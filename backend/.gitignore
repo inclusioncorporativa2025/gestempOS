@@ -1,0 +1,18 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno (NUNCA subir al repositorio)
+.env
+.env.local
+.env.production
+
+# Credenciales Firebase
+config/*.json
+
+# Logs
+*.log
+app.log
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

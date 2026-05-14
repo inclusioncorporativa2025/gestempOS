@@ -1,0 +1,12 @@
+{
+    "realm": "my-realm",
+    "auth-server-url": "http://localhost:8080/auth",
+    "ssl-required": "external",
+    "resource": "my-client",
+    "credentials": {
+      "secret": "my-client-secret"
+    },
+    "confidential-port": 0,
+    "use-resource-role-mappings": true
+  }
+  

@@ -1,0 +1,48 @@
+rfil
+    ports:
+      - "3000:3000" # Mapea el puerto interno de la app al puerto externo
+    restart: always # Configuración para reiniciar automáticamente el contenedor
+    environment:
+      NODE_ENV: production # Variables de entorno
+      # Agrega aquí otras variables si las necesitas
+    volumes:
+      - .:/usr/src/app # Mapea el proyecto local al contenedor
+      - /usr/src/app/node_modules # Evita conflictos con node_modules locales
+    command: "npm start" # Comando para iniciar la aplicación
+nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./certbot/conf:/etc/letsencrypt    - ./certbot/www:/var/www/certbot
+    depends_on:
+      - react-app
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+   volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 12h & wait $${!}; certbot renew; done;'"nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - react-app
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 12h & wait $${!}; certbot renew; done;'"

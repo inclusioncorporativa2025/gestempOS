@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: . # El directorio actual contiene el Dockerfile
+    ports:
+      - "3000:3000" # Mapea el puerto interno de la app al puerto externo
+    restart: always # Configuración para reiniciar automáticamente el contenedor
+    environment:
+      NODE_ENV: production # Variables de entorno
+      # Agrega aquí otras variables si las necesitas
+    volumes:
+      - .:/usr/src/app # Mapea el proyecto local al contenedor
+      - /usr/src/app/node_modules # Evita conflictos con node_modules locales
+    command: "npm start" # Comando para iniciar la aplicación

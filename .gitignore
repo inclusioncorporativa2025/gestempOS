@@ -1,0 +1,4 @@
+backend/config/local/
+**/firebase-adminsdk*.json
+.env
+.env.*
