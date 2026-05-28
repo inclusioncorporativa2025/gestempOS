@@ -31,13 +31,14 @@ dayjs.extend(timezone);
 
 const NodeCache = require('node-cache');
 const locationCache = new NodeCache({ stdTTL: 86400 });
-const firebaseAdmin = require('firebase-admin');
+// const firebaseAdmin = require('firebase-admin');
 
 const ZONA_HORARIA = 'Europe/Madrid';
 
 const getUserData= async (req, res) => {
     try {
         const { email } = req.body;
+        
         const usuario = await Usuario.findOne({
             where: { email },
         });

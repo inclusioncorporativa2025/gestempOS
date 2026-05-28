@@ -15,7 +15,7 @@ const ConfiguracionEsquema = sequelize.define('ConfiguracionEsquema', {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: 'empresas',
+            model: 'm_empresas',
             key: 'id_empresa',
         },
     },
@@ -28,7 +28,7 @@ const ConfiguracionEsquema = sequelize.define('ConfiguracionEsquema', {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: 'usuarios',
+            model: 'm_usuarios',
             key: 'id_usuario',
         },
     },
@@ -39,14 +39,14 @@ const ConfiguracionEsquema = sequelize.define('ConfiguracionEsquema', {
     usuario_modificacion: {
         type: DataTypes.INTEGER,
         references: {
-            model: 'usuarios',
+            model: 'm_usuarios',
             key: 'id_usuario',
         },
     },
     usuario_baja: {
         type: DataTypes.INTEGER,
         references: {
-            model: 'usuarios',
+            model: 'm_usuarios',
             key: 'id_usuario',
         },
     },
@@ -54,8 +54,7 @@ const ConfiguracionEsquema = sequelize.define('ConfiguracionEsquema', {
         type: DataTypes.DATE,
     },
 }, {
-    tableName: 'configuracion_esquema',
-    schema: 'public',
+    tableName: 'm_configuracion_esquema',
     timestamps: false,
 });
 

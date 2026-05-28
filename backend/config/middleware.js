@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const helmet = require('helmet');
-const firebaseAdmin = require('./firebase');
+const jwt = require('jsonwebtoken');
 const path = require('path');
 
 const configureMiddleware = (app) => {
@@ -25,17 +25,15 @@ const configureMiddleware = (app) => {
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
 
-  app.use(async (req, res, next) => {
+  app.use((req, res, next) => {
     const token = req.headers.authorization?.split('Bearer ')[1];
 
     if (!token) {
-
       return next();
     }
 
     try {
-
-      const decodedToken = await firebaseAdmin.auth().verifyIdToken(token);
+      const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
       req.user = decodedToken;
     } catch (error) {
       console.error('Error verificando token:', error.message);

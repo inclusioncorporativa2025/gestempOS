@@ -43,7 +43,7 @@ const UsuariosEmpresas = sequelize.define('UsuariosEmpresas', {
         allowNull: true,
     },
 }, {
-    tableName: 'usuarios_empresas',
+    tableName: 'm_usuarios_empresas',
     timestamps: false,
 });
 
