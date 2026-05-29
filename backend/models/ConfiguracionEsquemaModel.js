@@ -5,9 +5,9 @@ const ConfiguracionEsquema = sequelize.define('ConfiguracionEsquema', {
     id_configuracion_esquema: {
         type: DataTypes.INTEGER,
         primaryKey: true,
-        autoIncrement: true,
+        allowNull: false,
     },
-    nombre: {
+    nombre_esquema: {
         type: DataTypes.STRING,
         allowNull: false,
     },

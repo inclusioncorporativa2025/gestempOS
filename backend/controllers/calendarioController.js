@@ -1,4 +1,5 @@
 const FestivoEmpresa = require('../models/FestivoEmpresa');
+const { createConId } = require('../utils/empresaScope');
 
 const getFestivosByIdEmpresa = async (req, res) => {
   const { idUsuario, idEmpresa } = req.body;
@@ -8,11 +9,9 @@ const getFestivosByIdEmpresa = async (req, res) => {
   }
 
   try {
-    const esquema = 'empresa'+idEmpresa;
-
-    const festivos = await FestivoEmpresa.schema(esquema).findAll({
+    const festivos = await FestivoEmpresa.findAll({
       where: {
-        id_empresa: idEmpresa,
+        empresa_id: idEmpresa,
         fecha_baja: null
       },
       order: [['fecha', 'ASC']]
@@ -28,26 +27,23 @@ const guardarFestivoEmpresa = async (req, res) => {
 
   const { idUsuario, idEmpresa, fecha } = req.body;
 
-  const fechaF =fecha.fecha;
+  const fechaF = fecha.fecha;
   const descripcion = fecha.descripcion;
   if (!idUsuario || !idEmpresa || !fecha ) {
     return res.status(400).json({ error: 'Faltan datos requeridos para guardar el festivo.' });
   }
 
   try {
-    const esquema = 'empresa'+idEmpresa;
-
-    const existe = await FestivoEmpresa.schema(esquema).findOne({
-      where: { id_empresa: idEmpresa,fecha: fechaF, fecha_baja: null }
+    const existe = await FestivoEmpresa.findOne({
+      where: { empresa_id: idEmpresa, fecha: fechaF, fecha_baja: null }
     });
 
     if (existe) {
       return res.status(409).json({ error: 'Ya existe un festivo en esa fecha.' });
     }
 
-    const nuevoFestivo = await FestivoEmpresa.schema(esquema).create({
-      id_empresa: idEmpresa,
-      fecha:fechaF,
+    const nuevoFestivo = await createConId(FestivoEmpresa, idEmpresa, 'id_festivo', {
+      fecha: fechaF,
       descripcion,
       usuario_alta: idUsuario,
       fecha_alta: new Date()
@@ -67,10 +63,8 @@ const eliminarFestivoEmpresa = async (req, res) => {
   }
 
   try {
-    const esquema = 'empresa'+idEmpresa;
-
-    const festivo = await FestivoEmpresa.schema(esquema).findOne({
-      where: { id_festivo: idFestivo, id_empresa: idEmpresa, fecha_baja: null }
+    const festivo = await FestivoEmpresa.findOne({
+      where: { id_festivo: idFestivo, empresa_id: idEmpresa, fecha_baja: null }
     });
 
     if (!festivo) {

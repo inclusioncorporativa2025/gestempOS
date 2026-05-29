@@ -1,49 +1,44 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
-const Usuario = require('./Usuario');
 
 const Descansos = sequelize.define('Descansos', {
+    empresa_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        allowNull: false,
+    },
     id_descanso: {
         type: DataTypes.INTEGER,
         primaryKey: true,
-        autoIncrement: true,
+        allowNull: false,
     },
     id_usuario: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: {
-            model: Usuario,
-            key: 'id_usuario',
-        },
     },
     fecha_entrada: {
         type: DataTypes.DATE,
-        allowNull: false,
+        allowNull: true,
     },
     fecha_salida: {
         type: DataTypes.DATE,
         allowNull: true,
     },
     ubicacion_entrada: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(255),
         allowNull: true,
     },
     ubicacion_salida: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(255),
         allowNull: true,
     },
     fecha_alta: {
         type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
+        allowNull: true,
     },
     usuario_alta: {
         type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: Usuario,
-            key: 'id_usuario',
-        },
+        allowNull: true,
     },
     fecha_modificacion: {
         type: DataTypes.DATE,
@@ -52,10 +47,6 @@ const Descansos = sequelize.define('Descansos', {
     usuario_modificacion: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        references: {
-            model: Usuario,
-            key: 'id_usuario',
-        },
     },
     fecha_baja: {
         type: DataTypes.DATE,
@@ -64,10 +55,6 @@ const Descansos = sequelize.define('Descansos', {
     usuario_baja: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        references: {
-            model: Usuario,
-            key: 'id_usuario',
-        },
     },
 }, {
     tableName: 'descansos',

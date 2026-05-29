@@ -6,13 +6,14 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const Ausencias = require('../models/Ausencias');
+const { createConId } = require('../utils/empresaScope');
 
 const getAusenciasByIdUsuario = async (req, res) => {
     const { idUsuario, mes, idEmpresa } = req.body;
-    const esquema = 'empresa' + idEmpresa;
 
     try {
         const whereCondition = {
+            empresa_id: idEmpresa,
             fecha_baja: null,
             id_usuario: idUsuario,
         };
@@ -28,7 +29,7 @@ const getAusenciasByIdUsuario = async (req, res) => {
             ];
         }
 
-        const ausencias = await Ausencias.schema(esquema).findAll({
+        const ausencias = await Ausencias.findAll({
             where: whereCondition,
             order: [['fecha_alta', 'DESC']],
         });
@@ -69,12 +70,11 @@ const crearAusencia = async (req, res) => {
         return res.status(400).json({ error: 'fecha_hasta no puede ser anterior a fecha_desde' });
     }
 
-    const esquema = 'empresa' + idEmpresa;
-
     try {
 
-        const existeSuperposicion = await Ausencias.schema(esquema).findOne({
+        const existeSuperposicion = await Ausencias.findOne({
             where: {
+                empresa_id: idEmpresa,
                 id_usuario: idUsuario,
                 fecha_baja: null,
                 [Op.or]: [
@@ -92,7 +92,7 @@ const crearAusencia = async (req, res) => {
             return res.status(400).json({ error: 'La ausencia se superpone con otra existente' });
         }
 
-        const nuevaAusencia = await Ausencias.schema(esquema).create({
+        const nuevaAusencia = await createConId(Ausencias, idEmpresa, 'id_ausencia', {
             id_usuario: idUsuario,
             fecha_desde,
             fecha_hasta,

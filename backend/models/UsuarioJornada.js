@@ -2,10 +2,14 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
 
 const UsuarioJornada = sequelize.define('usuario_jornada', {
+  empresa_id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    allowNull: false,
+  },
   id_usuario_jornada: {
     type: DataTypes.INTEGER,
     primaryKey: true,
-    autoIncrement: true,
     allowNull: false,
   },
   id_usuario: {
@@ -16,16 +20,11 @@ const UsuarioJornada = sequelize.define('usuario_jornada', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
-  usuario_alta: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
   fecha_alta: {
     type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW,
+    allowNull: true,
   },
-  usuario_modificacion: {
+  usuario_alta: {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
@@ -33,12 +32,16 @@ const UsuarioJornada = sequelize.define('usuario_jornada', {
     type: DataTypes.DATE,
     allowNull: true,
   },
-  usuario_baja: {
+  usuario_modificacion: {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
   fecha_baja: {
     type: DataTypes.DATE,
+    allowNull: true,
+  },
+  usuario_baja: {
+    type: DataTypes.INTEGER,
     allowNull: true,
   },
 }, {

@@ -1,18 +1,19 @@
 const Usuario = require('../models/Usuario');
 const UsuarioJornada = require('../models/UsuarioJornada');
+const { createConId, createGlobalConId } = require('../utils/empresaScope');
 
 const crearUsuarioRepo = async (nombre,email,fechaAlta,usuarioAlta,dni,tipoUsuario) => {
 
     try{
-        const usuario = await Usuario.create({
+        const usuario = await createGlobalConId(Usuario, 'id_usuario', {
             nombre: nombre,
             email: email,
             fecha_alta: fechaAlta,
             usuario_alta : usuarioAlta,
-            tipo_usuario : 5,
             dni: dni,
             activo: true,
-            tipo_usuario: tipoUsuario
+            tipo_usuario: tipoUsuario,
+            requiere_reset_password: true,
         });
         return usuario;
     } catch (error){
@@ -24,11 +25,10 @@ const crearUsuarioRepo = async (nombre,email,fechaAlta,usuarioAlta,dni,tipoUsuar
 
 const crearUsuarioHorario = async ( idUsuario,horario, idUsuarioAccion , idEmpresa)=>{
 
-    const esquema = 'empresa'+idEmpresa;
     const date = new Date();
 
     try{
-        const usuarioHorario = await UsuarioJornada.schema(esquema).create({
+        const usuarioHorario = await createConId(UsuarioJornada, idEmpresa, 'id_usuario_jornada', {
            id_usuario : idUsuario,
            id_jornada : horario,
            fecha_alta : date,

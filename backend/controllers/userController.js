@@ -10,8 +10,6 @@ const axios = require('axios');
 const Empresa = require('../models/Empresa');
 const {crearUsuarioRepo,crearUsuarioHorario} = require('../repositorios/usuarioRepository');
 const {crearUsuarioEmpresa,validarCrearUsuario} = require('../repositorios/usuariosEmpresasRepository');
-const authController = require('./authController')
-const generatePassword = require('../utils/generatePass')
 const { Op } = require('sequelize');
 const dayjs = require('dayjs');
 const isoWeek = require('dayjs/plugin/isoWeek');
@@ -38,7 +36,7 @@ const ZONA_HORARIA = 'Europe/Madrid';
 const getUserData= async (req, res) => {
     try {
         const { email } = req.body;
-        
+
         const usuario = await Usuario.findOne({
             where: { email },
         });
@@ -71,7 +69,6 @@ const getUserData= async (req, res) => {
 const getUsuariosEmpresa = async (req, res) => {
     try {
         const { idEmpresa } = req.body;
-        const esquema = 'empresa'+idEmpresa;
 
         const idUsuarios = await UsuarioEmpresa.findAll({
             where: { id_empresa: idEmpresa, fecha_baja: null },
@@ -89,8 +86,9 @@ const getUsuariosEmpresa = async (req, res) => {
             }
         });
 
-        const usuarioJornadas = await UsuarioJornada.schema(esquema).findAll({
+        const usuarioJornadas = await UsuarioJornada.findAll({
             where: {
+                empresa_id: idEmpresa,
                 id_usuario: {
                     [Op.in]: idUsuariosArray
                 },
@@ -134,8 +132,8 @@ const crearUsuario= async (req, res) => {
             const usuarioEmpresa = await crearUsuarioEmpresa(usuario.dataValues.id_usuario, idEmpresa, idUsuarioAccion, date);
             const usuarioJornada = await crearUsuarioHorario (usuario.dataValues.id_usuario,horario, idUsuarioAccion,idEmpresa);
 
-            const password = generatePassword();
-            const resposeFirebase = await authController.crearUsuarioFirebase(JSON.stringify({ nombreUsuario ,email, password   }));
+            // El usuario se crea sin contraseña (requiere_reset_password = true):
+            // establecerá su contraseña mediante el flujo de restablecimiento por email.
 
             res.status(201).json({
             message: 'Usuario creado o actualizado exitosamente',
@@ -167,7 +165,6 @@ const editUsuario= async (req, res) => {
 
         const date = new Date()
         const {idUsuario, values ,idUsuarioAccion, idEmpresa} = req.body;
-        const esquema = 'empresa'+idEmpresa;
 
         const usuarios = await Usuario.update(
             {
@@ -183,21 +180,21 @@ const editUsuario= async (req, res) => {
             }
         );
 
-        const usuarioJornadaResult =  await UsuarioJornada.schema(esquema).findOne({
+        const usuarioJornadaResult =  await UsuarioJornada.findOne({
             where: {
-                id_usuario: idUsuario , fecha_baja: null
+                empresa_id: idEmpresa, id_usuario: idUsuario , fecha_baja: null
             }
 
         } );
 
         if(usuarioJornadaResult != null && usuarioJornadaResult){
-            const resutHorario =  await UsuarioJornada.schema(esquema).update(
+            const resutHorario =  await UsuarioJornada.update(
                 {
                     fecha_modificacion:date ,
                     usuario_modificacion: idUsuarioAccion,
                     id_jornada : values.horario
                 },{
-                    where : {id_usuario : idUsuario, fecha_baja: null}
+                    where : { empresa_id: idEmpresa, id_usuario : idUsuario, fecha_baja: null}
                 }
 
             );
@@ -225,10 +222,6 @@ const deleteUsuario= async (req, res) => {
         const date = new Date()
         const {idUsuario,idUsuarioAccion} = req.body;
 
-        var correoUser = await Usuario.findByPk(idUsuario);
-        const userFirebase = await firebaseAdmin.auth().getUserByEmail(correoUser.email);
-        await firebaseAdmin.auth().deleteUser(userFirebase.uid);
-
         await Usuario.update({
              fecha_baja: date,
                 usuario_baja: idUsuarioAccion,
@@ -253,12 +246,11 @@ const deleteUsuario= async (req, res) => {
 };
 const getHorasTotalesMesByIdUsuario = async (req, res) => {
     const { idUsuario_accion, idEmpresa, mes, idUsuario } = req.body;
-    const esquema = 'empresa' + idEmpresa;
     var horas = 0;
     var minutos = 0;
     try {
-        const info = await UsuarioJornada.schema(esquema).findAll({
-            where: { id_usuario: idUsuario, fecha_baja: null },
+        const info = await UsuarioJornada.findAll({
+            where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
             order: [['fecha_alta', 'DESC']],
             limit: 1
         });
@@ -269,16 +261,17 @@ const getHorasTotalesMesByIdUsuario = async (req, res) => {
 
         const tipoJornada = info[0].id_jornada;
 
-        const infoJornada = await Jornada.schema(esquema).findAll({
+        const infoJornada = await Jornada.findAll({
             where: {
+                empresa_id: idEmpresa,
                 fecha_baja: null,
                 id_jornada: tipoJornada
             }
         });
 
-        const festivos = await FestivoEmpresa.schema(esquema).findAll({
+        const festivos = await FestivoEmpresa.findAll({
             where: {
-                id_empresa: idEmpresa,
+                empresa_id: idEmpresa,
                 fecha_baja: null,
 
                 fecha: {
@@ -294,8 +287,8 @@ const getHorasTotalesMesByIdUsuario = async (req, res) => {
         }
 
         let diasJornada = [];
-        if (infoJornada[0].dataValues.tipo === 1) {
-            diasJornada = infoJornada[0].dataValues.column1.dias;
+        if (Number(infoJornada[0].dataValues.tipo) === 1) {
+            diasJornada = infoJornada[0].column1.dias;
 
             const diasSemanaMap = {
                 'Lunes': 1,
@@ -337,7 +330,7 @@ const getHorasTotalesMesByIdUsuario = async (req, res) => {
             horas = Math.floor(totalMinutos / 60);
             minutos = totalMinutos % 60;
         } else {
-            horas = infoJornada[0].dataValues.column1.horasMensuales;
+            horas = infoJornada[0].column1.horasMensuales;
             minutos = 0;
         }
 
@@ -383,7 +376,6 @@ const exportarDatosExcel = async (req, res) => {
             return res.status(400).json({ message: 'Faltan parámetros necesarios' });
         }
 
-        const esquema = 'empresa' + idEmpresa;
         const start = dayjs(startDate).startOf('day');
         const end = dayjs(endDate).endOf('day');
 
@@ -393,8 +385,9 @@ const exportarDatosExcel = async (req, res) => {
         }
 
         const [fichajesData, ausenciasData, descansosData] = await Promise.all([
-            fichajes.schema(esquema).findAll({
+            fichajes.findAll({
                 where: {
+                    empresa_id: idEmpresa,
                     id_usuario,
                     fecha_baja: null,
                     fecha_entrada: {
@@ -403,8 +396,9 @@ const exportarDatosExcel = async (req, res) => {
                     },
                 },
             }),
-            Ausencias.schema(esquema).findAll({
+            Ausencias.findAll({
                 where: {
+                    empresa_id: idEmpresa,
                     id_usuario,
                     fecha_baja: null,
                     fecha_desde: {
@@ -415,8 +409,9 @@ const exportarDatosExcel = async (req, res) => {
                     },
                 },
             }),
-            Descansos.schema(esquema).findAll({
+            Descansos.findAll({
                 where: {
+                    empresa_id: idEmpresa,
                     id_usuario,
                     fecha_baja: null,
                     fecha_entrada: {
@@ -529,8 +524,9 @@ const exportarDatosExcel = async (req, res) => {
 
         const meses = Object.keys(fichajesPorMes);
 
-        const cierres = await mesesCierre.schema(esquema).findAll({
+        const cierres = await mesesCierre.findAll({
             where: {
+                empresa_id: idEmpresa,
                 usuario_alta: id_usuario,
                 mes: { [Op.in]: meses },
                 usuario_aceptacion: { [Op.not]: null }

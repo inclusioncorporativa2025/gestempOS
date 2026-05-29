@@ -2,10 +2,14 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
 
 const Ausencia = sequelize.define('ausencia', {
+  empresa_id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    allowNull: false,
+  },
   id_ausencia: {
     type: DataTypes.INTEGER,
     primaryKey: true,
-    autoIncrement: true,
     allowNull: false,
   },
   id_usuario: {
@@ -14,11 +18,11 @@ const Ausencia = sequelize.define('ausencia', {
   },
   fecha_desde: {
     type: DataTypes.STRING(10),
-    allowNull: false,
+    allowNull: true,
   },
   fecha_hasta: {
     type: DataTypes.STRING(10),
-    allowNull: false,
+    allowNull: true,
   },
   hora_ausencia_desde: {
     type: DataTypes.TIME,
@@ -34,12 +38,11 @@ const Ausencia = sequelize.define('ausencia', {
   },
   usuario_alta: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
   },
   fecha_alta: {
     type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: DataTypes.NOW,
+    allowNull: true,
   },
   usuario_baja: {
     type: DataTypes.INTEGER,
@@ -50,8 +53,8 @@ const Ausencia = sequelize.define('ausencia', {
     allowNull: true,
   },
   tipo: {
-    type: DataTypes.STRING(500),
-    allowNull: false,
+    type: DataTypes.STRING(100),
+    allowNull: true,
   },
 }, {
   tableName: 'ausencias',

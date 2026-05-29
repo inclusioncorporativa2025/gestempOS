@@ -1,5 +1,6 @@
 const Empresa = require('../models/Empresa');
 const UsuarioEmpresa = require('../models/UsuarioEmpresa')
+const { createGlobalConId } = require('../utils/empresaScope');
 
 const validarCrearUsuario = async ( idEmpresa ) => {
 
@@ -30,7 +31,7 @@ const validarCrearUsuario = async ( idEmpresa ) => {
 const crearUsuarioEmpresa = async (id_usuario, id_empresa, idUsuarioAccion, fechaAlta) => {
 
   try{
-    const usuarioEmpresa = await UsuarioEmpresa.create({
+    const usuarioEmpresa = await createGlobalConId(UsuarioEmpresa, 'id_usuario_empresa', {
         id_usuario: id_usuario,
         id_empresa: id_empresa,
         fecha_alta: fechaAlta,

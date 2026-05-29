@@ -5,10 +5,10 @@ const { QueryTypes } = require('sequelize');
 const Ausencias = require('../models/Ausencias');
 
 const Fichajes = require('../models/Fichajes');
-const TipoAcceso = require('../models/TipoAcceso');
 const Peticiones = require('../models/Peticiones');
 const Descansos = require('../models/Descansos');
 const MesesCierre = require('../models/MesesCierre');
+const { createConId } = require('../utils/empresaScope');
 const nodemailer = require('nodemailer');
 const path = require('path');
 const {getTipoRegistro} = require('./companyController');
@@ -29,24 +29,16 @@ const getDatosUsuario = async (req, res) => {
 
   try {
 
-    const esquema = 'empresa'+idEmpresa;
-    const info = await Fichajes.schema(esquema).findAll({
-        where :{id_usuario: idUsuario,fecha_baja: null},
+    const info = await Fichajes.findAll({
+        where :{ empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
         order: [
             ['fecha_alta', 'DESC']
           ]
     })
 
-    const tipoAccesos = await TipoAcceso.schema(esquema).findAll({
-      where :{fecha_baja: null},
-      order: [
-          ['fecha_alta', 'DESC']
-        ]
-  })
-
     res.status(200).json({
       info: info,
-      tipoAccesos: tipoAccesos
+      tipoAccesos: []
     });
   } catch (error) {
     console.error(error);
@@ -62,19 +54,17 @@ const getDatosUsuarioById = async (req, res) => {
   }
 
   try {
-    const esquema = 'empresa' + idEmpresa;
-
     const [fichajes, ausencias, descansos] = await Promise.all([
-      Fichajes.schema(esquema).findAll({
-        where: { id_usuario: idUsuario, fecha_baja: null },
+      Fichajes.findAll({
+        where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
         order: [['fecha_alta', 'DESC']]
       }),
-      Ausencias.schema(esquema).findAll({
-        where: { id_usuario: idUsuario, fecha_baja: null },
+      Ausencias.findAll({
+        where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
         order: [['fecha_alta', 'DESC']]
       }),
-      Descansos.schema(esquema).findAll({
-        where: { id_usuario: idUsuario, fecha_baja: null },
+      Descansos.findAll({
+        where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
         order: [['fecha_alta', 'DESC']]
       })
     ]);
@@ -162,13 +152,12 @@ const getDatosUsuarioMes = async (req, res) => {
   }
 
   try {
-    const esquema = 'empresa' + idEmpresa;
-
     const inicioMes = dayjs(mes + '-01').startOf('month').toDate();
     const finMes = dayjs(mes + '-01').endOf('month').toDate();
 
-    const info = await Fichajes.schema(esquema).findAll({
+    const info = await Fichajes.findAll({
       where: {
+        empresa_id: idEmpresa,
         id_usuario: idUsuario,
         fecha_baja: null,
         fecha_entrada: {
@@ -195,8 +184,6 @@ const responderPeticionCierre = async (req, res) => {
   }
 
   try {
-    const esquema = 'empresa' + idEmpresa;
-
     const updateData = {};
     if (estado === 2) {
       updateData.fecha_aceptacion = dayjs().toDate();
@@ -214,8 +201,9 @@ const responderPeticionCierre = async (req, res) => {
       return res.status(400).json({ error: 'Estado no válido' });
     }
 
-    const [updated] = await MesesCierre.schema(esquema).update(updateData, {
+    const [updated] = await MesesCierre.update(updateData, {
       where: {
+        empresa_id: idEmpresa,
         id_mes_cierre: peticion.id_mes_cierre
       }
     });
@@ -240,11 +228,9 @@ const getUltimoRegistroVivo = async (req, res) => {
 
   try {
 
-    const esquema = 'empresa'+idEmpresa;
-    const info = await Fichajes.schema(esquema).find({
-      where: { id_usuario: idUsuario },
+    const info = await Fichajes.findOne({
+      where: { empresa_id: idEmpresa, id_usuario: idUsuario },
       order: [['fecha_alta', 'DESC']],
-      limit: 1
   });
 
     res.status(200).json({
@@ -266,43 +252,39 @@ const crearRegistro = async (req, res) => {
     }
 
     const ubicacionSt = `${ubicacion.latitude}-${ubicacion.longitude}`;
-    const esquema = 'empresa' + idEmpresa;
 
-    const ultimoRegistro = await getUltimoRegistro(idUsuario, esquema);
-    const ultimoDescanso = await getUltimoDescanso(idUsuario, esquema);
+    const ultimoRegistro = await getUltimoRegistro(idUsuario, idEmpresa);
+    const ultimoDescanso = await getUltimoDescanso(idUsuario, idEmpresa);
 
     if ((!ultimoRegistro || ultimoRegistro.dataValues.fecha_salida != null) && tipoRegistro===1) {
-      await Fichajes.schema(esquema).create({
+      await createConId(Fichajes, idEmpresa, 'id_fichaje', {
         id_usuario: idUsuario,
         fecha_alta: fecha,
         ubicacion_entrada: ubicacionSt,
         fecha_entrada: fecha,
         usuario_alta: usuarioAccion,
-        tipo_entrada: tipoRegistro,
       });
     } else if (tipoRegistro === 2){
-      await Fichajes.schema(esquema).update({
+      await Fichajes.update({
         fecha_salida: fecha,
         ubicacion_salida: ubicacionSt,
-        tipo_salida: tipoRegistro,
       }, {
-        where: { id_fichaje: ultimoRegistro.dataValues.id_fichaje },
+        where: { empresa_id: idEmpresa, id_fichaje: ultimoRegistro.dataValues.id_fichaje },
       });
     } else if (tipoRegistro === 3){
-      await Descansos.schema(esquema).create({
+      await createConId(Descansos, idEmpresa, 'id_descanso', {
         id_usuario: idUsuario,
         fecha_entrada: fecha,
         ubicacion_entrada: ubicacionSt,
         fecha_alta: fecha,
         usuario_alta: usuarioAccion,
-
       });
     } else if (tipoRegistro === 4){
-      await Descansos.schema(esquema).update({
+      await Descansos.update({
         fecha_salida: fecha,
         ubicacion_salida: ubicacionSt,
       }, {
-        where: { id_descanso : ultimoDescanso.id_descanso  },
+        where: { empresa_id: idEmpresa, id_descanso : ultimoDescanso.id_descanso  },
       });
     }else{
       res.status(500).json({ error: 'Error creando registro' });
@@ -317,11 +299,11 @@ const crearRegistro = async (req, res) => {
   }
 };
 
-const getUltimoRegistro= async (idUsuario,esquema) => {
+const getUltimoRegistro= async (idUsuario, idEmpresa) => {
 
   try{
-    const info = await Fichajes.schema(esquema).findOne({
-      where: { id_usuario: idUsuario, fecha_baja: null },
+    const info = await Fichajes.findOne({
+      where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
       order: [['fecha_alta', 'DESC']],
     });
 
@@ -333,11 +315,11 @@ const getUltimoRegistro= async (idUsuario,esquema) => {
 
 }
 
-const getUltimoDescanso= async (idUsuario,esquema) => {
+const getUltimoDescanso= async (idUsuario, idEmpresa) => {
 
   try{
-    const descanso = await Descansos.schema(esquema).findOne({
-      where: { id_usuario: idUsuario, fecha_salida: null },
+    const descanso = await Descansos.findOne({
+      where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_salida: null },
       order: [['fecha_entrada', 'DESC']],
     });
     return descanso;
@@ -351,25 +333,20 @@ const getUltimoDescanso= async (idUsuario,esquema) => {
 const getTipoRegistroByIdUsuario = async (req, res)=> {
 
   try {
-      const {esquema,idUsuario}  = req.body;
+      const { esquema, idUsuario } = req.body;
+      const idEmpresa = req.body.idEmpresa || parseInt(String(esquema || '').replace('empresa', ''), 10);
 
-      const ultimoRegistro =await getUltimoRegistro(idUsuario,esquema);
+      const ultimoRegistro = await getUltimoRegistro(idUsuario, idEmpresa);
 
-      const descanso = await getUltimoDescanso (idUsuario,esquema);
-      const tipoRegistros = await getTipoRegistro(req);
+      const descanso = await getUltimoDescanso(idUsuario, idEmpresa);
+
       var tipo = 0;
       if (ultimoRegistro!= null && ultimoRegistro.dataValues.fecha_salida == null){
         tipo= 1
       }
 
-      var tiposAcceso = await TipoAcceso.schema(esquema).findAll({
-          where: {
-            fecha_baja: null,tipo, activo : true
-          },
-          order: [
-              ['id_tipo_acceso', 'ASC']
-            ]
-        });
+      // La tabla `tipo_acceso` no existe en el modelo MySQL: lista vacía.
+      const tiposAcceso = [];
 
       res.status(200).json({ message: 'Datos recuperados correctamente',tiposAcceso });
   } catch (error) {
@@ -384,14 +361,13 @@ const deleteRegistro = async (req, res)=> {
   try {
       const {idRegistro, idEmpresa, fecha, usuarioAccion}  = req.body;
 
-      const esquema = 'empresa'+idEmpresa;
-       const result = await Fichajes.schema(esquema).update(
+       const result = await Fichajes.update(
         {
             fecha_baja: fecha,
             usuario_baja: usuarioAccion
         },
         {
-            where: { id_fichaje:idRegistro }
+            where: { empresa_id: idEmpresa, id_fichaje: idRegistro }
         }
     );
       res.status(200).json({ message: 'Datos recuperados correctamente',result });
@@ -406,7 +382,6 @@ const crearPeticionEdicion = async (req, res) => {
     const { idUsuario, idEmpresa, values } = req.body;
     const fechaConOffset = new Date();
 
-    const esquema = 'empresa' + idEmpresa;
     const tz = 'Europe/Madrid';
 
     const nueva_entrada = dayjs.tz(values.fecha, tz)
@@ -424,10 +399,10 @@ const crearPeticionEdicion = async (req, res) => {
       .utc();
 
     const usuariosEmpresa = await sequelize.query(
-      'SELECT id_usuario FROM usuarios_empresas WHERE id_empresa = $1 AND fecha_baja IS NULL',
+      'SELECT id_usuario FROM m_usuarios_empresas WHERE id_empresa = :idEmpresa AND fecha_baja IS NULL',
       {
         type: QueryTypes.SELECT,
-        bind: [idEmpresa],
+        replacements: { idEmpresa },
       }
     );
 
@@ -437,15 +412,13 @@ const crearPeticionEdicion = async (req, res) => {
       return res.status(400).json({ error: 'No hay usuarios activos en la empresa' });
     }
 
-    const query = `
-      SELECT email FROM usuarios
-      WHERE id_usuario = ANY($1::int[]) AND tipo_usuario IN ('3', '4')
-    `;
-
-    const usuariosConEmail = await sequelize.query(query, {
-      type: QueryTypes.SELECT,
-      bind: [usuariosIds],
-    });
+    const usuariosConEmail = await sequelize.query(
+      'SELECT email FROM m_usuarios WHERE id_usuario IN (:ids) AND tipo_usuario IN (3, 4)',
+      {
+        type: QueryTypes.SELECT,
+        replacements: { ids: usuariosIds },
+      }
+    );
 
     const destinatarios = usuariosConEmail.map(u => u.email);
 
@@ -453,7 +426,7 @@ const crearPeticionEdicion = async (req, res) => {
       return res.status(400).json({ error: 'No hay destinatarios válidos (tipo_usuario 3 o 4)' });
     }
 
-    const info = await Peticiones.schema(esquema).create({
+    const info = await createConId(Peticiones, idEmpresa, 'id_peticion', {
       id_usuario_peticion: idUsuario,
       fecha_alta: fechaConOffset,
       id_fichaje: values.id_fichaje,
@@ -480,7 +453,6 @@ const crearPeticionEdicion = async (req, res) => {
 const crearPeticionCierreMes = async (req, res) => {
   try {
     const { idUsuario, idEmpresa, mes } = req.body;
-    const esquema = 'empresa' + idEmpresa;
 
     const mesFormateado = moment(mes, ['MM/YYYY', 'YYYY-MM', moment.ISO_8601], true).isValid()
       ? moment(mes, ['MM/YYYY', 'YYYY-MM', moment.ISO_8601]).format('YYYY-MM')
@@ -490,16 +462,16 @@ const crearPeticionCierreMes = async (req, res) => {
       return res.status(400).json({ error: 'Formato de mes inválido' });
     }
 
-    const info = await MesesCierre.schema(esquema).create({
+    const info = await createConId(MesesCierre, idEmpresa, 'id_mes_cierre', {
       usuario_alta: idUsuario,
       mes: mesFormateado,
     });
 
     const usuariosEmpresa = await sequelize.query(
-      'SELECT id_usuario FROM usuarios_empresas WHERE id_empresa = $1 AND fecha_baja IS NULL',
+      'SELECT id_usuario FROM m_usuarios_empresas WHERE id_empresa = :idEmpresa AND fecha_baja IS NULL',
       {
         type: QueryTypes.SELECT,
-        bind: [idEmpresa],
+        replacements: { idEmpresa },
       }
     );
 
@@ -509,15 +481,13 @@ const crearPeticionCierreMes = async (req, res) => {
       return res.status(400).json({ error: 'No hay usuarios activos en la empresa' });
     }
 
-    const query = `
-      SELECT email FROM usuarios
-      WHERE id_usuario = ANY($1::int[]) AND tipo_usuario IN ('3', '4')
-    `;
-
-    const usuariosConEmail = await sequelize.query(query, {
-      type: QueryTypes.SELECT,
-      bind: [usuariosIds],
-    });
+    const usuariosConEmail = await sequelize.query(
+      'SELECT email FROM m_usuarios WHERE id_usuario IN (:ids) AND tipo_usuario IN (3, 4)',
+      {
+        type: QueryTypes.SELECT,
+        replacements: { ids: usuariosIds },
+      }
+    );
 
     const destinatarios = usuariosConEmail.map(u => u.email);
 
@@ -542,12 +512,12 @@ const crearPeticionCierreMes = async (req, res) => {
 
 const getPeticionesByIdEmpresa = async (req, res) => {
   const { idEmpresa } = req.body;
-  const esquema = 'empresa' + idEmpresa;
 
   try {
 
-    const peticiones = await Peticiones.schema(esquema).findAll({
+    const peticiones = await Peticiones.findAll({
       where: {
+        empresa_id: idEmpresa,
         fecha_aceptacion: null,
         fecha_cancelacion: null
       },
@@ -555,8 +525,9 @@ const getPeticionesByIdEmpresa = async (req, res) => {
     });
 
     const listaIdFichaje = peticiones.map(p => p.id_fichaje);
-    const fichajes = await Fichajes.schema(esquema).findAll({
+    const fichajes = await Fichajes.findAll({
       where: {
+        empresa_id: idEmpresa,
         id_fichaje: {
           [Op.in]: listaIdFichaje
         }
@@ -600,7 +571,6 @@ const getPeticionesByIdEmpresa = async (req, res) => {
 
 const responderPeticion = async (req, res) => {
   const { idEmpresa, idUsuario, idPeticion, estado } = req.body;
-  const esquema = 'empresa' + idEmpresa;
 
   try {
     const fechaActual = dayjs().tz('Europe/Madrid').toDate();
@@ -612,8 +582,8 @@ const responderPeticion = async (req, res) => {
         : { fecha_aceptacion: fechaActual })
     };
 
-    const info = await Peticiones.schema(esquema).update(updateData, {
-      where: { id_peticion: idPeticion }
+    const info = await Peticiones.update(updateData, {
+      where: { empresa_id: idEmpresa, id_peticion: idPeticion }
     });
 
     res.status(200).json({ message: 'Petición actualizada', info });
@@ -626,12 +596,12 @@ const responderPeticion = async (req, res) => {
 
 const getPeticionesByIdUsuario = async (req, res) => {
   const { idUsuario, idEmpresa } = req.body;
-  const esquema = 'empresa' + idEmpresa;
 
   try {
 
-    const peticiones = await Peticiones.schema(esquema).findAll({
+    const peticiones = await Peticiones.findAll({
       where: {
+        empresa_id: idEmpresa,
         id_usuario_peticion: idUsuario,
         fecha_aceptacion: null,
         fecha_cancelacion: null,
@@ -640,8 +610,9 @@ const getPeticionesByIdUsuario = async (req, res) => {
       raw: true,
     });
 
-    const mesesCierre = await MesesCierre.schema(esquema).findAll({
+    const mesesCierre = await MesesCierre.findAll({
       where: {
+        empresa_id: idEmpresa,
         usuario_alta: idUsuario,
         fecha_baja: null,
         usuario_cancelacion:null
@@ -664,15 +635,16 @@ const getPeticionesByIdUsuario = async (req, res) => {
 
 const getUltimoRegistroById= async (req, res) => {
   const {esquema, idUsuario}  = req.body;
+  const idEmpresa = req.body.idEmpresa || parseInt(String(esquema || '').replace('empresa', ''), 10);
 
   try{
-    const info = await Fichajes.schema(esquema).findOne({
-      where: { id_usuario: idUsuario, fecha_baja: null },
+    const info = await Fichajes.findOne({
+      where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
       order: [['fecha_entrada', 'DESC']],
     });
 
-    const descanso = await Descansos.schema(esquema).findOne({
-      where: { id_usuario: idUsuario, fecha_salida: null },
+    const descanso = await Descansos.findOne({
+      where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_salida: null },
       order: [['fecha_entrada', 'DESC']],
     });
 
@@ -693,10 +665,10 @@ const getHorasTrabajadasHoy = async (req, res)=> {
   try {
 
       const hoy = moment().startOf('day').toDate();
-      const esquema = 'empresa'+ idEmpresa;
 
-      const registros = await Fichajes.schema(esquema).findAll({
+      const registros = await Fichajes.findAll({
           where: {
+              empresa_id: idEmpresa,
               id_usuario: usuarioAccion,
               fecha_baja: null,
               fecha_entrada: {
@@ -740,10 +712,9 @@ const editarHoras = async (req, res) => {
       id_usuario_gestor, id_peticion } = req.body.values;
     const idEmpresa = req.body.idEmpresa
     const fecha = new Date().getTime() ;
-    const esquema = 'empresa' + idEmpresa;
 
-    const peticiones = await Peticiones.schema(esquema).findAll({
-      where: { id_peticion }
+    const peticiones = await Peticiones.findAll({
+      where: { empresa_id: idEmpresa, id_peticion }
     });
 
     if (!peticiones || peticiones.length === 0) {
@@ -755,7 +726,7 @@ const editarHoras = async (req, res) => {
     const horaEntrada = peticion.nueva_entrada;
     const horaSalida = peticion.nueva_salida;
 
-    const result = await Fichajes.schema(esquema).update(
+    const result = await Fichajes.update(
       {
         fecha_entrada: horaEntrada,
         fecha_salida: horaSalida,
@@ -763,7 +734,7 @@ const editarHoras = async (req, res) => {
         usuario_modificacion: id_usuario_gestor,
       },
       {
-        where: { id_fichaje }
+        where: { empresa_id: idEmpresa, id_fichaje }
       }
     );
 
@@ -775,12 +746,12 @@ const editarHoras = async (req, res) => {
 };
 const getCierresMensualesByIdEmpresa = async (req, res) => {
   const { idEmpresa } = req.body;
-  const esquema = 'empresa' + idEmpresa;
 
   try {
 
-    const meses = await MesesCierre.schema(esquema).findAll({
+    const meses = await MesesCierre.findAll({
       where: {
+        empresa_id: idEmpresa,
         fecha_baja: null,
         fecha_aceptacion: null,
         fecha_cancelacion: null,
@@ -896,7 +867,7 @@ async function enviarCorreoNotificacion(destinatarios, tipoNotificacion,usuarios
     attachments: [
       {
         filename: 'Logo-Horizontal INCOR-RGB.png',
-        path: path.resolve(__dirname, './Logo-Horizontal INCOR-RGB.png'),
+        path: path.resolve(__dirname, '../utils/images/Logo-Horizontal INCOR-RGB.png'),
         cid: 'logo',
       },
     ],

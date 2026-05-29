@@ -7,7 +7,7 @@ const UsuariosEmpresas = sequelize.define('UsuariosEmpresas', {
     id_usuario_empresa: {
         type: DataTypes.INTEGER,
         primaryKey: true,
-        autoIncrement: true,
+        allowNull: false,
     },
     id_usuario: {
         type: DataTypes.INTEGER,

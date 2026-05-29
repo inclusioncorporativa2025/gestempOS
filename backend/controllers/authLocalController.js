@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
@@ -33,6 +34,67 @@ const buildTransporter = () =>
       pass: process.env.SMTP_PASS,
     },
   });
+
+const buildResetEmailHtml = ({ nombre, enlace, ttlMinutos }) => `
+  <!DOCTYPE html>
+  <html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+  <body style="margin:0; padding:0; background-color:#f4f5f7;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7; padding:32px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+            <tr>
+              <td style="background-color:#fffff; padding:28px 0; text-align:center;">
+                <img src="cid:logo" alt="Ficha en el Trabajo" width="160" style="display:inline-block; max-width:160px; height:auto;" />
+              </td>
+            </tr>
+            <tr>
+              <td style="height:4px; background:linear-gradient(90deg,#2BA9E0 0%,#E0529C 100%); background-color:#2BA9E0; font-size:0; line-height:0;">&nbsp;</td>
+            </tr>
+            <tr>
+              <td style="padding:36px 40px 8px 40px; font-family:Arial,Helvetica,sans-serif;">
+                <h1 style="margin:0 0 16px 0; font-size:22px; color:#0f1020;">Restablecer contraseña</h1>
+                <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">Hola <strong>${nombre}</strong>,</p>
+                <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">
+                  Hemos recibido una solicitud para establecer la contraseña de tu cuenta en <strong>Ficha en el Trabajo</strong>.
+                </p>
+                <p style="margin:0 0 28px 0; font-size:15px; line-height:1.6; color:#444;">
+                  Pulsa el botón para continuar. Por seguridad, el enlace caduca en <strong>${ttlMinutos} minutos</strong>.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 40px 32px 40px; text-align:center; font-family:Arial,Helvetica,sans-serif;">
+                <a href="${enlace}" style="display:inline-block; background:linear-gradient(90deg,#2BA9E0 0%,#E0529C 100%); background-color:#2BA9E0; color:#ffffff; font-size:16px; font-weight:bold; text-decoration:none; padding:14px 36px; border-radius:8px;">
+                  Establecer contraseña
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 40px 32px 40px; font-family:Arial,Helvetica,sans-serif;">
+                <p style="margin:0 0 8px 0; font-size:13px; color:#777;">Si el botón no funciona, copia y pega esta URL en tu navegador:</p>
+                <p style="margin:0; font-size:13px; word-break:break-all;">
+                  <a href="${enlace}" style="color:#2BA9E0;">${enlace}</a>
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px 40px; background-color:#f9fafb; border-top:1px solid #eee; font-family:Arial,Helvetica,sans-serif;">
+                <p style="margin:0 0 6px 0; font-size:12px; color:#999;">Si no solicitaste este cambio, puedes ignorar este correo de forma segura.</p>
+                <p style="margin:0; font-size:12px; color:#999;">© ${new Date().getFullYear()} Inclusión Corporativa · Ficha en el Trabajo</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>
+`;
 
 const login = async (req, res) => {
   const { email, password } = req.body;
@@ -115,22 +177,18 @@ const forgotPassword = async (req, res) => {
         from: process.env.SMTP_USER,
         to: email,
         subject: 'Ficha en el Trabajo - Restablece tu contraseña',
-        html: `
-          <div style="font-family: Arial, sans-serif; color: #333;">
-            <h2>Restablecer contraseña</h2>
-            <p>Hola ${usuario.nombre},</p>
-            <p>Hemos recibido una solicitud para establecer tu contraseña.</p>
-            <p>Haz clic en el siguiente botón para continuar (el enlace caduca en ${RESET_TOKEN_TTL_MINUTES} minutos):</p>
-            <p>
-              <a href="${enlace}" style="background-color:#007BFF;color:#fff;padding:10px 20px;text-decoration:none;border-radius:5px;">
-                Establecer contraseña
-              </a>
-            </p>
-            <p>Si el botón no funciona, copia y pega esta URL en tu navegador:</p>
-            <p><a href="${enlace}">${enlace}</a></p>
-            <p>Si no solicitaste esto, ignora este correo.</p>
-          </div>
-        `,
+        html: buildResetEmailHtml({
+          nombre: usuario.nombre,
+          enlace,
+          ttlMinutos: RESET_TOKEN_TTL_MINUTES,
+        }),
+        attachments: [
+          {
+            filename: 'logo.png',
+            path: path.resolve(__dirname, '../utils/images/Logo-Horizontal INCOR-RGB.png'),
+            cid: 'logo',
+          },
+        ],
       });
     } catch (mailError) {
       console.error('Error enviando email de reset:', mailError.message);

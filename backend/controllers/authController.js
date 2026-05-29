@@ -1,5 +1,5 @@
 const firebaseAdmin = require('firebase-admin');
-const { initializeApp } = require('firebase-admin/app');
+// const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const nodemailer = require('nodemailer');
 const path = require('path');

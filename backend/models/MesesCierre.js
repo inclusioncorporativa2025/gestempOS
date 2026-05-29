@@ -1,24 +1,24 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
-const Usuario = require('./Usuario');
 
 const MesesCierre = sequelize.define('MesesCierre', {
+    empresa_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        allowNull: false,
+    },
     id_mes_cierre: {
         type: DataTypes.INTEGER,
         primaryKey: true,
-        autoIncrement: true,
+        allowNull: false,
     },
     mes: {
-        type: DataTypes.STRING(20),
-        allowNull: false,
+        type: DataTypes.STRING(50),
+        allowNull: true,
     },
     usuario_aceptacion: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        references: {
-            model: Usuario,
-            key: 'id_usuario',
-        },
     },
     fecha_aceptacion: {
         type: DataTypes.DATE,
@@ -27,10 +27,6 @@ const MesesCierre = sequelize.define('MesesCierre', {
     usuario_cancelacion: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        references: {
-            model: Usuario,
-            key: 'id_usuario',
-        },
     },
     fecha_cancelacion: {
         type: DataTypes.DATE,
@@ -38,24 +34,15 @@ const MesesCierre = sequelize.define('MesesCierre', {
     },
     usuario_alta: {
         type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: Usuario,
-            key: 'id_usuario',
-        },
+        allowNull: true,
     },
     fecha_alta: {
         type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
+        allowNull: true,
     },
     usuario_baja: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        references: {
-            model: Usuario,
-            key: 'id_usuario',
-        },
     },
     fecha_baja: {
         type: DataTypes.DATE,
