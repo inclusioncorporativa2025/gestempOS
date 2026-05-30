@@ -126,6 +126,44 @@ const buildResetEmailHtml = ({ nombre, enlace, ttlTexto }) =>
     </tr>
   `);
 
+const buildInvitacionEmpleadoHtml = ({
+  nombre,
+  nombreEmpresa,
+  emailLogin,
+  enlace,
+  ttlTexto,
+  urlApp,
+}) =>
+  emailLayout(`
+    <tr>
+      <td style="padding:36px 40px 8px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <h1 style="margin:0 0 16px 0; font-size:22px; color:#0f1020;">Invitación a Ficha en el Trabajo</h1>
+        <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">Hola <strong>${nombre}</strong>,</p>
+        <p style="margin:0 0 20px 0; font-size:15px; line-height:1.6; color:#444;">
+          Has sido invitado a unirte a <strong>${nombreEmpresa}</strong> en la plataforma <strong>Ficha en el Trabajo</strong>.
+        </p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px 0; background:#f9fafb; border-radius:8px; font-family:Arial,Helvetica,sans-serif;">
+          <tr>
+            <td style="padding:16px 20px; font-size:14px; color:#444;">
+              <p style="margin:0 0 8px 0;"><strong>Empresa:</strong> ${nombreEmpresa}</p>
+              <p style="margin:0 0 8px 0;"><strong>Usuario de acceso:</strong> ${emailLogin}</p>
+              <p style="margin:0;"><strong>URL de la aplicación:</strong> <a href="${urlApp}" style="color:#2BA9E0;">${urlApp}</a></p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:0 0 28px 0; font-size:15px; line-height:1.6; color:#444;">
+          Pulsa el botón para crear tu contraseña y activar tu cuenta. El enlace es válido durante <strong>${ttlTexto}</strong>.
+        </p>
+      </td>
+    </tr>
+    ${bloqueBotonEnlace(enlace, 'Crear mi contraseña')}
+    <tr>
+      <td style="padding:0 40px 24px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <p style="margin:0; font-size:13px; color:#777;">Si no esperabas esta invitación, puedes ignorar este correo.</p>
+      </td>
+    </tr>
+  `);
+
 const buildWelcomeEmailHtml = ({
   nombre,
   nombreEmpresa,
@@ -240,6 +278,36 @@ const enviarBienvenidaEmpresa = async (usuario, datosEmpresa) => {
   return enlace;
 };
 
+/**
+ * Invitación a empleado/supervisor/inspector recién dado de alta.
+ * Token de contraseña con la misma validez que bienvenida empresa (7 días por defecto).
+ */
+const enviarInvitacionEmpleado = async (usuario, { nombreEmpresa }) => {
+  const ttlMinutos = WELCOME_TOKEN_TTL_MINUTES;
+  const ttlTexto = formatTtlTexto(ttlMinutos);
+  const { enlace } = await asignarTokenContrasena(usuario, ttlMinutos);
+
+  try {
+    await enviarCorreo({
+      to: usuario.email,
+      subject: 'Ficha en el Trabajo - Invitación para crear tu contraseña',
+      html: buildInvitacionEmpleadoHtml({
+        nombre: usuario.nombre,
+        nombreEmpresa: nombreEmpresa || 'tu empresa',
+        emailLogin: usuario.email,
+        enlace,
+        ttlTexto,
+        urlApp: FRONTEND_URL,
+      }),
+    });
+  } catch (mailError) {
+    console.error('Error enviando email de invitación:', mailError.message);
+    throw mailError;
+  }
+
+  return enlace;
+};
+
 module.exports = {
   hashToken,
   RESET_TOKEN_TTL_MINUTES,
@@ -247,4 +315,5 @@ module.exports = {
   WELCOME_TOKEN_TTL_DAYS,
   generarYEnviarReset,
   enviarBienvenidaEmpresa,
+  enviarInvitacionEmpleado,
 };

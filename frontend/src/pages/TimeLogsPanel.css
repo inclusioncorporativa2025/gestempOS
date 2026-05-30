@@ -152,6 +152,23 @@
   background: #fafbfc;
 }
 
+.tlp-acciones {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.tlp-map-btn {
+  color: #1677ff;
+  font-size: 16px;
+}
+
+.tlp-map-btn:hover {
+  color: #4096ff !important;
+  background: rgba(22, 119, 255, 0.08) !important;
+}
+
 .tlp-edit-btn {
   color: #5a6472;
   font-size: 16px;

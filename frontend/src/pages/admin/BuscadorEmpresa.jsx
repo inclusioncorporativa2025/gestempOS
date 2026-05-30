@@ -14,8 +14,15 @@ import {
   Modal,
   Checkbox,
   Tag,
+  Tooltip,
 } from 'antd';
-import { SearchOutlined, PlusOutlined } from '@ant-design/icons';
+import {
+  SearchOutlined,
+  PlusOutlined,
+  EditOutlined,
+  StopOutlined,
+  RedoOutlined,
+} from '@ant-design/icons';
 import {
   crearEmpresa,
   editEmpresa,
@@ -262,43 +269,54 @@ const BuscadorEmpresa = () => {
               render: (_, record) => {
                 const activa = empresaEstaActiva(record);
                 return (
-                  <Row gutter={8} wrap>
+                  <div className="be-acciones">
                     {activa && (
-                      <Col>
-                        <Button type="link" onClick={() => handleEdit(record)}>
-                          Editar
-                        </Button>
-                      </Col>
+                      <Tooltip title="Editar">
+                        <Button
+                          type="text"
+                          icon={<EditOutlined />}
+                          className="be-accion-btn be-accion-btn--edit"
+                          onClick={() => handleEdit(record)}
+                          aria-label="Editar"
+                        />
+                      </Tooltip>
                     )}
                     {activa ? (
-                      <Col>
-                        <Popconfirm
-                          title="¿Estás seguro de dar de baja esta empresa?"
-                          onConfirm={() => handleDelete(record.id_empresa)}
-                          okText="Sí"
-                          cancelText="No"
-                        >
-                          <Button type="link" danger>
-                            Dar de baja
-                          </Button>
-                        </Popconfirm>
-                      </Col>
+                      <Popconfirm
+                        title="¿Estás seguro de dar de baja esta empresa?"
+                        onConfirm={() => handleDelete(record.id_empresa)}
+                        okText="Sí"
+                        cancelText="No"
+                      >
+                        <Tooltip title="Dar de baja">
+                          <Button
+                            type="text"
+                            danger
+                            icon={<StopOutlined />}
+                            className="be-accion-btn"
+                            aria-label="Dar de baja"
+                          />
+                        </Tooltip>
+                      </Popconfirm>
                     ) : (
-                      <Col>
-                        <Popconfirm
-                          title="¿Reactivar esta empresa?"
-                          description="Se restaurará el acceso y los vínculos con el administrador."
-                          onConfirm={() => handleReactivar(record.id_empresa)}
-                          okText="Reactivar"
-                          cancelText="Cancelar"
-                        >
-                          <Button type="link" className="be-reactivar-btn">
-                            Reactivar
-                          </Button>
-                        </Popconfirm>
-                      </Col>
+                      <Popconfirm
+                        title="¿Reactivar esta empresa?"
+                        description="Se restaurará el acceso y los vínculos con el administrador."
+                        onConfirm={() => handleReactivar(record.id_empresa)}
+                        okText="Reactivar"
+                        cancelText="Cancelar"
+                      >
+                        <Tooltip title="Reactivar">
+                          <Button
+                            type="text"
+                            icon={<RedoOutlined />}
+                            className="be-accion-btn be-accion-btn--reactivar"
+                            aria-label="Reactivar"
+                          />
+                        </Tooltip>
+                      </Popconfirm>
                     )}
-                  </Row>
+                  </div>
                 );
               },
             },

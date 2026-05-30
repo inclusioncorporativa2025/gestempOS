@@ -145,12 +145,19 @@ const Home = () => {
       } else {
         const config = ACCIONES[tipoId];
         message.success(config ? `${config.nombre} registrada correctamente` : 'Fichaje registrado');
+        const precisionM = response.ubicacionPrecisionM;
+        if (guardarUbicacion && precisionM != null && precisionM > 80) {
+          message.warning(
+            `Ubicación guardada con precisión aproximada (±${Math.round(precisionM)} m). Para mejorarla, usa el móvil con GPS activo y buena señal.`,
+            8,
+          );
+        }
         await refetch();
         notifyJornadaActualizada();
       }
     } catch (error) {
       console.error('Error al crear registro:', error);
-      message.error('Ocurrió un error al registrar el fichaje');
+      message.error(error.message || 'Ocurrió un error al registrar el fichaje');
     } finally {
       setLoading(false);
       setLoadingId(null);

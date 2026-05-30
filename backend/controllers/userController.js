@@ -9,7 +9,11 @@ const Descansos = require('../models/Descansos');
 const axios = require('axios');
 const Empresa = require('../models/Empresa');
 const {crearUsuarioRepo,crearUsuarioHorario} = require('../repositorios/usuarioRepository');
-const {crearUsuarioEmpresa,validarCrearUsuario} = require('../repositorios/usuariosEmpresasRepository');
+const {
+  crearUsuarioEmpresa,
+  obtenerDisponibilidadLicencias,
+} = require('../repositorios/usuariosEmpresasRepository');
+const { enviarInvitacionEmpleado } = require('../utils/mailService');
 const { Op } = require('sequelize');
 const dayjs = require('dayjs');
 const isoWeek = require('dayjs/plugin/isoWeek');
@@ -118,9 +122,9 @@ const crearUsuario= async (req, res) => {
     try{
         const date = new Date()
         const {email,nombreUsuario,dni, idEmpresa, idUsuarioAccion, tipoUsuario, horario} = req.body;
-        const validar = await validarCrearUsuario(idEmpresa);
+        const disponibilidad = await obtenerDisponibilidadLicencias(idEmpresa);
 
-        if(validar){
+        if(disponibilidad.disponible){
             const usuario = await crearUsuarioRepo(nombreUsuario,email,date,idUsuarioAccion,dni, tipoUsuario);
             if(usuario.name === 'SequelizeUniqueConstraintError'){
                 res.status(500).json({
@@ -129,25 +133,49 @@ const crearUsuario= async (req, res) => {
                   });
 
             }else{
-            const usuarioEmpresa = await crearUsuarioEmpresa(usuario.dataValues.id_usuario, idEmpresa, idUsuarioAccion, date);
-            const usuarioJornada = await crearUsuarioHorario (usuario.dataValues.id_usuario,horario, idUsuarioAccion,idEmpresa);
-
-            // El usuario se crea sin contraseña (requiere_reset_password = true):
-            // establecerá su contraseña mediante el flujo de restablecimiento por email.
-
-            res.status(201).json({
-            message: 'Usuario creado o actualizado exitosamente',
-            creada: true,
-            });
+            await crearUsuarioEmpresa(usuario.dataValues.id_usuario, idEmpresa, idUsuarioAccion, date);
+            if (horario) {
+              await crearUsuarioHorario(usuario.dataValues.id_usuario, horario, idUsuarioAccion, idEmpresa);
             }
 
-        }else{
+            const empresa = await Empresa.findOne({ where: { id_empresa: idEmpresa } });
+            const usuarioDb = await Usuario.findByPk(usuario.dataValues.id_usuario);
 
-              res.status(200).json({
-                message: 'Número de licencias superado',
-                creada: false,
+            let emailInvitacionEnviado = true;
+            let devInvitacionUrl = null;
 
-                });
+            try {
+              devInvitacionUrl = await enviarInvitacionEmpleado(usuarioDb, {
+                nombreEmpresa: empresa?.nombre,
+              });
+            } catch (mailError) {
+              emailInvitacionEnviado = false;
+              console.error('Usuario creado pero falló el email de invitación:', mailError.message);
+            }
+
+            const respuesta = {
+              message: emailInvitacionEnviado
+                ? 'Usuario creado. Se ha enviado un correo de invitación para crear la contraseña (válido 7 días).'
+                : 'Usuario creado, pero no se pudo enviar el correo de invitación. Use "Olvidé mi contraseña" con su email.',
+              creada: true,
+              emailInvitacionEnviado,
+            };
+
+            if (process.env.NODE_ENV !== 'production' && devInvitacionUrl) {
+              respuesta.devInvitacionUrl = devInvitacionUrl;
+            }
+
+            res.status(201).json(respuesta);
+            }
+
+        } else {
+            res.status(200).json({
+              creada: false,
+              codigo: 'LICENCIAS_AGOTADAS',
+              message: 'No tiene plazas disponibles. Póngase en contacto con soporte para ampliar las licencias.',
+              licencias: disponibilidad.licencias,
+              usadas: disponibilidad.usadas,
+            });
         }
 
     } catch (error) {

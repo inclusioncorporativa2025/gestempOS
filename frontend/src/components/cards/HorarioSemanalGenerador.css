@@ -1,0 +1,65 @@
+.horario-generador {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: #f6f8fa;
+  border: 1px solid #e8ecf0;
+  border-radius: 8px;
+}
+
+.horario-generador__header {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.horario-generador__icon {
+  font-size: 18px;
+  color: var(--color-primary, #1677ff);
+  margin-top: 2px;
+}
+
+.horario-generador__hint {
+  display: block;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.horario-generador__fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.horario-generador__field--tipo {
+  flex: 0 1 160px;
+  min-width: 140px;
+}
+
+.horario-generador__field--time {
+  flex: 0 1 130px;
+  min-width: 120px;
+}
+
+.horario-generador__label {
+  display: block;
+  font-size: 12px;
+  color: #5a6472;
+  margin-bottom: 4px;
+}
+
+.horario-generador__full {
+  width: 100%;
+}
+
+.horario-generador__action {
+  display: flex;
+  align-items: flex-end;
+  flex: 0 0 auto;
+  padding-bottom: 1px;
+}
+
+.horario-generador__action .ant-btn {
+  white-space: nowrap;
+}

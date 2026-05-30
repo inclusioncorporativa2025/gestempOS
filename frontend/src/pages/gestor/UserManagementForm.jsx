@@ -3,13 +3,44 @@ import { Modal,Layout, Card, Row, Col, Button, Form, Input, notification, Upload
 import { UserAddOutlined, UploadOutlined, InboxOutlined, DownloadOutlined } from '@ant-design/icons';
 import * as XLSX from 'xlsx'; // Importamos la biblioteca para manejar Excel
 
-import { crearUsuario ,importarUsuariosEmpresa} from "../../features/user/usuarioService";
+import { crearUsuario, importarUsuariosEmpresa } from '../../features/user/usuarioService';
+import { SUPPORT_EMAIL } from '../../constants/support';
 import { obtenerJornadas, obtenerJornadasByIdEmpresa } from "../../features/jornada/jornadaService";
 import './UserManagementForm.css';
 
 const { Dragger } = Upload;
 const { Title } = Typography;
 const { Option } = Select;
+
+const etiquetaTipoUsuario = (tipoUsuario) => {
+  if (String(tipoUsuario) === '4') return 'Supervisor';
+  if (String(tipoUsuario) === '5') return 'Empleado';
+  if (String(tipoUsuario) === '6') return 'Inspector';
+  return 'Usuario';
+};
+
+const mostrarAlertaSinPlazas = (response) => {
+  Modal.warning({
+    title: 'Sin plazas disponibles',
+    content: (
+      <div>
+        <p>{response?.message || 'No tiene plazas disponibles para dar de alta a más usuarios.'}</p>
+        {response?.licencias != null && (
+          <p style={{ marginTop: 8 }}>
+            Licencias contratadas: <strong>{response.licencias}</strong>
+            {' · '}
+            En uso: <strong>{response.usadas}</strong>
+          </p>
+        )}
+        <p style={{ marginTop: 12 }}>
+          Póngase en contacto con soporte en{' '}
+          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> para solicitar más licencias.
+        </p>
+      </div>
+    ),
+    okText: 'Entendido',
+  });
+};
 
 const UserManagementForm = () => {
   const [selectedButton, setSelectedButton] = useState(null); // Estado para manejar el botón seleccionado
@@ -18,6 +49,8 @@ const UserManagementForm = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [tipoUsuario, setTipoUsuario] = useState('Trabajador');
   const [tipoJornada, setTipoJornada] = useState('');
+  const [inviteForm] = Form.useForm();
+  const [inspectorForm] = Form.useForm();
   
   // Función para obtener las jornadas desde la API
   const obtenerTipoJornadas = async () => {
@@ -60,14 +93,26 @@ const UserManagementForm = () => {
     try {
       const response = await crearUsuario(values.email, values.nombreCompleto, values.Identificador, 6, null);
       if (!response.creada) {
-        notification.error({
-          message: response.message,
-          description: response.message,
+        if (response.codigo === 'LICENCIAS_AGOTADAS') {
+          mostrarAlertaSinPlazas(response);
+        } else {
+          notification.error({
+            message: response.message,
+            description: response.message,
+          });
+        }
+      } else if (response.emailInvitacionEnviado === false) {
+        inspectorForm.resetFields();
+        notification.warning({
+          message: 'Usuario creado sin correo',
+          description:
+            response.message ||
+            `Inspector creado, pero no se pudo enviar el email a ${values.email}. Puede usar "Olvidé mi contraseña".`,
         });
       } else {
+        inspectorForm.resetFields();
         notification.success({
-          message: 'Invitación Enviada',
-          description: `Se ha enviado una invitación al inspector ${values.email}.`,
+          message: `Inspector "${values.nombreCompleto}" creado, se le ha enviado el email de invitación.`,
         });
       }
     } catch (error) {
@@ -82,20 +127,32 @@ const UserManagementForm = () => {
     try {
       const response = await crearUsuario(values.email, values.nombreCompleto, values.dni, values.tipoUsuario, values.tipoHorario);
       if (!response.creada) {
-        notification.error({
-          message: response.message,
-          description: response.message,
+        if (response.codigo === 'LICENCIAS_AGOTADAS') {
+          mostrarAlertaSinPlazas(response);
+        } else {
+          notification.error({
+            message: response.message,
+            description: response.message,
+          });
+        }
+      } else if (response.emailInvitacionEnviado === false) {
+        inviteForm.resetFields();
+        const tipo = etiquetaTipoUsuario(values.tipoUsuario);
+        notification.warning({
+          message: `${tipo} "${values.nombreCompleto}" creado, pero no se pudo enviar el email de invitación.`,
+          description: 'Puede usar «Olvidé mi contraseña» con su correo para activar la cuenta.',
         });
       } else {
+        inviteForm.resetFields();
+        const tipo = etiquetaTipoUsuario(values.tipoUsuario);
         notification.success({
-          message: 'Invitación Enviada',
-          description: `Se ha enviado una invitación a ${values.email}.`,
+          message: `${tipo} "${values.nombreCompleto}" creado, se le ha enviado el email de invitación.`,
         });
       }
     } catch (error) {
       notification.error({
         message: error.message,
-        description: `Error enviado invitación a ${values.email}.`,
+        description: `Error enviando invitación a ${values.email}.`,
       });
     }
   };
@@ -249,7 +306,7 @@ const UserManagementForm = () => {
   } else if (selectedButton === 'addInspector') {
     return (
       <Card title="Alta Inspector">
-        <Form layout="vertical" onFinish={crearInspector}>
+        <Form form={inspectorForm} layout="vertical" onFinish={crearInspector}>
           <Form.Item
             label="Nombre Completo"
             name="nombreCompleto"

@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Layout, Card, Table, Button, Typography, Row, Col, Modal, Form, Input, TimePicker, message, Select, DatePicker, Checkbox, Collapse, Empty, Dropdown, Tooltip } from 'antd';
-import { MoreOutlined, SendOutlined, ExportOutlined, PlusCircleOutlined, EditOutlined } from '@ant-design/icons';
+import {
+  MoreOutlined,
+  SendOutlined,
+  ExportOutlined,
+  PlusCircleOutlined,
+  EditOutlined,
+  EnvironmentOutlined,
+} from '@ant-design/icons';
 import { crearPeticionEdicion, crearPeticionCierreMes, getPeticionesByIdUsuario, getPeticionesByIdEmpresa } from "../features/fichaje/fichajeService";
 import { getDatosUsuarioById } from "../features/fichaje/fichajeService";
 import { descargarExcelDesdeAPI } from "../features/user/usuarioService";
@@ -13,6 +20,8 @@ import moment from 'moment';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'; // <-- Importa el plugin
 import 'dayjs/locale/es';
 import { getIdUsuario, getIdEmpresa } from '../utils/authSession';
+import { parseUbicacionCoords } from '../utils/ubicacion';
+import UbicacionMapModal from '../components/UbicacionMapModal';
 import './TimeLogsPanel.css';
 
 dayjs.extend(utc); // Extiende el uso de UTC
@@ -68,7 +77,19 @@ const [selectedEntrada, setSelectedEntrada] = useState(null);
   const [horaDesde, setHoraDesde] = useState(null);
   const [horaHasta, setHoraHasta] = useState(null);
 const [diasExpandidos, setDiasExpandidos] = useState([]);
+const [mapModalOpen, setMapModalOpen] = useState(false);
+const [mapUbicacion, setMapUbicacion] = useState(null);
 const entradas = ['Vacaciones','Baja','Asuntos Propios','Otros']
+
+    const verUbicacionEnMapa = (ubicacion) => {
+      setMapUbicacion(ubicacion);
+      setMapModalOpen(true);
+    };
+
+    const cerrarMapaUbicacion = () => {
+      setMapModalOpen(false);
+      setMapUbicacion(null);
+    };
 
     const setVisibleModalExportar =  (id_usuario)=> {
         setIdUsuario(id_usuario);
@@ -396,28 +417,51 @@ const handleMonthChange = (date, dateString) => {
     };
 
     const renderAcciones = (_, record) => {
-      if (record.tipo !== 'Fichaje') return null;
+      const tiposConUbicacion = ['Fichaje', 'Descanso'];
+      if (!tiposConUbicacion.includes(record.tipo)) return null;
 
       const mesSeleccionadoFormateado =
         selectedMonth != null && selectedMonth ? selectedMonth.format('YYYY-MM') : null;
       const mesCerrado = mesesCierre.some((mc) => mc.mes === mesSeleccionadoFormateado);
 
       const isEditable =
+        record.tipo === 'Fichaje' &&
         !fichajesConPeticion.includes(record.key) &&
         !!record.checkOut &&
         (!mesSeleccionadoFormateado || !mesCerrado);
 
+      const ubicaciones = [];
+      const coordsEntrada = parseUbicacionCoords(record.ubicacionEntrada);
+      const coordsSalida = parseUbicacionCoords(record.ubicacionSalida);
+      if (coordsEntrada) ubicaciones.push({ key: 'entrada', label: 'entrada', ...coordsEntrada });
+      if (coordsSalida) ubicaciones.push({ key: 'salida', label: 'salida', ...coordsSalida });
+
       return (
-        <Tooltip title={isEditable ? 'Editar fichaje' : 'No se puede editar este registro'}>
-          <Button
-            type="text"
-            className="tlp-edit-btn"
-            icon={<EditOutlined />}
-            disabled={!isEditable}
-            onClick={() => showEditModal(record)}
-            aria-label="Editar fichaje"
-          />
-        </Tooltip>
+        <div className="tlp-acciones">
+          {ubicaciones.map((ubicacion) => (
+            <Tooltip key={ubicacion.key} title={`Ver ubicación de ${ubicacion.label}`}>
+              <Button
+                type="text"
+                className="tlp-map-btn"
+                icon={<EnvironmentOutlined />}
+                onClick={() => verUbicacionEnMapa(ubicacion)}
+                aria-label={`Ver ubicación de ${ubicacion.label}`}
+              />
+            </Tooltip>
+          ))}
+          {record.tipo === 'Fichaje' && (
+            <Tooltip title={isEditable ? 'Editar fichaje' : 'No se puede editar este registro'}>
+              <Button
+                type="text"
+                className="tlp-edit-btn"
+                icon={<EditOutlined />}
+                disabled={!isEditable}
+                onClick={() => showEditModal(record)}
+                aria-label="Editar fichaje"
+              />
+            </Tooltip>
+          )}
+        </div>
       );
     };
 
@@ -704,6 +748,12 @@ const handleMonthChange = (date, dateString) => {
                         onChange={(e) => setComentario(e.target.value)}
                         />                    
                 </Modal>
+
+            <UbicacionMapModal
+              open={mapModalOpen}
+              onClose={cerrarMapaUbicacion}
+              ubicacion={mapUbicacion}
+            />
         </Layout>
 
         

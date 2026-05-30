@@ -121,6 +121,30 @@
   background: #fafafa !important;
 }
 
-.be-reactivar-btn {
+.be-acciones {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.be-accion-btn {
+  font-size: 16px;
+}
+
+.be-accion-btn--edit {
   color: #1677ff;
+}
+
+.be-accion-btn--edit:hover {
+  color: #4096ff !important;
+  background: rgba(22, 119, 255, 0.08) !important;
+}
+
+.be-accion-btn--reactivar {
+  color: #1677ff;
+}
+
+.be-accion-btn--reactivar:hover {
+  color: #4096ff !important;
+  background: rgba(22, 119, 255, 0.08) !important;
 }

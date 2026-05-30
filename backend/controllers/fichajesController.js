@@ -9,6 +9,8 @@ const Peticiones = require('../models/Peticiones');
 const Descansos = require('../models/Descansos');
 const MesesCierre = require('../models/MesesCierre');
 const { createConId } = require('../utils/empresaScope');
+const { formatUbicacionStorage } = require('../utils/ubicacion');
+const { getDireccionDesdeLatLng } = require('../utils/reverseGeocode');
 const nodemailer = require('nodemailer');
 const path = require('path');
 const {getTipoRegistro} = require('./companyController');
@@ -261,7 +263,7 @@ const crearRegistro = async (req, res) => {
       return res.status(400).json({ error: 'Datos incompletos' });
     }
 
-    const ubicacionSt = `${ubicacion.latitude}-${ubicacion.longitude}`;
+    const ubicacionSt = formatUbicacionStorage(ubicacion);
 
     const ultimoRegistro = await getUltimoRegistro(idUsuario, idEmpresa);
     const ultimoDescanso = await getUltimoDescanso(idUsuario, idEmpresa);
@@ -902,9 +904,27 @@ async function enviarCorreoNotificacion(destinatarios, tipoNotificacion,usuarios
   }
 }
 
+const reverseGeocode = async (req, res) => {
+  const lat = Number(req.body?.lat);
+  const lng = Number(req.body?.lng);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return res.status(400).json({ error: 'Coordenadas inválidas' });
+  }
+
+  try {
+    const direccion = await getDireccionDesdeLatLng(lat, lng);
+    return res.status(200).json({ direccion });
+  } catch (error) {
+    console.error('Error en reverseGeocode:', error.message);
+    return res.status(500).json({ error: 'No se pudo obtener la dirección' });
+  }
+};
+
 module.exports = {
     getDatosUsuario,
     crearRegistro,
+    reverseGeocode,
     getTipoRegistroByIdUsuario,
     deleteRegistro,
     getHorasTrabajadasHoy,

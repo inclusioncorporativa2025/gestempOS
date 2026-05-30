@@ -17,6 +17,7 @@ const {
   getHorasTrabajadasHoy,
   editarHoras,
   getDatosUsuarioById,
+  reverseGeocode,
 } = require('../controllers/fichajesController');
 const { requireRole, ROLE_GROUPS } = require('../middleware/authMiddleware');
 
@@ -24,6 +25,7 @@ const GESTION_PETICIONES = ROLE_GROUPS.COMPANY_STAFF;
 
 router.post('/getData', requireRole(ROLE_GROUPS.FICHAJE), getDatosUsuario);
 router.post('/getDataById', requireRole(ROLE_GROUPS.FICHAJE), getDatosUsuarioById);
+router.post('/reverseGeocode', requireRole(ROLE_GROUPS.FICHAJE), reverseGeocode);
 
 router.post('/create', requireRole(ROLE_GROUPS.FICHAJE), crearRegistro);
 router.post('/getById', requireRole(ROLE_GROUPS.FICHAJE), getTipoRegistroByIdUsuario);

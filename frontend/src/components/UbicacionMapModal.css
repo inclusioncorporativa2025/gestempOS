@@ -1,0 +1,59 @@
+.ubicacion-map-address-block {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: #f6f8fa;
+  border-radius: 8px;
+  border: 1px solid #e8ecf0;
+}
+
+.ubicacion-map-address-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8c939a;
+  margin-bottom: 4px;
+}
+
+.ubicacion-map-address {
+  display: block;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #1f2933;
+}
+
+.ubicacion-map-address-spin {
+  margin-top: 4px;
+}
+
+.ubicacion-map-wrap {
+  height: 360px;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e8ecf0;
+}
+
+.ubicacion-map {
+  height: 100%;
+  width: 100%;
+  z-index: 0;
+}
+
+.ubicacion-map-coords {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.ubicacion-map-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.ubicacion-map-modal .ant-modal-body {
+  padding-top: 12px;
+}

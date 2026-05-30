@@ -5,8 +5,9 @@ import moment from 'moment';  // Importar moment.js para formatear fechas y hora
 import { crearJornada,obtenerUsuariosJornadas, deleteJornada,editarJornada,obtenerJornadasByIdEmpresa } from "../../features/jornada/jornadaService";
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';  
-import AnadirDiaCard from './AnadirDiaCard'; // Importar el nuevo componente
-import RegistroDiaCard from './RegistroDiaCard'; // Importar el nuevo componente
+import AnadirDiaCard from './AnadirDiaCard';
+import RegistroDiaCard from './RegistroDiaCard';
+import HorarioSemanalGenerador from './HorarioSemanalGenerador';
 import './GestionTipoUsuariosCard.css';
 
 dayjs.locale('es');  
@@ -430,11 +431,13 @@ const GestionTipoUsuariosCard = () => {
                             {/* Mostrar item1 e item2 si se selecciona "Partida" */}
                             {tipoJornada === '1' && (
                                 <>
+                                  <HorarioSemanalGenerador
+                                    form={addForm}
+                                    diasSeleccionados={diasSeleccionados}
+                                  />
                                   {diasSeleccionados.map((d) => (
                                     <AnadirDiaCard key={d} dia={d} form={addForm} />
-                                    ))}
-
-
+                                  ))}
                                 </>
                             )}
                         </Card>
