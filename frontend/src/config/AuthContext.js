@@ -1,15 +1,35 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import {
+  loadSessionFromStorage,
+  setAuthToken,
+  clearAuthSession,
+  claimsToUser,
+} from '../utils/authSession';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // `null` indica que no hay usuario autenticado
+  const [user, setUser] = useState(null);
+  const [ready, setReady] = useState(false);
 
-  const login = (userData) => setUser(userData); // Al iniciar sesión, guarda la información del usuario
-  const logout = () => setUser(null); // Al cerrar sesión, elimina la información del usuario
+  useEffect(() => {
+    const claims = loadSessionFromStorage();
+    setUser(claimsToUser(claims));
+    setReady(true);
+  }, []);
+
+  const login = useCallback((token) => {
+    const claims = setAuthToken(token);
+    setUser(claimsToUser(claims));
+  }, []);
+
+  const logout = useCallback(() => {
+    clearAuthSession();
+    setUser(null);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, ready, isAuthenticated: Boolean(user) }}>
       {children}
     </AuthContext.Provider>
   );

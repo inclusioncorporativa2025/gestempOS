@@ -1,3 +1,5 @@
+import { getIdUsuario, getEsquema } from '../../utils/authSession';
+
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL+'empresas'; 
 const API_BASE_URL_FICHA = process.env.REACT_APP_API_BASE_URL+'ficha/getById'; 
 const API_BASE_URL_FICHA_UltimoRegistro = process.env.REACT_APP_API_BASE_URL+'ficha/getUltimoRegistroById'; 
@@ -5,7 +7,7 @@ const API_BASE_URL_FICHA_UltimoRegistro = process.env.REACT_APP_API_BASE_URL+'fi
 //llamada ejempo
 export const crearEmpresa = async (values) => {
     try {
-        const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
+        const idUsuario = getIdUsuario(); 
 
         const response = await fetch(API_BASE_URL+`/create`, {
           method: 'POST',
@@ -29,8 +31,8 @@ export const crearEmpresa = async (values) => {
 
 export const getUltimoRegistroById = async () => {
   try{
-  const esquema = 'empresa'+parseInt(sessionStorage.getItem('esquema'));
-  const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
+  const esquema = 'empresa' + getEsquema();
+  const idUsuario = getIdUsuario(); 
 
   const response = await fetch(API_BASE_URL_FICHA_UltimoRegistro, {
     method: 'POST',
@@ -56,7 +58,7 @@ export const getUltimoRegistroById = async () => {
 //llamada ejempo
 export const getTipoRegistro = async () => {
   try {
-    const esquema = 'empresa'+parseInt(sessionStorage.getItem('esquema'));
+    const esquema = 'empresa' + getEsquema();
 
       
       const response = await fetch(API_BASE_URL+`/getTipoRegistro`, {
@@ -83,8 +85,8 @@ export const getTipoRegistro = async () => {
 //llamada ejempo
 export const getTipoRegistroByIdUsuario = async () => {
   try {
-    const esquema = 'empresa'+parseInt(sessionStorage.getItem('esquema'));
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
+    const esquema = 'empresa' + getEsquema();
+    const idUsuario = getIdUsuario(); 
 
       
       const response = await fetch(API_BASE_URL_FICHA, {
@@ -112,8 +114,8 @@ export const guardarTipoAcceso = async (nuevosDatos, datosOriginales) => {
     const tiposModificados = [];
     const tiposEliminados = [];
     const tiposNuevos = [];
-    const esquema = 'empresa'+parseInt(sessionStorage.getItem('esquema'));
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
+    const esquema = 'empresa' + getEsquema();
+    const idUsuario = getIdUsuario(); 
 
     // Detectar cambios y tipos nuevos
     nuevosDatos.forEach(tipo => {
@@ -208,7 +210,7 @@ export const getEmpresasUsuarios = async () => {
 export const editEmpresa = async (idEmpresa,datos) => {
 
   try {
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
+    const idUsuario = getIdUsuario(); 
 
     const response = await fetch(API_BASE_URL+`/edit`, {
         method: 'POST',
@@ -234,7 +236,7 @@ export const editEmpresa = async (idEmpresa,datos) => {
 export const eliminarEmpresa = async (idEmpresa) => {
 
   try {
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
+    const idUsuario = getIdUsuario(); 
 
     const response = await fetch(API_BASE_URL+`/delete`, {
         method: 'POST',

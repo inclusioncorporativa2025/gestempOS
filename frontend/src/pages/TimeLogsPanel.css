@@ -1,6 +1,18 @@
 .tlp-layout {
-  background-color: #f5f5f5;
-  margin: 0 auto;
+  width: 100%;
+  min-height: 100%;
+  background: #fff;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.tlp-layout > .ant-card {
+  border: none;
+  box-shadow: none;
+}
+
+.tlp-layout > .ant-card > .ant-card-body {
+  padding: 0;
 }
 
 .tlp-title {
@@ -42,4 +54,50 @@
   max-width: 400px;
   margin-top: 20px;
   margin-bottom: 20px;
+}
+
+.tlp-day-collapse {
+  background: transparent;
+  border: none;
+}
+
+.tlp-day-collapse > .ant-collapse-item {
+  margin-bottom: 10px;
+  border: 1px solid #eef0f4 !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  background: #fff;
+}
+
+.tlp-day-collapse > .ant-collapse-item > .ant-collapse-header {
+  align-items: center !important;
+  padding: 12px 16px !important;
+  background: #f8fafc;
+}
+
+.tlp-day-collapse > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box {
+  padding: 0 !important;
+}
+
+.tlp-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding-right: 8px;
+}
+
+.tlp-day-title {
+  font-weight: var(--font-weight-medium, 500);
+  color: #1a2332;
+}
+
+.tlp-day-count {
+  font-size: 0.85rem;
+  color: #6b7785;
+}
+
+.tlp-day-table .ant-table-thead > tr > th {
+  background: #fafbfc;
 }

@@ -359,21 +359,31 @@ const getTipoRegistroByIdUsuario = async (req, res)=> {
 const deleteRegistro = async (req, res)=> {
 
   try {
-      const {idRegistro, idEmpresa, fecha, usuarioAccion}  = req.body;
+      const { idRegistro, idEmpresa, fecha, usuarioAccion } = req.body;
+      const idFichaje = String(idRegistro).replace(/^fichaje-/, '');
 
-       const result = await Fichajes.update(
+      if (!idFichaje || !idEmpresa) {
+        return res.status(400).json({ error: 'Faltan datos para eliminar el fichaje' });
+      }
+
+      const [filasActualizadas] = await Fichajes.update(
         {
             fecha_baja: fecha,
             usuario_baja: usuarioAccion
         },
         {
-            where: { empresa_id: idEmpresa, id_fichaje: idRegistro }
+            where: { empresa_id: idEmpresa, id_fichaje: idFichaje, fecha_baja: null }
         }
     );
-      res.status(200).json({ message: 'Datos recuperados correctamente',result });
+
+      if (filasActualizadas === 0) {
+        return res.status(404).json({ error: 'Fichaje no encontrado o ya eliminado' });
+      }
+
+      res.status(200).json({ message: 'Fichaje eliminado correctamente', filasActualizadas });
   } catch (error) {
-      console.error('Error al obtener tipos de acceso:', error);
-      res.status(500).json({ error: 'Error al obtener tipos de acceso' });
+      console.error('Error al eliminar fichaje:', error);
+      res.status(500).json({ error: 'Error al eliminar el fichaje' });
   }
 };
 

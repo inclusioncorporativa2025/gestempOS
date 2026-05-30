@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Checkbox, Typography, notification, Modal } from 'antd';
-import { getUsuarioData } from "../features/user/usuarioService";
 import { doLogin, doForgotPassword } from "../features/auth/authService";
+import { useAuth } from '../config/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
 
@@ -13,39 +13,33 @@ const Login = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [email, setEmail] = useState("");
   const navigate = useNavigate();
+  const { user, login, ready } = useAuth();
 
-  // Maneja el inicio de sesión contra el backend (JWT).
+  useEffect(() => {
+    if (ready && user) {
+      navigate('/Home', { replace: true });
+    }
+  }, [ready, user, navigate]);
+
   const handleSubmit = async (values) => {
     setLoading(true);
 
     try {
-      await doLogin(values.email, values.password);
+      const data = await doLogin(values.email, values.password);
 
-      const datosUsuario = await getUsuarioData(values.email);
-
-      if (values.remember) {
-        localStorage.setItem('isLoggedIn', 'true');
-      } else {
-        sessionStorage.setItem('isLoggedIn', 'true');
+      if (!data?.token) {
+        throw new Error('No se recibió el token de sesión');
       }
 
-      sessionStorage.setItem('idUsuario', datosUsuario.usuario.id_usuario);
-      sessionStorage.setItem('idEmpresa', datosUsuario.empresa.id_empresa);
-      sessionStorage.setItem('nombreUsuario', datosUsuario.usuario.nombre);
-      sessionStorage.setItem('nombreEmpresa', datosUsuario.empresa.nombre);
-      sessionStorage.setItem('tipoUsuario', datosUsuario.usuario.tipo_usuario);
-      sessionStorage.setItem('esquema', datosUsuario.empresa.id_empresa);
-      sessionStorage.setItem('alias', datosUsuario.empresa.alias);
+      login(data.token);
 
       notification.success({
         message: "Inicio de sesión exitoso",
-        description: `Hola, ${datosUsuario.usuario.nombre}`,
+        description: `Hola, ${data.usuario?.nombre || ''}`,
       });
 
       navigate('/Home');
     } catch (error) {
-      // El usuario aún no tiene contraseña establecida (migración) o requiere reset.
-      // El backend ya ha enviado el correo automáticamente; solo informamos.
       if (error.code === 'PASSWORD_RESET_REQUIRED') {
         notification.info({
           message: "Restablecimiento de contraseña requerido",
@@ -66,7 +60,6 @@ const Login = () => {
   const openPasswordResetModal = () => setModalVisible(true);
   const closePasswordResetModal = () => setModalVisible(false);
 
-  // Solicita el correo de restablecimiento al backend.
   const handlePasswordReset = async (values) => {
     const correo = values?.email || email;
     if (!correo) {
@@ -101,10 +94,13 @@ const Login = () => {
     }
   };
 
+  if (!ready) {
+    return null;
+  }
+
   return (
     <div className="login-page">
       <div className="login-card">
-        {/* Mitad izquierda: imagen con velo degradado rosa/azul (se oculta en móvil) */}
         <div className="login-visual">
           <div className="login-visual-veil" />
           <div className="login-visual-content">
@@ -117,7 +113,6 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Mitad derecha: formulario de login */}
         <div className="login-form-panel">
           <div className="login-form-wrapper">
             <Title level={2} className="login-title">Iniciar Sesión</Title>

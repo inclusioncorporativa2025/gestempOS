@@ -21,8 +21,9 @@ const BuscadorEmpresa = () => {
         setLoading(true);
         try {
             const response = await getEmpresasUsuarios();
-            setData(response[0]);
-            setFilteredData(response[0]);
+            const lista = Array.isArray(response) ? response : [];
+            setData(lista);
+            setFilteredData(lista);
         } catch (error) {
             message.error('Error al cargar las empresas');
         } finally {
@@ -120,7 +121,7 @@ const BuscadorEmpresa = () => {
 
             <Card className="be-card-table">
                 <Table
-                    dataSource={filteredData}
+                    dataSource={Array.isArray(filteredData) ? filteredData : []}
                     loading={loading}
                     rowKey="id_empresa"
                     pagination={{ pageSize: 6 }}

@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const { Op } = require('sequelize');
 const Usuario = require('../models/Usuario');
+const UsuarioEmpresa = require('../models/UsuarioEmpresa');
+const Empresa = require('../models/Empresa');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRATION
@@ -176,11 +178,35 @@ const login = async (req, res) => {
     usuario.ultimo_login = new Date();
     await usuario.save();
 
+    let id_empresa = null;
+    let nombre_empresa = null;
+    let alias = null;
+
+    const usuarioEmpresa = await UsuarioEmpresa.findOne({
+      where: { id_usuario: usuario.id_usuario, fecha_baja: null },
+    });
+
+    if (usuarioEmpresa) {
+      const empresa = await Empresa.findOne({
+        where: { id_empresa: usuarioEmpresa.id_empresa, fecha_baja: null },
+      });
+      if (empresa) {
+        id_empresa = empresa.id_empresa;
+        nombre_empresa = empresa.nombre;
+        alias = empresa.alias;
+      }
+    }
+
     const token = jwt.sign(
       {
         id_usuario: usuario.id_usuario,
         email: usuario.email,
         tipo_usuario: usuario.tipo_usuario,
+        nombre: usuario.nombre,
+        id_empresa,
+        nombre_empresa,
+        alias,
+        esquema: id_empresa,
       },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
@@ -190,6 +216,9 @@ const login = async (req, res) => {
       message: 'Login exitoso',
       token,
       usuario: sanitizeUsuario(usuario),
+      empresa: id_empresa
+        ? { id_empresa, nombre: nombre_empresa, alias }
+        : null,
     });
   } catch (error) {
     console.error('Error en login:', error.message);

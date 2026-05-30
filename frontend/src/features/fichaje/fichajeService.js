@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import tz from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import { getFechaEuropeMadrid } from '../../utils/Helper';
+import { getIdUsuario, getIdEmpresa } from '../../utils/authSession';
 
 
 dayjs.extend(utc);
@@ -30,7 +31,7 @@ export const getUbicacion = () => {
 
 export const getCierresMensualesByIdEmpresa = async () => {
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idEmpresa = getIdEmpresa(); 
 
     const response = await fetch(API_BASE_URL+`/getCierresMensualesByIdEmpresa`, {
       method: 'POST',
@@ -52,8 +53,8 @@ export const getCierresMensualesByIdEmpresa = async () => {
 
 export const responderPeticionCierre = async (peticion, estado) => {
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa'));
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario'));
+    const idEmpresa = getIdEmpresa();
+    const idUsuario = getIdUsuario();
 
     const response = await fetch(API_BASE_URL + `/responderPeticionCierre`, {
       method: 'POST',
@@ -78,8 +79,8 @@ export const responderPeticionCierre = async (peticion, estado) => {
 
 export const getDatosUsuario = async () => {
   try {
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idUsuario = getIdUsuario(); 
+    const idEmpresa = getIdEmpresa(); 
 
     const response = await fetch(API_BASE_URL+`/getData`, {
       method: 'POST',
@@ -101,8 +102,8 @@ export const getDatosUsuario = async () => {
 
 export const crearPeticionEdicion = async (values) => {
   try {
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idUsuario = getIdUsuario(); 
+    const idEmpresa = getIdEmpresa(); 
 
     const response = await fetch(API_BASE_URL+`/crearPeticionEdicion`, {
       method: 'POST',
@@ -125,8 +126,8 @@ export const crearPeticionEdicion = async (values) => {
 
 export const crearPeticionCierreMes = async (mes) => {
   try {
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idUsuario = getIdUsuario(); 
+    const idEmpresa = getIdEmpresa(); 
 
     const response = await fetch(API_BASE_URL+`/crearPeticionCierreMes`, {
       method: 'POST',
@@ -149,7 +150,7 @@ export const crearPeticionCierreMes = async (mes) => {
 
 export const getPeticionesByIdEmpresa = async () => {
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idEmpresa = getIdEmpresa(); 
 
     const response = await fetch(API_BASE_URL+`/getPeticionesByIdEmpresa`, {
       method: 'POST',
@@ -172,7 +173,7 @@ export const getPeticionesByIdEmpresa = async () => {
 
 export const getDatosUsuarioMes = async (idUsuario,mes) => {
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idEmpresa = getIdEmpresa(); 
 
     const response = await fetch(API_BASE_URL+`/getDatosUsuarioMes`, {
       method: 'POST',
@@ -195,8 +196,8 @@ export const getDatosUsuarioMes = async (idUsuario,mes) => {
 
 export const responderPeticion = async (peticion, estado) => {
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa'));
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario'));
+    const idEmpresa = getIdEmpresa();
+    const idUsuario = getIdUsuario();
     const idPeticion = peticion.id_peticion;
     const response = await fetch(API_BASE_URL+`/responderPeticion`, {
       method: 'POST',
@@ -228,8 +229,8 @@ export const responderPeticion = async (peticion, estado) => {
 
 export const getPeticionesByIdUsuario = async () => {
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
+    const idEmpresa = getIdEmpresa(); 
+    const idUsuario = getIdUsuario(); 
 
     const response = await fetch(API_BASE_URL+`/getPeticionesByIdUsuario`, {
       method: 'POST',
@@ -254,7 +255,7 @@ export const getPeticionesByIdUsuario = async () => {
 
 export const getDatosUsuarioById = async (idUsuario) => {
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idEmpresa = getIdEmpresa(); 
 
     const response = await fetch(API_BASE_URL+`/getDataById`, {
       method: 'POST',
@@ -276,8 +277,8 @@ export const getDatosUsuarioById = async (idUsuario) => {
 
 export const crearRegistro = async (tipoRegistro, idUsuario,guardarUbicacion) => {
   try {
-    const usuarioAccion = parseInt(sessionStorage.getItem('idUsuario')); 
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const usuarioAccion = getIdUsuario(); 
+    const idEmpresa = getIdEmpresa(); 
     const fecha = getFechaEuropeMadrid();
     var ubicacion;
     if(guardarUbicacion){
@@ -308,34 +309,36 @@ export const crearRegistro = async (tipoRegistro, idUsuario,guardarUbicacion) =>
 
 
 export const eliminarRegistro = async (idRegistro) => {
-  try {
-    const usuarioAccion = parseInt(sessionStorage.getItem('idUsuario')); 
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
-    const fecha = getFechaEuropeMadrid();
+  const idFichaje = String(idRegistro).replace(/^fichaje-/, '');
+  const usuarioAccion = getIdUsuario();
+  const idEmpresa = getIdEmpresa();
+  const fecha = getFechaEuropeMadrid();
 
-    const response = await fetch(API_BASE_URL+`/delete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idRegistro, idEmpresa, fecha, usuarioAccion }),
-    });
+  const response = await fetch(API_BASE_URL + `/delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      idRegistro: idFichaje,
+      idEmpresa,
+      fecha,
+      usuarioAccion,
+    }),
+  });
 
-    if (!response.ok) {
-       await response.json();
-    }
+  const data = await response.json().catch(() => ({}));
 
-    const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || data.message || 'Error al eliminar el registro');
+  }
 
-    return data;  // Retorna la respuesta del servidor 
-  } catch (error) {
-    console.error('Error creando registro:', error);
-  }   
+  return data;
 };
 
 
 export const getHorasTotales = async () => {
   try {
-    const usuarioAccion = parseInt(sessionStorage.getItem('idUsuario')); 
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const usuarioAccion = getIdUsuario(); 
+    const idEmpresa = getIdEmpresa(); 
 
 
     const response = await fetch(API_BASE_URL+`/getHoras`, {
@@ -361,8 +364,8 @@ export const getHorasTotales = async () => {
 
 export const editarRegistro = async (values) => {
   try {
-    const usuarioAccion = parseInt(sessionStorage.getItem('idUsuario')); 
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const usuarioAccion = getIdUsuario(); 
+    const idEmpresa = getIdEmpresa(); 
 
       const horaEntrada = dayjs(values.nueva_entrada)
       .tz('Europe/Madrid', true)

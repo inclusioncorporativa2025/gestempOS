@@ -1,53 +1,64 @@
-import React from 'react';
-import { Button, Layout, Tooltip, notification } from 'antd';
-import { PoweroffOutlined, PhoneOutlined } from '@ant-design/icons';
-import { useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Layout } from 'antd';
+import { useLocation, Link } from 'react-router-dom';
+import { useEstadoJornada } from '../hooks/useEstadoJornada';
+import { useAuth } from '../config/AuthContext';
 import './Header.css';
 
 const { Header } = Layout;
 
+const esRutaFichaje = (pathname) =>
+  pathname === '/' || /^\/home$/i.test(pathname);
+
 const MyHeader = () => {
-  const location = useLocation(); // Obtiene la ruta actual
+  const location = useLocation();
+  const { estadoJornada, horasTrabajadas, refetch } = useEstadoJornada();
 
-  // Función para cerrar sesión
-  const handleLogout = () => {
-    sessionStorage.clear(); // Borra todo el contenido de sessionStorage
-    window.location.href = '/'; // Redirige al login
-  };
+  const enHome = esRutaFichaje(location.pathname);
+  const mostrarJornadaEnHeader =
+    !enHome && (estadoJornada === 'in' || estadoJornada === 'break');
 
-  const notificarSoporte = () => {
-    notification.info({
-      message: "Correo de soporte:",
-      description: `soporte@fichaeneltrabajo.es`,
-    });
-  };
+  useEffect(() => {
+    if (!enHome) {
+      refetch();
+    }
+  }, [enHome, location.pathname, refetch]);
 
-  const alias = sessionStorage.getItem('alias') || 'InCor';
+  const { user } = useAuth();
+  const alias = user?.alias || 'InCor';
 
   return (
     <Layout className="app-header-wrap">
       <Header className="app-header">
         <h1 className="app-header-title">{alias}</h1>
-        {/* Muestra el botón solo si no está en la página principal */}
+
         {location.pathname !== '/' && (
-          <div>
-            <Tooltip title="soporte@fichaeneltrabajo.es">
-              <Button
-                className="app-header-btn"
-                type="text"
-                onClick={notificarSoporte}
-                icon={<PhoneOutlined className="app-header-icon" />}
-              />
-            </Tooltip>
-            <Tooltip title="Cerrar sesión">
-              <Button
-                className="app-header-btn"
-                type="text"
-                onClick={handleLogout}
-                icon={<PoweroffOutlined className="app-header-icon" />}
-              />
-            </Tooltip>
-          </div>
+          <Link
+            to="/Home"
+            className={`app-header-jornada ${mostrarJornadaEnHeader ? 'app-header-jornada--visible' : ''}`}
+            aria-hidden={!mostrarJornadaEnHeader}
+            tabIndex={mostrarJornadaEnHeader ? 0 : -1}
+          >
+            {estadoJornada === 'in' && (
+              <>
+                <span
+                  className="app-header-jornada-dot app-header-jornada-dot--working"
+                  aria-hidden
+                />
+                <span className="app-header-jornada-time">{horasTrabajadas}</span>
+                <span className="app-header-jornada-label">Trabajando</span>
+              </>
+            )}
+            {estadoJornada === 'break' && (
+              <>
+                <span
+                  className="app-header-jornada-dot app-header-jornada-dot--pause"
+                  aria-hidden
+                />
+                <span className="app-header-jornada-label">Pausa</span>
+              </>
+            )}
+          </Link>
         )}
       </Header>
     </Layout>

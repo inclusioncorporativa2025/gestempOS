@@ -1,188 +1,271 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Typography, Col, Row, Select, message,Switch   } from 'antd';
-import { PlayCircleOutlined  } from '@ant-design/icons';
-import { getUltimoRegistroById } from '../features/empresas/empresasService';
+import { Button, Typography, message, Switch } from 'antd';
+import {
+  LoginOutlined,
+  LogoutOutlined,
+  CoffeeOutlined,
+  CheckCircleOutlined,
+} from '@ant-design/icons';
 import { crearRegistro } from '../features/fichaje/fichajeService';
 import { getFechaEuropeMadrid } from '../utils/Helper';
+import { useEstadoJornada, notifyJornadaActualizada } from '../hooks/useEstadoJornada';
+import { useAuth } from '../config/AuthContext';
+import ConfirmPopup from '../components/shared/ConfirmPopup';
 import './Home.css';
 
 const { Title } = Typography;
-const { Option } = Select;
+
+const ACCIONES = {
+  1: {
+    nombre: 'Fichar entrada',
+    descripcion: 'Iniciar jornada laboral',
+    icon: LoginOutlined,
+    className: 'home-action-btn--entrada',
+    modalAccent: 'entrada',
+  },
+  2: {
+    nombre: 'Fichar salida',
+    descripcion: 'Finalizar jornada laboral',
+    icon: LogoutOutlined,
+    className: 'home-action-btn--salida',
+    modalAccent: 'salida',
+  },
+  3: {
+    nombre: 'Iniciar descanso',
+    descripcion: 'Pausa durante la jornada',
+    icon: CoffeeOutlined,
+    className: 'home-action-btn--descanso',
+    modalAccent: 'descanso',
+  },
+  4: {
+    nombre: 'Fin de descanso',
+    descripcion: 'Volver a la jornada',
+    icon: CheckCircleOutlined,
+    className: 'home-action-btn--fin-descanso',
+    modalAccent: 'fin-descanso',
+  },
+};
+
+const ESTADOS = {
+  out: { label: 'Fuera de jornada', className: 'home-status--out' },
+  in: { label: 'En jornada', className: 'home-status--in' },
+  break: { label: 'En descanso', className: 'home-status--break' },
+};
+
+const formatearReloj = (fecha) =>
+  fecha.toLocaleTimeString('es-ES', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+const formatearFecha = (fecha) =>
+  fecha.toLocaleDateString('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 
 const Home = () => {
   const [loading, setLoading] = useState(false);
-  const [tipoEntrada, setTipoEntrada] = useState('');
-  const [tiposRegistros, setTiposRegistros] = useState([]);
-  const [horasTrabajadas, setHorasTrabajadas] = useState('00:00');
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [loadingId, setLoadingId] = useState(null);
+  const [horaActual, setHoraActual] = useState(() => formatearReloj(getFechaEuropeMadrid()));
+  const { estadoJornada, horasTrabajadas, tiposRegistros, refetch } = useEstadoJornada();
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingTipoId, setPendingTipoId] = useState(null);
+  const [confirmHora, setConfirmHora] = useState('');
 
   const [guardarUbicacion, setGuardarUbicacion] = useState(() => {
     const saved = localStorage.getItem('guardarUbicacion');
-    return saved === 'true'; 
+    return saved === 'true';
   });
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+
+  const { user } = useAuth();
+  const nombreUsuario = user?.nombre ?? '';
+  const fechaHoy = formatearFecha(getFechaEuropeMadrid());
 
   useEffect(() => {
     localStorage.setItem('guardarUbicacion', guardarUbicacion);
   }, [guardarUbicacion]);
-  
-  const nombreUsuario = sessionStorage.getItem('nombreUsuario');
-  const fetchTiposRegistros = async () => {
-    try {
-      const ultimoRegistro = await getUltimoRegistroById();
-      const registros = [];
-  
-      if (ultimoRegistro && ultimoRegistro.info != null) {
-        const { fecha_entrada, fecha_salida } = ultimoRegistro.info;
-  
-        const parseFecha = (fecha) => {
-          if (!fecha) return null;
-          const utcDate = new Date(fecha);
-          return new Date(utcDate.getTime()); 
-        };
-  
-        const entrada = parseFecha(fecha_entrada);
-        const salida = parseFecha(fecha_salida);
-  
-        if (entrada && !salida && ultimoRegistro.descanso== null) {
-          const ahora = getFechaEuropeMadrid();
-          const diffMs = ahora.getTime() - entrada.getTime();
-  
-          const horas = Math.floor(diffMs / (1000 * 60 * 60));
-          const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  
-          const formato = `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
-          setHorasTrabajadas(formato);
-  
-          registros.push({ id: 2, nombre: 'Salida' });
-          registros.push({ id: 3, nombre: 'Descanso' }); // Nueva opción
-  
-          setTipoEntrada(2);
-        } else if(ultimoRegistro.descanso!= null){
-          registros.push({ id: 4, nombre: 'Fin Descanso' }); // Nueva opción
-          setTipoEntrada(4);
-
-        }else {
-          registros.push({ id: 1, nombre: 'Entrada' });
-          setTipoEntrada(1);
-          setHorasTrabajadas('00:00');
-        }
-      } else {
-        registros.push({ id: 1, nombre: 'Entrada' });
-        setTipoEntrada(1);
-        setHorasTrabajadas('00:00');
-      }
-  
-      setTiposRegistros(registros);
-    } catch (error) {
-      console.error('Error al obtener los tipos de registro:', error);
-      setTiposRegistros([]);
-      setHorasTrabajadas('00:00');
-    }
-  };
-  
 
   useEffect(() => {
-    fetchTiposRegistros();
+    const tick = setInterval(() => {
+      setHoraActual(formatearReloj(getFechaEuropeMadrid()));
+    }, 1000);
+    return () => clearInterval(tick);
   }, []);
 
-  const buttonEntrada = async () => {
+  const solicitarConfirmacion = (tipoId) => {
+    const registro = tiposRegistros.find((r) => r.id === tipoId);
+    if (!registro) {
+      message.error('Acción no disponible');
+      return;
+    }
+
+    setPendingTipoId(tipoId);
+    setConfirmHora(formatearReloj(getFechaEuropeMadrid()));
+    setConfirmOpen(true);
+  };
+
+  const cerrarConfirmacion = () => {
+    if (loading) return;
+    setConfirmOpen(false);
+    setPendingTipoId(null);
+  };
+
+  const confirmarFichaje = async () => {
+    if (pendingTipoId == null) return;
+    await registrarFichaje(pendingTipoId);
+    setConfirmOpen(false);
+    setPendingTipoId(null);
+  };
+
+  const registrarFichaje = async (tipoId) => {
+    const registro = tiposRegistros.find((r) => r.id === tipoId);
+    if (!registro) {
+      message.error('Acción no disponible');
+      return;
+    }
+
     try {
       setLoading(true);
-      const usuario = parseInt(sessionStorage.getItem('idUsuario'));
-      const registroSeleccionado = tiposRegistros.find((registro) => registro.id === tipoEntrada);
-
-      if (!registroSeleccionado) {
-        message.error('Tipo de registro no válido');
+      setLoadingId(tipoId);
+      const usuario = user?.id_usuario;
+      if (!usuario) {
+        message.error('Sesión no válida');
         return;
       }
-
-      const response = await crearRegistro(registroSeleccionado.id, usuario,guardarUbicacion );
+      const response = await crearRegistro(tipoId, usuario, guardarUbicacion);
 
       if (!response) {
-        message.error('Error creando registro');
+        message.error('No se pudo registrar el fichaje');
       } else {
-        message.success('Registro creado');
-        await fetchTiposRegistros();
+        const config = ACCIONES[tipoId];
+        message.success(config ? `${config.nombre} registrada correctamente` : 'Fichaje registrado');
+        await refetch();
+        notifyJornadaActualizada();
       }
     } catch (error) {
       console.error('Error al crear registro:', error);
-      message.error('Ocurrió un error al crear el registro');
+      message.error('Ocurrió un error al registrar el fichaje');
     } finally {
       setLoading(false);
+      setLoadingId(null);
     }
   };
 
-  const handleSelectChange = (value) => {
-    setTipoEntrada(value);
-  };
+  const estado = ESTADOS[estadoJornada] || ESTADOS.out;
+
+  const pendingConfig = pendingTipoId != null
+    ? ACCIONES[pendingTipoId] || {
+        nombre: tiposRegistros.find((r) => r.id === pendingTipoId)?.nombre || 'Fichaje',
+        icon: LoginOutlined,
+        modalAccent: 'entrada',
+      }
+    : null;
+
+  const confirmMeta = [{ label: 'Hora', value: confirmHora }];
+  if (guardarUbicacion) {
+    confirmMeta.push({ value: 'Se guardará tu ubicación' });
+  }
 
   return (
     <div className="home-page">
-      <Col className="home-col">
-        <Row span={24} className="home-title-row">
-          <Title>Hola, {nombreUsuario}</Title>
-        </Row>
-        <Row className="home-card">
+      <div className="home-container">
+        <header className="home-header">
+          <Title level={2} className="home-greeting">
+            Hola, {nombreUsuario}
+          </Title>
+          <span className="home-date">{fechaHoy}</span>
+        </header>
 
-          <Col span={24} className="home-action-col">
-            <Button
-              shape="default"
-              size="large"
-              onClick={buttonEntrada}
-              loading={loading}
-              className="home-fichar-btn"
-            >
-              <Row className="home-btn-row" span={24}>
-                <Col span={24}></Col>
-                <Col span={24}>
-                  <PlayCircleOutlined className="home-play-icon" />
-                </Col>
-              </Row>
-            </Button>
-          </Col>
+        <div className="home-card">
+          <div className={`home-status ${estado.className}`}>
+            <span className="home-status-dot" aria-hidden />
+            <span>{estado.label}</span>
+          </div>
 
-          <Col span={24} className="home-select-col">
-            <Row className="home-select-row">
-              <div className="home-tipo-label">
-                <h3>Tipo de registro:</h3>
-              </div>
+          <div className="home-clock-block">
+            <time className="home-clock" dateTime={horaActual}>
+              {horaActual}
+            </time>
+            {estadoJornada === 'in' && (
+              <>
+                <span className="home-hours-label">Tiempo en jornada</span>
+                <span className="home-hours-value">{horasTrabajadas}</span>
+              </>
+            )}
+          </div>
 
-              <Select
-                placeholder="Selecciona el tipo de registro"
-                className="home-select"
-                value={tipoEntrada}
-                onChange={handleSelectChange}
-                dropdownStyle={{
-                  maxHeight: '250px',
-                  overflowY: 'auto',
-                  whiteSpace: 'nowrap',
-                }}
-                optionLabelProp="label"
-              >
-                {tiposRegistros.map((registro) => (
-                  <Option key={registro.id} value={registro.id} label={registro.nombre}>
-                    <span className="home-option-text">
-                      {registro.nombre}
-                    </span>
-                  </Option>
-                ))}
-              </Select>
-              <div className="home-ubicacion">
-                <span>Guardar ubicación:</span>
-                <Switch checked={guardarUbicacion} onChange={setGuardarUbicacion} />
-              </div>
-            </Row>
-          </Col>
-        </Row>
-        
-      </Col>
-      
-      
+          <span className="home-actions-title">¿Qué deseas registrar?</span>
+
+          <div className="home-actions">
+            {tiposRegistros.map((registro) => {
+              const config = ACCIONES[registro.id] || {
+                nombre: registro.nombre,
+                descripcion: '',
+                icon: LoginOutlined,
+                className: 'home-action-btn--entrada',
+              };
+              const Icon = config.icon;
+
+              return (
+                <Button
+                  key={registro.id}
+                  type="primary"
+                  block
+                  size="large"
+                  className={`home-action-btn ${config.className}`}
+                  loading={loading && loadingId === registro.id}
+                  disabled={loading && loadingId !== registro.id}
+                  onClick={() => solicitarConfirmacion(registro.id)}
+                >
+                  <Icon />
+                  <span>
+                    {config.nombre}
+                    {config.descripcion && (
+                      <small className="home-action-desc">{config.descripcion}</small>
+                    )}
+                  </span>
+                </Button>
+              );
+            })}
+          </div>
+
+          <footer className="home-footer">
+            <div>
+              <span className="home-footer-text">Guardar ubicación</span>
+              <span className="home-footer-hint">Opcional al fichar</span>
+            </div>
+            <Switch
+              checked={guardarUbicacion}
+              onChange={setGuardarUbicacion}
+              aria-label="Guardar ubicación al fichar"
+            />
+          </footer>
+        </div>
+      </div>
+
+      {pendingConfig && (
+        <ConfirmPopup
+          open={confirmOpen}
+          onCancel={cerrarConfirmacion}
+          onConfirm={confirmarFichaje}
+          title="Confirmar fichaje"
+          message={
+            <>
+              ¿Deseas registrar <strong>{pendingConfig.nombre}</strong>?
+            </>
+          }
+          meta={confirmMeta}
+          icon={pendingConfig.icon}
+          variant={pendingConfig.modalAccent}
+          confirmLoading={loading}
+        />
+      )}
     </div>
   );
 };

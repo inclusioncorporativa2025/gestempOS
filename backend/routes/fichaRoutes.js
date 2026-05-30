@@ -1,24 +1,45 @@
 const express = require('express');
 const router = express.Router();
-const {responderPeticionCierre,getDatosUsuarioMes,getCierresMensualesByIdEmpresa,crearPeticionCierreMes,responderPeticion,getPeticionesByIdUsuario,getPeticionesByIdEmpresa, crearPeticionEdicion,getUltimoRegistroById,getDatosUsuario,crearRegistro,getTipoRegistroByIdUsuario,deleteRegistro,getHorasTrabajadasHoy,editarHoras,getDatosUsuarioById,crearJornada } = require('../controllers/fichajesController');
+const {
+  responderPeticionCierre,
+  getDatosUsuarioMes,
+  getCierresMensualesByIdEmpresa,
+  crearPeticionCierreMes,
+  responderPeticion,
+  getPeticionesByIdUsuario,
+  getPeticionesByIdEmpresa,
+  crearPeticionEdicion,
+  getUltimoRegistroById,
+  getDatosUsuario,
+  crearRegistro,
+  getTipoRegistroByIdUsuario,
+  deleteRegistro,
+  getHorasTrabajadasHoy,
+  editarHoras,
+  getDatosUsuarioById,
+} = require('../controllers/fichajesController');
+const { requireRole, ROLE_GROUPS } = require('../middleware/authMiddleware');
 
-router.post('/getData', getDatosUsuario);
-router.post('/getDataById', getDatosUsuarioById);
+const GESTION_PETICIONES = ROLE_GROUPS.COMPANY_STAFF;
 
-router.post('/create', crearRegistro);
-router.post('/getById', getTipoRegistroByIdUsuario);
-router.post('/delete', deleteRegistro);
-router.post('/getHoras', getHorasTrabajadasHoy);
-router.post('/edit', editarHoras);
-router.post('/getUltimoRegistroById', getUltimoRegistroById);
-router.post('/crearPeticionEdicion', crearPeticionEdicion);
-router.post('/getPeticionesByIdEmpresa', getPeticionesByIdEmpresa);
-router.post('/getPeticionesByIdUsuario', getPeticionesByIdUsuario);
-router.post('/responderPeticion', responderPeticion);
-router.post('/crearPeticionCierreMes', crearPeticionCierreMes);
+router.post('/getData', requireRole(ROLE_GROUPS.FICHAJE), getDatosUsuario);
+router.post('/getDataById', requireRole(ROLE_GROUPS.FICHAJE), getDatosUsuarioById);
 
-router.post('/getCierresMensualesByIdEmpresa', getCierresMensualesByIdEmpresa);
-router.post('/getDatosUsuarioMes', getDatosUsuarioMes);
-router.post('/responderPeticionCierre', responderPeticionCierre);
+router.post('/create', requireRole(ROLE_GROUPS.FICHAJE), crearRegistro);
+router.post('/getById', requireRole(ROLE_GROUPS.FICHAJE), getTipoRegistroByIdUsuario);
+router.post('/delete', requireRole(ROLE_GROUPS.FICHAJE), deleteRegistro);
+router.post('/getHoras', requireRole(ROLE_GROUPS.FICHAJE), getHorasTrabajadasHoy);
+router.post('/getUltimoRegistroById', requireRole(ROLE_GROUPS.FICHAJE), getUltimoRegistroById);
+
+router.post('/edit', requireRole(ROLE_GROUPS.COMPANY_STAFF), editarHoras);
+router.post('/crearPeticionEdicion', requireRole(ROLE_GROUPS.FICHAJE), crearPeticionEdicion);
+router.post('/crearPeticionCierreMes', requireRole(ROLE_GROUPS.FICHAJE), crearPeticionCierreMes);
+router.post('/getPeticionesByIdUsuario', requireRole(ROLE_GROUPS.FICHAJE), getPeticionesByIdUsuario);
+
+router.post('/getPeticionesByIdEmpresa', requireRole(GESTION_PETICIONES), getPeticionesByIdEmpresa);
+router.post('/responderPeticion', requireRole(GESTION_PETICIONES), responderPeticion);
+router.post('/getCierresMensualesByIdEmpresa', requireRole(GESTION_PETICIONES), getCierresMensualesByIdEmpresa);
+router.post('/getDatosUsuarioMes', requireRole(GESTION_PETICIONES), getDatosUsuarioMes);
+router.post('/responderPeticionCierre', requireRole(GESTION_PETICIONES), responderPeticionCierre);
 
 module.exports = router;

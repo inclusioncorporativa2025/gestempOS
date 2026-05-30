@@ -1,13 +1,11 @@
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL+'calendario'; 
+import { getIdUsuario, getIdEmpresa } from '../../utils/authSession';
 
-const esquema = parseInt(sessionStorage.getItem('esquema'));
-const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
-
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL+'calendario';
 
 export const getFestivosByIdEmpresa = async () => {
   try {
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idUsuario = getIdUsuario();
+    const idEmpresa = getIdEmpresa();
 
     const response = await fetch(API_BASE_URL+`/getFestivosByIdEmpresa`, {
       method: 'POST',
@@ -17,46 +15,47 @@ export const getFestivosByIdEmpresa = async () => {
 
     if (!response.ok) {
       const errorData = await response.json();
+      throw new Error(errorData.message || 'Error getFestivosByIdEmpresa');
     }
 
     const data = await response.json();
 
-    return data; 
+    return data;
   } catch (error) {
-    console.error('Error obteniendo datos:', error);
-  }   
+    console.error('Error en getFestivosByIdEmpresa:', error);
+    throw error;
+  }
 };
 
-
-
-export const guardarFestivoEmpresa = async (fecha) => {
+export const guardarFestivoEmpresa = async (values) => {
   try {
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idUsuario = getIdUsuario();
+    const idEmpresa = getIdEmpresa();
 
     const response = await fetch(API_BASE_URL+`/guardarFestivoEmpresa`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idUsuario, idEmpresa,fecha }),
+      body: JSON.stringify({ idUsuario, idEmpresa, values }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
+      throw new Error(errorData.message || 'Error guardarFestivoEmpresa');
     }
 
     const data = await response.json();
 
-    return data; 
+    return data;
   } catch (error) {
-    console.error('Error obteniendo datos:', error);
-  }   
+    console.error('Error en guardarFestivoEmpresa:', error);
+    throw error;
+  }
 };
-
 
 export const eliminarFestivoEmpresa = async (idFestivo) => {
   try {
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idUsuario = getIdUsuario();
+    const idEmpresa = getIdEmpresa();
 
     const response = await fetch(API_BASE_URL+`/eliminarFestivoEmpresa`, {
       method: 'POST',
@@ -66,12 +65,14 @@ export const eliminarFestivoEmpresa = async (idFestivo) => {
 
     if (!response.ok) {
       const errorData = await response.json();
+      throw new Error(errorData.message || 'Error eliminarFestivoEmpresa');
     }
 
     const data = await response.json();
 
-    return data; 
+    return data;
   } catch (error) {
-    console.error('Error obteniendo datos:', error);
-  }   
+    console.error('Error en eliminarFestivoEmpresa:', error);
+    throw error;
+  }
 };

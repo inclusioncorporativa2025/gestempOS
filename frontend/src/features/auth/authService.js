@@ -1,3 +1,5 @@
+import { setAuthToken, clearAuthSession, getAuthToken } from '../../utils/authSession';
+
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL + 'auth';
 
 /**
@@ -25,7 +27,7 @@ export const doLogin = async (email, password) => {
   }
 
   if (data.token) {
-    localStorage.setItem('authToken', data.token);
+    setAuthToken(data.token);
   }
 
   return data;
@@ -35,9 +37,10 @@ export const doLogin = async (email, password) => {
  * Cierra la sesión del usuario (descarta el token y los datos de sesión).
  */
 export const doLogout = () => {
-  localStorage.removeItem('authToken');
-  sessionStorage.clear();
+  clearAuthSession();
 };
+
+export const getStoredToken = () => getAuthToken();
 
 /**
  * Solicita el envío del correo de restablecimiento de contraseña.

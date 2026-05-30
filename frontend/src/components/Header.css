@@ -10,15 +10,84 @@
   max-height: 6%;
 }
 
+/* Indicador de jornada (solo fuera de /Home) */
+.app-header-jornada {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  text-decoration: none;
+  color: #fff;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px) scale(0.96);
+  max-width: 0;
+  overflow: hidden;
+  padding-left: 0;
+  padding-right: 0;
+  margin-right: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.35s ease,
+    visibility 0.35s ease,
+    transform 0.35s ease,
+    max-width 0.35s ease,
+    padding 0.35s ease,
+    margin 0.35s ease;
+}
+
+.app-header-jornada--visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  max-width: 200px;
+  padding: 6px 12px;
+  margin-right: 4px;
+  pointer-events: auto;
+}
+
+.app-header-jornada-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.app-header-jornada-dot--working {
+  background: #52c41a;
+  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.35);
+  animation: header-dot-pulse 2s ease-in-out infinite;
+}
+
+.app-header-jornada-dot--pause {
+  background: #faad14;
+  box-shadow: 0 0 0 3px rgba(250, 173, 20, 0.35);
+}
+
+@keyframes header-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.app-header-jornada-time {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+.app-header-jornada-label {
+  font-size: 0.85rem;
+  opacity: 0.95;
+}
+
+.app-header-jornada:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
 .app-header-title {
   color: #fff;
 }
 
-.app-header-btn {
-  margin-left: 10px;
-}
-
-.app-header-icon {
-  color: #fff;
-  font-size: 18px;
-}

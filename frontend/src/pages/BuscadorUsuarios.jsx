@@ -8,13 +8,14 @@ import { obtenerJornadas } from "../features/jornada/jornadaService";
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import esES from 'antd/es/locale/es_ES';
+import { getTipoUsuario } from '../utils/authSession';
 import './BuscadorUsuarios.css';
 dayjs.locale('es');
 
 const { Title } = Typography;
 
 const BuscarUsuarios = () => {
-    const tipoUsuario = parseInt(sessionStorage.getItem('tipoUsuario'));
+    const tipoUsuario = getTipoUsuario();
     const [usuarios, setUsuarios] = useState([]);
     const [searchText, setSearchText] = useState('');
     const [isModalVisible, setIsModalVisible] = useState(false);

@@ -3,10 +3,10 @@
 // Los servicios del proyecto usan `fetch` directamente y no añadían el token.
 // Como el backend ahora exige `Authorization: Bearer <jwt>` en todas las rutas
 // `/api/*` (salvo las de `/auth`), parcheamos `window.fetch` una sola vez para:
-//   1. Añadir automáticamente el token guardado en localStorage a las llamadas a la API.
+//   1. Añadir automáticamente el JWT guardado a las llamadas a la API.
 //   2. Si la API responde 401 (token ausente/expirado), limpiar la sesión y volver al login.
-//
-// Así no hay que modificar cada uno de los servicios existentes.
+
+import { getAuthToken, clearAuthSession } from '../utils/authSession';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
 const originalFetch = window.fetch.bind(window);
@@ -25,7 +25,7 @@ window.fetch = async (input, init = {}) => {
   const url = getUrl(input);
 
   if (esLlamadaApi(url)) {
-    const token = localStorage.getItem('authToken');
+    const token = getAuthToken();
 
     if (token) {
       const headers = new Headers(init.headers || {});
@@ -40,8 +40,7 @@ window.fetch = async (input, init = {}) => {
 
   // Sesión inválida/expirada: no aplica a los endpoints públicos de auth.
   if (response.status === 401 && esLlamadaApi(url) && !esLlamadaAuth(url)) {
-    localStorage.removeItem('authToken');
-    sessionStorage.clear();
+    clearAuthSession();
     if (window.location.pathname !== '/') {
       window.location.href = '/';
     }

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Layout, Card, Table, Button, Typography, Row, Col, Modal, Form, Input, TimePicker, message, Select, DatePicker, Checkbox } from 'antd';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Layout, Card, Table, Button, Typography, Row, Col, Modal, Form, Input, TimePicker, message, Select, DatePicker, Checkbox, Collapse, Empty } from 'antd';
 import {  eliminarRegistro,crearPeticionEdicion,crearPeticionCierreMes,getPeticionesByIdUsuario,getPeticionesByIdEmpresa } from "../features/fichaje/fichajeService";
 import { getDatosUsuarioById } from "../features/fichaje/fichajeService";
 import { descargarExcelDesdeAPI } from "../features/user/usuarioService";
@@ -10,11 +10,30 @@ import utc from 'dayjs/plugin/utc'; // Importa el plugin UTC
 import timezone from 'dayjs/plugin/timezone'; // Importa el plugin Timezone
 import moment from 'moment';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'; // <-- Importa el plugin
+import 'dayjs/locale/es';
+import { getIdUsuario, getIdEmpresa } from '../utils/authSession';
 import './TimeLogsPanel.css';
 
 dayjs.extend(utc); // Extiende el uso de UTC
 dayjs.extend(timezone); // Extiende el uso de Timezone
 dayjs.extend(isSameOrBefore); // <-- Extiende dayjs
+dayjs.locale('es');
+
+const formatEtiquetaDia = (dateStr) => {
+  const d = dayjs(dateStr, 'DD/MM/YYYY');
+  if (!d.isValid()) return dateStr || 'Sin fecha';
+  const dia = d.format('dddd');
+  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)}, ${dateStr}`;
+};
+
+const calcularDifTiempo = (entrada, salida) => {
+  if (!entrada?.isValid() || !salida?.isValid()) return '';
+  const diffMs = salida.diff(entrada);
+  if (diffMs < 0) return '';
+  const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffMin = Math.floor((diffMs / (1000 * 60)) % 60);
+  return `${diffHrs}h ${diffMin}min`;
+};
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -42,6 +61,7 @@ const [selectedEntrada, setSelectedEntrada] = useState(null);
   const [todoElDia, setTodoElDia] = useState(false);
   const [horaDesde, setHoraDesde] = useState(null);
   const [horaHasta, setHoraHasta] = useState(null);
+const [diasExpandidos, setDiasExpandidos] = useState([]);
 const entradas = ['Vacaciones','Baja','Asuntos Propios','Otros']
 
     const setVisibleModalExportar =  (id_usuario)=> {
@@ -54,9 +74,9 @@ const entradas = ['Vacaciones','Baja','Asuntos Propios','Otros']
 // Método para añadir ausencia
 const anadirAusencia = async () => {
   try {
-    const idUsuario = parseInt(sessionStorage.getItem("idUsuario"));
-    const idEmpresa = parseInt(sessionStorage.getItem("idEmpresa"));
-    const usuario_alta = sessionStorage.getItem("usuario"); // o como lo tengas en sesión
+    const idUsuario = getIdUsuario();
+    const idEmpresa = getIdEmpresa();
+    const usuario_alta = getIdUsuario();
 
     if (!exportDateRange || exportDateRange.length !== 2) {
       return message.error("Por favor, selecciona un rango de fechas válido.");
@@ -102,7 +122,7 @@ const anadirAusencia = async () => {
 };
     const handleExport = () => {
 
-        const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
+        const idUsuario = getIdUsuario(); 
 
 
     
@@ -125,7 +145,7 @@ const anadirAusencia = async () => {
 
 const fetchData = async () => {
   try {
-    const idUsuario = parseInt(sessionStorage.getItem("idUsuario"));
+    const idUsuario = getIdUsuario();
 
     const registros = await getDatosUsuarioById(idUsuario);
 
@@ -135,22 +155,15 @@ const fetchData = async () => {
   const fechaSalida = item.fecha_salida ? dayjs.utc(item.fecha_salida).tz('Europe/Madrid') : null;
   const fecha = fechaBase ? dayjs(fechaBase) : null;
 
-  let totalHoras = "";
-  if (
-    item.tipo === "fichaje" &&
-    fechaEntrada &&
-    fechaSalida &&
-    fechaEntrada.isValid() &&
-    fechaSalida.isValid()
-  ) {
-    const diffMs = fechaSalida.diff(fechaEntrada);
-    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMin = Math.floor((diffMs / (1000 * 60)) % 60);
-    totalHoras = `${diffHrs}h ${diffMin}min`;
-  }
+  const tiposConDuracion = ['fichaje', 'descanso'];
+  const totalHoras =
+    tiposConDuracion.includes(item.tipo) || (item.tipo === 'ausencia' && !item.sin_hora)
+      ? calcularDifTiempo(fechaEntrada, fechaSalida)
+      : '';
 
   return {
     key: `${item.tipo || "registro"}-${item.id_fichaje || item.id_ausencia || item.id_descanso || index}`,
+    idFichaje: item.id_fichaje ?? null,
     tipo:
       item.tipo === "fichaje"
         ? "Fichaje"
@@ -315,12 +328,22 @@ const crearPeticionMensual = async () => {
 
     
     
-    const handleDelete = async (key) => {
-        const result = await eliminarRegistro(key);
-        const updatedData = data.filter((item) => item.key !== key);
+    const handleDelete = async (record) => {
+      const idFichaje = record.idFichaje ?? String(record.key).replace(/^fichaje-/, '');
+      if (!idFichaje) {
+        message.error('No se pudo identificar el fichaje');
+        return;
+      }
+
+      try {
+        await eliminarRegistro(idFichaje);
+        const updatedData = data.filter((item) => item.key !== record.key);
         setData(updatedData);
         setFilteredData(updatedData);
         message.success('Registro eliminado correctamente');
+      } catch (error) {
+        message.error(error.message || 'No se pudo eliminar el registro');
+      }
     };
 
 const handleMonthChange = (date, dateString) => {
@@ -366,65 +389,77 @@ const handleMonthChange = (date, dateString) => {
         });
     };
 
+    const renderAcciones = (_, record) => {
+      if (record.tipo !== 'Fichaje') return null;
+
+      const mesSeleccionadoFormateado =
+        selectedMonth != null && selectedMonth ? selectedMonth.format('YYYY-MM') : null;
+      const mesCerrado = mesesCierre.some((mc) => mc.mes === mesSeleccionadoFormateado);
+
+      const isEditable =
+        !fichajesConPeticion.includes(record.key) &&
+        !!record.checkOut &&
+        (!mesSeleccionadoFormateado || !mesCerrado);
+
+      return (
+        <>
+          <Button type="link" onClick={() => showEditModal(record)} disabled={!isEditable}>
+            Editar
+          </Button>
+          <Button type="link" danger onClick={() => handleDelete(record)}>
+            Eliminar
+          </Button>
+        </>
+      );
+    };
+
     const columns = [
-        {
+      {
         title: 'Tipo',
         dataIndex: 'tipo',
         key: 'tipo',
-        },
-        {
-            title: 'Fecha',
-            dataIndex: 'date',
-            key: 'date',
-        },
-        {
-            title: 'Hora Entrada',
-            dataIndex: 'checkIn',
-            key: 'checkIn',
-        },
-        {
-            title: 'Hora Salida',
-            dataIndex: 'checkOut',
-            key: 'checkOut',
-        },
-        {
-            title: 'Dif. Tiempo',
-            dataIndex: 'totalH',
-            key: 'totalH',
-        },
-        
-        {
-            title: 'Acciones',
-            key: 'actions',
-             render: (record) => {
-      // Solo habilitar acciones si es un fichaje
-      if (record.tipo === "Fichaje") {
-        const mesSeleccionadoFormateado =
-          selectedMonth != null && selectedMonth ? selectedMonth.format('YYYY-MM') : null;
-        const mesCerrado = mesesCierre.some(mc => mc.mes === mesSeleccionadoFormateado);
+      },
+      {
+        title: 'Hora Entrada',
+        dataIndex: 'checkIn',
+        key: 'checkIn',
+      },
+      {
+        title: 'Hora Salida',
+        dataIndex: 'checkOut',
+        key: 'checkOut',
+      },
+      {
+        title: 'Dif. Tiempo',
+        dataIndex: 'totalH',
+        key: 'totalH',
+      },
+      {
+        title: 'Acciones',
+        key: 'actions',
+        render: renderAcciones,
+      },
+    ];
 
-        const isEditable =
-          !fichajesConPeticion.includes(record.key) &&
-          !!record.checkOut &&
-          (!mesSeleccionadoFormateado || !mesCerrado);
+    const gruposPorDia = useMemo(() => {
+      const map = new Map();
+      filteredData.forEach((row) => {
+        const day = row.date || 'Sin fecha';
+        if (!map.has(day)) map.set(day, []);
+        map.get(day).push(row);
+      });
+      return Array.from(map.entries()).sort(
+        (a, b) => dayjs(b[0], 'DD/MM/YYYY').valueOf() - dayjs(a[0], 'DD/MM/YYYY').valueOf(),
+      );
+    }, [filteredData]);
 
-        return (
-          <>
-            <Button type="link" onClick={() => showEditModal(record)} disabled={!isEditable}>
-              Editar
-            </Button>
-            <Button type="link" danger onClick={() => handleDelete(record.key)}>
-              Eliminar
-            </Button>
-          </>
-        );
+    useEffect(() => {
+      if (gruposPorDia.length > 0) {
+        setDiasExpandidos([gruposPorDia[0][0]]);
+      } else {
+        setDiasExpandidos([]);
       }
-
-      // Si es ausencia, no mostrar botones
-      return null;
-    },
-  },
-];
+    }, [gruposPorDia]);
 
     return (
         <Layout className="tlp-layout">
@@ -443,12 +478,37 @@ const handleMonthChange = (date, dateString) => {
                     </Col>
                 </Row>
 
-                <Table
-                    columns={columns}
-                    dataSource={filteredData}
-                    pagination={{ pageSize: 10 }}
-                    scroll={{ x: 800 }}
-                />
+                {gruposPorDia.length === 0 ? (
+                  <Empty description="No hay registros para este periodo" />
+                ) : (
+                  <Collapse
+                    className="tlp-day-collapse"
+                    activeKey={diasExpandidos}
+                    onChange={(keys) => setDiasExpandidos(Array.isArray(keys) ? keys : [keys])}
+                    items={gruposPorDia.map(([date, rows]) => ({
+                      key: date,
+                      label: (
+                        <div className="tlp-day-header">
+                          <span className="tlp-day-title">{formatEtiquetaDia(date)}</span>
+                          <span className="tlp-day-count">
+                            {rows.length} registro{rows.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      ),
+                      children: (
+                        <Table
+                          className="tlp-day-table"
+                          columns={columns}
+                          dataSource={rows}
+                          pagination={false}
+                          scroll={{ x: 700 }}
+                          size="small"
+                          rowKey="key"
+                        />
+                      ),
+                    }))}
+                  />
+                )}
 
                 {/* Botón Enviar */}
                 <Row justify="start" className="tlp-actions-row">

@@ -1,6 +1,7 @@
 .config-gestor-layout {
-  background-color: transparent;
-  max-width: 90vw;
-  margin: 0 auto;
-  height: 80vh;
+  width: 100%;
+  min-height: 100%;
+  background: #fff;
+  padding: 24px;
+  box-sizing: border-box;
 }

@@ -17,6 +17,8 @@ import Home from './pages/Home';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Header from './components/Header';
+import SidebarFooter from './components/SidebarFooter';
+import { useAuth } from './config/AuthContext';
 import TimeLogsPanel from './pages/TimeLogsPanel';
 import AltaEmpresa from './pages/admin/AltaEmpresa';
 import UserManagementForm from './pages/gestor/UserManagementForm';
@@ -31,6 +33,7 @@ import Notificaciones from './pages/Notificaciones';
 
 import '../src/App.css';
 import './styles/sidebar.css';
+import './styles/app-layout.css';
 
 const { Sider, Content } = Layout;
 
@@ -106,7 +109,8 @@ function App() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const tipousuario = parseInt(sessionStorage.getItem('tipoUsuario')); 
+  const { user } = useAuth();
+  const tipousuario = user?.tipo_usuario ?? null;
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -121,7 +125,10 @@ function App() {
   const closeDrawer = () => setDrawerVisible(false);
 
   // Filtrar las páginas según el tipo de usuario
-  const filteredPages = pages.filter((page) => page.tipousuario.includes(tipousuario));
+  const filteredPages =
+    tipousuario != null
+      ? pages.filter((page) => page.tipousuario.includes(tipousuario))
+      : [];
 
   // Item del menú activo según la ruta actual
   const paginaActual = pages.find(
@@ -148,9 +155,9 @@ function App() {
 
   return (
     <ConfigProvider theme={{ token: { fontFamily: 'var(--font-family-base)', fontWeightStrong: 300 } }}>
-    <Layout style={{ height: '100vh' }}>
+    <Layout className="app-shell">
       {!isLogin && <Header />}
-      <Layout>
+      <Layout className="app-shell-body">
         {location.pathname !== '/' && !isMobile && (
           <Sider
             width={220}
@@ -162,21 +169,25 @@ function App() {
             trigger={null}
             onCollapse={(value) => setCollapsed(value)}
           >
-            <div className="app-sider-toggle">
-              <Button
-                type="text"
-                aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
-                onClick={() => setCollapsed(!collapsed)}
-                icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            <div className="app-sider-inner">
+              <div className="app-sider-toggle">
+                <Button
+                  type="text"
+                  aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+                  onClick={() => setCollapsed(!collapsed)}
+                  icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                />
+              </div>
+              <Menu
+                className="app-menu app-sider-menu"
+                mode="inline"
+                inlineCollapsed={collapsed}
+                selectedKeys={selectedKeys}
+                onClick={handleMenuClick}
+                items={menuItems}
               />
+              <SidebarFooter collapsed={collapsed} />
             </div>
-            <Menu
-              className="app-menu"
-              mode="inline"
-              selectedKeys={selectedKeys}
-              onClick={handleMenuClick}
-              items={menuItems}
-            />
           </Sider>
         )}
 
@@ -201,21 +212,26 @@ function App() {
           placement="bottom"
           closable
           onClose={closeDrawer}
-          onClick={closeDrawer}
           open={drawerVisible}
           height="auto"
         >
-          <Menu
-            className="app-menu"
-            mode="inline"
-            selectedKeys={selectedKeys}
-            onClick={handleMenuClick}
-            items={menuItems}
-          />
+          <div className="app-drawer-body">
+            <Menu
+              className="app-menu"
+              mode="inline"
+              selectedKeys={selectedKeys}
+              onClick={handleMenuClick}
+              items={menuItems}
+            />
+            <SidebarFooter />
+          </div>
         </Drawer>
 
-        <Layout style={(isMobile || isLogin) ? {} : { padding: '0 24px 24px' }}>
-          <Content style={{ padding: (isMobile || isLogin) ? 0 : 24, background: isLogin ? 'transparent' : '#fff' }}>
+        <Layout className={!isMobile && !isLogin ? 'app-main-layout' : undefined}>
+          <Content
+            className={!isMobile && !isLogin ? 'app-main-content' : undefined}
+            style={isLogin ? { background: 'transparent' } : undefined}
+          >
             <Routes>
               <Route path="/" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />

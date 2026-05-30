@@ -1,0 +1,27 @@
+/* Área principal: ancho completo, sin franjas grises laterales */
+.app-shell-body {
+  background: #fff;
+}
+
+.app-main-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  padding: 0 !important;
+  background: #fff;
+}
+
+.app-main-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0 !important;
+  background: #fff;
+  overflow: auto;
+}
+
+.app-main-content > * {
+  width: 100%;
+  max-width: none;
+}

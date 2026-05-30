@@ -1,11 +1,12 @@
 import { message } from "antd";
+import { getIdUsuario, getIdEmpresa } from '../../utils/authSession';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL+'jornada'; 
 
 
 export const getDatosById = async () => {
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idEmpresa = getIdEmpresa(); 
     const response = await fetch(API_BASE_URL+`/getDataById`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -27,7 +28,7 @@ export const getDatosById = async () => {
 export const obtenerJornadasByIdEmpresa = async ()=>{
 
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idEmpresa = getIdEmpresa(); 
     const response = await fetch(API_BASE_URL+`/obtenerJornadasByIdEmpresa`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -48,8 +49,8 @@ export const obtenerJornadasByIdEmpresa = async ()=>{
 
 export const crearJornada = async (values) => {
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
+    const idEmpresa = getIdEmpresa(); 
+    const idUsuario = getIdUsuario(); 
 
     // Asegúrate de que los valores se pasen correctamente como el JSON esperado
     const response = await fetch(API_BASE_URL + `/crearJornada`, {
@@ -80,7 +81,7 @@ export const crearJornada = async (values) => {
 
 export const obtenerJornadas = async () => {
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idEmpresa = getIdEmpresa(); 
     const response = await fetch(API_BASE_URL + `/obtenerJornadas`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -102,7 +103,7 @@ export const obtenerJornadas = async () => {
 
 export const obtenerUsuariosJornadas = async () => {
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idEmpresa = getIdEmpresa(); 
     const response = await fetch(API_BASE_URL + `/obtenerUsuariosJornadas`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -126,7 +127,7 @@ export const obtenerUsuariosJornadas = async () => {
 
 export const obtenerJornadasYRegistros = async () => {
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
+    const idEmpresa = getIdEmpresa(); 
     const response = await fetch(API_BASE_URL + `/obtenerJornadasYRegistros`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -148,8 +149,8 @@ export const obtenerJornadasYRegistros = async () => {
 
 export const deleteJornada = async (idJornada) => {
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa')); 
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario')); 
+    const idEmpresa = getIdEmpresa(); 
+    const idUsuario = getIdUsuario(); 
 
     const response = await fetch(API_BASE_URL + `/deleteById`, {
       method: 'POST',
@@ -173,8 +174,8 @@ export const deleteJornada = async (idJornada) => {
 
 export const editarJornada = async (updatedJornada) => {
   try {
-    const idEmpresa = parseInt(sessionStorage.getItem('idEmpresa'));
-    const idUsuario = parseInt(sessionStorage.getItem('idUsuario'));
+    const idEmpresa = getIdEmpresa();
+    const idUsuario = getIdUsuario();
 
     const response = await fetch(API_BASE_URL + `/editarJornada`, {
       method: 'POST',

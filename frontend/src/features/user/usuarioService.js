@@ -1,6 +1,7 @@
 import { saveAs } from 'file-saver';
 import dayjs from 'dayjs';
 import { message } from 'antd';
+import { getIdEmpresa, getIdUsuario } from '../../utils/authSession';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL+'user'; 
 
@@ -30,7 +31,7 @@ export const getUsuarioData = async (email) => {
 
 export const getUsuariosEmpresa = async()=>{
   try {
-    const idEmpresa = sessionStorage.getItem('idEmpresa');
+    const idEmpresa = getIdEmpresa();
     const response = await fetch(API_BASE_URL+`/getUsuariosEmpresa`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -53,7 +54,7 @@ export const getUsuariosEmpresa = async()=>{
 
 export const descargarExcelDesdeAPI = async (startDate, endDate,id_usuario) => {
   try {
-    const idEmpresa = sessionStorage.getItem('idEmpresa');
+    const idEmpresa = getIdEmpresa();
 
       const response = await fetch(API_BASE_URL+'/exportar', {
           method: 'POST',
@@ -81,7 +82,7 @@ export const descargarExcelDesdeAPI = async (startDate, endDate,id_usuario) => {
     
 export const importarUsuariosEmpresa = async (values) => {
   try {
-    const idEmpresa = sessionStorage.getItem('idEmpresa');
+    const idEmpresa = getIdEmpresa();
 
       const response = await fetch(API_BASE_URL+'/importar', {
           method: 'POST',
@@ -108,8 +109,8 @@ export const importarUsuariosEmpresa = async (values) => {
 export const crearUsuario = async (email,nombreUsuario,dni, tipoUsuario, horario) =>{
 
   try{
-    const idEmpresa = sessionStorage.getItem('idEmpresa');
-    const idUsuarioAccion = sessionStorage.getItem('idUsuario');
+    const idEmpresa = getIdEmpresa();
+    const idUsuarioAccion = getIdUsuario();
 
     
 
@@ -137,8 +138,8 @@ export const crearUsuario = async (email,nombreUsuario,dni, tipoUsuario, horario
 export const editUsuario = async (idUsuario, values) =>{
 
   try{
-    const idUsuarioAccion = sessionStorage.getItem('idUsuario');
-    const idEmpresa = sessionStorage.getItem('idEmpresa');
+    const idUsuarioAccion = getIdUsuario();
+    const idEmpresa = getIdEmpresa();
 
     const response = await fetch(API_BASE_URL+`/edit`, {
       method: 'POST',
@@ -166,7 +167,7 @@ export const editUsuario = async (idUsuario, values) =>{
 export const deleteUsuario = async (idUsuario) =>{
 
   try{
-    const idUsuarioAccion = sessionStorage.getItem('idUsuario');
+    const idUsuarioAccion = getIdUsuario();
     const response = await fetch(API_BASE_URL+`/delete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -192,8 +193,8 @@ export const deleteUsuario = async (idUsuario) =>{
 export const getHorasTotalesMesByIdUsuario = async (mes,idUsuario) =>{
 
   try{
-    const idUsuario_accion = sessionStorage.getItem('idUsuario');
-    const idEmpresa = sessionStorage.getItem('idEmpresa');
+    const idUsuario_accion = getIdUsuario();
+    const idEmpresa = getIdEmpresa();
 
     const response = await fetch(API_BASE_URL+`/getHorasTotalesMesByIdUsuario`, {
       method: 'POST',
