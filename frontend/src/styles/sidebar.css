@@ -1,0 +1,111 @@
+/* ===========================================================================
+   Sidebar / menú de navegación moderno
+   =========================================================================== */
+
+/* Contenedor del sidebar (escritorio) */
+.app-sider {
+  background: #ffffff !important;
+  border-right: 1px solid #eef0f4;
+  box-shadow: 2px 0 12px rgba(15, 16, 32, 0.04);
+  padding: 16px 10px;
+}
+
+/* Botón de colapsar, arriba en el borde del sidebar */
+.app-sider-toggle {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 40px;
+  margin-bottom: 8px;
+}
+
+.app-sider-toggle .ant-btn {
+  color: #5a6472;
+  font-size: 18px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.app-sider-toggle .ant-btn:hover {
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.08);
+}
+
+/* Centrado cuando el sidebar está colapsado */
+.app-sider.ant-layout-sider-collapsed .app-sider-toggle {
+  justify-content: center;
+}
+
+/* Menú (escritorio y drawer móvil) */
+.app-menu.ant-menu {
+  background: transparent;
+  border-inline-end: none !important;
+}
+
+.app-menu .ant-menu-item {
+  height: 46px;
+  line-height: 46px;
+  margin: 6px 0;
+  border-radius: 12px;
+  color: #5a6472;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Padding solo cuando el menú está expandido */
+.app-menu:not(.ant-menu-inline-collapsed) .ant-menu-item {
+  padding-inline: 14px !important;
+}
+
+/* Item colapsado: cuadrado y centrado */
+.app-menu.ant-menu-inline-collapsed .ant-menu-item {
+  width: 46px;
+  margin-inline: auto;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-menu.ant-menu-inline-collapsed .ant-menu-item .ant-menu-title-content {
+  display: none;
+}
+
+.app-menu.ant-menu-inline-collapsed .ant-menu-item .anticon {
+  margin: 0 !important;
+  vertical-align: 0;
+}
+
+.app-menu .ant-menu-item a {
+  color: inherit;
+}
+
+.app-menu .ant-menu-item .anticon {
+  font-size: 18px;
+  vertical-align: -3px;
+}
+
+/* Hover */
+.app-menu .ant-menu-item:hover {
+  background: rgba(43, 169, 224, 0.08);
+  color: var(--color-primary);
+}
+
+/* Item activo: píldora con efecto glass (frosted) */
+.app-menu .ant-menu-item-selected {
+  background: rgba(255, 255, 255, 0.25) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 6px 18px rgba(var(--color-primary-rgb), 0.15), 0 2px 8px rgba(var(--color-secondary-rgb), 0.1);
+}
+
+.app-menu .ant-menu-item-selected,
+.app-menu .ant-menu-item-selected a,
+.app-menu .ant-menu-item-selected .anticon {
+  color: var(--color-primary) !important;
+}
+
+/* Quita el indicador/borde por defecto del item seleccionado */
+.app-menu .ant-menu-item-selected::after,
+.app-menu .ant-menu-item::after {
+  display: none !important;
+}

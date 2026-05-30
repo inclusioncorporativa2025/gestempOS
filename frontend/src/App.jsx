@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Layout, Menu, Drawer, Button } from 'antd';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Layout, Menu, Drawer, Button, ConfigProvider } from 'antd';
 import {
   MenuOutlined,
   UserAddOutlined,
@@ -8,7 +8,9 @@ import {
   SearchOutlined,
   FieldTimeOutlined,
   LoginOutlined,
-  CalendarOutlined,MailOutlined
+  CalendarOutlined,MailOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined
 } from '@ant-design/icons';
 import Login from './pages/Login';
 import Home from './pages/Home';
@@ -28,6 +30,7 @@ import Notificaciones from './pages/Notificaciones';
 
 
 import '../src/App.css';
+import './styles/sidebar.css';
 
 const { Sider, Content } = Layout;
 
@@ -100,7 +103,9 @@ const pages = [
 function App() {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const tipousuario = parseInt(sessionStorage.getItem('tipoUsuario')); 
 
   useEffect(() => {
@@ -118,19 +123,59 @@ function App() {
   // Filtrar las páginas según el tipo de usuario
   const filteredPages = pages.filter((page) => page.tipousuario.includes(tipousuario));
 
+  // Item del menú activo según la ruta actual
+  const paginaActual = pages.find(
+    (page) => page.path.toLowerCase() === location.pathname.toLowerCase()
+  );
+  const selectedKeys = paginaActual ? [paginaActual.key] : [];
+
+  // Items del menú (el label como texto sirve de tooltip cuando está colapsado)
+  const menuItems = filteredPages.map((item) => ({
+    key: item.key,
+    icon: item.icon,
+    label: item.label,
+    title: item.label,
+  }));
+
+  // Navegación al pulsar un item (funciona también con el sidebar colapsado)
+  const handleMenuClick = ({ key }) => {
+    const page = pages.find((p) => p.key === key);
+    if (page) {
+      navigate(page.path);
+      closeDrawer();
+    }
+  };
+
   return (
+    <ConfigProvider theme={{ token: { fontFamily: 'var(--font-family-base)', fontWeightStrong: 300 } }}>
     <Layout style={{ height: '100vh' }}>
       {!isLogin && <Header />}
       <Layout>
         {location.pathname !== '/' && !isMobile && (
-          <Sider width={200} theme="dark" style={{ background: '#fff' }}>
+          <Sider
+            width={220}
+            collapsedWidth={76}
+            theme="light"
+            className="app-sider"
+            collapsible
+            collapsed={collapsed}
+            trigger={null}
+            onCollapse={(value) => setCollapsed(value)}
+          >
+            <div className="app-sider-toggle">
+              <Button
+                type="text"
+                aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+                onClick={() => setCollapsed(!collapsed)}
+                icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              />
+            </div>
             <Menu
+              className="app-menu"
               mode="inline"
-              defaultSelectedKeys={['1']}
-              items={filteredPages.map((item) => ({
-                ...item,
-                label: <Link to={item.path}>{item.label}</Link>,
-              }))}
+              selectedKeys={selectedKeys}
+              onClick={handleMenuClick}
+              items={menuItems}
             />
           </Sider>
         )}
@@ -161,12 +206,11 @@ function App() {
           height="auto"
         >
           <Menu
+            className="app-menu"
             mode="inline"
-            defaultSelectedKeys={['1']}
-            items={filteredPages.map((item) => ({
-              ...item,
-              label: <Link to={item.path}>{item.label}</Link>,
-            }))}
+            selectedKeys={selectedKeys}
+            onClick={handleMenuClick}
+            items={menuItems}
           />
         </Drawer>
 
@@ -254,6 +298,7 @@ function App() {
         </Layout>
       </Layout>
     </Layout>
+    </ConfigProvider>
   );
 }
 
