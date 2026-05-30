@@ -96,6 +96,47 @@ const buildResetEmailHtml = ({ nombre, enlace, ttlMinutos }) => `
   </html>
 `;
 
+/**
+ * Genera un token de restablecimiento, lo guarda en el usuario y envía
+ * el correo con el enlace para establecer la contraseña.
+ *
+ * @param {object} usuario  Instancia Sequelize del usuario
+ * @returns {Promise<string>} URL de restablecimiento (útil para devolverla en desarrollo)
+ */
+const generarYEnviarReset = async (usuario) => {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  usuario.reset_token_hash = hashToken(rawToken);
+  usuario.reset_token_expira = new Date(Date.now() + RESET_TOKEN_TTL_MINUTES * 60 * 1000);
+  await usuario.save();
+
+  const enlace = `${FRONTEND_URL}/reset-password?token=${rawToken}&email=${encodeURIComponent(usuario.email)}`;
+
+  try {
+    const transporter = buildTransporter();
+    await transporter.sendMail({
+      from: process.env.SMTP_USER,
+      to: usuario.email,
+      subject: 'Ficha en el Trabajo - Restablece tu contraseña',
+      html: buildResetEmailHtml({
+        nombre: usuario.nombre,
+        enlace,
+        ttlMinutos: RESET_TOKEN_TTL_MINUTES,
+      }),
+      attachments: [
+        {
+          filename: 'logo.png',
+          path: path.resolve(__dirname, '../utils/images/Logo-Horizontal INCOR-RGB.png'),
+          cid: 'logo',
+        },
+      ],
+    });
+  } catch (mailError) {
+    console.error('Error enviando email de reset:', mailError.message);
+  }
+
+  return enlace;
+};
+
 const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -110,11 +151,21 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 
+    // Usuario sin contraseña establecida (p.ej. migración) o que requiere reset:
+    // enviamos automáticamente el correo para que establezca su contraseña.
     if (!usuario.password_hash || usuario.requiere_reset_password) {
-      return res.status(403).json({
+      const enlace = await generarYEnviarReset(usuario);
+
+      const respuesta = {
         code: 'PASSWORD_RESET_REQUIRED',
-        message: 'Debes establecer tu contraseña. Usa la opción de restablecer contraseña.',
-      });
+        message: 'Tras mejoras en el sistema, por motivos de seguridad debes restablecer la contraseña. Se te ha enviado un correo con los pasos a seguir.',
+      };
+
+      if (process.env.NODE_ENV !== 'production') {
+        respuesta.devResetUrl = enlace;
+      }
+
+      return res.status(403).json(respuesta);
     }
 
     const passwordValido = await bcrypt.compare(password, usuario.password_hash);
@@ -164,38 +215,10 @@ const forgotPassword = async (req, res) => {
       return res.status(200).json(respuestaGenerica);
     }
 
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    usuario.reset_token_hash = hashToken(rawToken);
-    usuario.reset_token_expira = new Date(Date.now() + RESET_TOKEN_TTL_MINUTES * 60 * 1000);
-    await usuario.save();
-
-    const enlace = `${FRONTEND_URL}/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
-
-    try {
-      const transporter = buildTransporter();
-      await transporter.sendMail({
-        from: process.env.SMTP_USER,
-        to: email,
-        subject: 'Ficha en el Trabajo - Restablece tu contraseña',
-        html: buildResetEmailHtml({
-          nombre: usuario.nombre,
-          enlace,
-          ttlMinutos: RESET_TOKEN_TTL_MINUTES,
-        }),
-        attachments: [
-          {
-            filename: 'logo.png',
-            path: path.resolve(__dirname, '../utils/images/Logo-Horizontal INCOR-RGB.png'),
-            cid: 'logo',
-          },
-        ],
-      });
-    } catch (mailError) {
-      console.error('Error enviando email de reset:', mailError.message);
-    }
+    const enlace = await generarYEnviarReset(usuario);
 
     if (process.env.NODE_ENV !== 'production') {
-      return res.status(200).json({ ...respuestaGenerica, devToken: rawToken, devResetUrl: enlace });
+      return res.status(200).json({ ...respuestaGenerica, devResetUrl: enlace });
     }
 
     return res.status(200).json(respuestaGenerica);

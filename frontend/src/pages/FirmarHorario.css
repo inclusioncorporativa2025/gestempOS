@@ -1,0 +1,14 @@
+.firmar-layout {
+  background-color: transparent;
+  max-width: 90vw;
+  margin: 0 auto;
+  height: 100vh;
+}
+
+.firmar-title {
+  text-align: center;
+}
+
+.firmar-row {
+  margin-bottom: 20px;
+}

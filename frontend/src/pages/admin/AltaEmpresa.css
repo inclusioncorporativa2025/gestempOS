@@ -1,0 +1,22 @@
+.alta-layout {
+  background-color: transparent;
+}
+
+.alta-content {
+  height: 84vh;
+  justify-content: center;
+  align-items: start;
+  display: flex;
+}
+
+.alta-title {
+  text-align: center;
+}
+
+.alta-input-number {
+  width: 100%;
+}
+
+.alta-btn-mr {
+  margin-right: 15px;
+}

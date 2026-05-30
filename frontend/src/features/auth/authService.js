@@ -1,144 +1,84 @@
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL+'auth'; 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL + 'auth';
+
 /**
- * Inicia sesión con el email y contraseña proporcionados.
- * @param {string} email - Correo electrónico del usuario.
- * @param {string} password - Contraseña del usuario.
- * @returns {Promise<object>} - Respuesta del servidor con los datos del usuario.
+ * Inicia sesión con email y contraseña contra el backend (JWT).
+ * Guarda el token en localStorage si el login es correcto.
+ * @param {string} email
+ * @param {string} password
+ * @returns {Promise<object>} { token, usuario }
+ * @throws {Error} con propiedad `code` (p.ej. 'PASSWORD_RESET_REQUIRED') cuando aplica.
  */
 export const doLogin = async (email, password) => {
-  try {
-    const response = await fetch(API_BASE_URL+`/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+  const response = await fetch(API_BASE_URL + `/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Error al iniciar sesión');
-    }
+  const data = await response.json().catch(() => ({}));
 
-    const data = await response.json();
-    localStorage.setItem('authToken', data.token);  // Guarda el token
-    return data;
-  } catch (error) {
-    console.error('Error en doLogin:', error);
+  if (!response.ok) {
+    const error = new Error(data.message || 'Error al iniciar sesión');
+    error.code = data.code;
+    error.status = response.status;
     throw error;
   }
+
+  if (data.token) {
+    localStorage.setItem('authToken', data.token);
+  }
+
+  return data;
 };
 
 /**
- * Cierra la sesión del usuario.
+ * Cierra la sesión del usuario (descarta el token y los datos de sesión).
  */
 export const doLogout = () => {
-  localStorage.removeItem('authToken');  // Limpia el token
+  localStorage.removeItem('authToken');
+  sessionStorage.clear();
 };
 
 /**
- * Verifica si el usuario está autenticado.
- * @returns {Promise<boolean>} - `true` si el usuario está autenticado, de lo contrario `false`.
+ * Solicita el envío del correo de restablecimiento de contraseña.
+ * @param {string} email
+ * @returns {Promise<object>} respuesta del servidor (incluye devResetUrl en desarrollo).
  */
-export const getAuthStatus = async () => {
-  const token = localStorage.getItem('authToken');
-  if (!token) return false;
+export const doForgotPassword = async (email) => {
+  const response = await fetch(API_BASE_URL + `/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
 
-  try {
-    const response = await fetch(API_BASE_URL+`/auth-status`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+  const data = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
-      return false;
-    }
-
-    const data = await response.json();
-    return data.isAuthenticated;
-  } catch (error) {
-    console.error('Error en getAuthStatus:', error);
-    return false;
+  if (!response.ok) {
+    throw new Error(data.message || 'Error al solicitar el restablecimiento');
   }
+
+  return data;
 };
 
 /**
- * Registra un nuevo usuario.
- * @param {string} nombreCompleto - Nombre completo del usuario.
- * @param {string} email - Correo electrónico del usuario.
- * @returns {Promise<object>} - Respuesta del servidor.
+ * Establece una nueva contraseña a partir del token recibido por email.
+ * @param {string} email
+ * @param {string} token
+ * @param {string} password
+ * @returns {Promise<object>}
  */
-export const doRegister = async (nombreCompleto, email,password, empresa) => {
-  try {
-    const response = await fetch(API_BASE_URL+`/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombreCompleto, email,password, empresa }),
-    });
+export const doResetPassword = async (email, token, password) => {
+  const response = await fetch(API_BASE_URL + `/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, token, password }),
+  });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Error al registrar usuario');
-    }
+  const data = await response.json().catch(() => ({}));
 
-    const data = await response.json();
-
-    return data;  // Retorna la respuesta del servidor (esto podría ser un mensaje de éxito o los datos del usuario)
-  } catch (error) {
-    console.error('Error en doRegister:', error);
-    throw error;
+  if (!response.ok) {
+    throw new Error(data.message || 'Error al restablecer la contraseña');
   }
+
+  return data;
 };
-
-
-
-export const doCrearUsuario = async ( email,password) => {
-  try {
-    const response = await fetch(API_BASE_URL+`/crearUsuario`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Error al registrar usuario');
-    }
-
-    const data = await response.json();
-
-    return data;  // Retorna la respuesta del servidor (esto podría ser un mensaje de éxito o los datos del usuario)
-  } catch (error) {
-    console.error('Error en doRegister:', error);
-    throw error;
-  }
-};
-
-
-/**
- * Registra un nuevo usuario.
- * @param {string} nombreCompleto - Nombre completo del usuario.
- * @param {string} email - Correo electrónico del usuario.
- * @returns {Promise<object>} - Respuesta del servidor.
- */
-export const completarRegistro = async (nombreCompleto, email ,password, empresa, usuarioAlta, tipoUsuario) => {
-  try {
-    const response = await fetch(API_BASE_URL+`/completarRegistro`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombreCompleto, email,password, empresa,usuarioAlta, tipoUsuario }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Error al registrar usuario');
-    }
-
-    const data = await response.json();
-
-    return data;  // Retorna la respuesta del servidor (esto podría ser un mensaje de éxito o los datos del usuario)
-  } catch (error) {
-    console.error('Error en doRegister:', error);
-    throw error;
-  }
-};
-
-

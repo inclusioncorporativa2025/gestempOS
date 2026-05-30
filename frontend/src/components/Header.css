@@ -1,0 +1,24 @@
+.app-header-wrap {
+  background-color: red;
+  display: contents;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-height: 6%;
+}
+
+.app-header-title {
+  color: #fff;
+}
+
+.app-header-btn {
+  margin-left: 10px;
+}
+
+.app-header-icon {
+  color: #fff;
+  font-size: 18px;
+}

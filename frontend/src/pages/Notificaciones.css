@@ -1,0 +1,33 @@
+.notif-layout {
+  background-color: transparent;
+}
+
+.notif-card {
+  margin-top: 16px;
+  width: 100%;
+}
+
+.notif-modal {
+  top: 50px;
+}
+
+.notif-modal-title {
+  text-align: center;
+}
+
+.notif-totales {
+  margin-top: 16px;
+  font-weight: bold;
+}
+
+.notif-total-sep {
+  margin-right: 26px;
+}
+
+.notif-btn-mr {
+  margin-right: 8px;
+}
+
+.notif-procesada {
+  color: #888;
+}

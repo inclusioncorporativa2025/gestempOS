@@ -1,0 +1,12 @@
+.anadir-dia-collapse {
+  margin-bottom: 6px;
+}
+
+.anadir-dia-collapse .ant-select,
+.anadir-dia-collapse .ant-picker {
+  width: 100%;
+}
+
+.anadir-dia-time {
+  text-align: center;
+}

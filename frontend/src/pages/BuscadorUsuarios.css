@@ -1,0 +1,51 @@
+.bu-toolbar {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bu-search {
+  width: 300px;
+}
+
+.bu-activos {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bu-activos-label {
+  font-weight: 600;
+}
+
+.bu-full-width {
+  width: 100%;
+}
+
+.bu-detalles-modal {
+  top: 50px;
+}
+
+.bu-modal-title {
+  text-align: center;
+}
+
+.bu-month-picker {
+  width: 150px;
+  margin-bottom: 16px;
+}
+
+.bu-totales {
+  margin-top: 16px;
+  font-weight: bold;
+}
+
+.bu-total-sep {
+  margin-right: 26px;
+}
+
+.bu-acciones {
+  display: flex;
+  gap: 8px;
+}

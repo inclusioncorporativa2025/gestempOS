@@ -1,0 +1,45 @@
+.tlp-layout {
+  background-color: #f5f5f5;
+  margin: 0 auto;
+}
+
+.tlp-title {
+  text-align: center;
+}
+
+.tlp-month-picker {
+  width: 150px;
+  margin-bottom: 16px;
+}
+
+.tlp-actions-row {
+  margin-top: 16px;
+}
+
+.tlp-btn-enviar {
+  margin-right: 10px;
+}
+
+.tlp-btn-ausencia {
+  margin-left: 40px;
+}
+
+.tlp-full-width {
+  width: 100%;
+}
+
+.tlp-timepicker {
+  width: 100%;
+  margin-top: 5px;
+}
+
+.tlp-checkbox {
+  margin-top: 10px;
+}
+
+.tlp-select {
+  width: 80%;
+  max-width: 400px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}

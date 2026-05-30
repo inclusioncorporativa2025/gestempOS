@@ -1,0 +1,94 @@
+.home-page {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  background-color: #f5f5f5;
+  padding: 10px;
+}
+
+.home-col {
+  padding: 2vh;
+}
+
+.home-title-row {
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.home-card {
+  width: 100%;
+  max-width: 600px;
+  border: 1px solid black;
+  border-radius: 10px;
+  padding: 20px;
+  background-color: white;
+}
+
+.home-action-col {
+  display: flex;
+  justify-content: center;
+  min-height: 40vh;
+  padding: 20px;
+}
+
+.home-fichar-btn {
+  color: white;
+  background-color: #001529;
+  width: 100%;
+  max-width: 400px;
+  height: 100%;
+  font-size: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  border: none;
+  border-radius: 45px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.home-btn-row {
+  width: 100vw;
+  height: 100%;
+}
+
+.home-play-icon {
+  margin-bottom: 45px;
+  font-size: 8.5rem;
+}
+
+.home-select-col {
+  display: flex;
+  align-content: center;
+  justify-content: center;
+}
+
+.home-select-row {
+  width: 80%;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+  margin-inline: 10px;
+}
+
+.home-tipo-label {
+  padding-inline: 20px;
+}
+
+.home-select {
+  width: 80%;
+  max-width: 400px;
+}
+
+.home-option-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-ubicacion {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

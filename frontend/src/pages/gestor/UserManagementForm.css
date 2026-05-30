@@ -1,0 +1,23 @@
+.umf-layout {
+  background-color: #ffffff;
+}
+
+.umf-title {
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+.umf-btn-row {
+  justify-content: center;
+}
+
+.umf-btn-col {
+  text-align: center;
+}
+
+.umf-form-col {
+  width: 100vw;
+  margin: 0 auto;
+  justify-content: center;
+  align-items: center;
+}

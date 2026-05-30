@@ -1,0 +1,15 @@
+.be-layout {
+  background-color: transparent;
+}
+
+.be-card-table {
+  margin-top: 16px;
+}
+
+.be-full-width {
+  width: 100%;
+}
+
+.be-edit-modal {
+  max-width: 90%;
+}
