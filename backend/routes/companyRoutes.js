@@ -6,6 +6,7 @@ const {
   getEmpresas,
   editEmpresa,
   eliminarEmpresa,
+  reactivarEmpresa,
   getEmpresasUsuarios,
 } = require('../controllers/companyController');
 const { requireRole, ROLE_GROUPS } = require('../middleware/authMiddleware');
@@ -17,6 +18,7 @@ router.get('/getEmpresas', requireRole(ROLE_GROUPS.PLATFORM), getEmpresas);
 router.get('/getEmpresasUsuarios', requireRole(ROLE_GROUPS.PLATFORM), getEmpresasUsuarios);
 router.post('/edit', requireRole(ROLE_GROUPS.PLATFORM), editEmpresa);
 router.post('/delete', requireRole(ROLE_GROUPS.PLATFORM), eliminarEmpresa);
+router.post('/reactivar', requireRole(ROLE_GROUPS.PLATFORM), reactivarEmpresa);
 
 router.post('/getTipoRegistro', requireRole(ROLE_GROUPS.CONFIG), getTipoRegistro);
 router.post('/updateTipoRegistro', requireRole(ROLE_GROUPS.CONFIG), updateTipoRegistro);

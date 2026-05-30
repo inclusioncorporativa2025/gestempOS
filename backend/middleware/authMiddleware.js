@@ -1,4 +1,13 @@
 const jwt = require('jsonwebtoken');
+const Empresa = require('../models/Empresa');
+
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@fichaeneltrabajo.es';
+
+const empresaEstaOperativa = (empresa) =>
+  empresa &&
+  !empresa.fecha_baja &&
+  empresa.activo !== false &&
+  empresa.activo !== 0;
 
 /** Tipos de usuario (m_usuarios.tipo_usuario) */
 const ROLES = {
@@ -18,6 +27,21 @@ const ROLE_GROUPS = {
   PERSONAL_LIST: [ROLES.ROOT, ROLES.ADMIN_EMPRESA, ROLES.SUPERVISOR, ROLES.INSPECTOR],
   USER_WRITE: [ROLES.ROOT, ROLES.ADMIN_EMPRESA, ROLES.SUPERVISOR],
   CONFIG: [ROLES.ROOT, ROLES.ADMIN_EMPRESA, ROLES.SUPERVISOR],
+  /** Calendario: ver ausencias de toda la empresa */
+  CALENDARIO_AUSENCIAS_EMPRESA: [
+    ROLES.ROOT,
+    ROLES.PLATFORM_ADMIN,
+    ROLES.ADMIN_EMPRESA,
+    ROLES.SUPERVISOR,
+  ],
+  /** Calendario: acceso a la pantalla (empleado solo ve las propias) */
+  CALENDARIO_VIEW: [
+    ROLES.ROOT,
+    ROLES.PLATFORM_ADMIN,
+    ROLES.ADMIN_EMPRESA,
+    ROLES.SUPERVISOR,
+    ROLES.EMPLEADO,
+  ],
   ALL: [1, 2, 3, 4, 5, 6],
 };
 
@@ -68,7 +92,7 @@ const requireRole = (...tiposPermitidos) => {
  * Usuarios de empresa (3–6) solo pueden operar sobre su id_empresa del JWT.
  * ROOT (1) y plataforma (2) quedan exentos.
  */
-const requireOwnEmpresa = (req, res, next) => {
+const requireOwnEmpresa = async (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ message: 'No autorizado' });
   }
@@ -80,7 +104,26 @@ const requireOwnEmpresa = (req, res, next) => {
 
   const empresaToken = Number(req.user.id_empresa);
   if (!empresaToken) {
-    return res.status(403).json({ message: 'Usuario sin empresa asignada' });
+    return res.status(403).json({
+      code: 'EMPRESA_NO_VINCULADA',
+      message: 'No podemos iniciar su sesión en este momento.',
+      supportEmail: SUPPORT_EMAIL,
+    });
+  }
+
+  try {
+    const empresa = await Empresa.findByPk(empresaToken);
+    if (!empresaEstaOperativa(empresa)) {
+      return res.status(403).json({
+        code: 'EMPRESA_INACTIVA',
+        message:
+          'El acceso de su empresa no está disponible en este momento. Si necesita ayuda, contacte con soporte.',
+        supportEmail: SUPPORT_EMAIL,
+      });
+    }
+  } catch (error) {
+    console.error('Error validando empresa activa:', error.message);
+    return res.status(500).json({ message: 'Error al validar la empresa' });
   }
 
   const camposEmpresa = ['idEmpresa', 'id_empresa'];

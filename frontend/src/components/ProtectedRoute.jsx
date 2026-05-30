@@ -17,7 +17,7 @@ const ProtectedRoute = ({ children, allowedTypes }) => {
 
   if (!allowedTypes.includes(tipoUsuario)) {
     if (tipoUsuario === 2) {
-      return <Navigate to="/alta-empresa" replace />;
+      return <Navigate to="/buscador-empresa" replace />;
     }
     return <Navigate to="/" replace />;
   }

@@ -1,21 +1,74 @@
-const crypto = require('crypto');
-const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const { Op } = require('sequelize');
 const Usuario = require('../models/Usuario');
 const UsuarioEmpresa = require('../models/UsuarioEmpresa');
 const Empresa = require('../models/Empresa');
+const { hashToken, generarYEnviarReset } = require('../utils/mailService');
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRATION
-const FRONTEND_URL = process.env.FRONTEND_URL
-const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES) || 60;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRATION;
 const BCRYPT_ROUNDS = 10;
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@fichaeneltrabajo.es';
 
-const hashToken = (rawToken) =>
-  crypto.createHash('sha256').update(rawToken).digest('hex');
+/** Tipos de plataforma: no exigen empresa activa en el login */
+const TIPOS_PLATAFORMA = [1, 2];
+
+const usuarioActivo = (usuario) =>
+  usuario && usuario.activo !== false && usuario.activo !== 0;
+
+const empresaEstaOperativa = (empresa) =>
+  empresa &&
+  !empresa.fecha_baja &&
+  empresa.activo !== false &&
+  empresa.activo !== 0;
+
+const obtenerEmpresaDelUsuario = async (idUsuario) => {
+  const usuarioEmpresa = await UsuarioEmpresa.findOne({
+    where: { id_usuario: idUsuario, fecha_baja: null },
+  });
+
+  if (!usuarioEmpresa) {
+    return { usuarioEmpresa: null, empresa: null };
+  }
+
+  const empresa = await Empresa.findOne({
+    where: { id_empresa: usuarioEmpresa.id_empresa },
+  });
+
+  return { usuarioEmpresa, empresa };
+};
+
+/**
+ * Usuarios de empresa (3–6) solo pueden autenticarse si su empresa está activa y sin baja.
+ */
+const validarAccesoEmpresa = (usuario, empresa, usuarioEmpresa) => {
+  const tipo = Number(usuario.tipo_usuario);
+
+  if (TIPOS_PLATAFORMA.includes(tipo)) {
+    return null;
+  }
+
+  if (!usuarioEmpresa) {
+    return {
+      status: 403,
+      code: 'EMPRESA_NO_VINCULADA',
+      message:
+        'Su usuario no está vinculado a ninguna empresa. Contacte con el administrador de la plataforma.',
+    };
+  }
+
+  if (!empresaEstaOperativa(empresa)) {
+    return {
+      status: 403,
+      code: 'EMPRESA_INACTIVA',
+      message:
+        'La empresa asociada a su cuenta no está activa o ha sido dada de baja. Contacte con el administrador de la plataforma.',
+    };
+  }
+
+  return null;
+};
 
 const sanitizeUsuario = (usuario) => ({
   id_usuario: usuario.id_usuario,
@@ -25,119 +78,6 @@ const sanitizeUsuario = (usuario) => ({
   dni: usuario.dni,
   activo: usuario.activo,
 });
-
-const buildTransporter = () =>
-  nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT, 10),
-    secure: parseInt(process.env.SMTP_PORT, 10) === 465,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-
-const buildResetEmailHtml = ({ nombre, enlace, ttlMinutos }) => `
-  <!DOCTYPE html>
-  <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  </head>
-  <body style="margin:0; padding:0; background-color:#f4f5f7;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7; padding:32px 0;">
-      <tr>
-        <td align="center">
-          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-            <tr>
-              <td style="background-color:#fffff; padding:28px 0; text-align:center;">
-                <img src="cid:logo" alt="Ficha en el Trabajo" width="160" style="display:inline-block; max-width:160px; height:auto;" />
-              </td>
-            </tr>
-            <tr>
-              <td style="height:4px; background:linear-gradient(90deg,#2BA9E0 0%,#E0529C 100%); background-color:#2BA9E0; font-size:0; line-height:0;">&nbsp;</td>
-            </tr>
-            <tr>
-              <td style="padding:36px 40px 8px 40px; font-family:Arial,Helvetica,sans-serif;">
-                <h1 style="margin:0 0 16px 0; font-size:22px; color:#0f1020;">Restablecer contraseña</h1>
-                <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">Hola <strong>${nombre}</strong>,</p>
-                <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">
-                  Hemos recibido una solicitud para establecer la contraseña de tu cuenta en <strong>Ficha en el Trabajo</strong>.
-                </p>
-                <p style="margin:0 0 28px 0; font-size:15px; line-height:1.6; color:#444;">
-                  Pulsa el botón para continuar. Por seguridad, el enlace caduca en <strong>${ttlMinutos} minutos</strong>.
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:0 40px 32px 40px; text-align:center; font-family:Arial,Helvetica,sans-serif;">
-                <a href="${enlace}" style="display:inline-block; background:linear-gradient(90deg,#2BA9E0 0%,#E0529C 100%); background-color:#2BA9E0; color:#ffffff; font-size:16px; font-weight:bold; text-decoration:none; padding:14px 36px; border-radius:8px;">
-                  Establecer contraseña
-                </a>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:0 40px 32px 40px; font-family:Arial,Helvetica,sans-serif;">
-                <p style="margin:0 0 8px 0; font-size:13px; color:#777;">Si el botón no funciona, copia y pega esta URL en tu navegador:</p>
-                <p style="margin:0; font-size:13px; word-break:break-all;">
-                  <a href="${enlace}" style="color:#2BA9E0;">${enlace}</a>
-                </p>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:24px 40px; background-color:#f9fafb; border-top:1px solid #eee; font-family:Arial,Helvetica,sans-serif;">
-                <p style="margin:0 0 6px 0; font-size:12px; color:#999;">Si no solicitaste este cambio, puedes ignorar este correo de forma segura.</p>
-                <p style="margin:0; font-size:12px; color:#999;">© ${new Date().getFullYear()} Inclusión Corporativa · Ficha en el Trabajo</p>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-  </html>
-`;
-
-/**
- * Genera un token de restablecimiento, lo guarda en el usuario y envía
- * el correo con el enlace para establecer la contraseña.
- *
- * @param {object} usuario  Instancia Sequelize del usuario
- * @returns {Promise<string>} URL de restablecimiento (útil para devolverla en desarrollo)
- */
-const generarYEnviarReset = async (usuario) => {
-  const rawToken = crypto.randomBytes(32).toString('hex');
-  usuario.reset_token_hash = hashToken(rawToken);
-  usuario.reset_token_expira = new Date(Date.now() + RESET_TOKEN_TTL_MINUTES * 60 * 1000);
-  await usuario.save();
-
-  const enlace = `${FRONTEND_URL}/reset-password?token=${rawToken}&email=${encodeURIComponent(usuario.email)}`;
-
-  try {
-    const transporter = buildTransporter();
-    await transporter.sendMail({
-      from: process.env.SMTP_USER,
-      to: usuario.email,
-      subject: 'Ficha en el Trabajo - Restablece tu contraseña',
-      html: buildResetEmailHtml({
-        nombre: usuario.nombre,
-        enlace,
-        ttlMinutos: RESET_TOKEN_TTL_MINUTES,
-      }),
-      attachments: [
-        {
-          filename: 'logo.png',
-          path: path.resolve(__dirname, '../utils/images/Logo-Horizontal INCOR-RGB.png'),
-          cid: 'logo',
-        },
-      ],
-    });
-  } catch (mailError) {
-    console.error('Error enviando email de reset:', mailError.message);
-  }
-
-  return enlace;
-};
 
 const login = async (req, res) => {
   const { email, password } = req.body;
@@ -149,8 +89,18 @@ const login = async (req, res) => {
   try {
     const usuario = await Usuario.findOne({ where: { email, fecha_baja: null } });
 
-    if (!usuario || usuario.activo === false) {
+    if (!usuarioActivo(usuario)) {
       return res.status(401).json({ message: 'Credenciales inválidas' });
+    }
+
+    const { usuarioEmpresa, empresa } = await obtenerEmpresaDelUsuario(usuario.id_usuario);
+    const bloqueoEmpresa = validarAccesoEmpresa(usuario, empresa, usuarioEmpresa);
+    if (bloqueoEmpresa) {
+      return res.status(bloqueoEmpresa.status).json({
+        code: bloqueoEmpresa.code,
+        message: bloqueoEmpresa.message,
+        supportEmail: bloqueoEmpresa.supportEmail,
+      });
     }
 
     // Usuario sin contraseña establecida (p.ej. migración) o que requiere reset:
@@ -182,19 +132,10 @@ const login = async (req, res) => {
     let nombre_empresa = null;
     let alias = null;
 
-    const usuarioEmpresa = await UsuarioEmpresa.findOne({
-      where: { id_usuario: usuario.id_usuario, fecha_baja: null },
-    });
-
-    if (usuarioEmpresa) {
-      const empresa = await Empresa.findOne({
-        where: { id_empresa: usuarioEmpresa.id_empresa, fecha_baja: null },
-      });
-      if (empresa) {
-        id_empresa = empresa.id_empresa;
-        nombre_empresa = empresa.nombre;
-        alias = empresa.alias;
-      }
+    if (empresaEstaOperativa(empresa)) {
+      id_empresa = empresa.id_empresa;
+      nombre_empresa = empresa.nombre;
+      alias = empresa.alias;
     }
 
     const token = jwt.sign(
@@ -240,7 +181,12 @@ const forgotPassword = async (req, res) => {
   try {
     const usuario = await Usuario.findOne({ where: { email, fecha_baja: null } });
 
-    if (!usuario || usuario.activo === false) {
+    if (!usuarioActivo(usuario)) {
+      return res.status(200).json(respuestaGenerica);
+    }
+
+    const { usuarioEmpresa, empresa } = await obtenerEmpresaDelUsuario(usuario.id_usuario);
+    if (validarAccesoEmpresa(usuario, empresa, usuarioEmpresa)) {
       return res.status(200).json(respuestaGenerica);
     }
 

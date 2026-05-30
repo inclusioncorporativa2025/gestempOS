@@ -20,7 +20,6 @@ import Header from './components/Header';
 import SidebarFooter from './components/SidebarFooter';
 import { useAuth } from './config/AuthContext';
 import TimeLogsPanel from './pages/TimeLogsPanel';
-import AltaEmpresa from './pages/admin/AltaEmpresa';
 import UserManagementForm from './pages/gestor/UserManagementForm';
 import ConfiguracionGestor from './pages/gestor/ConfiguracionGestor';
 import Calendario from './pages/Calendario';
@@ -71,7 +70,7 @@ const pages = [
     key: '9',
     icon: <CalendarOutlined />,
     path: '/Calendario',
-    tipousuario: [1,3,4],
+    tipousuario: [1,3,4,5],
   },
   {
     label: 'Configuración',
@@ -79,13 +78,6 @@ const pages = [
     icon: <SlidersOutlined />,
     path: '/ConfiguracionGestor',
     tipousuario: [1,3,4],
-  },
-  {
-    label: 'Alta Empresa',
-    key: '7',
-    icon: <UserAddOutlined />,
-    path: '/alta-empresa',
-    tipousuario: [1,2],
   },
   {
     label: 'Empresas',
@@ -120,7 +112,10 @@ function App() {
   }, []);
 
   const isMobile = windowWidth < 950;
-  const isLogin = location.pathname === '/';
+  /** Login, olvidé contraseña y alta de clave: sin menú ni cabecera de la app */
+  const isAuthShellPage = ['/', '/forgot-password', '/reset-password'].includes(
+    location.pathname,
+  );
   const showDrawer = () => setDrawerVisible(true);
   const closeDrawer = () => setDrawerVisible(false);
 
@@ -156,9 +151,9 @@ function App() {
   return (
     <ConfigProvider theme={{ token: { fontFamily: 'var(--font-family-base)', fontWeightStrong: 300 } }}>
     <Layout className="app-shell">
-      {!isLogin && <Header />}
+      {!isAuthShellPage && <Header />}
       <Layout className="app-shell-body">
-        {location.pathname !== '/' && !isMobile && (
+        {!isAuthShellPage && !isMobile && (
           <Sider
             width={220}
             collapsedWidth={76}
@@ -191,7 +186,7 @@ function App() {
           </Sider>
         )}
 
-        {isMobile && location.pathname !== '/' && ( // Asegúrate de no mostrar en la página de login
+        {isMobile && !isAuthShellPage && (
           <Button
             className="colorPrincipal"
             type="primary"
@@ -227,23 +222,15 @@ function App() {
           </div>
         </Drawer>
 
-        <Layout className={!isMobile && !isLogin ? 'app-main-layout' : undefined}>
+        <Layout className={!isMobile && !isAuthShellPage ? 'app-main-layout' : undefined}>
           <Content
-            className={!isMobile && !isLogin ? 'app-main-content' : undefined}
-            style={isLogin ? { background: 'transparent' } : undefined}
+            className={!isMobile && !isAuthShellPage ? 'app-main-content' : undefined}
+            style={isAuthShellPage ? { background: 'transparent' } : undefined}
           >
             <Routes>
               <Route path="/" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route
-                path="/alta-empresa"
-                element={
-                  <ProtectedRoute allowedTypes={[1, 2]}>
-                    <AltaEmpresa />
-                  </ProtectedRoute>
-                }
-              />
               <Route
                 path="/TimeLogsPanel"
                 element={
@@ -271,7 +258,7 @@ function App() {
                <Route
                 path="/Calendario"
                 element={
-                  <ProtectedRoute allowedTypes={[1, 3, 4]}>
+                  <ProtectedRoute allowedTypes={[1, 3, 4, 5]}>
                     <Calendario />
                   </ProtectedRoute>
                 }

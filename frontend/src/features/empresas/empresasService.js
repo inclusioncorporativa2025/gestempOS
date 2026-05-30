@@ -251,14 +251,32 @@ export const eliminarEmpresa = async (idEmpresa) => {
   
       const data = await response.json();
   
-      return data.empresas;  
+      return data;  
     } catch (error) {
       console.error('Error recuperando datos:', error);
       throw error;
     }   
 };
 
+export const reactivarEmpresa = async (idEmpresa) => {
+  try {
+    const idUsuario = getIdUsuario();
 
+    const response = await fetch(`${API_BASE_URL}/reactivar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idEmpresa, idUsuario }),
+    });
 
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || errorData.message || 'Error al reactivar la empresa');
+    }
 
+    return response.json();
+  } catch (error) {
+    console.error('Error reactivar empresa:', error);
+    throw error;
+  }
+};
 

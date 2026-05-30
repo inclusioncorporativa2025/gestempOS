@@ -1,9 +1,108 @@
 .be-layout {
-  background-color: transparent;
+  width: 100%;
+  min-height: 100%;
+  background: #fff;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.be-page-title {
+  margin: 0 0 20px !important;
+  text-align: center;
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.be-stats-row {
+  margin-bottom: 16px;
+}
+
+.be-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  min-height: 88px;
+  padding: 16px 20px;
+  border: 2px solid #e8e8e8;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  font-family: inherit;
+}
+
+.be-stat-card:hover {
+  border-color: var(--color-primary, #2ba9e0);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb, 43, 169, 224), 0.15);
+}
+
+.be-stat-card--selected {
+  border-color: var(--color-primary, #2ba9e0);
+  box-shadow: 0 4px 14px rgba(var(--color-primary-rgb, 43, 169, 224), 0.22);
+}
+
+.be-stat-label {
+  display: block;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.55);
+  margin-bottom: 4px;
+}
+
+.be-stat-count {
+  font-size: 28px;
+  font-weight: var(--font-weight-medium, 500);
+  line-height: 1.2;
+  color: var(--color-dark, #001529);
+}
+
+.be-stat-card--activas.be-stat-card--selected .be-stat-count {
+  color: #389e0d;
+}
+
+.be-stat-card--desactivadas.be-stat-card--selected .be-stat-count {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.be-search-card {
+  margin-bottom: 16px;
+}
+
+.be-search-card .ant-card-body {
+  padding: 16px 20px;
+}
+
+.be-search-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.be-search-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.be-alta-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-weight: var(--font-weight-medium, 500);
+}
+
+@media (max-width: 576px) {
+  .be-search-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .be-alta-btn {
+    width: 100%;
+  }
 }
 
 .be-card-table {
-  margin-top: 16px;
+  margin-top: 0;
 }
 
 .be-full-width {
@@ -12,4 +111,16 @@
 
 .be-edit-modal {
   max-width: 90%;
+}
+
+.be-row-inactiva {
+  opacity: 0.72;
+}
+
+.be-row-inactiva td {
+  background: #fafafa !important;
+}
+
+.be-reactivar-btn {
+  color: #1677ff;
 }

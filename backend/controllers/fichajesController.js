@@ -16,9 +16,14 @@ const moment = require('moment-timezone');
 const dayjs = require('dayjs');
 const timezone = require('dayjs/plugin/timezone');
 const utc = require('dayjs/plugin/utc');
+const customParseFormat = require('dayjs/plugin/customParseFormat');
 const Usuario = require('../models/Usuario');
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.extend(customParseFormat);
+
+const parseFechaRegistro = (valor) =>
+  dayjs(valor, ['DD-MM-YYYY', 'YYYY-MM-DD'], true);
 
 const getDatosUsuario = async (req, res) => {
   const { idUsuario, idEmpresa } = req.body;
@@ -72,7 +77,10 @@ const getDatosUsuarioById = async (req, res) => {
     const combinarFechaHora = (fecha, hora) => {
       if (!fecha) return null;
 
-      const fechaBase = dayjs(fecha).format('YYYY-MM-DD');
+      const parsed = parseFechaRegistro(fecha);
+      const fechaBase = parsed.isValid()
+        ? parsed.format('YYYY-MM-DD')
+        : dayjs(fecha).format('YYYY-MM-DD');
 
       if (!hora) {
         return `${fechaBase}T00:00:00`;
@@ -83,10 +91,12 @@ const getDatosUsuarioById = async (req, res) => {
 
     const expandirRangoDias = (fechaDesde, fechaHasta) => {
       const dias = [];
-      let actual = dayjs(fechaDesde).startOf('day');
-      const fin = dayjs(fechaHasta).startOf('day');
+      let actual = parseFechaRegistro(fechaDesde).startOf('day');
+      const fin = parseFechaRegistro(fechaHasta).startOf('day');
 
-      while (actual.isSame(fin) || actual.isBefore(fin)) {
+      if (!actual.isValid() || !fin.isValid()) return [];
+
+      while (actual.isSame(fin, 'day') || actual.isBefore(fin, 'day')) {
         dias.push(actual.format('YYYY-MM-DD'));
         actual = actual.add(1, 'day');
       }
@@ -475,6 +485,7 @@ const crearPeticionCierreMes = async (req, res) => {
     const info = await createConId(MesesCierre, idEmpresa, 'id_mes_cierre', {
       usuario_alta: idUsuario,
       mes: mesFormateado,
+      fecha_alta: new Date(),
     });
 
     const usuariosEmpresa = await sequelize.query(

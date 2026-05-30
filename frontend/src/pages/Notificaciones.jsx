@@ -338,7 +338,7 @@ const setVisibleModalDetalles = async (info) => {
                 columns={columnsCierreMensual}
                 dataSource={cierresMensuales}
                 loading={loading}
-                rowKey="id_cierre"
+                rowKey={(record) => `${record.empresa_id}-${record.id_mes_cierre}`}
                 pagination={{ pageSize: 5 }}
               />
             </Card>

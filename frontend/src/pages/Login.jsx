@@ -3,6 +3,7 @@ import { Form, Input, Button, Checkbox, Typography, notification, Modal } from '
 import { doLogin, doForgotPassword } from "../features/auth/authService";
 import { useAuth } from '../config/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { SUPPORT_EMAIL } from '../constants/support';
 import './Login.css';
 
 const { Title, Text } = Typography;
@@ -45,6 +46,19 @@ const Login = () => {
           message: "Restablecimiento de contraseña requerido",
           description: error.message || "Tras mejoras en el sistema, por motivos de seguridad debes restablecer la contraseña. Se te ha enviado un correo con los pasos a seguir.",
           duration: 8,
+        });
+      } else if (error.code === 'EMPRESA_INACTIVA' || error.code === 'EMPRESA_NO_VINCULADA') {
+        const emailSoporte = error.supportEmail || SUPPORT_EMAIL;
+        notification.warning({
+          message: 'Acceso no disponible',
+          description: (
+            <>
+              {error.message || 'No podemos iniciar su sesión en este momento.'}{' '}
+              Si necesita ayuda, escríbanos a{' '}
+              <a href={`mailto:${emailSoporte}`}>{emailSoporte}</a>.
+            </>
+          ),
+          duration: 10,
         });
       } else {
         notification.error({

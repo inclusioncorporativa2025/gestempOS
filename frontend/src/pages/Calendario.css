@@ -5,3 +5,130 @@
   padding: 24px;
   box-sizing: border-box;
 }
+
+.cal-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+  margin-bottom: 16px;
+}
+
+.cal-leyenda-hint {
+  font-size: 13px;
+}
+
+/* Fecha arriba, ausencias/festivos abajo en la celda */
+.calendario-layout :global(.ant-picker-calendar-date) {
+  display: flex;
+  flex-direction: column;
+  min-height: 72px;
+}
+
+.calendario-layout :global(.ant-picker-calendar-date-content) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: auto !important;
+  min-height: 40px;
+  margin-top: auto;
+  padding-bottom: 2px;
+}
+
+.cal-cell-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 3px;
+  font-size: 9px;
+  line-height: 1.2;
+  max-height: 64px;
+  overflow: hidden;
+  margin-top: auto;
+}
+
+.cal-badge {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  font-size: 9px;
+  line-height: 1.15;
+}
+
+.cal-badge :global(.ant-badge-status) {
+  line-height: 1.15;
+  font-size: 9px;
+}
+
+.cal-badge :global(.ant-badge-status-dot) {
+  width: 5px;
+  height: 5px;
+  top: 0;
+}
+
+.cal-badge :global(.ant-badge-status-text) {
+  font-size: 9px;
+  line-height: 1.15;
+  margin-inline-start: 4px;
+}
+
+.cal-ausencia-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.cal-ausencia-dot {
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: #1677ff;
+}
+
+.cal-ausencia-textos {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  flex: 1;
+}
+
+.cal-ausencia-nombre,
+.cal-ausencia-tipo {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.cal-ausencia-nombre {
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.cal-ausencia-tipo {
+  color: #1677ff;
+}
+
+.cal-mas-ausencias {
+  font-size: 8px;
+  line-height: 1.1;
+}
+
+.cal-ausencias-lista {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.cal-ausencias-lista li {
+  margin-bottom: 6px;
+}

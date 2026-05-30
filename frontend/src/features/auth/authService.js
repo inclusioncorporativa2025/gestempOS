@@ -23,6 +23,7 @@ export const doLogin = async (email, password) => {
     const error = new Error(data.message || 'Error al iniciar sesión');
     error.code = data.code;
     error.status = response.status;
+    error.supportEmail = data.supportEmail;
     throw error;
   }
 

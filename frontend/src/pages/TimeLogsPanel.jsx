@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Layout, Card, Table, Button, Typography, Row, Col, Modal, Form, Input, TimePicker, message, Select, DatePicker, Checkbox, Collapse, Empty } from 'antd';
-import {  eliminarRegistro,crearPeticionEdicion,crearPeticionCierreMes,getPeticionesByIdUsuario,getPeticionesByIdEmpresa } from "../features/fichaje/fichajeService";
+import { Layout, Card, Table, Button, Typography, Row, Col, Modal, Form, Input, TimePicker, message, Select, DatePicker, Checkbox, Collapse, Empty, Dropdown, Tooltip } from 'antd';
+import { MoreOutlined, SendOutlined, ExportOutlined, PlusCircleOutlined, EditOutlined } from '@ant-design/icons';
+import { crearPeticionEdicion, crearPeticionCierreMes, getPeticionesByIdUsuario, getPeticionesByIdEmpresa } from "../features/fichaje/fichajeService";
 import { getDatosUsuarioById } from "../features/fichaje/fichajeService";
 import { descargarExcelDesdeAPI } from "../features/user/usuarioService";
 import { crearAusencia } from "../features/ausencias/ausenciasService";
@@ -24,6 +25,11 @@ const formatEtiquetaDia = (dateStr) => {
   if (!d.isValid()) return dateStr || 'Sin fecha';
   const dia = d.format('dddd');
   return `${dia.charAt(0).toUpperCase()}${dia.slice(1)}, ${dateStr}`;
+};
+
+const esFechaHoy = (dateStr) => {
+  const d = dayjs(dateStr, 'DD/MM/YYYY');
+  return d.isValid() && d.isSame(dayjs(), 'day');
 };
 
 const calcularDifTiempo = (entrada, salida) => {
@@ -78,6 +84,10 @@ const anadirAusencia = async () => {
     const idEmpresa = getIdEmpresa();
     const usuario_alta = getIdUsuario();
 
+    if (!selectedEntrada) {
+      return message.error('Selecciona el tipo de ausencia');
+    }
+
     if (!exportDateRange || exportDateRange.length !== 2) {
       return message.error("Por favor, selecciona un rango de fechas válido.");
     }
@@ -104,6 +114,7 @@ const anadirAusencia = async () => {
     );
 
     message.success("Ausencia añadida correctamente");
+    await fetchData();
 
     // Cerrar modal y limpiar
     setAbsenceModalVisible(false);
@@ -117,7 +128,8 @@ const anadirAusencia = async () => {
     return datos;
   } catch (error) {
     console.error("Error añadiendo ausencia:", error);
-    message.error("Error al añadir ausencia");
+    const detalle = error.detalle ? ` (${error.detalle})` : '';
+    message.error((error.message || 'Error al añadir ausencia') + detalle, 6);
   }
 };
     const handleExport = () => {
@@ -206,7 +218,19 @@ const fetchData = async () => {
     });
 
     setData(sortedData);
-    setFilteredData(sortedData);
+    if (selectedMonth) {
+      const filtered = sortedData.filter((item) => {
+        const itemDate = moment(item.date, 'DD/MM/YYYY');
+        return (
+          itemDate.isValid() &&
+          itemDate.month() === selectedMonth.month() &&
+          itemDate.year() === selectedMonth.year()
+        );
+      });
+      setFilteredData(filtered);
+    } else {
+      setFilteredData(sortedData);
+    }
   } catch (error) {
     console.error("Error al cargar los datos:", error);
     message.error("Error al cargar los datos");
@@ -328,24 +352,6 @@ const crearPeticionMensual = async () => {
 
     
     
-    const handleDelete = async (record) => {
-      const idFichaje = record.idFichaje ?? String(record.key).replace(/^fichaje-/, '');
-      if (!idFichaje) {
-        message.error('No se pudo identificar el fichaje');
-        return;
-      }
-
-      try {
-        await eliminarRegistro(idFichaje);
-        const updatedData = data.filter((item) => item.key !== record.key);
-        setData(updatedData);
-        setFilteredData(updatedData);
-        message.success('Registro eliminado correctamente');
-      } catch (error) {
-        message.error(error.message || 'No se pudo eliminar el registro');
-      }
-    };
-
 const handleMonthChange = (date, dateString) => {
     setSelectedMonth(date);
 
@@ -402,14 +408,16 @@ const handleMonthChange = (date, dateString) => {
         (!mesSeleccionadoFormateado || !mesCerrado);
 
       return (
-        <>
-          <Button type="link" onClick={() => showEditModal(record)} disabled={!isEditable}>
-            Editar
-          </Button>
-          <Button type="link" danger onClick={() => handleDelete(record)}>
-            Eliminar
-          </Button>
-        </>
+        <Tooltip title={isEditable ? 'Editar fichaje' : 'No se puede editar este registro'}>
+          <Button
+            type="text"
+            className="tlp-edit-btn"
+            icon={<EditOutlined />}
+            disabled={!isEditable}
+            onClick={() => showEditModal(record)}
+            aria-label="Editar fichaje"
+          />
+        </Tooltip>
       );
     };
 
@@ -461,22 +469,54 @@ const handleMonthChange = (date, dateString) => {
       }
     }, [gruposPorDia]);
 
+    const accionesMenu = {
+      items: [
+        {
+          key: 'enviar',
+          label: 'Enviar',
+          icon: <SendOutlined />,
+          disabled: isSubmitDisabled,
+        },
+        {
+          key: 'exportar',
+          label: 'Exportar',
+          icon: <ExportOutlined />,
+        },
+        {
+          key: 'ausencia',
+          label: 'Añadir ausencia',
+          icon: <PlusCircleOutlined />,
+        },
+      ],
+      onClick: ({ key }) => {
+        if (key === 'enviar') enviarRegistro();
+        if (key === 'exportar') setVisibleModalExportar();
+        if (key === 'ausencia') setAbsenceModalVisible(true);
+      },
+    };
+
     return (
         <Layout className="tlp-layout">
             <Card title={<Title className="tlp-title" level={2}>Registro de Horas</Title>}>
-                <Row>
-                    <Col span={24}>
-                        <DatePicker
-                            value={selectedMonth}
-                            onChange={handleMonthChange}
-                            picker="month"
-                            className="tlp-month-picker"
-                            format="MM/YYYY"
-                            disabledDate={(current) => current && current > moment()}
-                            placeholder="Selecciona un mes"
+                <div className="tlp-toolbar">
+                    <DatePicker
+                        value={selectedMonth}
+                        onChange={handleMonthChange}
+                        picker="month"
+                        className="tlp-month-picker"
+                        format="MM/YYYY"
+                        disabledDate={(current) => current && current > moment()}
+                        placeholder="Selecciona un mes"
+                    />
+                    <Dropdown menu={accionesMenu} trigger={['click']} placement="bottomRight">
+                        <Button
+                            type="text"
+                            className="tlp-more-btn"
+                            icon={<MoreOutlined />}
+                            aria-label="Más acciones"
                         />
-                    </Col>
-                </Row>
+                    </Dropdown>
+                </div>
 
                 {gruposPorDia.length === 0 ? (
                   <Empty description="No hay registros para este periodo" />
@@ -487,9 +527,17 @@ const handleMonthChange = (date, dateString) => {
                     onChange={(keys) => setDiasExpandidos(Array.isArray(keys) ? keys : [keys])}
                     items={gruposPorDia.map(([date, rows]) => ({
                       key: date,
+                      className: esFechaHoy(date) ? 'tlp-day-item--hoy' : undefined,
                       label: (
                         <div className="tlp-day-header">
-                          <span className="tlp-day-title">{formatEtiquetaDia(date)}</span>
+                          <span className="tlp-day-title">
+                            {formatEtiquetaDia(date)}
+                            {esFechaHoy(date) && (
+                              <span className="tlp-hoy-chip" aria-label="Día actual">
+                                Hoy
+                              </span>
+                            )}
+                          </span>
                           <span className="tlp-day-count">
                             {rows.length} registro{rows.length !== 1 ? 's' : ''}
                           </span>
@@ -509,32 +557,6 @@ const handleMonthChange = (date, dateString) => {
                     }))}
                   />
                 )}
-
-                {/* Botón Enviar */}
-                <Row justify="start" className="tlp-actions-row">
-                    <Button
-                    className="tlp-btn-enviar"
-                        type="primary"
-                        disabled={isSubmitDisabled} // Habilitar/deshabilitar el botón
-                        onClick={enviarRegistro}
-                    >
-                        Enviar
-                    </Button>
-                      <Button
-                        type="primary"
-                        onClick={setVisibleModalExportar}
-                    >
-                        Exportar
-                    </Button>
-
-                      <Button
-                        className="tlp-btn-ausencia"
-                        type="primary"
-                        onClick={() => setAbsenceModalVisible(true)}
-                    >
-                        Añadir ausencia
-                    </Button>
-                </Row>
 
                 <Modal
                     title="Editar Registro"

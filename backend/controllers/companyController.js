@@ -4,6 +4,7 @@ const Usuario = require('../models/Usuario');
 const UsuarioEmpresa = require('../models/UsuarioEmpresa');
 const ConfiguracionEsquemaModel = require('../models/ConfiguracionEsquemaModel');
 const { getNextGlobalId } = require('../utils/empresaScope');
+const { enviarBienvenidaEmpresa } = require('../utils/mailService');
 
 const registerCompany = async (req, res) => {
     const transaction = await sequelize.transaction();
@@ -57,9 +58,33 @@ const registerCompany = async (req, res) => {
 
         await transaction.commit();
 
-        // El administrador se crea sin contraseña (requiere_reset_password = true):
-        // deberá establecerla con el flujo "He olvidado mi contraseña".
-        res.status(201).json({ message: 'Empresa registrada con éxito'  });
+        let emailBienvenidaEnviado = true;
+        let devWelcomeUrl = null;
+
+        try {
+          devWelcomeUrl = await enviarBienvenidaEmpresa(usuarioAdmin, {
+            nombreEmpresa: nombre_empresa,
+            licencias: numLicencias,
+            alias,
+            identificadorFiscal: CIF,
+          });
+        } catch (mailError) {
+          emailBienvenidaEnviado = false;
+          console.error('Empresa creada pero falló el email de bienvenida:', mailError.message);
+        }
+
+        const respuesta = {
+          message: emailBienvenidaEnviado
+            ? 'Empresa registrada con éxito. Se ha enviado un correo de bienvenida al administrador.'
+            : 'Empresa registrada con éxito, pero no se pudo enviar el correo de bienvenida. Use "Olvidé mi contraseña" con el email del administrador.',
+          emailBienvenidaEnviado,
+        };
+
+        if (process.env.NODE_ENV !== 'production' && devWelcomeUrl) {
+          respuesta.devWelcomeUrl = devWelcomeUrl;
+        }
+
+        res.status(201).json(respuesta);
     } catch (error) {
 
         await transaction.rollback();
@@ -108,10 +133,18 @@ const getEmpresasUsuarios = async (req, res)=> {
   try {
 
          const result = await sequelize.query(
-                `select e.id_empresa,e.nombre,e.identificador_fiscal,e.fecha_alta,e.licencias,e.activo,e.alias, u.email from m_empresas e
-                inner join m_usuarios_empresas ue on ue.id_empresa = e.id_empresa
-                inner join m_usuarios u on u.id_usuario = ue.id_usuario and u.tipo_usuario = 3
-                where e.fecha_baja is null order by e.fecha_alta desc;`,
+                `SELECT e.id_empresa, e.nombre, e.identificador_fiscal, e.fecha_alta, e.licencias,
+                        e.activo, e.alias, e.fecha_baja,
+                        (
+                          SELECT u.email
+                          FROM m_usuarios_empresas ue
+                          INNER JOIN m_usuarios u ON u.id_usuario = ue.id_usuario AND u.tipo_usuario = 3
+                          WHERE ue.id_empresa = e.id_empresa
+                          ORDER BY ue.fecha_baja IS NULL DESC, ue.fecha_alta DESC
+                          LIMIT 1
+                        ) AS email
+                FROM m_empresas e
+                ORDER BY e.fecha_alta DESC`,
                 { type: sequelize.QueryTypes.SELECT }
               );
         if(!res){
@@ -179,26 +212,59 @@ async function deleteRegistroVivo() {}
 
     try {
 
-      const {idEmpresa,idUsuario} = req.body;
+      const { idEmpresa, idUsuario } = req.body;
+      const idEmpresaNum = Number(idEmpresa);
+
+      if (!idEmpresaNum) {
+        return res.status(400).json({ error: 'idEmpresa obligatorio' });
+      }
+
       const fecha = new Date();
 
-        var empresas = await Empresa.update(
-          {
-              fecha_modificacion:fecha,
-              usuario_modificacion : idUsuario,
-              usuario_baja: idUsuario,
-              fecha_baja:fecha
+      const [filasEmpresa] = await Empresa.update(
+        {
+          fecha_modificacion: fecha,
+          usuario_modificacion: idUsuario,
+          usuario_baja: idUsuario,
+          fecha_baja: fecha,
+          activo: 0,
+        },
+        {
+          where: {
+            id_empresa: idEmpresaNum,
+            fecha_baja: null,
           },
-          {
-              where: {
-              id_empresa: idEmpresa,
-            }
-          });
-          if(!res){
-            return empresas;
-          }else{
-            res.status(200).json({ message: 'Baja empresa correctamente',empresas });
-          }
+        },
+      );
+
+      if (!filasEmpresa) {
+        const existe = await Empresa.findByPk(idEmpresaNum);
+        if (!existe) {
+          return res.status(404).json({ error: 'Empresa no encontrada' });
+        }
+        return res.status(400).json({
+          error: 'La empresa ya estaba dada de baja',
+        });
+      }
+
+      await UsuarioEmpresa.update(
+        {
+          fecha_baja: fecha,
+          usuario_baja: idUsuario,
+        },
+        {
+          where: { id_empresa: idEmpresaNum, fecha_baja: null },
+        },
+      );
+
+      if (!res) {
+        return filasEmpresa;
+      }
+
+      return res.status(200).json({
+        message: 'Baja empresa correctamente',
+        filasActualizadas: filasEmpresa,
+      });
 
     } catch (error) {
         console.error('Error Baja empresa:', error);
@@ -207,4 +273,55 @@ async function deleteRegistroVivo() {}
 
   };
 
-module.exports = { registerCompany,getTipoRegistro, updateTipoRegistro,updateTipoRegistroVivo, deleteRegistroVivo,getEmpresas,editEmpresa ,eliminarEmpresa,getEmpresasUsuarios};
+  const reactivarEmpresa = async (req, res) => {
+    try {
+      const { idEmpresa, idUsuario } = req.body;
+      const idEmpresaNum = Number(idEmpresa);
+      const fecha = new Date();
+
+      const [filas] = await Empresa.update(
+        {
+          fecha_baja: null,
+          usuario_baja: null,
+          activo: 1,
+          fecha_modificacion: fecha,
+          usuario_modificacion: idUsuario,
+        },
+        {
+          where: { id_empresa: idEmpresaNum },
+        },
+      );
+
+      if (!filas) {
+        return res.status(404).json({ error: 'Empresa no encontrada' });
+      }
+
+      await UsuarioEmpresa.update(
+        {
+          fecha_baja: null,
+          usuario_baja: null,
+        },
+        {
+          where: { id_empresa: idEmpresaNum },
+        },
+      );
+
+      res.status(200).json({ message: 'Empresa reactivada correctamente' });
+    } catch (error) {
+      console.error('Error reactivar empresa:', error);
+      res.status(500).json({ error: 'Error al reactivar la empresa' });
+    }
+  };
+
+module.exports = {
+  registerCompany,
+  getTipoRegistro,
+  updateTipoRegistro,
+  updateTipoRegistroVivo,
+  deleteRegistroVivo,
+  getEmpresas,
+  editEmpresa,
+  eliminarEmpresa,
+  reactivarEmpresa,
+  getEmpresasUsuarios,
+};

@@ -44,6 +44,7 @@ const getLogoutCopy = (estadoJornada, horasTrabajadas) => {
 
 const SidebarFooter = ({ collapsed = false }) => {
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const { logout: clearAuth } = useAuth();
   const { estadoJornada, horasTrabajadas } = useEstadoJornada();
 
   const logoutCopy = useMemo(
@@ -52,8 +53,9 @@ const SidebarFooter = ({ collapsed = false }) => {
   );
 
   const ejecutarLogout = () => {
+    setLogoutOpen(false);
     doLogout();
-    logout();
+    clearAuth();
     window.location.href = '/';
   };
 
