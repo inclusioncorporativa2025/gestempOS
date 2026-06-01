@@ -1,6 +1,11 @@
-/** App routes (lowercase English). */
-export const ROUTES = {
-  login: '/',
+/** Public marketing site (landing). */
+export const LANDING_ROUTES = {
+  home: '/',
+};
+
+/** Authenticated app + auth screens. */
+export const APP_ROUTES = {
+  login: '/login',
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   home: '/home',
@@ -12,3 +17,6 @@ export const ROUTES = {
   companies: '/companies',
   notifications: '/notifications',
 };
+
+/** @deprecated Prefer APP_ROUTES or LANDING_ROUTES */
+export const ROUTES = APP_ROUTES;

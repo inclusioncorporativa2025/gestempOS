@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { Form, Input, Button, Typography, Card, notification, Result } from 'antd';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { doResetPassword } from '../features/auth/authService';
+import { doResetPassword } from '../../features/auth/authService';
+import { APP_ROUTES } from '../../constants/routes';
 import './ResetPassword.css';
 
 const { Title, Paragraph } = Typography;
@@ -25,7 +26,7 @@ const ResetPassword = () => {
         message: 'Contraseña establecida',
         description: 'Ya puedes iniciar sesión con tu nueva contraseña.',
       });
-      navigate('/');
+      navigate(APP_ROUTES.login);
     } catch (error) {
       notification.error({
         message: 'Error',
@@ -43,7 +44,11 @@ const ResetPassword = () => {
           status="warning"
           title="Enlace no válido"
           subTitle="El enlace de restablecimiento es incorrecto o está incompleto. Solicita uno nuevo desde el inicio de sesión."
-          extra={<Link to="/"><Button type="primary">Volver al inicio</Button></Link>}
+          extra={
+            <Link to={APP_ROUTES.login}>
+              <Button type="primary">Volver al inicio de sesión</Button>
+            </Link>
+          }
         />
       </div>
     );

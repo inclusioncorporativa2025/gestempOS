@@ -1,0 +1,26 @@
+.umf-layout {
+  background-color: #ffffff;
+}
+
+.umf-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.umf-back {
+  padding-left: 0;
+  margin-bottom: 0.25rem;
+}
+
+.umf-title {
+  margin: 0 !important;
+}
+
+.umf-form-col {
+  width: 100vw;
+  margin: 0 auto;
+  justify-content: center;
+  align-items: center;
+}

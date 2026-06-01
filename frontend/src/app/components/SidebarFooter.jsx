@@ -2,9 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { Button, Tooltip, notification } from 'antd';
 import { PhoneOutlined, PoweroffOutlined } from '@ant-design/icons';
 import ConfirmPopup from './shared/ConfirmPopup';
-import { doLogout } from '../features/auth/authService';
-import { useAuth } from '../config/AuthContext';
-import { useEstadoJornada } from '../hooks/useEstadoJornada';
+import { doLogout } from '../../features/auth/authService';
+import { useAuth } from '../../config/AuthContext';
+import { useEstadoJornada } from '../../hooks/useEstadoJornada';
 
 const getLogoutCopy = (estadoJornada, horasTrabajadas) => {
   if (estadoJornada === 'in') {

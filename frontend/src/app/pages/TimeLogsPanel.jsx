@@ -8,10 +8,10 @@ import {
   EditOutlined,
   EnvironmentOutlined,
 } from '@ant-design/icons';
-import { crearPeticionEdicion, crearPeticionCierreMes, getPeticionesByIdUsuario, getPeticionesByIdEmpresa } from "../features/fichaje/fichajeService";
-import { getDatosUsuarioById } from "../features/fichaje/fichajeService";
-import { descargarExcelDesdeAPI } from "../features/user/usuarioService";
-import { crearAusencia } from "../features/ausencias/ausenciasService";
+import { crearPeticionEdicion, crearPeticionCierreMes, getPeticionesByIdUsuario, getPeticionesByIdEmpresa } from "../../features/fichaje/fichajeService";
+import { getDatosUsuarioById } from "../../features/fichaje/fichajeService";
+import { descargarExcelDesdeAPI } from "../../features/user/usuarioService";
+import { crearAusencia } from "../../features/ausencias/ausenciasService";
 
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc'; // Importa el plugin UTC
@@ -19,8 +19,8 @@ import timezone from 'dayjs/plugin/timezone'; // Importa el plugin Timezone
 import moment from 'moment';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'; // <-- Importa el plugin
 import 'dayjs/locale/es';
-import { getIdUsuario, getIdEmpresa } from '../utils/authSession';
-import { parseUbicacionCoords } from '../utils/ubicacion';
+import { getIdUsuario, getIdEmpresa } from '../../utils/authSession';
+import { parseUbicacionCoords } from '../../utils/ubicacion';
 import UbicacionMapModal from '../components/UbicacionMapModal';
 import './TimeLogsPanel.css';
 

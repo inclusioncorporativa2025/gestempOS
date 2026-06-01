@@ -1,7 +1,7 @@
 // src/pages/ForgotPassword.jsx
 import React, { useState } from 'react';
 import { Form, Input, Button, Typography, Card, message } from 'antd';
-import { doForgotPassword } from '../features/auth/authService';
+import { doForgotPassword } from '../../features/auth/authService';
 import './ForgotPassword.css';
 
 const { Title } = Typography;

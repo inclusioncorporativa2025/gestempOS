@@ -3,21 +3,38 @@ const bodyParser = require('body-parser');
 const helmet = require('helmet');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const { APP_URL } = require('./appUrls');
+
+const parseOrigins = (raw) =>
+  String(raw || '')
+    .split(',')
+    .map((o) => o.trim().replace(/^["']|["']$/g, ''))
+    .filter(Boolean);
+
+const isLocalDevOrigin = (origin) =>
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 
 const configureMiddleware = (app) => {
 
   app.use(helmet());
 
-  const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
-    : null;
+  const allowedOrigins = new Set(parseOrigins(process.env.ALLOWED_ORIGINS));
+  if (APP_URL) {
+    allowedOrigins.add(APP_URL);
+  }
+
+  const isDev = process.env.NODE_ENV !== 'production';
 
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (origin && allowedOrigins?.includes(origin)) {
+    const originAllowed =
+      origin &&
+      (allowedOrigins.has(origin) || (isDev && isLocalDevOrigin(origin)));
+
+    if (originAllowed) {
       res.header('Access-Control-Allow-Origin', origin);
       res.header('Access-Control-Allow-Credentials', 'true');
-    } else if (!allowedOrigins?.length) {
+    } else if (allowedOrigins.size === 0 && !APP_URL) {
       res.header('Access-Control-Allow-Origin', '*');
     }
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');

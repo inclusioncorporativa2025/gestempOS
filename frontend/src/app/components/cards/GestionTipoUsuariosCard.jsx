@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Tooltip,Card, Typography, Table, Button, Collapse, Modal, Form, Input, TimePicker, message, Checkbox, Select, Row, Col } from 'antd';
 import { EditOutlined,InfoCircleOutlined, DeleteOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';  // Iconos para los botones de editar, eliminar, añadir y guardar
 import moment from 'moment';  // Importar moment.js para formatear fechas y horas correctamente
-import { crearJornada,obtenerUsuariosJornadas, deleteJornada,editarJornada,obtenerJornadasByIdEmpresa } from "../../features/jornada/jornadaService";
+import { crearJornada,obtenerUsuariosJornadas, deleteJornada,editarJornada,obtenerJornadasByIdEmpresa } from "../../../features/jornada/jornadaService";
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';  
 import AnadirDiaCard from './AnadirDiaCard';

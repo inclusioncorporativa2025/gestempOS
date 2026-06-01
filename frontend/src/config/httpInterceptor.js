@@ -6,6 +6,7 @@
 //   1. Añadir automáticamente el JWT guardado a las llamadas a la API.
 //   2. Si la API responde 401 (token ausente/expirado), limpiar la sesión y volver al login.
 
+import { APP_ROUTES } from '../constants/routes';
 import { getAuthToken, clearAuthSession } from '../utils/authSession';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
@@ -41,8 +42,8 @@ window.fetch = async (input, init = {}) => {
   // Sesión inválida/expirada: no aplica a los endpoints públicos de auth.
   if (response.status === 401 && esLlamadaApi(url) && !esLlamadaAuth(url)) {
     clearAuthSession();
-    if (window.location.pathname !== '/') {
-      window.location.href = '/';
+    if (window.location.pathname !== APP_ROUTES.login) {
+      window.location.href = APP_ROUTES.login;
     }
   }
 

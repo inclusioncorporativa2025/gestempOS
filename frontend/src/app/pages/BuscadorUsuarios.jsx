@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Tag, Card, Table, Input, Button, Modal, Tooltip, Popconfirm, Form, message, Typography, DatePicker, Switch, Select, ConfigProvider } from 'antd';
-import { SearchOutlined, EditOutlined, DeleteOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
-import { getUsuariosEmpresa, deleteUsuario, editUsuario, getHorasTotalesMesByIdUsuario, descargarExcelDesdeAPI } from "../features/user/usuarioService";
-import { getDatosUsuarioById } from '../features/fichaje/fichajeService';
-import { obtenerJornadas } from "../features/jornada/jornadaService";
+import { Tag, Card, Table, Input, Button, Modal, Tooltip, Popconfirm, Form, message, Typography, DatePicker, Switch, Select, ConfigProvider, Dropdown } from 'antd';
+import { SearchOutlined, EditOutlined, DeleteOutlined, EyeOutlined, DownloadOutlined, UserAddOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { APP_ROUTES } from '../../constants/routes';
+import { getUsuariosEmpresa, deleteUsuario, editUsuario, getHorasTotalesMesByIdUsuario, descargarExcelDesdeAPI } from "../../features/user/usuarioService";
+import { getDatosUsuarioById } from '../../features/fichaje/fichajeService';
+import { obtenerJornadas } from "../../features/jornada/jornadaService";
 
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import esES from 'antd/es/locale/es_ES';
-import { getTipoUsuario } from '../utils/authSession';
+import { getTipoUsuario } from '../../utils/authSession';
+import AltaEmpleadoModal from '../components/AltaEmpleadoModal';
 import './BuscadorUsuarios.css';
 dayjs.locale('es');
 
 const { Title } = Typography;
 
 const BuscarUsuarios = () => {
+    const navigate = useNavigate();
     const tipoUsuario = getTipoUsuario();
     const [usuarios, setUsuarios] = useState([]);
     const [searchText, setSearchText] = useState('');
@@ -55,10 +59,29 @@ const BuscarUsuarios = () => {
             usuario.email.toLowerCase().includes(searchText.toLowerCase()) ||
             usuario.dni.toLowerCase().includes(searchText.toLowerCase());
 
-        const matchesActivo = showOnlyActivos ? usuario.activo : true;
-
-        return matchesSearch && matchesActivo;
+        return matchesSearch;
     });
+
+    const irAAltaUsuarios = (section) => {
+        navigate(APP_ROUTES.usersAdd, { state: { section } });
+    };
+
+    const menuMasAcciones = {
+        items: [
+            {
+                key: 'import',
+                label: 'Importar usuarios',
+                icon: <UploadOutlined />,
+                onClick: () => irAAltaUsuarios('importUsers'),
+            },
+            {
+                key: 'inspector',
+                label: 'Invitar inspector',
+                icon: <UserAddOutlined />,
+                onClick: () => irAAltaUsuarios('addInspector'),
+            },
+        ],
+    };
 
     const handleSearch = (e) => setSearchText(e.target.value);
 
@@ -320,11 +343,31 @@ const BuscarUsuarios = () => {
                         className="bu-search"
                     />
 
-                    <div className="bu-activos">
-                        <span className="bu-activos-label">Solo activos</span>
-                        <Switch checked={showOnlyActivos} onChange={setShowOnlyActivos} />
+                    <div className="bu-toolbar-actions">
+                        <Button
+                            type="primary"
+                            className="colorPrincipal"
+                            icon={<UserAddOutlined />}
+                            onClick={() => setAltaEmpleadoOpen(true)}
+                        >
+                            Añadir empleados
+                        </Button>
+                        <Dropdown menu={menuMasAcciones} trigger={['click']} placement="bottomRight">
+                            <Button
+                                type="text"
+                                className="bu-more-btn"
+                                icon={<MoreOutlined />}
+                                aria-label="Más acciones"
+                            />
+                        </Dropdown>
                     </div>
                 </div>
+
+                <AltaEmpleadoModal
+                    open={altaEmpleadoOpen}
+                    onClose={() => setAltaEmpleadoOpen(false)}
+                    onSuccess={fetchUsuarios}
+                />
 
                 {/* Modal de exportación */}
                 <Modal

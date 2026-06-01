@@ -15,12 +15,12 @@ import {
   getCierresMensualesByIdEmpresa,
   getDatosUsuarioMes,
   responderPeticionCierre,
-} from '../features/fichaje/fichajeService';
+} from '../../features/fichaje/fichajeService';
 
 import {
    getHorasTotalesMesByIdUsuario,
 
-} from '../features/user/usuarioService';
+} from '../../features/user/usuarioService';
 import './Notificaciones.css';
 
 dayjs.locale('es');

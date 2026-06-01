@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Checkbox, Typography, notification, Modal } from 'antd';
-import { doLogin, doForgotPassword } from "../features/auth/authService";
-import { useAuth } from '../config/AuthContext';
+import { doLogin, doForgotPassword } from "../../features/auth/authService";
+import { useAuth } from '../../config/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { ROUTES } from '../constants/routes';
-import { SUPPORT_EMAIL } from '../constants/support';
+import { APP_ROUTES } from '../../constants/routes';
+import { SUPPORT_EMAIL } from '../../constants/support';
 import './Login.css';
 
 const { Title, Text } = Typography;
@@ -19,7 +19,7 @@ const Login = () => {
 
   useEffect(() => {
     if (ready && user) {
-      navigate(ROUTES.home, { replace: true });
+      navigate(APP_ROUTES.home, { replace: true });
     }
   }, [ready, user, navigate]);
 
@@ -40,7 +40,7 @@ const Login = () => {
         description: `Hola, ${data.usuario?.nombre || ''}`,
       });
 
-      navigate(ROUTES.home);
+      navigate(APP_ROUTES.home);
     } catch (error) {
       if (error.code === 'PASSWORD_RESET_REQUIRED') {
         notification.info({

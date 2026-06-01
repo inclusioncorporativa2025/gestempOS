@@ -7,16 +7,25 @@
 
 .bu-search {
   width: 300px;
+  flex: 1;
+  max-width: 420px;
 }
 
-.bu-activos {
+.bu-toolbar-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
-.bu-activos-label {
-  font-weight: 600;
+.bu-more-btn {
+  font-size: 1.25rem;
+  width: 40px;
+  height: 40px;
+}
+
+.bu-more-btn .anticon {
+  transform: rotate(90deg);
 }
 
 .bu-full-width {

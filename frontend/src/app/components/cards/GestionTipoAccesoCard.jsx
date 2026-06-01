@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Typography, Table, Switch, Button, Modal, Input, Popconfirm, Select, Row, Col, message } from 'antd';
-import { getTipoRegistro, guardarTipoAcceso } from '../../features/empresas/empresasService'; 
+import { getTipoRegistro, guardarTipoAcceso } from '../../../features/empresas/empresasService'; 
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import './GestionTipoAccesoCard.css';
 

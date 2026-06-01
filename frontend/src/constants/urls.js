@@ -1,7 +1,8 @@
 /**
  * Producción:
  * - LANDING_URL → https://fichaeneltrabajo.es (web comercial)
- * - APP_URL → https://app.fichaeneltrabajo.es (esta app; rutas en la raíz: /, /home, …)
+ * - APP_URL → https://app.fichaeneltrabajo.es (app: /login, /home, …)
+ * - LANDING_URL → https://fichaeneltrabajo.es (landing en /)
  */
 
 const fromEnv = (key, fallback) => {

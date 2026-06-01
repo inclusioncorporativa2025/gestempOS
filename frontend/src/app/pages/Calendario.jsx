@@ -8,9 +8,9 @@ import {
   getFestivosByIdEmpresa,
   guardarFestivoEmpresa,
   eliminarFestivoEmpresa
-} from '../features/calendario/CalendarioService';
-import { getAusenciasCalendario } from '../features/ausencias/ausenciasService';
-import { useAuth } from '../config/AuthContext';
+} from '../../features/calendario/CalendarioService';
+import { getAusenciasCalendario } from '../../features/ausencias/ausenciasService';
+import { useAuth } from '../../config/AuthContext';
 import './Calendario.css';
 
 dayjs.locale('es');

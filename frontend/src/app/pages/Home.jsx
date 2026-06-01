@@ -6,10 +6,10 @@ import {
   CoffeeOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
-import { crearRegistro } from '../features/fichaje/fichajeService';
-import { getFechaEuropeMadrid } from '../utils/Helper';
-import { useEstadoJornada, notifyJornadaActualizada } from '../hooks/useEstadoJornada';
-import { useAuth } from '../config/AuthContext';
+import { crearRegistro } from '../../features/fichaje/fichajeService';
+import { getFechaEuropeMadrid } from '../../utils/Helper';
+import { useEstadoJornada, notifyJornadaActualizada } from '../../hooks/useEstadoJornada';
+import { useAuth } from '../../config/AuthContext';
 import ConfirmPopup from '../components/shared/ConfirmPopup';
 import './Home.css';
 

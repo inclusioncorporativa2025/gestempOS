@@ -29,7 +29,7 @@ import {
   eliminarEmpresa,
   getEmpresasUsuarios,
   reactivarEmpresa,
-} from '../../features/empresas/empresasService';
+} from '../../../features/empresas/empresasService';
 import AltaEmpresaForm from './AltaEmpresaForm';
 import './BuscadorEmpresa.css';
 

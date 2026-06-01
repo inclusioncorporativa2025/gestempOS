@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Modal,Layout, Card, Row, Col, Button, Form, Input, notification, Upload, Typography, Select, message } from 'antd';
-import { UserAddOutlined, UploadOutlined, InboxOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Modal, Layout, Card, Row, Col, Button, Form, Input, notification, Upload, Typography, Select, message } from 'antd';
+import { InboxOutlined, DownloadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { APP_ROUTES } from '../../../constants/routes';
 import * as XLSX from 'xlsx'; // Importamos la biblioteca para manejar Excel
 
-import { crearUsuario, importarUsuariosEmpresa } from '../../features/user/usuarioService';
-import { SUPPORT_EMAIL } from '../../constants/support';
-import { obtenerJornadas, obtenerJornadasByIdEmpresa } from "../../features/jornada/jornadaService";
+import { crearUsuario, importarUsuariosEmpresa } from '../../../features/user/usuarioService';
+import { SUPPORT_EMAIL } from '../../../constants/support';
+import { obtenerJornadas, obtenerJornadasByIdEmpresa } from "../../../features/jornada/jornadaService";
 import './UserManagementForm.css';
 
 const { Dragger } = Upload;
@@ -42,14 +44,20 @@ const mostrarAlertaSinPlazas = (response) => {
   });
 };
 
+const SECCIONES_VALIDAS = ['importUsers', 'addInspector'];
+
+const seccionInicial = (state) =>
+  SECCIONES_VALIDAS.includes(state?.section) ? state.section : 'importUsers';
+
 const UserManagementForm = () => {
-  const [selectedButton, setSelectedButton] = useState(null); // Estado para manejar el botón seleccionado
-  const [fileList, setFileList] = useState([]); // Estado para manejar los archivos subidos
-  const [jornadas, setJornadas] = useState([]); // Estado para almacenar las jornadas recuperadas de la API
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [selectedButton, setSelectedButton] = useState(() => seccionInicial(location.state));
+  const [fileList, setFileList] = useState([]);
+  const [jornadas, setJornadas] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [tipoUsuario, setTipoUsuario] = useState('Trabajador');
   const [tipoJornada, setTipoJornada] = useState('');
-  const [inviteForm] = Form.useForm();
   const [inspectorForm] = Form.useForm();
   
   // Función para obtener las jornadas desde la API
@@ -67,9 +75,11 @@ const UserManagementForm = () => {
     obtenerTipoJornadas();
   }, []);
 
-  const handleButtonClick = (buttonType) => {
-    setSelectedButton(buttonType);
-  };
+  useEffect(() => {
+    if (SECCIONES_VALIDAS.includes(location.state?.section)) {
+      setSelectedButton(location.state.section);
+    }
+  }, [location.state?.section]);
 
   const importarUsuarios = async (values) => {
 
@@ -123,39 +133,6 @@ const UserManagementForm = () => {
     }
   };
 
-  const enviarInvitacion = async (values) => {
-    try {
-      const response = await crearUsuario(values.email, values.nombreCompleto, values.dni, values.tipoUsuario, values.tipoHorario);
-      if (!response.creada) {
-        if (response.codigo === 'LICENCIAS_AGOTADAS') {
-          mostrarAlertaSinPlazas(response);
-        } else {
-          notification.error({
-            message: response.message,
-            description: response.message,
-          });
-        }
-      } else if (response.emailInvitacionEnviado === false) {
-        inviteForm.resetFields();
-        const tipo = etiquetaTipoUsuario(values.tipoUsuario);
-        notification.warning({
-          message: `${tipo} "${values.nombreCompleto}" creado, pero no se pudo enviar el email de invitación.`,
-          description: 'Puede usar «Olvidé mi contraseña» con su correo para activar la cuenta.',
-        });
-      } else {
-        inviteForm.resetFields();
-        const tipo = etiquetaTipoUsuario(values.tipoUsuario);
-        notification.success({
-          message: `${tipo} "${values.nombreCompleto}" creado, se le ha enviado el email de invitación.`,
-        });
-      }
-    } catch (error) {
-      notification.error({
-        message: error.message,
-        description: `Error enviando invitación a ${values.email}.`,
-      });
-    }
-  };
   const showDownloadModal = () => {
     setModalVisible(true); // Abre el modal
   };
@@ -202,65 +179,7 @@ const UserManagementForm = () => {
   
 
   const renderForm = () => {
-    if (selectedButton === 'addUser') {
-      return (
-        <Card title="Alta de Usuario">
-          <Form layout="vertical" onFinish={enviarInvitacion}>
-            <Form.Item
-              label="Nombre Completo"
-              name="nombreCompleto"
-              rules={[{ required: true, message: 'Por favor, ingresa el nombre completo' }]}>
-              <Input placeholder="Ingresa el nombre completo" />
-            </Form.Item>
-
-            <Form.Item
-              label="Email"
-              name="email"
-              rules={[{ required: true, type: 'email', message: 'Por favor, ingresa un email válido' }]}>
-              <Input placeholder="Ingresa el correo electrónico" />
-            </Form.Item>
-
-            <Form.Item
-              label="DNI"
-              name="dni"
-              rules={[{ required: true, message: 'Por favor, ingresa un dni válido' }]}>
-              <Input placeholder="Ingresa el dni" />
-            </Form.Item>
-
-            {/* Selector de tipo de horario */}
-            <Form.Item
-              label="Tipo de Horario"
-              name="tipoHorario"
-              rules={[{ required: true, message: 'Por favor, selecciona un tipo de horario' }]}>
-              <Select placeholder="Selecciona el tipo de horario">
-                {jornadas.map((jornada) => (
-                  <Option key={jornada.id_jornada} value={jornada.id_jornada}>
-                    {jornada.nombre}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-
-            {/* Selector de tipo de usuario */}
-            <Form.Item
-              label="Tipo de Usuario"
-              name="tipoUsuario"
-              rules={[{ required: true, message: 'Por favor, selecciona un tipo de usuario' }]}>
-              <Select placeholder="Selecciona el tipo de usuario">
-                <Option value="5">Empleado</Option>
-                <Option value="4">Supervisor</Option>
-              </Select>
-            </Form.Item>
-
-            <Form.Item>
-              <Button type="primary" className="colorPrincipal" block htmlType="submit">
-                Enviar Invitación
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
-      );
-    } else if (selectedButton === 'importUsers') {
+    if (selectedButton === 'importUsers') {
       return (
         <Card title="Importar Usuarios">
           <Form layout="vertical">
@@ -346,46 +265,37 @@ const UserManagementForm = () => {
       </Card>
     );
   }
-    return null; // No se muestra nada si no hay botón seleccionado
+    return null;
   };
+
+  const tituloSeccion = {
+    importUsers: 'Importar usuarios',
+    addInspector: 'Invitar inspector',
+  }[selectedButton] || 'Gestión de usuarios';
 
   return (
     <Layout className="umf-layout">
-      <Card title={<Title className="umf-title" level={2}>Gestion De Usuarios</Title>}>
-        <Row xs={21} sm={12} md={12} lg={12} xl={12} xxl={12} className="umf-btn-row">
-          <Col className="umf-btn-col">
+      <Card
+        title={
+          <div className="umf-header">
             <Button
-              className={selectedButton === 'addUser' ? 'colorPrincipal' : ''}
-              type={selectedButton === 'addUser' ? 'primary' : 'text'}
-              icon={<UserAddOutlined />}
-              onClick={() => handleButtonClick('addUser')}>
-              Enviar Invitación
+              type="text"
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate(APP_ROUTES.users)}
+              className="umf-back"
+            >
+              Volver al listado
             </Button>
-          </Col>
-          <Col className="umf-btn-col">
-            <Button
-              className={selectedButton === 'importUsers' ? 'colorPrincipal' : ''}
-              type={selectedButton === 'importUsers' ? 'primary' : 'text'}
-              icon={<UploadOutlined />}
-              onClick={() => handleButtonClick('importUsers')}>
-              Importar Usuarios
-            </Button>
-          </Col>
-          <Col className="umf-btn-col">
-            <Button
-              className={selectedButton === 'addInspector' ? 'colorPrincipal' : ''}
-              type={selectedButton === 'addInspector' ? 'primary' : 'text'}
-              icon={<UserAddOutlined />}
-              onClick={() => handleButtonClick('addInspector')}>
-              Invitar Inspector
-            </Button>
-          </Col>
-        </Row>
+            <Title className="umf-title" level={2}>
+              {tituloSeccion}
+            </Title>
+          </div>
+        }
+      >
+        <Col xs={24} className="umf-form-col">
+          {renderForm()}
+        </Col>
       </Card>
-
-      <Col xs={21} sm={12} md={12} lg={12} xl={12} xxl={12} className="umf-form-col">
-        {renderForm()}
-      </Col>
       <Modal
           title="Seleccionar Tipo de Usuario y Jornada"
           open={modalVisible}

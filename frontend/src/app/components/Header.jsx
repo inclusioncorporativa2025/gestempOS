@@ -1,15 +1,15 @@
 import React, { useEffect } from 'react';
 import { Layout } from 'antd';
 import { useLocation, Link } from 'react-router-dom';
-import { ROUTES } from '../constants/routes';
-import { useEstadoJornada } from '../hooks/useEstadoJornada';
-import { useAuth } from '../config/AuthContext';
+import { APP_ROUTES } from '../../constants/routes';
+import { useEstadoJornada } from '../../hooks/useEstadoJornada';
+import { useAuth } from '../../config/AuthContext';
 import './Header.css';
 
 const { Header } = Layout;
 
 const esRutaFichaje = (pathname) =>
-  pathname === ROUTES.login || pathname === ROUTES.home;
+  pathname === APP_ROUTES.login || pathname === APP_ROUTES.home;
 
 const MyHeader = () => {
   const location = useLocation();
@@ -33,9 +33,9 @@ const MyHeader = () => {
       <Header className="app-header">
         <h1 className="app-header-title">{alias}</h1>
 
-        {location.pathname !== ROUTES.login && (
+        {location.pathname !== APP_ROUTES.login && (
           <Link
-            to={ROUTES.home}
+            to={APP_ROUTES.home}
             className={`app-header-jornada ${mostrarJornadaEnHeader ? 'app-header-jornada--visible' : ''}`}
             aria-hidden={!mostrarJornadaEnHeader}
             tabIndex={mostrarJornadaEnHeader ? 0 : -1}
