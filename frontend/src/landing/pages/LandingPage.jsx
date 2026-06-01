@@ -7,8 +7,32 @@ import {
   SafetyCertificateOutlined,
   BarChartOutlined,
 } from '@ant-design/icons';
-import { getAppLoginHref } from '../../utils/appLinks';
+import { getAppLoginHref, getAppRegisterHref } from '../../utils/appLinks';
+import { PLANS } from '../../constants/plans';
+import LandingFooter from '../components/LandingFooter';
 import './LandingPage.css';
+
+const PlanCta = ({ href, external, featured, children }) => {
+  const className = featured
+    ? 'landing-plan-cta landing-plan-cta--primary'
+    : 'landing-plan-cta landing-plan-cta--outline';
+
+  if (external) {
+    return (
+      <Button type={featured ? 'primary' : 'default'} href={href} className={className} block>
+        {children}
+      </Button>
+    );
+  }
+
+  return (
+    <Link to={href}>
+      <Button type={featured ? 'primary' : 'default'} className={className} block>
+        {children}
+      </Button>
+    </Link>
+  );
+};
 
 const features = [
   {
@@ -33,28 +57,57 @@ const features = [
   },
 ];
 
+const CtaButton = ({ href, external, className, size, children }) =>
+  external ? (
+    <Button type="primary" href={href} className={className} size={size}>
+      {children}
+    </Button>
+  ) : (
+    <Link to={href}>
+      <Button type="primary" className={className} size={size}>
+        {children}
+      </Button>
+    </Link>
+  );
+
+const NavLink = ({ href, external, children }) =>
+  external ? (
+    <a href={href} className="landing-header-link">
+      {children}
+    </a>
+  ) : (
+    <Link to={href} className="landing-header-link">
+      {children}
+    </Link>
+  );
+
 const LandingPage = () => {
   const loginHref = getAppLoginHref();
+  const registerHref = getAppRegisterHref();
   const loginIsExternal = loginHref.startsWith('http');
+  const registerIsExternal = registerHref.startsWith('http');
 
   return (
-    <div className="landing">
-      <header className="landing-header">
-        <div className="landing-container landing-header-inner">
-          <span className="landing-logo">Ficha en el trabajo</span>
-          {loginIsExternal ? (
-            <Button type="primary" href={loginHref} className="landing-cta-header">
-              Acceder
-            </Button>
-          ) : (
-            <Link to={loginHref}>
-              <Button type="primary" className="landing-cta-header">
+    <div className="landing gradient-bg">
+      <div className="landing-header-shell">
+        <header className="landing-header">
+          <div className="landing-header-inner">
+            <span className="landing-logo">Ficha en el trabajo</span>
+            <nav className="landing-header-nav" aria-label="Acciones">
+              <NavLink href={loginHref} external={loginIsExternal}>
                 Acceder
-              </Button>
-            </Link>
-          )}
-        </div>
-      </header>
+              </NavLink>
+              <CtaButton
+                href={registerHref}
+                external={registerIsExternal}
+                className="landing-cta-header landing-cta-start"
+              >
+                Empieza gratis
+              </CtaButton>
+            </nav>
+          </div>
+        </header>
+      </div>
 
       <section className="landing-hero">
         <div className="landing-container landing-hero-inner">
@@ -67,18 +120,85 @@ const LandingPage = () => {
             empleado, potente para el gestor.
           </p>
           <div className="landing-hero-actions">
+            <CtaButton
+              href={registerHref}
+              external={registerIsExternal}
+              className="landing-cta-start"
+              size="large"
+            >
+              Empieza gratis
+            </CtaButton>
             {loginIsExternal ? (
-              <Button type="primary" size="large" href={loginHref}>
-                Iniciar sesión
+              <Button type="default" size="large" href={loginHref} className="landing-hero-login">
+                Acceder
               </Button>
             ) : (
               <Link to={loginHref}>
-                <Button type="primary" size="large">
-                  Iniciar sesión
+                <Button type="default" size="large" className="landing-hero-login">
+                  Acceder
                 </Button>
               </Link>
             )}
           </div>
+        </div>
+      </section>
+
+      <section className="landing-plans" aria-labelledby="landing-plans-title">
+        <div className="landing-container">
+          <h2 id="landing-plans-title" className="landing-plans-title">
+            Compara todos los planes.
+          </h2>
+          <p className="landing-plans-lead">
+            Elige qué incluye cada plan y encuentra el que mejor se adapta a tu negocio.
+          </p>
+
+          <ul className="landing-plans-grid">
+            {PLANS.map((plan) => (
+              <li
+                key={plan.id}
+                className={`landing-plan-item${plan.bestseller ? ' landing-plan-item--bestseller' : ''}`}
+              >
+                {plan.bestseller && (
+                  <span className="landing-plan-bestseller">Más vendido</span>
+                )}
+                <article
+                  className={`landing-plan-card landing-plan-card--${plan.variant}${
+                    plan.featured ? ' landing-plan-card--featured' : ''
+                  }`}
+                >
+                  <div className="landing-plan-card-top">
+                    <div className="landing-plan-card-gradient" aria-hidden />
+                    <span className="landing-plan-badge">{plan.name}</span>
+                  </div>
+                  <div className="landing-plan-card-body">
+                    <p className="landing-plan-price">
+                      <span className="landing-plan-price-from">desde</span>{' '}
+                      <strong>{plan.price} €</strong>
+                      <span className="landing-plan-price-unit">/ licencia / mes</span>
+                    </p>
+                    <p className="landing-plan-min">
+                      Mín. {plan.minLicenses} licencias
+                    </p>
+                    <p className="landing-plan-desc">{plan.description}</p>
+                    <ul className="landing-plan-features">
+                      {plan.features.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                    <div className="landing-plan-cta-wrap">
+                      <PlanCta
+                        href={registerHref}
+                        external={registerIsExternal}
+                        featured={plan.featured}
+                      >
+                        Empezar prueba gratuita
+                      </PlanCta>
+                    </div>
+                  </div>
+                </article>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
@@ -99,16 +219,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      <footer className="landing-footer">
-        <div className="landing-container landing-footer-inner">
-          <span>© {new Date().getFullYear()} Ficha en el trabajo</span>
-          {loginIsExternal ? (
-            <a href={loginHref}>Acceso clientes</a>
-          ) : (
-            <Link to={loginHref}>Acceso clientes</Link>
-          )}
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   );
 };

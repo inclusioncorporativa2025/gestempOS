@@ -6,6 +6,7 @@ export const LANDING_ROUTES = {
 /** Authenticated app + auth screens. */
 export const APP_ROUTES = {
   login: '/login',
+  register: '/register',
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   home: '/home',

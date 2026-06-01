@@ -18,3 +18,21 @@ export const getAppLoginHref = () => {
   }
   return `${APP_URL}${APP_ROUTES.login}`;
 };
+
+const buildAppPath = (path) => {
+  if (typeof window === 'undefined') {
+    return `${APP_URL}${path}`;
+  }
+  if (isAppSubdomain()) {
+    return path;
+  }
+  const host = window.location.hostname;
+  const sameSpa =
+    host === 'localhost' || host === '127.0.0.1' || host === 'fichaeneltrabajo.es';
+  if (sameSpa) {
+    return path;
+  }
+  return `${APP_URL}${path}`;
+};
+
+export const getAppRegisterHref = () => buildAppPath(APP_ROUTES.register);

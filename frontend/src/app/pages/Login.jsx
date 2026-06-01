@@ -114,7 +114,7 @@ const Login = () => {
   }
 
   return (
-    <div className="login-page">
+    <div className="login-page gradient-bg">
       <div className="login-card">
         <div className="login-visual">
           <div className="login-visual-veil" />

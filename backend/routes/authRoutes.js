@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { login, forgotPassword, resetPassword } = require('../controllers/authLocalController');
+const { registerCompanyPublic } = require('../controllers/companyController');
 
 router.post('/login', login);
+
+router.post('/register-company', registerCompanyPublic);
 
 router.post('/forgot-password', forgotPassword);
 

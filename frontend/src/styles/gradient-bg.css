@@ -1,0 +1,52 @@
+/**
+ * Fondo general azul + rosa difuminado (marca).
+ * Usar en landing, register, login público, etc.
+ */
+.gradient-bg {
+  position: relative;
+  isolation: isolate;
+  overflow-x: hidden;
+  background-color: #f2f7fb;
+  background-image:
+    radial-gradient(
+      ellipse 90% 70% at 8% 12%,
+      rgba(var(--color-primary-rgb), 0.42) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 85% 65% at 92% 18%,
+      rgba(var(--color-secondary-rgb), 0.28) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 75% 60% at 75% 88%,
+      rgba(var(--color-secondary-rgb), 0.38) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 70% 55% at 20% 78%,
+      rgba(var(--color-primary-rgb), 0.32) 0%,
+      transparent 55%
+    ),
+    linear-gradient(180deg, #f8fbfe 0%, #eef4f9 50%, #f5f0f6 100%);
+}
+
+.gradient-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle min(45vw, 420px) at 12% 35%,
+      rgba(var(--color-primary-rgb), 0.22) 0%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle min(40vw, 380px) at 88% 62%,
+      rgba(var(--color-secondary-rgb), 0.2) 0%,
+      transparent 100%
+    );
+  filter: blur(40px);
+}

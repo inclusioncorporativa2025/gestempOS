@@ -313,8 +313,15 @@ async function deleteRegistroVivo() {}
     }
   };
 
+/** Alta de empresa desde la landing (sin sesión). */
+const registerCompanyPublic = async (req, res) => {
+  req.body.idUsuario = null;
+  return registerCompany(req, res);
+};
+
 module.exports = {
   registerCompany,
+  registerCompanyPublic,
   getTipoRegistro,
   updateTipoRegistro,
   updateTipoRegistroVivo,

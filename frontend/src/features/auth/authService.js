@@ -86,3 +86,20 @@ export const doResetPassword = async (email, token, password) => {
 
   return data;
 };
+
+/** Registro público de empresa (landing «Empieza gratis»). */
+export const registrarEmpresaPublica = async (values) => {
+  const response = await fetch(`${API_BASE_URL}/register-company`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || data.message || 'Error al registrar la empresa');
+  }
+
+  return data;
+};

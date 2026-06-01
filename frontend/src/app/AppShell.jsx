@@ -17,6 +17,7 @@ import Login from './pages/Login';
 import Home from './pages/Home';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Register from './pages/Register';
 import Header from './components/Header';
 import SidebarFooter from './components/SidebarFooter';
 import { useAuth } from '../config/AuthContext';
@@ -105,6 +106,7 @@ const AppShell = () => {
   const isMobile = windowWidth < 950;
   const isAuthShellPage = [
     APP_ROUTES.login,
+    APP_ROUTES.register,
     APP_ROUTES.forgotPassword,
     APP_ROUTES.resetPassword,
   ].includes(location.pathname);
@@ -224,6 +226,7 @@ const AppShell = () => {
             >
               <Routes>
                 <Route path={APP_ROUTES.login} element={<Login />} />
+                <Route path={APP_ROUTES.register} element={<Register />} />
                 <Route path={APP_ROUTES.forgotPassword} element={<ForgotPassword />} />
                 <Route path={APP_ROUTES.resetPassword} element={<ResetPassword />} />
                 <Route

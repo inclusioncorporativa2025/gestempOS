@@ -2,8 +2,21 @@ import React from 'react';
 import { Form, Input, Row, Col, Button, InputNumber } from 'antd';
 import './AltaEmpresa.css';
 
-const AltaEmpresaForm = ({ form, loading, onFinish, onCancel }) => (
-  <Form form={form} name="altaEmpresa" onFinish={onFinish} layout="vertical">
+const AltaEmpresaForm = ({
+  form,
+  loading,
+  onFinish,
+  onCancel,
+  submitLabel = 'Continuar',
+  className = '',
+}) => (
+  <Form
+    form={form}
+    name="altaEmpresa"
+    onFinish={onFinish}
+    layout="vertical"
+    className={className}
+  >
     <Row gutter={[16, 16]}>
       <Col xs={24} sm={12}>
         <Form.Item
@@ -69,8 +82,8 @@ const AltaEmpresaForm = ({ form, loading, onFinish, onCancel }) => (
         </Form.Item>
       </Col>
       <Col xs={24}>
-        <Button type="primary" htmlType="submit" loading={loading} className="alta-btn-mr">
-          Continuar
+        <Button type="primary" htmlType="submit" loading={loading} className="alta-btn-mr colorPrincipal">
+          {submitLabel}
         </Button>
         <Button onClick={onCancel}>Limpiar</Button>
       </Col>
