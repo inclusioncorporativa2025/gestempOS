@@ -42,6 +42,9 @@ const FILTRO_DESACTIVADAS = 'desactivadas';
 const empresaEstaActiva = (record) =>
   !record.fecha_baja && record.activo !== 0 && record.activo !== false;
 
+const sumarLicencias = (empresas) =>
+  empresas.reduce((acc, empresa) => acc + (Number(empresa.licencias) || 0), 0);
+
 const coincideBusqueda = (empresa, texto) => {
   const q = texto.trim().toLowerCase();
   if (!q) return true;
@@ -82,9 +85,16 @@ const BuscadorEmpresa = () => {
   };
 
   const contadores = useMemo(() => {
-    const activas = data.filter(empresaEstaActiva).length;
-    const desactivadas = data.length - activas;
-    return { total: data.length, activas, desactivadas };
+    const empresasActivas = data.filter(empresaEstaActiva);
+    const empresasDesactivadas = data.filter((e) => !empresaEstaActiva(e));
+    return {
+      total: data.length,
+      activas: empresasActivas.length,
+      desactivadas: empresasDesactivadas.length,
+      licenciasTotal: sumarLicencias(data),
+      licenciasActivas: sumarLicencias(empresasActivas),
+      licenciasDesactivadas: sumarLicencias(empresasDesactivadas),
+    };
   }, [data]);
 
   const filteredData = useMemo(() => {
@@ -101,12 +111,28 @@ const BuscadorEmpresa = () => {
   };
 
   const tarjetasResumen = [
-    { key: FILTRO_TODAS, label: 'Total', count: contadores.total, className: 'be-stat-card--total' },
-    { key: FILTRO_ACTIVAS, label: 'Activas', count: contadores.activas, className: 'be-stat-card--activas' },
+    {
+      key: FILTRO_TODAS,
+      label: 'Total',
+      count: contadores.total,
+      licenciasLabel: 'Total licencias',
+      licencias: contadores.licenciasTotal,
+      className: 'be-stat-card--total',
+    },
+    {
+      key: FILTRO_ACTIVAS,
+      label: 'Activas',
+      count: contadores.activas,
+      licenciasLabel: 'Total activas',
+      licencias: contadores.licenciasActivas,
+      className: 'be-stat-card--activas',
+    },
     {
       key: FILTRO_DESACTIVADAS,
       label: 'Desactivadas',
       count: contadores.desactivadas,
+      licenciasLabel: 'Total desactivadas',
+      licencias: contadores.licenciasDesactivadas,
       className: 'be-stat-card--desactivadas',
     },
   ];
@@ -194,7 +220,7 @@ const BuscadorEmpresa = () => {
       </Title>
 
       <Row gutter={[16, 16]} className="be-stats-row">
-        {tarjetasResumen.map(({ key, label, count, className }) => (
+        {tarjetasResumen.map(({ key, label, count, licenciasLabel, licencias, className }) => (
           <Col xs={24} sm={8} key={key}>
             <button
               type="button"
@@ -204,6 +230,10 @@ const BuscadorEmpresa = () => {
             >
               <Text className="be-stat-label">{label}</Text>
               <span className="be-stat-count">{count}</span>
+              <span className="be-stat-licencias-block">
+                <span className="be-stat-licencias-label">{licenciasLabel}</span>
+                <span className="be-stat-licencias">{licencias}</span>
+              </span>
             </button>
           </Col>
         ))}

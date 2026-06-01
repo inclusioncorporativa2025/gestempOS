@@ -3,6 +3,7 @@ import { Form, Input, Button, Checkbox, Typography, notification, Modal } from '
 import { doLogin, doForgotPassword } from "../features/auth/authService";
 import { useAuth } from '../config/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '../constants/routes';
 import { SUPPORT_EMAIL } from '../constants/support';
 import './Login.css';
 
@@ -18,7 +19,7 @@ const Login = () => {
 
   useEffect(() => {
     if (ready && user) {
-      navigate('/Home', { replace: true });
+      navigate(ROUTES.home, { replace: true });
     }
   }, [ready, user, navigate]);
 
@@ -39,7 +40,7 @@ const Login = () => {
         description: `Hola, ${data.usuario?.nombre || ''}`,
       });
 
-      navigate('/Home');
+      navigate(ROUTES.home);
     } catch (error) {
       if (error.code === 'PASSWORD_RESET_REQUIRED') {
         notification.info({

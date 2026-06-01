@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const path = require('path');
 const nodemailer = require('nodemailer');
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const { APP_URL } = require('../config/appUrls');
 const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES) || 60;
 const WELCOME_TOKEN_TTL_DAYS = Number(process.env.WELCOME_TOKEN_TTL_DAYS) || 7;
 const WELCOME_TOKEN_TTL_MINUTES = WELCOME_TOKEN_TTL_DAYS * 24 * 60;
@@ -100,7 +100,7 @@ const asignarTokenContrasena = async (usuario, ttlMinutos) => {
   usuario.reset_token_expira = new Date(Date.now() + ttlMinutos * 60 * 1000);
   await usuario.save();
 
-  const enlace = `${FRONTEND_URL}/reset-password?token=${rawToken}&email=${encodeURIComponent(usuario.email)}`;
+  const enlace = `${APP_URL}/reset-password?token=${rawToken}&email=${encodeURIComponent(usuario.email)}`;
   return { enlace, rawToken };
 };
 
@@ -267,7 +267,7 @@ const enviarBienvenidaEmpresa = async (usuario, datosEmpresa) => {
         emailLogin: usuario.email,
         enlace,
         ttlTexto,
-        urlApp: FRONTEND_URL,
+        urlApp: APP_URL,
       }),
     });
   } catch (mailError) {
@@ -297,7 +297,7 @@ const enviarInvitacionEmpleado = async (usuario, { nombreEmpresa }) => {
         emailLogin: usuario.email,
         enlace,
         ttlTexto,
-        urlApp: FRONTEND_URL,
+        urlApp: APP_URL,
       }),
     });
   } catch (mailError) {

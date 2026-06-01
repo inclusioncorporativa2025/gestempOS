@@ -22,7 +22,7 @@
   align-items: flex-start;
   justify-content: center;
   width: 100%;
-  min-height: 88px;
+  min-height: 92px;
   padding: 16px 20px;
   border: 2px solid #e8e8e8;
   border-radius: 10px;
@@ -57,7 +57,40 @@
   color: var(--color-dark, #001529);
 }
 
+.be-stat-licencias-block {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #eef0f2;
+  width: 100%;
+}
+
+.be-stat-licencias-label {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.42);
+  line-height: 1.2;
+}
+
+.be-stat-licencias {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #6b7280;
+}
+
+.be-stat-card--activas .be-stat-licencias {
+  color: #52a31a;
+}
+
 .be-stat-card--activas.be-stat-card--selected .be-stat-count {
+  color: #389e0d;
+}
+
+.be-stat-card--activas.be-stat-card--selected .be-stat-licencias {
   color: #389e0d;
 }
 

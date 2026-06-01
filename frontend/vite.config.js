@@ -8,6 +8,8 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const apiBaseUrl = env.VITE_API_BASE_URL || 'http://127.0.0.1:5000/api/';
+  const appUrl = env.VITE_APP_URL || 'http://localhost:3000';
+  const landingUrl = env.VITE_LANDING_URL || 'https://fichaeneltrabajo.es';
 
   return {
     plugins: [react()],
@@ -28,6 +30,8 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env.REACT_APP_API_BASE_URL': JSON.stringify(apiBaseUrl),
       'process.env.NODE_ENV': JSON.stringify(mode),
+      'import.meta.env.VITE_APP_URL': JSON.stringify(appUrl),
+      'import.meta.env.VITE_LANDING_URL': JSON.stringify(landingUrl),
     },
     build: {
       outDir: 'build',

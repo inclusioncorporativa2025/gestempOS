@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Layout } from 'antd';
 import { useLocation, Link } from 'react-router-dom';
+import { ROUTES } from '../constants/routes';
 import { useEstadoJornada } from '../hooks/useEstadoJornada';
 import { useAuth } from '../config/AuthContext';
 import './Header.css';
@@ -8,7 +9,7 @@ import './Header.css';
 const { Header } = Layout;
 
 const esRutaFichaje = (pathname) =>
-  pathname === '/' || /^\/home$/i.test(pathname);
+  pathname === ROUTES.login || pathname === ROUTES.home;
 
 const MyHeader = () => {
   const location = useLocation();
@@ -32,9 +33,9 @@ const MyHeader = () => {
       <Header className="app-header">
         <h1 className="app-header-title">{alias}</h1>
 
-        {location.pathname !== '/' && (
+        {location.pathname !== ROUTES.login && (
           <Link
-            to="/Home"
+            to={ROUTES.home}
             className={`app-header-jornada ${mostrarJornadaEnHeader ? 'app-header-jornada--visible' : ''}`}
             aria-hidden={!mostrarJornadaEnHeader}
             tabIndex={mostrarJornadaEnHeader ? 0 : -1}

@@ -6,6 +6,7 @@ const path = require('path');
 const { sequelize } = require('../config/db');
 const Usuario = require('../models/Usuario');
 const UsuarioEmpresa = require('../models/UsuarioEmpresa');
+const { APP_URL } = require('../config/appUrls');
 
 if (!firebaseAdmin.apps.length) {
 
@@ -134,12 +135,12 @@ const crearUsuarioFirebase = async (req,res) => {
       </div>
 
       <p>Para acceder a tu panel de control, haz clic en el siguiente enlace:</p>
-      <a href="http://fichaeneltrabajo.es"
+      <a href="${APP_URL}"
         style="background-color: #007BFF; color: white; padding: 10px 20px; text-decoration: none; font-size: 16px; border-radius: 5px;">
         Acceder a mi cuenta
       </a>
       <p style="margin-top: 20px;">Si el enlace anterior no funciona, copia y pega la siguiente URL en la barra de direcciones de tu navegador:</p>
-      <p><a href="http://fichaeneltrabajo.es" style="color: #007BFF;">http://fichaeneltrabajo.es</a></p>
+      <p><a href="${APP_URL}" style="color: #007BFF;">${APP_URL}</a></p>
       <p>¡Gracias!</p>
       <p>El equipo de Inclusión Corporativa</p>
             <img src="cid:logo" alt="Logo de InCor" style="width: 150px;" />
@@ -197,12 +198,12 @@ const crearUsuarioFirebase = async (req,res) => {
         </table>
     </div>
     <p>Para acceder a tu panel de control, haz clic en el siguiente enlace:</p>
-        <a href="http://fichaeneltrabajo.es"
+        <a href="${APP_URL}"
           style="background-color: #007BFF; color: white; padding: 10px 20px; text-decoration: none; font-size: 16px; border-radius: 5px;">
           Acceder a mi cuenta
         </a>
     <p style="margin-top: 20px; color: black;">Si el enlace anterior no funciona, copia y pega la siguiente URL en la barra de direcciones de tu navegador:</p>
-    <p><a href="http://fichaeneltrabajo.es" style="color: #007BFF;">http://fichaeneltrabajo.es</a></p>
+    <p><a href="${APP_URL}" style="color: #007BFF;">${APP_URL}</a></p>
     <p>¡Gracias!</p>
     <p>El equipo de Inclusión Corporativa</p>
           <img src="cid:logo" alt="Logo de InCor" style="width: 150px;" />

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { ROUTES } from './constants/routes';
 import { Layout, Menu, Drawer, Button, ConfigProvider } from 'antd';
 import {
   MenuOutlined,
@@ -41,56 +42,56 @@ const pages = [
     label: 'Fichar',
     key: '1',
     icon: <LoginOutlined />,
-    path: '/Home',
+    path: ROUTES.home,
     tipousuario: [1,3,4,5],
   },
   {
     label: 'Gestión Tiempo',
     key: '2',
     icon: <FieldTimeOutlined />,
-    path: '/TimeLogsPanel',
+    path: ROUTES.timeLogs,
     tipousuario: [1,3,4,5],
   },
   {
     label: 'Personal',
     key: '3',
     icon: <SearchOutlined />,
-    path: '/buscador-usuarios',
+    path: ROUTES.users,
     tipousuario: [1,3,4,6],
   },
   {
     label: 'Añadir Personal',
     key: '4',
     icon: <UserAddOutlined />,
-    path: '/UserManagementForm',
+    path: ROUTES.usersAdd,
     tipousuario: [1,3,4],
   },
   {
     label: 'Calendario',
     key: '9',
     icon: <CalendarOutlined />,
-    path: '/Calendario',
+    path: ROUTES.calendar,
     tipousuario: [1,3,4,5],
   },
   {
     label: 'Configuración',
     key: '6',
     icon: <SlidersOutlined />,
-    path: '/ConfiguracionGestor',
+    path: ROUTES.settings,
     tipousuario: [1,3,4],
   },
   {
     label: 'Empresas',
     key: '8',
     icon: <SlidersOutlined />,
-    path: '/buscador-empresa',
+    path: ROUTES.companies,
     tipousuario: [1,2],
   },
   {
     label: 'Notificaciones',
     key: '10',
     icon: <MailOutlined />,
-    path: '/notificaciones',
+    path: ROUTES.notifications,
     tipousuario: [1,3,4],
   },
 ];
@@ -113,9 +114,11 @@ function App() {
 
   const isMobile = windowWidth < 950;
   /** Login, olvidé contraseña y alta de clave: sin menú ni cabecera de la app */
-  const isAuthShellPage = ['/', '/forgot-password', '/reset-password'].includes(
-    location.pathname,
-  );
+  const isAuthShellPage = [
+    ROUTES.login,
+    ROUTES.forgotPassword,
+    ROUTES.resetPassword,
+  ].includes(location.pathname);
   const showDrawer = () => setDrawerVisible(true);
   const closeDrawer = () => setDrawerVisible(false);
 
@@ -228,11 +231,11 @@ function App() {
             style={isAuthShellPage ? { background: 'transparent' } : undefined}
           >
             <Routes>
-              <Route path="/" element={<Login />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path={ROUTES.login} element={<Login />} />
+              <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
+              <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
               <Route
-                path="/TimeLogsPanel"
+                path={ROUTES.timeLogs}
                 element={
                   <ProtectedRoute allowedTypes={[1, 3, 4, 5]}>
                     <TimeLogsPanel />
@@ -240,7 +243,7 @@ function App() {
                 }
               />
               <Route
-                path="/Home"
+                path={ROUTES.home}
                 element={
                   <ProtectedRoute allowedTypes={[1, 3, 4, 5]}>
                     <Home />
@@ -248,15 +251,15 @@ function App() {
                 }
               />
               <Route
-                path="/UserManagementForm"
+                path={ROUTES.usersAdd}
                 element={
                   <ProtectedRoute allowedTypes={[1, 3, 4]}>
                     <UserManagementForm />
                   </ProtectedRoute>
                 }
               />
-               <Route
-                path="/Calendario"
+              <Route
+                path={ROUTES.calendar}
                 element={
                   <ProtectedRoute allowedTypes={[1, 3, 4, 5]}>
                     <Calendario />
@@ -264,7 +267,7 @@ function App() {
                 }
               />
               <Route
-                path="/ConfiguracionGestor"
+                path={ROUTES.settings}
                 element={
                   <ProtectedRoute allowedTypes={[1, 3, 4]}>
                     <ConfiguracionGestor />
@@ -272,7 +275,7 @@ function App() {
                 }
               />
               <Route
-                path="/buscador-empresa"
+                path={ROUTES.companies}
                 element={
                   <ProtectedRoute allowedTypes={[1, 2]}>
                     <BuscadorEmpresa />
@@ -280,22 +283,30 @@ function App() {
                 }
               />
               <Route
-                path="/buscador-usuarios"
+                path={ROUTES.users}
                 element={
-                  <ProtectedRoute allowedTypes={[1,3,4,6]}>
+                  <ProtectedRoute allowedTypes={[1, 3, 4, 6]}>
                     <BuscadorUsuarios />
                   </ProtectedRoute>
                 }
               />
-              
               <Route
-                path="/notificaciones"
+                path={ROUTES.notifications}
                 element={
-                  <ProtectedRoute allowedTypes={[1,3,4]}>
+                  <ProtectedRoute allowedTypes={[1, 3, 4]}>
                     <Notificaciones />
                   </ProtectedRoute>
                 }
               />
+              {/* Legacy paths (bookmarks / old links) */}
+              <Route path="/Home" element={<Navigate to={ROUTES.home} replace />} />
+              <Route path="/TimeLogsPanel" element={<Navigate to={ROUTES.timeLogs} replace />} />
+              <Route path="/UserManagementForm" element={<Navigate to={ROUTES.usersAdd} replace />} />
+              <Route path="/Calendario" element={<Navigate to={ROUTES.calendar} replace />} />
+              <Route path="/ConfiguracionGestor" element={<Navigate to={ROUTES.settings} replace />} />
+              <Route path="/buscador-empresa" element={<Navigate to={ROUTES.companies} replace />} />
+              <Route path="/buscador-usuarios" element={<Navigate to={ROUTES.users} replace />} />
+              <Route path="/notificaciones" element={<Navigate to={ROUTES.notifications} replace />} />
             </Routes>
           </Content>
         </Layout>

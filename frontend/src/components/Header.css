@@ -10,7 +10,7 @@
   max-height: 6%;
 }
 
-/* Indicador de jornada (solo fuera de /Home) */
+/* Indicador de jornada (solo fuera de /home) */
 .app-header-jornada {
   display: flex;
   align-items: center;
