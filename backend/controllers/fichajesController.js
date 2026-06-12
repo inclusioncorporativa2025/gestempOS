@@ -11,6 +11,8 @@ const MesesCierre = require('../models/MesesCierre');
 const { createConId } = require('../utils/empresaScope');
 const { formatUbicacionStorage } = require('../utils/ubicacion');
 const { getDireccionDesdeLatLng } = require('../utils/reverseGeocode');
+const { TIPO_REGISTRO_A_EVENTO } = require('../utils/registroHash');
+const { registrarEventoFichaje, verificarEventosMes } = require('../repositorios/fichajeRegistroEventosRepository');
 const nodemailer = require('nodemailer');
 const path = require('path');
 const {getTipoRegistro} = require('./companyController');
@@ -179,8 +181,13 @@ const getDatosUsuarioMes = async (req, res) => {
       order: [['fecha_alta', 'DESC']],
     });
 
+    const auditoria = await verificarEventosMes(idEmpresa, idUsuario, mes);
+
     res.status(200).json({
       info,
+      eventos: auditoria.eventos,
+      integridad: auditoria.integridad,
+      hashRaiz: auditoria.hashRaiz,
     });
   } catch (error) {
     console.error(error);
@@ -263,51 +270,83 @@ const crearRegistro = async (req, res) => {
       return res.status(400).json({ error: 'Datos incompletos' });
     }
 
-    const ubicacionSt = formatUbicacionStorage(ubicacion);
+    const tipoEvento = TIPO_REGISTRO_A_EVENTO[tipoRegistro];
+    if (!tipoEvento) {
+      return res.status(400).json({ error: 'Tipo de registro no válido' });
+    }
+
+    const ubicacionSt = formatUbicacionStorage(ubicacion) || '';
 
     const ultimoRegistro = await getUltimoRegistro(idUsuario, idEmpresa);
     const ultimoDescanso = await getUltimoDescanso(idUsuario, idEmpresa);
 
-    if ((!ultimoRegistro || ultimoRegistro.dataValues.fecha_salida != null) && tipoRegistro===1) {
-      await createConId(Fichajes, idEmpresa, 'id_fichaje', {
-        id_usuario: idUsuario,
-        fecha_alta: fecha,
-        ubicacion_entrada: ubicacionSt,
-        fecha_entrada: fecha,
-        usuario_alta: usuarioAccion,
+    await sequelize.transaction(async (transaction) => {
+      let idFichajeRef = null;
+      let idDescansoRef = null;
+
+      if ((!ultimoRegistro || ultimoRegistro.dataValues.fecha_salida != null) && tipoRegistro === 1) {
+        const fichaje = await createConId(Fichajes, idEmpresa, 'id_fichaje', {
+          id_usuario: idUsuario,
+          fecha_alta: fecha,
+          ubicacion_entrada: ubicacionSt,
+          fecha_entrada: fecha,
+          usuario_alta: usuarioAccion,
+        }, transaction);
+        idFichajeRef = fichaje.id_fichaje;
+      } else if (tipoRegistro === 2) {
+        if (!ultimoRegistro || ultimoRegistro.dataValues.fecha_salida != null) {
+          throw new Error('No hay fichaje abierto para registrar salida');
+        }
+        idFichajeRef = ultimoRegistro.dataValues.id_fichaje;
+        await Fichajes.update({
+          fecha_salida: fecha,
+          ubicacion_salida: ubicacionSt,
+        }, {
+          where: { empresa_id: idEmpresa, id_fichaje: idFichajeRef },
+          transaction,
+        });
+      } else if (tipoRegistro === 3) {
+        const descanso = await createConId(Descansos, idEmpresa, 'id_descanso', {
+          id_usuario: idUsuario,
+          fecha_entrada: fecha,
+          ubicacion_entrada: ubicacionSt,
+          fecha_alta: fecha,
+          usuario_alta: usuarioAccion,
+        }, transaction);
+        idDescansoRef = descanso.id_descanso;
+      } else if (tipoRegistro === 4) {
+        if (!ultimoDescanso) {
+          throw new Error('No hay descanso abierto para registrar fin de pausa');
+        }
+        idDescansoRef = ultimoDescanso.id_descanso;
+        await Descansos.update({
+          fecha_salida: fecha,
+          ubicacion_salida: ubicacionSt,
+        }, {
+          where: { empresa_id: idEmpresa, id_descanso: idDescansoRef },
+          transaction,
+        });
+      } else {
+        throw new Error('Error creando registro');
+      }
+
+      await registrarEventoFichaje({
+        empresaId: idEmpresa,
+        idUsuario,
+        tipo: tipoEvento,
+        fechaInput: fecha,
+        ubicacion: ubicacionSt,
+        idFichaje: idFichajeRef,
+        idDescanso: idDescansoRef,
+        usuarioAlta: usuarioAccion,
+        transaction,
       });
-    } else if (tipoRegistro === 2){
-      await Fichajes.update({
-        fecha_salida: fecha,
-        ubicacion_salida: ubicacionSt,
-      }, {
-        where: { empresa_id: idEmpresa, id_fichaje: ultimoRegistro.dataValues.id_fichaje },
-      });
-    } else if (tipoRegistro === 3){
-      await createConId(Descansos, idEmpresa, 'id_descanso', {
-        id_usuario: idUsuario,
-        fecha_entrada: fecha,
-        ubicacion_entrada: ubicacionSt,
-        fecha_alta: fecha,
-        usuario_alta: usuarioAccion,
-      });
-    } else if (tipoRegistro === 4){
-      await Descansos.update({
-        fecha_salida: fecha,
-        ubicacion_salida: ubicacionSt,
-      }, {
-        where: { empresa_id: idEmpresa, id_descanso : ultimoDescanso.id_descanso  },
-      });
-    }else{
-      res.status(500).json({ error: 'Error creando registro' });
-      return;
-    }
+    });
 
     res.status(200).json({ message: 'Registro exitoso' });
-
   } catch (error) {
     console.error('Error creando registro:', error);
-    res.status(500).json({ error: 'Error creando registro' });
+    res.status(500).json({ error: error.message || 'Error creando registro' });
   }
 };
 
@@ -749,17 +788,33 @@ const editarHoras = async (req, res) => {
     const horaEntrada = peticion.nueva_entrada;
     const horaSalida = peticion.nueva_salida;
 
-    const result = await Fichajes.update(
-      {
-        fecha_entrada: horaEntrada,
-        fecha_salida: horaSalida,
-        fecha_modificacion:fecha,
-        usuario_modificacion: id_usuario_gestor,
-      },
-      {
-        where: { empresa_id: idEmpresa, id_fichaje }
-      }
-    );
+    const result = await sequelize.transaction(async (transaction) => {
+      const [filas] = await Fichajes.update(
+        {
+          fecha_entrada: horaEntrada,
+          fecha_salida: horaSalida,
+          fecha_modificacion: fecha,
+          usuario_modificacion: id_usuario_gestor,
+        },
+        {
+          where: { empresa_id: idEmpresa, id_fichaje },
+          transaction,
+        }
+      );
+
+      await registrarEventoFichaje({
+        empresaId: idEmpresa,
+        idUsuario: peticion.id_usuario_peticion,
+        tipo: 'edicion_autorizada',
+        fechaInput: horaEntrada,
+        observaciones: `id_peticion=${id_peticion};entrada=${dayjs(horaEntrada).toISOString()};salida=${dayjs(horaSalida).toISOString()}`,
+        idFichaje: id_fichaje,
+        usuarioAlta: id_usuario_gestor,
+        transaction,
+      });
+
+      return filas;
+    });
 
     res.status(200).json({ message: 'Datos actualizados correctamente', result });
   } catch (error) {

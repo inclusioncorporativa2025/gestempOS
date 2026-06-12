@@ -49,16 +49,22 @@ const getNextId = async (model, empresaId, idField, transaction) => {
  * @param {object} data  Datos del registro (sin empresa_id ni id)
  * @returns {Promise<object>} Instancia creada
  */
-const createConId = async (model, empresaId, idField, data) => {
+const createConId = async (model, empresaId, idField, data, transaction) => {
   const empresa = parseEmpresaId(empresaId);
 
-  return sequelize.transaction(async (transaction) => {
-    const nextId = await getNextId(model, empresa, idField, transaction);
+  const crear = async (tx) => {
+    const nextId = await getNextId(model, empresa, idField, tx);
     return model.create(
       { ...data, empresa_id: empresa, [idField]: nextId },
-      { transaction }
+      { transaction: tx }
     );
-  });
+  };
+
+  if (transaction) {
+    return crear(transaction);
+  }
+
+  return sequelize.transaction(crear);
 };
 
 /**

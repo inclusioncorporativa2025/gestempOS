@@ -143,7 +143,11 @@ const LandingPage = () => {
         </div>
       </section>
 
-      <section className="landing-plans" aria-labelledby="landing-plans-title">
+      <section
+        id="planes"
+        className="landing-plans"
+        aria-labelledby="landing-plans-title"
+      >
         <div className="landing-container">
           <h2 id="landing-plans-title" className="landing-plans-title">
             Compara todos los planes.
@@ -202,9 +206,15 @@ const LandingPage = () => {
         </div>
       </section>
 
-      <section className="landing-features">
+      <section
+        id="funcionalidades"
+        className="landing-features"
+        aria-labelledby="landing-features-title"
+      >
         <div className="landing-container">
-          <h2 className="landing-section-title">Todo lo que necesitas</h2>
+          <h2 id="landing-features-title" className="landing-section-title">
+            Todo lo que necesitas
+          </h2>
           <ul className="landing-feature-grid">
             {features.map((item) => (
               <li key={item.title} className="landing-feature-card">

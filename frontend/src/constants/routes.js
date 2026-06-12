@@ -1,6 +1,14 @@
 /** Public marketing site (landing). */
 export const LANDING_ROUTES = {
   home: '/',
+  /** Anclas en la página de inicio */
+  features: '/#funcionalidades',
+  plans: '/#planes',
+  /** Páginas legales (contenido pendiente de publicar) */
+  legalNotice: '/aviso-legal',
+  privacy: '/politica-privacidad',
+  cookies: '/politica-cookies',
+  terms: '/terminos-condiciones',
 };
 
 /** Authenticated app + auth screens. */
