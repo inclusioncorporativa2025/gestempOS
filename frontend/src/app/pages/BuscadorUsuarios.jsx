@@ -36,6 +36,7 @@ const BuscarUsuarios = () => {
     const [showOnlyActivos, setShowOnlyActivos] = useState(false);
     const [exportModalVisible, setExportModalVisible] = useState(false);
     const [exportDateRange, setExportDateRange] = useState(null);
+    const [altaEmpleadoOpen, setAltaEmpleadoOpen] = useState(false);
 
     const formatDate = (date) => dayjs(date).format('DD/MM/YYYY');
 
