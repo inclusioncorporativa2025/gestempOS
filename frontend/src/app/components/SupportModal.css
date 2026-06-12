@@ -1,0 +1,23 @@
+.support-modal-intro {
+  margin-bottom: 1rem;
+}
+
+.support-modal-meta {
+  margin-bottom: 1.25rem;
+}
+
+.support-modal-form {
+  margin-top: 0.25rem;
+}
+
+.support-modal-destino {
+  display: block;
+  margin-bottom: 1rem;
+  font-size: 0.8125rem;
+}
+
+.support-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}

@@ -203,13 +203,14 @@ const buildWelcomeEmailHtml = ({
     ${bloqueBotonEnlace(enlace, 'Crear mi contraseña')}
   `);
 
-const enviarCorreo = async ({ to, subject, html }) => {
+const enviarCorreo = async ({ to, subject, html, replyTo }) => {
   const transporter = buildTransporter();
   await transporter.sendMail({
     from: process.env.SMTP_USER,
     to,
     subject,
     html,
+    replyTo,
     attachments: logoAttachment(),
   });
 };
@@ -308,6 +309,80 @@ const enviarInvitacionEmpleado = async (usuario, { nombreEmpresa }) => {
   return enlace;
 };
 
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@fichaeneltrabajo.es';
+
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+const buildSupportSubject = ({ nombreEmpresa, idEmpresa }) => {
+  const empresa = nombreEmpresa || 'Sin empresa';
+  const id = idEmpresa != null ? idEmpresa : 'N/A';
+  return `[Soporte] ${empresa} (ID: ${id})`;
+};
+
+const buildSupportEmailHtml = ({
+  nombreUsuario,
+  emailUsuario,
+  nombreEmpresa,
+  idEmpresa,
+  idUsuario,
+  mensaje,
+}) =>
+  emailLayout(`
+    <tr>
+      <td style="padding:32px 40px 8px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <h2 style="margin:0 0 16px 0; font-size:20px; color:#001529;">Nueva consulta de soporte</h2>
+        <p style="margin:0; font-size:14px; color:#444;">
+          Mensaje enviado desde la plataforma Ficha en el Trabajo.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 40px 16px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px; color:#333;">
+          <tr><td style="padding:6px 0;"><strong>Usuario:</strong> ${escapeHtml(nombreUsuario)}</td></tr>
+          <tr><td style="padding:6px 0;"><strong>Email de contacto:</strong> ${escapeHtml(emailUsuario)}</td></tr>
+          <tr><td style="padding:6px 0;"><strong>Empresa:</strong> ${escapeHtml(nombreEmpresa)}</td></tr>
+          <tr><td style="padding:6px 0;"><strong>ID empresa:</strong> ${escapeHtml(idEmpresa)}</td></tr>
+          <tr><td style="padding:6px 0;"><strong>ID usuario:</strong> ${escapeHtml(idUsuario)}</td></tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 40px 32px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <p style="margin:0 0 8px 0; font-size:14px; font-weight:bold; color:#001529;">Mensaje</p>
+        <div style="padding:16px; background:#f7f9fb; border-radius:8px; border:1px solid #e8ecf0; font-size:14px; line-height:1.6; color:#333; white-space:pre-wrap;">${escapeHtml(mensaje)}</div>
+      </td>
+    </tr>
+  `);
+
+const enviarCorreoSoporte = async ({
+  nombreUsuario,
+  emailUsuario,
+  nombreEmpresa,
+  idEmpresa,
+  idUsuario,
+  mensaje,
+}) => {
+  await enviarCorreo({
+    to: SUPPORT_EMAIL,
+    replyTo: emailUsuario,
+    subject: buildSupportSubject({ nombreEmpresa, idEmpresa }),
+    html: buildSupportEmailHtml({
+      nombreUsuario,
+      emailUsuario,
+      nombreEmpresa,
+      idEmpresa,
+      idUsuario,
+      mensaje,
+    }),
+  });
+};
+
 module.exports = {
   hashToken,
   RESET_TOKEN_TTL_MINUTES,
@@ -316,4 +391,7 @@ module.exports = {
   generarYEnviarReset,
   enviarBienvenidaEmpresa,
   enviarInvitacionEmpleado,
+  enviarCorreoSoporte,
+  buildSupportSubject,
+  SUPPORT_EMAIL,
 };

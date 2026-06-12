@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Button, Tooltip, notification } from 'antd';
+import { Button, Tooltip } from 'antd';
 import { PhoneOutlined, PoweroffOutlined } from '@ant-design/icons';
 import ConfirmPopup from './shared/ConfirmPopup';
+import SupportModal from './SupportModal';
 import { doLogout } from '../../features/auth/authService';
 import { useAuth } from '../../config/AuthContext';
 import { useEstadoJornada } from '../../hooks/useEstadoJornada';
@@ -44,6 +45,7 @@ const getLogoutCopy = (estadoJornada, horasTrabajadas) => {
 
 const SidebarFooter = ({ collapsed = false }) => {
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
   const { logout: clearAuth } = useAuth();
   const { estadoJornada, horasTrabajadas } = useEstadoJornada();
 
@@ -59,17 +61,12 @@ const SidebarFooter = ({ collapsed = false }) => {
     window.location.href = '/';
   };
 
-  const notificarSoporte = () => {
-    notification.info({
-      message: 'Correo de soporte:',
-      description: 'soporte@fichaeneltrabajo.es',
-    });
-  };
+  const notificarSoporte = () => setSupportOpen(true);
 
   return (
     <>
       <div className={`app-sider-footer ${collapsed ? 'app-sider-footer--collapsed' : ''}`}>
-        <Tooltip title={collapsed ? 'soporte@fichaeneltrabajo.es' : ''} placement="right">
+        <Tooltip title={collapsed ? 'Contactar soporte' : ''} placement="right">
           <Button
             type="text"
             className="app-sider-footer-btn"
@@ -93,6 +90,8 @@ const SidebarFooter = ({ collapsed = false }) => {
           </Button>
         </Tooltip>
       </div>
+
+      <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
 
       <ConfirmPopup
         open={logoutOpen}

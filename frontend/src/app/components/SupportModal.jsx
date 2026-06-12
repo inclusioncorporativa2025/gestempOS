@@ -1,0 +1,108 @@
+import React, { useState } from 'react';
+import { Modal, Form, Input, Button, Typography, Descriptions, notification } from 'antd';
+import { MailOutlined } from '@ant-design/icons';
+import { useAuth } from '../../config/AuthContext';
+import { SUPPORT_EMAIL } from '../../constants/support';
+import { enviarMensajeSoporte } from '../../features/support/supportService';
+import './SupportModal.css';
+
+const { Text, Paragraph } = Typography;
+const { TextArea } = Input;
+
+const SupportModal = ({ open, onClose }) => {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+
+  const nombreEmpresa = user?.nombre_empresa || 'Sin empresa asignada';
+  const idEmpresa = user?.id_empresa ?? 'N/A';
+  const emailUsuario = user?.email || '';
+
+  const handleClose = () => {
+    if (loading) return;
+    form.resetFields();
+    onClose();
+  };
+
+  const handleSubmit = async (values) => {
+    setLoading(true);
+    try {
+      await enviarMensajeSoporte(values.mensaje.trim());
+      notification.success({
+        message: 'Mensaje enviado',
+        description: `Soporte recibirá tu consulta y te responderá a ${emailUsuario}.`,
+      });
+      form.resetFields();
+      onClose();
+    } catch (error) {
+      notification.error({
+        message: 'Error al enviar',
+        description: error.message || 'Inténtalo de nuevo más tarde.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal
+      title="Contactar con soporte"
+      open={open}
+      onCancel={handleClose}
+      footer={null}
+      destroyOnClose
+      width={520}
+      className="support-modal"
+    >
+      <Paragraph type="secondary" className="support-modal-intro">
+        Describe tu consulta o incidencia. El asunto incluirá los datos de tu empresa para
+        agilizar el seguimiento.
+      </Paragraph>
+
+      <Descriptions size="small" column={1} bordered className="support-modal-meta">
+        <Descriptions.Item label="Empresa">{nombreEmpresa}</Descriptions.Item>
+        <Descriptions.Item label="ID empresa">{idEmpresa}</Descriptions.Item>
+        <Descriptions.Item label="Tu correo">{emailUsuario}</Descriptions.Item>
+      </Descriptions>
+
+      <Form form={form} layout="vertical" onFinish={handleSubmit} className="support-modal-form">
+        <Form.Item
+          label="Mensaje"
+          name="mensaje"
+          rules={[
+            { required: true, message: 'Escribe tu consulta' },
+            { min: 10, message: 'El mensaje debe tener al menos 10 caracteres' },
+          ]}
+        >
+          <TextArea
+            rows={5}
+            placeholder="Cuéntanos qué necesitas o qué problema has encontrado..."
+            maxLength={2000}
+            showCount
+          />
+        </Form.Item>
+
+        <Text type="secondary" className="support-modal-destino">
+          Se enviará a <strong>{SUPPORT_EMAIL}</strong>
+        </Text>
+
+        <div className="support-modal-actions">
+          <Button onClick={handleClose} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button
+            type="primary"
+            htmlType="submit"
+            icon={<MailOutlined />}
+            loading={loading}
+            className="colorPrincipal"
+          >
+            Enviar a soporte
+          </Button>
+        </div>
+      </Form>
+    </Modal>
+  );
+};
+
+export default SupportModal;

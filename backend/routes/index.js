@@ -5,6 +5,7 @@ const fichaRoutes = require('./fichaRoutes');
 const jornadaRoutes = require('./jornadaRoutes');
 const calendarioRoutes = require('./calendarioRoutes');
 const ausenciasRoutes = require('./ausenciasRoutes');
+const supportRoutes = require('./supportRoutes');
 const { requireAuth, requireOwnEmpresa } = require('../middleware/authMiddleware');
 
 /** Rutas con ámbito de empresa: el JWT debe coincidir con idEmpresa del body (tipos 3–6) */
@@ -18,6 +19,7 @@ const configureRoutes = (app) => {
   app.use('/api/jornada', ...empresaScope, jornadaRoutes);
   app.use('/api/calendario', ...empresaScope, calendarioRoutes);
   app.use('/api/ausencias', ...empresaScope, ausenciasRoutes);
+  app.use('/api/support', supportRoutes);
 };
 
 module.exports = configureRoutes;
