@@ -13,6 +13,16 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 5001;
 
+// Ruta básica para comprobar que el backend está vivo
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'gestemp-backend',
+    domain: 'app.fichaeneltrabajo.es',
+    port: port
+  });
+});
+
 configureMiddleware(app);
 configureRoutes(app);
 app.use(errorHandler);
