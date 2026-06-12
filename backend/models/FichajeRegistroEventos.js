@@ -45,18 +45,17 @@ const FichajeRegistroEventos = sequelize.define('FichajeRegistroEventos', {
   id_fichaje: {
     type: DataTypes.INTEGER,
     allowNull: true,
+    field: 'id_fichaje_ref',
   },
   id_descanso: {
     type: DataTypes.INTEGER,
     allowNull: true,
-  },
-  usuario_alta: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
+    field: 'id_descanso_ref',
   },
   fecha_alta: {
     type: DataTypes.DATE,
     allowNull: false,
+    defaultValue: DataTypes.NOW,
   },
 }, {
   tableName: 'fichaje_registro_eventos',

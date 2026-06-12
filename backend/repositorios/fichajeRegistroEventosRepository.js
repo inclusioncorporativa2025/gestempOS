@@ -35,23 +35,24 @@ const registrarEventoFichaje = async ({
     observacionesNorm
   );
 
+  const payload = {
+    id_usuario: idUsuario,
+    tipo,
+    fecha,
+    hora,
+    ubicacion: ubicacionNorm,
+    observaciones: observacionesNorm,
+    hash,
+  };
+
+  if (idFichaje != null) payload.id_fichaje = idFichaje;
+  if (idDescanso != null) payload.id_descanso = idDescanso;
+
   return createConId(
     FichajeRegistroEventos,
     empresaId,
     'id_evento',
-    {
-      id_usuario: idUsuario,
-      tipo,
-      fecha,
-      hora,
-      ubicacion: ubicacionNorm,
-      observaciones: observacionesNorm,
-      hash,
-      id_fichaje: idFichaje,
-      id_descanso: idDescanso,
-      usuario_alta: usuarioAlta,
-      fecha_alta: new Date(),
-    },
+    payload,
     transaction
   );
 };
