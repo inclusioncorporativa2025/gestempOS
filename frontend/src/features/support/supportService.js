@@ -1,4 +1,4 @@
-import { getAuthToken } from '../utils/authSession';
+import { getAuthToken } from '../../utils/authSession';
 
 const API_BASE_URL = `${process.env.REACT_APP_API_BASE_URL}support`;
 
