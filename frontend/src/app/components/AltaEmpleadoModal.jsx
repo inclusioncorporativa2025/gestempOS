@@ -8,7 +8,7 @@ const { Option } = Select;
 
 const etiquetaTipoUsuario = (tipoUsuario) => {
   if (String(tipoUsuario) === '4') return 'Supervisor';
-  if (String(tipoUsuario) === '5') return 'Empleado';
+  if (String(tipoUsuario) === '5') return 'Personal';
   return 'Usuario';
 };
 
@@ -99,7 +99,7 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
 
   return (
     <Modal
-      title="Añadir empleado"
+      title="Añadir al personal"
       open={open}
       onCancel={onClose}
       footer={null}
@@ -151,7 +151,7 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
           rules={[{ required: true, message: 'Selecciona el tipo' }]}
         >
           <Select placeholder="Selecciona el tipo">
-            <Option value="5">Empleado</Option>
+            <Option value="5">Personal</Option>
             <Option value="4">Supervisor</Option>
           </Select>
         </Form.Item>

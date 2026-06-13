@@ -51,8 +51,11 @@ const SupportModal = ({ open, onClose }) => {
       onCancel={handleClose}
       footer={null}
       destroyOnClose
+      centered
       width={520}
+      zIndex={2000}
       className="support-modal"
+      getContainer={() => document.body}
     >
       <Paragraph type="secondary" className="support-modal-intro">
         Describe tu consulta o incidencia. El asunto incluirá los datos de tu empresa para

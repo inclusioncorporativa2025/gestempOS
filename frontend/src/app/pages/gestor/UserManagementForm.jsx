@@ -16,7 +16,7 @@ const { Option } = Select;
 
 const etiquetaTipoUsuario = (tipoUsuario) => {
   if (String(tipoUsuario) === '4') return 'Supervisor';
-  if (String(tipoUsuario) === '5') return 'Empleado';
+  if (String(tipoUsuario) === '5') return 'Personal';
   if (String(tipoUsuario) === '6') return 'Inspector';
   return 'Usuario';
 };

@@ -351,7 +351,7 @@ const BuscarUsuarios = () => {
                             icon={<UserAddOutlined />}
                             onClick={() => setAltaEmpleadoOpen(true)}
                         >
-                            Añadir empleados
+                            Añadir personal
                         </Button>
                         <Dropdown menu={menuMasAcciones} trigger={['click']} placement="bottomRight">
                             <Button
@@ -454,7 +454,7 @@ const BuscarUsuarios = () => {
                             <Select.Option value="3">Administrador</Select.Option>
                             ) : (
                             <>
-                                <Select.Option value="5">Empleado</Select.Option>
+                                <Select.Option value="5">Personal</Select.Option>
                                 <Select.Option value="4">Supervisores</Select.Option>
                             </>
                             )}

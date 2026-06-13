@@ -20,6 +20,7 @@ import ResetPassword from './pages/ResetPassword';
 import Register from './pages/Register';
 import Header from './components/Header';
 import SidebarFooter from './components/SidebarFooter';
+import SupportModal from './components/SupportModal';
 import { useAuth } from '../config/AuthContext';
 import TimeLogsPanel from './pages/TimeLogsPanel';
 import UserManagementForm from './pages/gestor/UserManagementForm';
@@ -92,6 +93,7 @@ const AppShell = () => {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -176,7 +178,10 @@ const AppShell = () => {
                   onClick={handleMenuClick}
                   items={menuItems}
                 />
-                <SidebarFooter collapsed={collapsed} />
+                <SidebarFooter
+                  collapsed={collapsed}
+                  onOpenSupport={() => setSupportOpen(true)}
+                />
               </div>
             </Sider>
           )}
@@ -213,7 +218,7 @@ const AppShell = () => {
                 onClick={handleMenuClick}
                 items={menuItems}
               />
-              <SidebarFooter />
+              <SidebarFooter onOpenSupport={() => setSupportOpen(true)} />
             </div>
           </Drawer>
 
@@ -328,6 +333,8 @@ const AppShell = () => {
           </Layout>
         </Layout>
       </Layout>
+
+      <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
     </ConfigProvider>
   );
 };
