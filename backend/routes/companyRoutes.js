@@ -8,6 +8,8 @@ const {
   eliminarEmpresa,
   reactivarEmpresa,
   getEmpresasUsuarios,
+  getMiEmpresa,
+  editMiEmpresa,
 } = require('../controllers/companyController');
 const { requireRole, ROLE_GROUPS } = require('../middleware/authMiddleware');
 
@@ -22,5 +24,8 @@ router.post('/reactivar', requireRole(ROLE_GROUPS.PLATFORM), reactivarEmpresa);
 
 router.post('/getTipoRegistro', requireRole(ROLE_GROUPS.CONFIG), getTipoRegistro);
 router.post('/updateTipoRegistro', requireRole(ROLE_GROUPS.CONFIG), updateTipoRegistro);
+
+router.get('/miEmpresa', requireRole(ROLE_GROUPS.CONFIG), getMiEmpresa);
+router.post('/editMiEmpresa', requireRole(ROLE_GROUPS.CONFIG), editMiEmpresa);
 
 module.exports = router;

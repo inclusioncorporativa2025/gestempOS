@@ -23,6 +23,8 @@ export const APP_ROUTES = {
   usersAdd: '/users/add',
   calendar: '/calendar',
   settings: '/settings',
+  settingsEmpresa: '/settings/empresa',
+  settingsJornada: '/settings/jornada',
   companies: '/companies',
   notifications: '/notifications',
 };

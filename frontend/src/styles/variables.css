@@ -43,4 +43,25 @@
   /* Canales RGB (para usar con rgba() y opacidad) */
   --color-primary-rgb: 43, 169, 224;
   --color-secondary-rgb: 224, 82, 156;
+
+  /* Degradado de marca: primario → secundario */
+  --gradient-brand: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-secondary) 100%
+  );
+  --gradient-brand-horizontal: linear-gradient(
+    90deg,
+    var(--color-primary) 0%,
+    var(--color-secondary) 100%
+  );
+
+  /* Header: primary y secondary mezclados con el fondo oscuro (marca sin saturación excesiva) */
+  --gradient-header: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-primary) 52%, var(--color-dark)) 0%,
+    color-mix(in srgb, var(--color-primary) 22%, var(--color-dark)) 38%,
+    color-mix(in srgb, var(--color-secondary) 22%, var(--color-dark)) 62%,
+    color-mix(in srgb, var(--color-secondary) 48%, var(--color-dark)) 100%
+  );
 }

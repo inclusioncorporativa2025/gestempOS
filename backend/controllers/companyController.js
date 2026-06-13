@@ -6,6 +6,32 @@ const ConfiguracionEsquemaModel = require('../models/ConfiguracionEsquemaModel')
 const { getNextGlobalId } = require('../utils/empresaScope');
 const { enviarBienvenidaEmpresa } = require('../utils/mailService');
 
+const trimOptional = (value) => {
+  const text = String(value ?? '').trim();
+  return text || null;
+};
+
+const pickMiEmpresaParaCliente = (empresa) => ({
+  nombre: empresa.nombre,
+  alias: empresa.alias,
+  identificador_fiscal: empresa.identificador_fiscal,
+  razon_social: empresa.razon_social,
+  nombre_comercial: empresa.nombre_comercial,
+  email: empresa.email,
+  telefono: empresa.telefono,
+  web: empresa.web,
+  direccion: empresa.direccion,
+  codigo_postal: empresa.codigo_postal,
+  ciudad: empresa.ciudad,
+  provincia: empresa.provincia,
+  pais: empresa.pais,
+  sector: empresa.sector,
+  actividad: empresa.actividad,
+  licencias: empresa.licencias,
+  logo_url: empresa.logo_url,
+  color_principal: empresa.color_principal,
+});
+
 const registerCompany = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
@@ -313,6 +339,82 @@ async function deleteRegistroVivo() {}
     }
   };
 
+const getMiEmpresa = async (req, res) => {
+  try {
+    const idEmpresa = Number(req.user?.id_empresa);
+    if (!idEmpresa) {
+      return res.status(400).json({ error: 'No hay empresa asociada a la sesión' });
+    }
+
+    const empresa = await Empresa.findByPk(idEmpresa);
+    if (!empresa) {
+      return res.status(404).json({ error: 'Empresa no encontrada' });
+    }
+
+    return res.status(200).json({
+      message: 'Datos recuperados correctamente',
+      empresa: pickMiEmpresaParaCliente(empresa),
+    });
+  } catch (error) {
+    console.error('Error al obtener empresa del usuario:', error);
+    return res.status(500).json({ error: 'Error al obtener los datos de la empresa' });
+  }
+};
+
+const editMiEmpresa = async (req, res) => {
+  try {
+    const idEmpresa = Number(req.user?.id_empresa);
+    const idUsuario = Number(req.user?.id_usuario);
+    const { datos } = req.body;
+
+    if (!idEmpresa) {
+      return res.status(400).json({ error: 'No hay empresa asociada a la sesión' });
+    }
+
+    if (!datos?.nombre?.trim() || !datos?.alias?.trim()) {
+      return res.status(400).json({ error: 'El nombre y el alias de la empresa son obligatorios' });
+    }
+
+    const [filas] = await Empresa.update(
+      {
+        nombre: datos.nombre.trim(),
+        alias: datos.alias.trim(),
+        identificador_fiscal: trimOptional(datos.identificador_fiscal),
+        razon_social: trimOptional(datos.razon_social),
+        nombre_comercial: trimOptional(datos.nombre_comercial),
+        email: trimOptional(datos.email),
+        telefono: trimOptional(datos.telefono),
+        web: trimOptional(datos.web),
+        direccion: trimOptional(datos.direccion),
+        codigo_postal: trimOptional(datos.codigo_postal),
+        ciudad: trimOptional(datos.ciudad),
+        provincia: trimOptional(datos.provincia),
+        pais: trimOptional(datos.pais) || 'España',
+        sector: trimOptional(datos.sector),
+        actividad: trimOptional(datos.actividad),
+        logo_url: trimOptional(datos.logo_url),
+        color_principal: trimOptional(datos.color_principal),
+        fecha_modificacion: new Date(),
+        usuario_modificacion: idUsuario,
+      },
+      { where: { id_empresa: idEmpresa } },
+    );
+
+    if (!filas) {
+      return res.status(404).json({ error: 'Empresa no encontrada' });
+    }
+
+    const empresa = await Empresa.findByPk(idEmpresa);
+    return res.status(200).json({
+      message: 'Empresa actualizada correctamente',
+      empresa: pickMiEmpresaParaCliente(empresa),
+    });
+  } catch (error) {
+    console.error('Error al editar empresa del usuario:', error);
+    return res.status(500).json({ error: 'Error al guardar los datos de la empresa' });
+  }
+};
+
 /** Alta de empresa desde la landing (sin sesión). */
 const registerCompanyPublic = async (req, res) => {
   req.body.idUsuario = null;
@@ -331,4 +433,6 @@ module.exports = {
   eliminarEmpresa,
   reactivarEmpresa,
   getEmpresasUsuarios,
+  getMiEmpresa,
+  editMiEmpresa,
 };

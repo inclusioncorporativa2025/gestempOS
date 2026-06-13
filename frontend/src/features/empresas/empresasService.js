@@ -280,3 +280,43 @@ export const reactivarEmpresa = async (idEmpresa) => {
   }
 };
 
+export const getMiEmpresa = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/miEmpresa`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || errorData.message || 'Error recuperando datos');
+    }
+
+    const data = await response.json();
+    return data.empresa;
+  } catch (error) {
+    console.error('Error recuperando empresa:', error);
+    throw error;
+  }
+};
+
+export const editMiEmpresa = async (datos) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/editMiEmpresa`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ datos }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || errorData.message || 'Error al guardar');
+    }
+
+    const data = await response.json();
+    return data.empresa;
+  } catch (error) {
+    console.error('Error guardando empresa:', error);
+    throw error;
+  }
+};

@@ -24,7 +24,10 @@ import SupportModal from './components/SupportModal';
 import { useAuth } from '../config/AuthContext';
 import TimeLogsPanel from './pages/TimeLogsPanel';
 import UserManagementForm from './pages/gestor/UserManagementForm';
-import ConfiguracionGestor from './pages/gestor/ConfiguracionGestor';
+import ConfiguracionLayout from './pages/gestor/ConfiguracionLayout';
+import ConfiguracionHub from './pages/gestor/ConfiguracionHub';
+import ConfiguracionEmpresa from './pages/gestor/ConfiguracionEmpresa';
+import ConfiguracionJornada from './pages/gestor/ConfiguracionJornada';
 import Calendario from './pages/Calendario';
 import BuscadorEmpresa from './pages/admin/BuscadorEmpresa';
 import BuscadorUsuarios from './pages/BuscadorUsuarios';
@@ -121,9 +124,15 @@ const AppShell = () => {
       ? pages.filter((page) => page.tipousuario.includes(tipousuario))
       : [];
 
-  const paginaActual = pages.find(
-    (page) => page.path.toLowerCase() === location.pathname.toLowerCase(),
-  );
+  const paginaActual = pages.find((page) => {
+    if (page.path === APP_ROUTES.settings) {
+      return (
+        location.pathname === page.path ||
+        location.pathname.startsWith(`${page.path}/`)
+      );
+    }
+    return page.path.toLowerCase() === location.pathname.toLowerCase();
+  });
   const selectedKeys = paginaActual ? [paginaActual.key] : [];
 
   const menuItems = filteredPages.map((item) => ({
@@ -267,13 +276,17 @@ const AppShell = () => {
                   }
                 />
                 <Route
-                  path={APP_ROUTES.settings}
+                  path={`${APP_ROUTES.settings}/*`}
                   element={
                     <ProtectedRoute allowedTypes={[1, 3, 4]}>
-                      <ConfiguracionGestor />
+                      <ConfiguracionLayout />
                     </ProtectedRoute>
                   }
-                />
+                >
+                  <Route index element={<ConfiguracionHub />} />
+                  <Route path="empresa" element={<ConfiguracionEmpresa />} />
+                  <Route path="jornada" element={<ConfiguracionJornada />} />
+                </Route>
                 <Route
                   path={APP_ROUTES.companies}
                   element={
@@ -315,6 +328,10 @@ const AppShell = () => {
                 <Route
                   path="/ConfiguracionGestor"
                   element={<Navigate to={APP_ROUTES.settings} replace />}
+                />
+                <Route
+                  path="/ConfiguracionGestor/*"
+                  element={<Navigate to={APP_ROUTES.settingsJornada} replace />}
                 />
                 <Route
                   path="/buscador-empresa"

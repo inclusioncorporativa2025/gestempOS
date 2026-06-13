@@ -1,0 +1,131 @@
+.config-layout {
+  width: 100%;
+  min-height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.config-layout__title {
+  margin: 0 0 4px !important;
+  font-weight: 500 !important;
+}
+
+.config-layout__subtitle {
+  display: block;
+  margin-bottom: 20px;
+  color: #64748b;
+}
+
+.config-layout__menu {
+  margin-bottom: 24px;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.config-layout__content {
+  width: 100%;
+}
+
+.config-hub-grid {
+  margin-top: 8px;
+}
+
+.config-hub-card {
+  height: 100%;
+  border-radius: 12px;
+  border: 1px solid #eef0f4;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.config-hub-card:hover {
+  border-color: rgba(var(--color-primary-rgb), 0.45);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.config-hub-card__title {
+  margin: 0 0 8px !important;
+  font-weight: 500 !important;
+}
+
+.config-hub-card__desc {
+  margin: 0;
+  color: #64748b;
+}
+
+.config-empresa-card {
+  max-width: 960px;
+  border-radius: 12px;
+  border: 1px solid #eef0f4;
+}
+
+.config-empresa-section {
+  margin: 8px 0 16px !important;
+  font-size: 0.95rem;
+  color: #475569;
+}
+
+.config-empresa-card .ant-card-head-title {
+  font-weight: 500;
+}
+
+.config-empresa {
+  width: 100%;
+}
+
+.config-empresa-loading {
+  padding: 48px;
+  text-align: center;
+}
+
+.config-empresa-form {
+  width: 100%;
+}
+
+.config-empresa-block {
+  margin-bottom: 20px;
+  padding: 20px 24px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.config-empresa-block__title {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.config-empresa-form .ant-form-item-label > label {
+  color: #334155;
+  font-weight: 500;
+}
+
+.config-empresa-form .ant-input,
+.config-empresa-form .ant-input-number,
+.config-empresa-form .ant-input-affix-wrapper {
+  background: #fff;
+  border-color: #cbd5e1;
+}
+
+.config-empresa-form .ant-input:hover,
+.config-empresa-form .ant-input-number:hover,
+.config-empresa-form .ant-input-affix-wrapper:hover {
+  border-color: var(--color-primary);
+}
+
+.config-empresa-form .ant-input:focus,
+.config-empresa-form .ant-input-number-focused,
+.config-empresa-form .ant-input-affix-wrapper-focused {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.15);
+}
+
+.config-empresa-input-full {
+  width: 100%;
+}
+
+.config-empresa-actions {
+  margin-top: 8px;
+}
