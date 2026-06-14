@@ -25,10 +25,10 @@ import SidebarEmpresaBrand from './components/SidebarEmpresaBrand';
 import SupportModal from './components/SupportModal';
 import { OPEN_SUPPORT_EVENT } from './components/Header';
 import { useAuth } from '../config/AuthContext';
-import TimeLogsPanel from './pages/TimeLogsPanel';
+import GestionTiempoPage from './pages/GestionTiempoPage';
 import UserManagementForm from './pages/gestor/UserManagementForm';
-import ConfiguracionLayout from './pages/gestor/ConfiguracionLayout';
-import ConfiguracionHub from './pages/gestor/ConfiguracionHub';
+import ConfiguracionLayout, { ConfiguracionOrgGate } from './pages/gestor/ConfiguracionLayout';
+import ConfiguracionUsuario from './pages/gestor/ConfiguracionUsuario';
 import ConfiguracionEmpresa from './pages/gestor/ConfiguracionEmpresa';
 import ConfiguracionJornada from './pages/gestor/ConfiguracionJornada';
 import Calendario from './pages/Calendario';
@@ -80,7 +80,7 @@ const pages = [
     key: '6',
     icon: <SlidersOutlined />,
     path: APP_ROUTES.settings,
-    tipousuario: [1, 3, 4],
+    tipousuario: [1, 2, 3, 4, 5, 6],
   },
   {
     label: 'Empresas',
@@ -157,7 +157,9 @@ const AppShell = () => {
   const handleMenuClick = ({ key }) => {
     const page = pages.find((p) => p.key === key);
     if (page) {
-      navigate(page.path);
+      const dest =
+        page.path === APP_ROUTES.settings ? APP_ROUTES.settingsUsuario : page.path;
+      navigate(dest);
       closeDrawer();
     }
   };
@@ -215,6 +217,7 @@ const AppShell = () => {
       <Layout className="app-shell">
         <Layout className="app-shell-body">
           {!isAuthShellPage && !isMobile && (
+            <div className="app-sider-wrap">
             <Sider
               width={220}
               collapsedWidth={76}
@@ -227,14 +230,6 @@ const AppShell = () => {
             >
               <div className="app-sider-inner">
                 <SidebarEmpresaBrand collapsed={collapsed} />
-                <div className="app-sider-toggle">
-                  <Button
-                    type="text"
-                    aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
-                    onClick={() => setCollapsed(!collapsed)}
-                    icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                  />
-                </div>
                 <Menu
                   className="app-menu app-sider-menu"
                   mode="inline"
@@ -249,6 +244,14 @@ const AppShell = () => {
                 />
               </div>
             </Sider>
+            <Button
+              type="text"
+              className="app-sider-edge-toggle"
+              aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+              onClick={() => setCollapsed(!collapsed)}
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            />
+            </div>
           )}
 
           {isMobile && !isAuthShellPage && (
@@ -308,7 +311,7 @@ const AppShell = () => {
                   path={APP_ROUTES.timeLogs}
                   element={
                     <ProtectedRoute allowedTypes={[1, 3, 4, 5]}>
-                      <TimeLogsPanel />
+                      <GestionTiempoPage />
                     </ProtectedRoute>
                   }
                 />
@@ -339,14 +342,29 @@ const AppShell = () => {
                 <Route
                   path={`${APP_ROUTES.settings}/*`}
                   element={
-                    <ProtectedRoute allowedTypes={[1, 3, 4]}>
+                    <ProtectedRoute allowedTypes={[1, 2, 3, 4, 5, 6]}>
                       <ConfiguracionLayout />
                     </ProtectedRoute>
                   }
                 >
-                  <Route index element={<ConfiguracionHub />} />
-                  <Route path="empresa" element={<ConfiguracionEmpresa />} />
-                  <Route path="jornada" element={<ConfiguracionJornada />} />
+                  <Route index element={<Navigate to="usuario" replace />} />
+                  <Route path="usuario" element={<ConfiguracionUsuario />} />
+                  <Route
+                    path="empresa"
+                    element={
+                      <ConfiguracionOrgGate>
+                        <ConfiguracionEmpresa />
+                      </ConfiguracionOrgGate>
+                    }
+                  />
+                  <Route
+                    path="jornada"
+                    element={
+                      <ConfiguracionOrgGate>
+                        <ConfiguracionJornada />
+                      </ConfiguracionOrgGate>
+                    }
+                  />
                 </Route>
                 <Route
                   path={APP_ROUTES.companies}
@@ -388,7 +406,7 @@ const AppShell = () => {
                 />
                 <Route
                   path="/ConfiguracionGestor"
-                  element={<Navigate to={APP_ROUTES.settings} replace />}
+                  element={<Navigate to={APP_ROUTES.settingsEmpresa} replace />}
                 />
                 <Route
                   path="/ConfiguracionGestor/*"

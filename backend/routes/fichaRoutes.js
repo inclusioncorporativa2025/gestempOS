@@ -18,6 +18,7 @@ const {
   editarHoras,
   getDatosUsuarioById,
   reverseGeocode,
+  getEstadoPersonalEmpresa,
 } = require('../controllers/fichajesController');
 const { requireRole, ROLE_GROUPS } = require('../middleware/authMiddleware');
 
@@ -43,5 +44,6 @@ router.post('/responderPeticion', requireRole(GESTION_PETICIONES), responderPeti
 router.post('/getCierresMensualesByIdEmpresa', requireRole(GESTION_PETICIONES), getCierresMensualesByIdEmpresa);
 router.post('/getDatosUsuarioMes', requireRole(GESTION_PETICIONES), getDatosUsuarioMes);
 router.post('/responderPeticionCierre', requireRole(GESTION_PETICIONES), responderPeticionCierre);
+router.post('/getEstadoPersonalEmpresa', requireRole(ROLE_GROUPS.PRESENCIA_EQUIPO), getEstadoPersonalEmpresa);
 
 module.exports = router;

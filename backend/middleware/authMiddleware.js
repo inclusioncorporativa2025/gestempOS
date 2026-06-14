@@ -42,6 +42,13 @@ const ROLE_GROUPS = {
     ROLES.SUPERVISOR,
     ROLES.EMPLEADO,
   ],
+  /** Gestión Tiempo: presencia del equipo (no empleado ni inspector) */
+  PRESENCIA_EQUIPO: [
+    ROLES.ROOT,
+    ROLES.PLATFORM_ADMIN,
+    ROLES.ADMIN_EMPRESA,
+    ROLES.SUPERVISOR,
+  ],
   ALL: [1, 2, 3, 4, 5, 6],
 };
 

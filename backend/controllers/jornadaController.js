@@ -214,13 +214,27 @@ const crearJornada = async (req, res) => {
           const idjornada = parseInt(idJornada);
           const idusuario = parseInt(idUsuario);
 
-          const result = await Jornada.update(
+          const asignados = await UsuarioJornada.count({
+            where: {
+              empresa_id: idempresa,
+              id_jornada: idjornada,
+              fecha_baja: null,
+            },
+          });
+
+          if (asignados > 0) {
+            return res.status(400).json({
+              error: 'Hay personal asignado a esta jornada. No se puede dar de baja.',
+            });
+          }
+
+          await Jornada.update(
             {
                 fecha_baja: new Date(),
                 usuario_baja: idusuario
             },
             {
-                where: { empresa_id: idempresa, id_jornada: idjornada }
+                where: { empresa_id: idempresa, id_jornada: idjornada, fecha_baja: null }
             }
         );
 
@@ -231,11 +245,63 @@ const crearJornada = async (req, res) => {
       }
   };
 
+  const editarJornada = async (req, res) => {
+    const { id_jornada, idEmpresa, idUsuario, nombre, tipo_hora, horasMensuales } = req.body;
+
+    if (!id_jornada || !idEmpresa || !nombre) {
+      return res.status(400).json({ error: 'Faltan datos requeridos' });
+    }
+
+    try {
+      const jornada = await Jornada.findOne({
+        where: {
+          empresa_id: idEmpresa,
+          id_jornada,
+          fecha_baja: null,
+        },
+      });
+
+      if (!jornada) {
+        return res.status(404).json({ error: 'Jornada no encontrada' });
+      }
+
+      const config = jornada.column1 || {};
+      const updatedColumn1 = {
+        ...config,
+        nombreJornada: nombre,
+        tipoHora: tipo_hora,
+      };
+
+      if (Number(jornada.tipo) === 2 && horasMensuales != null) {
+        updatedColumn1.horasMensuales = String(horasMensuales);
+      }
+
+      await Jornada.update(
+        {
+          nombre,
+          tipo_hora: parseInt(tipo_hora, 10),
+          column1: updatedColumn1,
+          fecha_modificacion: new Date(),
+          usuario_modificacion: idUsuario,
+        },
+        {
+          where: { empresa_id: idEmpresa, id_jornada },
+        }
+      );
+
+      return res.status(200).json({ message: 'Jornada actualizada correctamente' });
+    } catch (error) {
+      console.error('Error al editar jornada:', error);
+      return res.status(500).json({ error: 'Error al actualizar la jornada' });
+    }
+  };
+
   module.exports = {
     crearJornada,
     obtenerJornadasYRegistros: obtenerJornadaYRegistros,
     obtenerJornadas: obtenerJornada,
     deleteById,
+    editarJornada,
     obtenerJornadasByIdEmpresa: obtenerJornadaByIdEmpresa,
     obtenerUsuariosJornadas: obtenerUsuariosJornada
   };

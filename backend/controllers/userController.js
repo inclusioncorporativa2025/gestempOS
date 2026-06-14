@@ -1,4 +1,5 @@
 const Usuario = require('../models/Usuario');
+const bcrypt = require('bcryptjs');
 const UsuarioEmpresa = require('../models/UsuarioEmpresa');
 const UsuarioJornada = require('../models/UsuarioJornada');
 const Jornada = require('../models/Jornada');
@@ -36,6 +37,99 @@ const locationCache = new NodeCache({ stdTTL: 86400 });
 // const firebaseAdmin = require('firebase-admin');
 
 const ZONA_HORARIA = 'Europe/Madrid';
+const BCRYPT_ROUNDS = 10;
+
+const sanitizePerfil = (usuario) => ({
+    id_usuario: usuario.id_usuario,
+    nombre: usuario.nombre,
+    email: usuario.email,
+    dni: usuario.dni ?? '',
+    tipo_usuario: usuario.tipo_usuario,
+    email_verificado: usuario.email_verificado,
+});
+
+const getMiPerfil = async (req, res) => {
+    try {
+        const idUsuario = Number(req.user.id_usuario);
+        const usuario = await Usuario.findOne({
+            where: { id_usuario: idUsuario, fecha_baja: null },
+        });
+
+        if (!usuario) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        return res.status(200).json({ perfil: sanitizePerfil(usuario) });
+    } catch (error) {
+        console.error('Error en getMiPerfil:', error.message);
+        return res.status(500).json({ message: 'Error al cargar el perfil' });
+    }
+};
+
+const editMiPerfil = async (req, res) => {
+    const idUsuario = Number(req.user.id_usuario);
+    const { nombre, dni, contrasenaActual, contrasenaNueva } = req.body;
+
+    try {
+        const usuario = await Usuario.findOne({
+            where: { id_usuario: idUsuario, fecha_baja: null },
+        });
+
+        if (!usuario) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        const updates = {
+            fecha_modificacion: new Date(),
+            usuario_modificacion: idUsuario,
+        };
+
+        if (nombre != null) {
+            const nombreTrim = String(nombre).trim();
+            if (!nombreTrim) {
+                return res.status(400).json({ message: 'El nombre es obligatorio' });
+            }
+            updates.nombre = nombreTrim;
+        }
+
+        if (dni !== undefined) {
+            updates.dni = dni ? String(dni).trim() : null;
+        }
+
+        if (contrasenaNueva) {
+            if (!contrasenaActual) {
+                return res.status(400).json({ message: 'Introduce tu contraseña actual' });
+            }
+            if (String(contrasenaNueva).length < 8) {
+                return res.status(400).json({
+                    message: 'La nueva contraseña debe tener al menos 8 caracteres',
+                });
+            }
+            if (!usuario.password_hash) {
+                return res.status(400).json({
+                    message: 'Debes establecer la contraseña mediante el enlace de invitación',
+                });
+            }
+            const passwordValido = await bcrypt.compare(contrasenaActual, usuario.password_hash);
+            if (!passwordValido) {
+                return res.status(400).json({ message: 'La contraseña actual no es correcta' });
+            }
+            updates.password_hash = await bcrypt.hash(contrasenaNueva, BCRYPT_ROUNDS);
+            updates.requiere_reset_password = false;
+        }
+
+        await usuario.update(updates);
+        await usuario.reload();
+
+        return res.status(200).json({
+            message: 'Perfil actualizado correctamente',
+            perfil: sanitizePerfil(usuario),
+        });
+    } catch (error) {
+        console.error('Error en editMiPerfil:', error.message);
+        return res.status(500).json({ message: 'Error al guardar el perfil' });
+    }
+};
 
 const getUserData= async (req, res) => {
     try {
@@ -701,6 +795,8 @@ const exportarDatosExcel = async (req, res) => {
 module.exports = {
     exportarDatosExcel,
     getUserData,
+    getMiPerfil,
+    editMiPerfil,
     crearUsuario,
     getUsuariosEmpresa,
     editUsuario,

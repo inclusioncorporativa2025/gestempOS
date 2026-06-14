@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Layout, Card, Table, Button, Typography, Row, Col, Modal, Form, Input, TimePicker, message, Select, DatePicker, Checkbox, Collapse, Empty, Dropdown, Tooltip } from 'antd';
+import { Layout, Card, Table, Button, Row, Col, Modal, Form, Input, TimePicker, message, Select, DatePicker, Checkbox, Collapse, Empty, Dropdown, Tooltip } from 'antd';
 import {
   MoreOutlined,
   SendOutlined,
@@ -51,8 +51,6 @@ const calcularDifTiempo = (entrada, salida) => {
   return `${diffHrs}h ${diffMin}min`;
 };
 
-const { Title } = Typography;
-const { Option } = Select;
 
 const TimeLogsPanel = () => {
     const [data, setData] = useState([]);
@@ -543,7 +541,7 @@ const handleMonthChange = (date, dateString) => {
 
     return (
         <Layout className="tlp-layout">
-            <Card title={<Title className="tlp-title" level={2}>Registro de Horas</Title>}>
+            <Card>
                 <div className="tlp-toolbar">
                     <DatePicker
                         value={selectedMonth}

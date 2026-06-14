@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const {
   getUserData,
+  getMiPerfil,
+  editMiPerfil,
   crearUsuario,
   getUsuariosEmpresa,
   editUsuario,
@@ -13,6 +15,8 @@ const {
 const { requireRole, ROLE_GROUPS } = require('../middleware/authMiddleware');
 
 router.post('/getData', requireRole(ROLE_GROUPS.ALL), getUserData);
+router.post('/miPerfil', requireRole(ROLE_GROUPS.ALL), getMiPerfil);
+router.post('/editMiPerfil', requireRole(ROLE_GROUPS.ALL), editMiPerfil);
 
 router.post('/crear', requireRole(ROLE_GROUPS.USER_WRITE), crearUsuario);
 router.post('/getUsuariosEmpresa', requireRole(ROLE_GROUPS.PERSONAL_LIST), getUsuariosEmpresa);

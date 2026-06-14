@@ -5,7 +5,6 @@ import { getIdEmpresa, getIdUsuario } from '../../utils/authSession';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL+'user'; 
 
-//recuperar información de usuario tras login
 export const getUsuarioData = async (email) => {
     try {
         const response = await fetch(API_BASE_URL+`/getData`, {
@@ -187,6 +186,38 @@ export const deleteUsuario = async (idUsuario) =>{
     console.error('Error borrando usuario:', error);
     throw error;
   }
+};
+
+export const getMiPerfil = async () => {
+  const response = await fetch(`${API_BASE_URL}/miPerfil`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Error al cargar el perfil');
+  }
+
+  return data.perfil;
+};
+
+export const editMiPerfil = async (values) => {
+  const response = await fetch(`${API_BASE_URL}/editMiPerfil`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(values),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Error al guardar el perfil');
+  }
+
+  return data;
 };
 
 

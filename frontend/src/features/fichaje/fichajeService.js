@@ -437,12 +437,29 @@ export const getHorasTotales = async () => {
 
     const data = await response.json();
 
-    return data;  // Retorna la respuesta del servidor 
+    return data;
   } catch (error) {
     console.error('Error creando registro:', error);
   }   
 };
 
+export const getEstadoPersonalEmpresa = async () => {
+  const idEmpresa = getIdEmpresa();
+
+  const response = await fetch(`${API_BASE_URL}/getEstadoPersonalEmpresa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idEmpresa }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || data.message || 'Error al obtener el estado del personal');
+  }
+
+  return data;
+};
 
 export const editarRegistro = async (values) => {
   try {

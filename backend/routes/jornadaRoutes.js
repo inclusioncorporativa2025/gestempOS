@@ -5,6 +5,7 @@ const {
   crearJornada,
   obtenerJornadasYRegistros,
   deleteById,
+  editarJornada,
   obtenerJornadas,
   obtenerJornadasByIdEmpresa,
 } = require('../controllers/jornadaController');
@@ -16,5 +17,6 @@ router.post('/obtenerJornadas', requireRole(ROLE_GROUPS.CONFIG), obtenerJornadas
 router.post('/obtenerUsuariosJornadas', requireRole(ROLE_GROUPS.CONFIG), obtenerUsuariosJornadas);
 router.post('/obtenerJornadasByIdEmpresa', requireRole(ROLE_GROUPS.CONFIG), obtenerJornadasByIdEmpresa);
 router.post('/deleteById', requireRole(ROLE_GROUPS.CONFIG), deleteById);
+router.post('/editarJornada', requireRole(ROLE_GROUPS.CONFIG), editarJornada);
 
 module.exports = router;

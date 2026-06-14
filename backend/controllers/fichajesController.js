@@ -22,6 +22,7 @@ const timezone = require('dayjs/plugin/timezone');
 const utc = require('dayjs/plugin/utc');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 const Usuario = require('../models/Usuario');
+const UsuariosEmpresas = require('../models/UsuarioEmpresa');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(customParseFormat);
@@ -976,6 +977,123 @@ const reverseGeocode = async (req, res) => {
   }
 };
 
+const resolverEstadoJornada = (fichajeAbierto, descansoAbierto) => {
+  if (fichajeAbierto && descansoAbierto) return 'break';
+  if (fichajeAbierto) return 'in';
+  return 'out';
+};
+
+const getEstadoPersonalEmpresa = async (req, res) => {
+  const { idEmpresa } = req.body;
+
+  if (!idEmpresa) {
+    return res.status(400).json({ error: 'idEmpresa requerido' });
+  }
+
+  try {
+    const vinculos = await UsuariosEmpresas.findAll({
+      where: { id_empresa: idEmpresa, fecha_baja: null },
+      attributes: ['id_usuario'],
+    });
+
+    const idsVinculados = vinculos.map((v) => v.id_usuario);
+
+    if (!idsVinculados.length) {
+      return res.status(200).json({
+        personal: [],
+        resumen: { trabajando: 0, descanso: 0, fuera: 0, total: 0 },
+      });
+    }
+
+    const usuarios = await Usuario.findAll({
+      where: {
+        id_usuario: { [Op.in]: idsVinculados },
+        fecha_baja: null,
+        activo: true,
+        tipo_usuario: { [Op.in]: [3, 4, 5] },
+      },
+      attributes: ['id_usuario', 'nombre', 'email', 'tipo_usuario'],
+    });
+
+    const userIds = usuarios.map((u) => u.id_usuario);
+
+    if (!userIds.length) {
+      return res.status(200).json({
+        personal: [],
+        resumen: { trabajando: 0, descanso: 0, fuera: 0, total: 0 },
+      });
+    }
+
+    const fichajesAbiertos = await Fichajes.findAll({
+      where: {
+        empresa_id: idEmpresa,
+        id_usuario: { [Op.in]: userIds },
+        fecha_baja: null,
+        fecha_salida: null,
+      },
+      order: [['fecha_entrada', 'DESC']],
+    });
+
+    const descansosAbiertos = await Descansos.findAll({
+      where: {
+        empresa_id: idEmpresa,
+        id_usuario: { [Op.in]: userIds },
+        fecha_salida: null,
+      },
+      order: [['fecha_entrada', 'DESC']],
+    });
+
+    const fichajePorUsuario = {};
+    fichajesAbiertos.forEach((f) => {
+      if (!fichajePorUsuario[f.id_usuario]) {
+        fichajePorUsuario[f.id_usuario] = f;
+      }
+    });
+
+    const descansoPorUsuario = {};
+    descansosAbiertos.forEach((d) => {
+      if (!descansoPorUsuario[d.id_usuario]) {
+        descansoPorUsuario[d.id_usuario] = d;
+      }
+    });
+
+    const personal = usuarios.map((u) => {
+      const fichaje = fichajePorUsuario[u.id_usuario] || null;
+      const descanso = descansoPorUsuario[u.id_usuario] || null;
+      const estado = resolverEstadoJornada(fichaje, descanso);
+
+      return {
+        id_usuario: u.id_usuario,
+        nombre: u.nombre,
+        email: u.email,
+        tipo_usuario: u.tipo_usuario,
+        estado,
+        fecha_entrada: fichaje?.fecha_entrada || null,
+        fecha_descanso: descanso?.fecha_entrada || null,
+      };
+    });
+
+    const ordenEstado = { in: 0, break: 1, out: 2 };
+    personal.sort((a, b) => {
+      const diff = ordenEstado[a.estado] - ordenEstado[b.estado];
+      if (diff !== 0) return diff;
+      return (a.nombre || '').localeCompare(b.nombre || '', 'es');
+    });
+
+    const resumen = {
+      trabajando: personal.filter((p) => p.estado === 'in').length,
+      descanso: personal.filter((p) => p.estado === 'break').length,
+      fuera: personal.filter((p) => p.estado === 'out').length,
+      total: personal.length,
+    };
+
+    res.status(200).json({ personal, resumen });
+  } catch (error) {
+    console.error('Error getEstadoPersonalEmpresa:', error);
+    res.status(500).json({ error: 'Error al obtener el estado del personal' });
+  }
+};
+
 module.exports = {
     getDatosUsuario,
     crearRegistro,
@@ -993,6 +1111,7 @@ module.exports = {
     crearPeticionCierreMes,
     getCierresMensualesByIdEmpresa,
     getDatosUsuarioMes,
-    responderPeticionCierre
+    responderPeticionCierre,
+    getEstadoPersonalEmpresa,
 
   };

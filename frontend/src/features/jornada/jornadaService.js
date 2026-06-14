@@ -185,14 +185,14 @@ export const editarJornada = async (updatedJornada) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Error:', errorData);
-      return errorData;
+      throw new Error(errorData.error || errorData.message || 'Error al editar la jornada');
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
     console.error('Error al editar jornada:', error);
+    throw error;
   }
 };
 

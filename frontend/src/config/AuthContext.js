@@ -28,8 +28,14 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, []);
 
+  const patchUser = useCallback((partial) => {
+    setUser((prev) => (prev ? { ...prev, ...partial } : null));
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, ready, isAuthenticated: Boolean(user) }}>
+    <AuthContext.Provider
+      value={{ user, login, logout, patchUser, ready, isAuthenticated: Boolean(user) }}
+    >
       {children}
     </AuthContext.Provider>
   );

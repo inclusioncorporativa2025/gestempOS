@@ -1,5 +1,19 @@
-.gtu-add-btn {
+.gtu-add-btn-row {
+  display: flex;
+  justify-content: flex-end;
   margin-bottom: 16px;
+}
+
+.gtu-add-btn.gradient-btn {
+  min-height: 34px !important;
+  height: 34px;
+  padding: 0 14px !important;
+  font-size: 0.85rem;
+  gap: 6px;
+}
+
+.gtu-add-btn .gradient-btn__icon {
+  font-size: 0.9em;
 }
 
 .gtu-info-icon {
@@ -10,4 +24,23 @@
 
 .gtu-input-full {
   width: 100%;
+}
+
+.gtu-jornada-collapse .ant-collapse-item > .ant-collapse-header {
+  align-items: center;
+}
+
+.gtu-panel-edit-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  margin-right: -4px;
+  color: var(--color-primary);
+  font-size: 16px;
+}
+
+.gtu-panel-edit-btn:hover {
+  color: var(--color-primary-dark) !important;
+  background: rgba(var(--color-primary-rgb), 0.1) !important;
 }

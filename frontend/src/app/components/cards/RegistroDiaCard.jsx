@@ -1,132 +1,120 @@
-import React from 'react';
-import { Card, Button, Popconfirm, Typography, Table } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
+import React, { useMemo } from 'react';
+import { Card, Typography, Table, Descriptions, Tag } from 'antd';
 import './RegistroDiaCard.css';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
-const RegistroDiaCard = ({ tipo, onEdit, onDelete }) => {
-  const isFormatoVariable = tipo.tipo===2;
-  const dias = tipo.column1?.dias || [];
+const parseColumn1 = (tipo) => {
+  if (!tipo?.column1) return {};
+  if (typeof tipo.column1 === 'string') {
+    try {
+      return JSON.parse(tipo.column1);
+    } catch {
+      return {};
+    }
+  }
+  return tipo.column1;
+};
 
-  const tipoHora = tipo.tipoHora || tipo.column1?.tipoHora || 'Desconocido';
-  const nombreJornada = tipo.nombreJornada || tipo.column1?.nombreJornada || 'Sin nombre';
-  const horasMensuales = tipo.horasMensuales || tipo.column1?.horasMensuales || 'N/A';
+const labelTipoJornada = (tipo) => {
+  const n = Number(tipo);
+  if (n === 1) return 'Fija';
+  if (n === 2) return 'Flexible';
+  return 'Desconocido';
+};
+
+const labelTipoHora = (tipoHora) => {
+  const n = Number(tipoHora);
+  if (n === 1) return 'Extra';
+  if (n === 2) return 'Complementaria';
+  if (n === 3) return 'Bolsa de horas';
+  return 'Desconocido';
+};
+
+const labelTipoHorarioDia = (value) => {
+  const n = Number(value);
+  if (n === 1) return 'Horario continuo';
+  if (n === 2) return 'Horario partido';
+  return '—';
+};
+
+const RegistroDiaCard = ({ tipo }) => {
+  const config = useMemo(() => parseColumn1(tipo), [tipo]);
+  const esFlexible = Number(tipo.tipo) === 2;
+  const dias = Array.isArray(config.dias) ? config.dias : [];
+  const horasMensuales = config.horasMensuales ?? tipo.horasMensuales ?? '';
 
   const columns = [
+    { title: 'Hora entrada', dataIndex: 'hora_entrada', key: 'hora_entrada' },
+    { title: 'Hora salida', dataIndex: 'hora_salida', key: 'hora_salida' },
     {
-      title: 'Hora entrada',
-      dataIndex: 'hora_entrada',
-      key: 'hora_entrada',
-    },
-    {
-      title: 'Hora salida',
-      dataIndex: 'hora_salida',
-      key: 'hora_salida',
-    },
-    {
-      title: 'Tipo de hora',
-      dataIndex: 'tipo_hora',
-      key: 'tipo_hora',
-      render: (value) => {
-        switch (value) {
-          case 1:
-          case '1':
-            return 'Extra';
-          case 2:
-          case '2':
-            return 'Complementaria';
-          case 3:
-          case '3':
-            return 'Bolsa de horas';
-          default:
-            return 'Desconocido';
-        }
-      },
-    },
-    {
-      title: 'Tipo de jornada',
-      dataIndex: 'tipo',
-      key: 'tipo',
-      render: (value) => {
-        switch (value) {
-          case '1':
-            return 'Horario continuo';
-          case '2':
-            return 'Horario partido';
-          default:
-            return 'Desconocido';
-        }
-      },
+      title: 'Tipo de horario',
+      dataIndex: 'tipo_horario',
+      key: 'tipo_horario',
+      render: (value) => labelTipoHorarioDia(value),
     },
   ];
 
-  // Si es tipo variable, solo mostramos horasMensuales
-  if (isFormatoVariable) {
-    return (
-      <Card className="registro-card">
-        <Text strong>Horas mensuales:</Text> {horasMensuales}
-        <div className="registro-actions">
-          <Popconfirm
-            title="¿Estás seguro de que deseas eliminar este tipo de jornada?"
-            onConfirm={() => onDelete(tipo.id_jornada)}
-            okText="Sí"
-            cancelText="No"
-          >
-            <Button danger type="primary" icon={<DeleteOutlined />}>
-              Eliminar jornada
-            </Button>
-          </Popconfirm>
-        </div>
-      </Card>
-    );
-  }
-
-  // Render clásico
   return (
-    <div>
-      {dias.map((dia, index) => (
-        <Card key={index} className="registro-card">
-          <Title level={4}>{dia.dia}</Title>
-
-          {dia.horario && Array.isArray(dia.horario) && dia.horario.length > 0 ? (
-            <Table
-              columns={columns}
-              dataSource={dia.horario.map((horarioItem, idx) => ({
-                key: idx,
-                tipo_hora: tipo.tipo_hora || tipoHora,
-                tipo: dia.tipo_horario,
-                hora_entrada: horarioItem.horaEntrada,
-                hora_salida: horarioItem.horaSalida,
-              }))}
-              rowKey={(record) => record.key}
-              pagination={false}
-            />
-          ) : (
-            <p>No hay horarios disponibles.</p>
-          )}
-
-          {/* <Button
-            type="primary"
-            icon={<EditOutlined />}
-            onClick={() => onEdit(tipo)}
-            style={{ marginRight: 8 }}
-          >
-            Editar
-          </Button> */}
-        </Card>
-      ))}
-
-      <Popconfirm
-        title="¿Estás seguro de que deseas eliminar este tipo de jornada?"
-        onConfirm={() => onDelete(tipo.id_jornada)}
-        okText="Sí"
-        cancelText="No"
+    <div className="registro-dia">
+      <Descriptions
+        className="registro-dia-meta"
+        size="small"
+        column={{ xs: 1, sm: 2, md: 3 }}
+        bordered
       >
-        <Button danger type="primary" icon={<DeleteOutlined />} className="registro-delete-btn">
-          Eliminar jornada
-        </Button>
-      </Popconfirm>
+          <Descriptions.Item label="Tipo de jornada">
+            <Tag color={esFlexible ? 'purple' : 'blue'}>{labelTipoJornada(tipo.tipo)}</Tag>
+          </Descriptions.Item>
+          <Descriptions.Item label="Tipo de hora">
+            {labelTipoHora(tipo.tipo_hora)}
+          </Descriptions.Item>
+          {esFlexible ? (
+            <Descriptions.Item label="Horas mensuales">
+              {horasMensuales !== '' && horasMensuales != null ? (
+                <Text strong>{horasMensuales} h</Text>
+              ) : (
+                <Text type="secondary">No definidas</Text>
+              )}
+            </Descriptions.Item>
+          ) : (
+            <Descriptions.Item label="Días configurados">
+              {dias.length > 0 ? dias.length : 'Ninguno'}
+            </Descriptions.Item>
+          )}
+        </Descriptions>
+
+      {!esFlexible && (
+        <div className="registro-dia-dias">
+          {dias.length === 0 ? (
+            <Text type="secondary">No hay días ni horarios configurados.</Text>
+          ) : (
+            dias.map((dia, index) => (
+              <Card key={`${dia.dia}-${index}`} className="registro-card" size="small">
+                <Text strong className="registro-dia-nombre">
+                  {dia.dia}
+                </Text>
+                {Array.isArray(dia.horario) && dia.horario.length > 0 ? (
+                  <Table
+                    className="registro-dia-tabla"
+                    columns={columns}
+                    dataSource={dia.horario.map((horarioItem, idx) => ({
+                      key: `${dia.dia}-${idx}`,
+                      hora_entrada: horarioItem.horaEntrada || '—',
+                      hora_salida: horarioItem.horaSalida || '—',
+                      tipo_horario: dia.tipo_horario,
+                    }))}
+                    pagination={false}
+                    size="small"
+                  />
+                ) : (
+                  <Text type="secondary">Sin tramos horarios para este día.</Text>
+                )}
+              </Card>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 };

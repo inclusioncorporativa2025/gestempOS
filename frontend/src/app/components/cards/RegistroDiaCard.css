@@ -1,11 +1,37 @@
+.registro-dia {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.registro-dia-meta {
+  background: transparent;
+}
+
+.registro-dia-meta .ant-descriptions-view {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.registro-dia-dias {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .registro-card {
-  margin-bottom: 16px;
+  margin-bottom: 0;
+  border-radius: 12px !important;
+  border: 1px solid rgba(var(--color-primary-rgb), 0.1) !important;
+  background: rgba(255, 255, 255, 0.6) !important;
 }
 
-.registro-actions {
-  margin-top: 16px;
+.registro-dia-nombre {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
 }
 
-.registro-delete-btn {
-  margin-bottom: 16px;
+.registro-dia-tabla .ant-table {
+  background: transparent;
 }

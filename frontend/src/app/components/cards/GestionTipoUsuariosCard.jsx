@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Tooltip,Card, Typography, Table, Button, Collapse, Modal, Form, Input, TimePicker, message, Checkbox, Select, Row, Col } from 'antd';
+import { Tooltip,Card, Table, Button, Collapse, Modal, Form, Input, TimePicker, message, Checkbox, Select, Row, Col } from 'antd';
 import GradientButton from '../shared/GradientButton';
-import { EditOutlined,InfoCircleOutlined, DeleteOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';  // Iconos para los botones de editar, eliminar, añadir y guardar
-import moment from 'moment';  // Importar moment.js para formatear fechas y horas correctamente
-import { crearJornada,obtenerUsuariosJornadas, deleteJornada,editarJornada,obtenerJornadasByIdEmpresa } from "../../../features/jornada/jornadaService";
+import { EditOutlined, InfoCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import { crearJornada, editarJornada, obtenerJornadasByIdEmpresa } from "../../../features/jornada/jornadaService";
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';  
 import AnadirDiaCard from './AnadirDiaCard';
@@ -13,27 +12,29 @@ import './GestionTipoUsuariosCard.css';
 
 dayjs.locale('es');  
 
-const { Title } = Typography;
 const { Panel } = Collapse;
 const { Option } = Select;
 const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+const parseColumn1 = (tipo) => {
+    if (!tipo?.column1) return {};
+    if (typeof tipo.column1 === 'string') {
+        try {
+            return JSON.parse(tipo.column1);
+        } catch {
+            return {};
+        }
+    }
+    return tipo.column1;
+};
 
 const GestionTipoUsuariosCard = () => {
     const [tiposJornada, setTiposJornada] = useState([]);  // Cambiado para usar datos obtenidos de la API
     const [isAddModalVisible, setIsAddModalVisible] = useState(false);
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-    const [isModalEditReady, setIsModalEditReady] = useState(false);
     const [tipoJornadaEdit, setTipoJornadaEdit] = useState('');
     const [diasSeleccionados, setDiasSeleccionados] = useState([]);
-    const [tipoJornada, setTipoJornada] = useState('');  // Estado para el tipo de jornada seleccionado
-    const [tipoJornadaData, setTipoJornadaData] = useState(null); // Almacena los datos de tipo jornada
-
-
-    const WeekDaysForm = () => {
-        const [form] = Form.useForm();
-      
-        };
-    
+    const [tipoJornada, setTipoJornada] = useState('');
         const obtenerJornadasEmpresa = async () => {
             try {
               const response = await obtenerJornadasByIdEmpresa(); 
@@ -46,114 +47,43 @@ const GestionTipoUsuariosCard = () => {
           };
           
     useEffect(() => {
-
         obtenerJornadasEmpresa();
     }, []);
 
-    useEffect(() => {
-        
-        if (tipoJornadaData && tipoJornadaData.registros) {
-            
-            const reg1 = tipoJornadaData.registros[0];
-            const reg2 = tipoJornadaData.registros[1];
-    
-           
-                // Inicializar los valores del formulario
-                editForm.setFieldsValue({
-                    nombreEdit: tipoJornadaData.jornada_nombre,
-                    idJornada : tipoJornadaData.id_jornada,
-                    tipo_jornadaEdit: tipoJornadaData.tipo, // Verifica si 'tipo' está disponible en tipoJornadaData
-                    legalEdit: tipoJornadaData.tipo_hora,
-                    nombre1Edit: reg1.registro_nombre,
-                    idRegistro1: reg1.id_registro_jornada,
-                    hora_entrada1Edit: reg1.hora_entrada ? dayjs(reg1.hora_entrada, 'HH:mm:ss') : null,
-                    hora_salida1Edit: reg1.hora_salida ? dayjs(reg1.hora_salida, 'HH:mm:ss') : null,
-                    descansos1Edit: reg1.descansos,
-                    nombre2Edit: reg2 ? reg2.registro_nombre : null,
-                    idRegistro2: reg2.id_registro_jornada? reg2.id_registro_jornada : null,
-                    hora_entrada2Edit: reg2 && reg2.hora_entrada ? dayjs(reg2.hora_entrada, 'HH:mm:ss') : null,
-                    hora_salida2Edit: reg2 && reg2.hora_salida ? dayjs(reg2.hora_salida, 'HH:mm:ss') : null,
-                    descansos2Edit: reg2 ? reg2.descansos : null,
-                });
-
-                setTipoJornadaEdit(tipoJornadaData.tipo);
-                setIsModalEditReady(true);
-                setIsEditModalVisible(true);
-            
-           
-        }
-    }, [tipoJornadaData]);  // Este useEffect se ejecuta cuando `tipoJornadaData` cambia
-    
     const handleEdit = (tipo) => {
-        setTipoJornadaData(tipo);  // Guarda los datos del tipo de jornada
+        const config = parseColumn1(tipo);
+        setTipoJornadaEdit(String(tipo.tipo));
+        editForm.setFieldsValue({
+            idJornada: tipo.id_jornada,
+            nombreEdit: tipo.nombre,
+            tipo_jornadaEdit: String(tipo.tipo),
+            legalEdit: String(tipo.tipo_hora),
+            horasMensualesEdit: config.horasMensuales || '',
+        });
+        setIsEditModalVisible(true);
     };
 
-    const editJornada = async () => {
-        // Obtener todos los valores del formulario de edición
-        const formData = editForm.getFieldsValue();
-        
-        // Organizar los datos para enviarlos correctamente al backend
-        const updatedJornada = {
-            id_jornada: editForm?.getFieldValue('idJornada'), // ID de la jornada almacenado en `editFormData`
-            jornada_nombre: formData.nombreEdit, // Nombre de la jornada del formulario
-            tipo: formData.tipo_jornadaEdit, // Tipo de jornada (Continua o Partida)
-            tipo_hora: formData.legalEdit, // Tipo de hora (Extra, Complementaria, Bolsa)
-            registros: [
-                {
-                    id_registro: formData.idRegistro1, // ID del primer registro
-                    registro_nombre: formData.nombre1Edit, // Nombre del primer registro
-                    hora_entrada: formData.hora_entrada1Edit ? formData.hora_entrada1Edit.format('HH:mm:ss') : null,
-                    hora_salida: formData.hora_salida1Edit ? formData.hora_salida1Edit.format('HH:mm:ss') : null,
-                    descansos: formData.descansos1Edit, // Número de descansos para el primer registro
-                },
-                formData.nombre2Edit && {
-                    id_registro: formData.idRegistro2, // ID del segundo registro (si existe)
-                    registro_nombre: formData.nombre2Edit, // Nombre del segundo registro
-                    hora_entrada: formData.hora_entrada2Edit ? formData.hora_entrada2Edit.format('HH:mm:ss') : null,
-                    hora_salida: formData.hora_salida2Edit ? formData.hora_salida2Edit.format('HH:mm:ss') : null,
-                    descansos: formData.descansos2Edit, // Número de descansos para el segundo registro
-                }
-            ].filter(Boolean), // Filtra los registros vacíos
-        };
-    
+    const editJornadaSubmit = async () => {
         try {
-            // Llamar al servicio de editar jornada con los datos organizados
-            await editarJornada(updatedJornada);
-    
-            // Cerrar el modal y actualizar la vista
-            message.success('Jornada editada correctamente');
+            const values = await editForm.validateFields();
+            await editarJornada({
+                id_jornada: values.idJornada,
+                nombre: values.nombreEdit,
+                tipo_hora: values.legalEdit,
+                horasMensuales: values.horasMensualesEdit,
+            });
+            message.success('Jornada actualizada correctamente');
             setIsEditModalVisible(false);
-            handleReload(); // Asumimos que tienes esta función para recargar la vista
-        } catch (error) {
-            console.error('Error al editar jornada:', error);
-            message.error('Error al editar la jornada');
-        }
-    };
-    
-    const handleDeleteTipo = async (tipoId) => {
-
-        const usuJornadas = await obtenerUsuariosJornadas();
-        if(usuJornadas && usuJornadas.length > 0){
-            message.error('Existen usuarios asignados a esta jornada');
-            return;
-
-        }
-        const data = await deleteJornada(tipoId);
-
-        const updatedTiposJornada = tiposJornada.filter((tipo) => tipo.id !== tipoId);
-        setTiposJornada(updatedTiposJornada);
-        if(!data){
-            message.error('Error eliminando jornada');
-
-        }else{
-            message.success('Tipo de jornada eliminado correctamente');
             handleReload();
-
+        } catch (error) {
+            if (error?.errorFields) return;
+            message.error(error.message || 'Error al editar la jornada');
         }
     };
+
     const handleReload = () => {
         obtenerJornadasEmpresa();
-      };
+    };
       
     const handleCancel = () => {
         setIsAddModalVisible(false);
@@ -309,23 +239,38 @@ const GestionTipoUsuariosCard = () => {
     const [addForm] = Form.useForm();
     return (
         <Card >
-            <Title level={2}>Gestionar Tipos de Jornada</Title>
             <p>Aquí puedes gestionar los tipos de jornada y sus registros asociados.</p>
 
-            <GradientButton
-                text="Añadir Tipo de Jornada"
-                iconStart={<PlusOutlined />}
-                onClick={() => setIsAddModalVisible(true)}
-                className="gtu-add-btn"
-            />
-            <Collapse>
+            <div className="gtu-add-btn-row">
+                <GradientButton
+                    text="Añadir"
+                    iconStart={<PlusOutlined />}
+                    size="small"
+                    onClick={() => setIsAddModalVisible(true)}
+                    className="gtu-add-btn"
+                />
+            </div>
+            <Collapse className="gtu-jornada-collapse">
             {tiposJornada.map((tipo, index) => (
-                <Panel header={tipo.nombre} key={tipo.id || `tipo-${index}`}>
-                    <RegistroDiaCard  
-                    tipo={tipo} 
-                    onEdit={handleEdit} 
-                    onDelete={handleDeleteTipo} 
-                    />
+                <Panel
+                    header={tipo.nombre}
+                    key={tipo.id_jornada || `tipo-${index}`}
+                    extra={
+                        <Tooltip title="Editar jornada">
+                            <Button
+                                type="text"
+                                className="gtu-panel-edit-btn"
+                                icon={<EditOutlined />}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEdit(tipo);
+                                }}
+                                aria-label="Editar jornada"
+                            />
+                        </Tooltip>
+                    }
+                >
+                    <RegistroDiaCard tipo={tipo} />
                 </Panel>
             ))}
             </Collapse>
@@ -441,7 +386,56 @@ const GestionTipoUsuariosCard = () => {
                             )}
                         </Card>
                 </Form>
-            </Modal>  
+            </Modal>
+
+            <Modal
+                title="Editar jornada"
+                open={isEditModalVisible}
+                onOk={editJornadaSubmit}
+                onCancel={() => setIsEditModalVisible(false)}
+                okText="Guardar"
+                cancelText="Cancelar"
+                destroyOnClose
+            >
+                <Form form={editForm} layout="vertical">
+                    <Form.Item name="idJornada" hidden>
+                        <Input />
+                    </Form.Item>
+                    <Form.Item
+                        label="Nombre"
+                        name="nombreEdit"
+                        rules={[{ required: true, message: 'Introduce el nombre de la jornada' }]}
+                    >
+                        <Input placeholder="Ej. Jornada 1" />
+                    </Form.Item>
+                    <Form.Item label="Tipo de jornada" name="tipo_jornadaEdit">
+                        <Select disabled>
+                            <Option value="1">Fija</Option>
+                            <Option value="2">Flexible</Option>
+                        </Select>
+                    </Form.Item>
+                    <Form.Item
+                        label="Tipo de hora"
+                        name="legalEdit"
+                        rules={[{ required: true, message: 'Selecciona el tipo de hora' }]}
+                    >
+                        <Select placeholder="Tipo de hora">
+                            <Option value="1">Extra</Option>
+                            <Option value="2">Complementaria</Option>
+                            <Option value="3">Bolsa de horas</Option>
+                        </Select>
+                    </Form.Item>
+                    {tipoJornadaEdit === '2' && (
+                        <Form.Item
+                            label="Horas mensuales"
+                            name="horasMensualesEdit"
+                            rules={[{ required: true, message: 'Introduce las horas mensuales' }]}
+                        >
+                            <Input type="number" placeholder="Ej. 160" className="gtu-input-full" />
+                        </Form.Item>
+                    )}
+                </Form>
+            </Modal>
                     
         </Card>
     );

@@ -1,58 +1,67 @@
-.app-header-profile {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  padding: 4px 4px 4px 6px;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.app-header-profile:hover {
-  background: rgba(var(--color-primary-rgb), 0.06);
-}
-
-.app-header-profile-name {
-  font-size: 0.95rem;
-  font-weight: var(--font-weight-medium);
-  color: #2a1f36;
-  white-space: nowrap;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.app-header-profile-chevron {
-  font-size: 0.65rem;
-  color: #9a8aa8;
-  margin-right: 4px;
-}
-
-.app-header-empresa-dropdown .ant-dropdown-menu {
-  min-width: 200px;
-  border-radius: 12px;
-  padding: 6px;
-  box-shadow: 0 8px 28px rgba(var(--color-primary-dark-rgb), 0.12);
-}
-
-.app-header-plan-modal__body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.app-header-plan-modal__empresa,
-.app-header-plan-modal__licencias {
-  margin: 0 0 12px !important;
-  font-size: 1.05rem;
-  font-weight: 500;
-}
-
-.app-header-plan-modal__hint {
-  margin: 8px 0 0 !important;
-  font-size: 0.92rem;
-}
+.app-header-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 4px 4px 4px 6px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.app-header-profile:hover {
+  background: rgba(var(--color-primary-rgb), 0.06);
+}
+
+.app-header-profile--static {
+  cursor: default;
+  padding-right: 10px;
+}
+
+.app-header-profile--static:hover {
+  background: transparent;
+}
+
+.app-header-profile-name {
+  font-size: 0.95rem;
+  font-weight: var(--font-weight-medium);
+  color: #2a1f36;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-header-profile-chevron {
+  font-size: 0.65rem;
+  color: #9a8aa8;
+  margin-right: 4px;
+}
+
+.app-header-empresa-dropdown .ant-dropdown-menu {
+  min-width: 200px;
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 8px 28px rgba(var(--color-primary-dark-rgb), 0.12);
+}
+
+.app-header-plan-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.app-header-plan-modal__empresa,
+.app-header-plan-modal__licencias {
+  margin: 0 0 12px !important;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.app-header-plan-modal__hint {
+  margin: 8px 0 0 !important;
+  font-size: 0.92rem;
+}
 
