@@ -18,9 +18,12 @@ import Home from './pages/Home';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Register from './pages/Register';
+import GradientButton from './components/shared/GradientButton';
 import Header from './components/Header';
 import SidebarFooter from './components/SidebarFooter';
+import SidebarEmpresaBrand from './components/SidebarEmpresaBrand';
 import SupportModal from './components/SupportModal';
+import { OPEN_SUPPORT_EVENT } from './components/Header';
 import { useAuth } from '../config/AuthContext';
 import TimeLogsPanel from './pages/TimeLogsPanel';
 import UserManagementForm from './pages/gestor/UserManagementForm';
@@ -37,6 +40,9 @@ import Notificaciones from './pages/Notificaciones';
 import './App.css';
 import './styles/sidebar.css';
 import './styles/app-layout.css';
+import './styles/app-page.css';
+import './styles/forms.css';
+import './styles/modal-actions.css';
 
 const { Sider, Content } = Layout;
 
@@ -108,6 +114,12 @@ const AppShell = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    const openSupport = () => setSupportOpen(true);
+    window.addEventListener(OPEN_SUPPORT_EVENT, openSupport);
+    return () => window.removeEventListener(OPEN_SUPPORT_EVENT, openSupport);
+  }, []);
+
   const isMobile = windowWidth < 950;
   const isAuthShellPage = [
     APP_ROUTES.login,
@@ -153,11 +165,54 @@ const AppShell = () => {
   return (
     <ConfigProvider
       theme={{
-        token: { fontFamily: 'var(--font-family-base)', fontWeightStrong: 300 },
+        token: {
+          fontFamily: 'var(--font-family-base)',
+          fontWeightStrong: 300,
+          colorPrimary: '#A85CE0',
+          colorBgLayout: '#F6F2FA',
+          colorBgContainer: '#FFFFFF',
+          borderRadius: 12,
+          controlHeight: 42,
+        },
+        components: {
+          Input: {
+            borderRadius: 999,
+            controlHeight: 42,
+            paddingInline: 16,
+            lineWidth: 0,
+            colorBorder: 'transparent',
+            hoverBorderColor: 'transparent',
+            activeBorderColor: 'transparent',
+            activeShadow: '0 4px 18px rgba(168, 92, 224, 0.16)',
+          },
+          Select: {
+            borderRadius: 999,
+            controlHeight: 42,
+            lineWidth: 0,
+            colorBorder: 'transparent',
+            hoverBorderColor: 'transparent',
+            activeBorderColor: 'transparent',
+          },
+          DatePicker: {
+            borderRadius: 999,
+            controlHeight: 42,
+            lineWidth: 0,
+            colorBorder: 'transparent',
+            hoverBorderColor: 'transparent',
+            activeBorderColor: 'transparent',
+          },
+          InputNumber: {
+            borderRadius: 999,
+            controlHeight: 42,
+            lineWidth: 0,
+            colorBorder: 'transparent',
+            hoverBorderColor: 'transparent',
+            activeBorderColor: 'transparent',
+          },
+        },
       }}
     >
       <Layout className="app-shell">
-        {!isAuthShellPage && <Header />}
         <Layout className="app-shell-body">
           {!isAuthShellPage && !isMobile && (
             <Sider
@@ -171,6 +226,7 @@ const AppShell = () => {
               onCollapse={(value) => setCollapsed(value)}
             >
               <div className="app-sider-inner">
+                <SidebarEmpresaBrand collapsed={collapsed} />
                 <div className="app-sider-toggle">
                   <Button
                     type="text"
@@ -196,17 +252,15 @@ const AppShell = () => {
           )}
 
           {isMobile && !isAuthShellPage && (
-            <Button
-              className="colorPrincipal"
-              type="primary"
-              icon={<MenuOutlined />}
+            <GradientButton
+              iconStart={<MenuOutlined />}
               onClick={showDrawer}
+              className="app-mobile-menu-btn"
               style={{
                 position: 'fixed',
                 bottom: 20,
                 right: 20,
                 zIndex: 1000,
-                borderRadius: 15,
               }}
             />
           )}
@@ -220,6 +274,7 @@ const AppShell = () => {
             height="auto"
           >
             <div className="app-drawer-body">
+              <SidebarEmpresaBrand />
               <Menu
                 className="app-menu"
                 mode="inline"
@@ -232,12 +287,18 @@ const AppShell = () => {
           </Drawer>
 
           <Layout
-            className={!isMobile && !isAuthShellPage ? 'app-main-layout' : undefined}
+            className={[
+              'app-main-column',
+              isAuthShellPage ? 'app-main-column--auth' : '',
+            ].filter(Boolean).join(' ')}
           >
-            <Content
-              className={!isMobile && !isAuthShellPage ? 'app-main-content' : undefined}
-              style={isAuthShellPage ? { background: 'transparent' } : undefined}
-            >
+            {!isAuthShellPage && <Header />}
+
+            <Layout className={!isAuthShellPage ? 'app-main-layout' : undefined}>
+              <Content
+                className={!isAuthShellPage ? 'app-main-content' : undefined}
+                style={isAuthShellPage ? { background: 'transparent' } : undefined}
+              >
               <Routes>
                 <Route path={APP_ROUTES.login} element={<Login />} />
                 <Route path={APP_ROUTES.register} element={<Register />} />
@@ -347,6 +408,7 @@ const AppShell = () => {
                 />
               </Routes>
             </Content>
+            </Layout>
           </Layout>
         </Layout>
       </Layout>

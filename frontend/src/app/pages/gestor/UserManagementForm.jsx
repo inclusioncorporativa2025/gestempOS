@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Layout, Card, Row, Col, Button, Form, Input, notification, Upload, Typography, Select, message } from 'antd';
+import GradientButton from '../../components/shared/GradientButton';
 import { InboxOutlined, DownloadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../../constants/routes';
@@ -203,9 +204,7 @@ const UserManagementForm = () => {
             <Form.Item>
               <Row gutter={16}>
                 <Col span={12}>
-                  <Button type="primary" className="colorPrincipal" block onClick={importarUsuarios} disabled={fileList.length === 0}>
-                    Aceptar
-                  </Button>
+                  <GradientButton text="Aceptar" block onClick={importarUsuarios} disabled={fileList.length === 0} />
                 </Col>
                 <Col span={12}>
                   <Button block danger onClick={eliminarArchivo}>
@@ -257,9 +256,7 @@ const UserManagementForm = () => {
 
 
           <Form.Item>
-            <Button type="primary" className="colorPrincipal" block htmlType="submit">
-              Enviar Invitación
-            </Button>
+            <GradientButton type="submit" text="Enviar Invitación" block />
           </Form.Item>
         </Form>
       </Card>

@@ -1,0 +1,79 @@
+/* Pie de modales — botones pill con mismo fondo y anillo */
+
+.ant-modal-footer,
+.modal-actions,
+.confirm-popup-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-actions {
+  margin-top: 0.25rem;
+}
+
+.ant-modal-footer .ant-btn,
+.modal-actions .ant-btn,
+.confirm-popup-footer .ant-btn,
+.modal-actions .gradient-btn-ring,
+.confirm-popup-footer .gradient-btn-ring {
+  min-height: 40px;
+  height: auto;
+  padding: 0 22px;
+  border-radius: var(--input-radius-pill) !important;
+  font-weight: var(--font-weight-light);
+  font-size: 0.95rem;
+}
+
+.modal-btn-cancel.ant-btn,
+.ant-modal-footer .ant-btn-default {
+  border: none !important;
+  background: #fff !important;
+  color: #5a6472 !important;
+  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.08) !important;
+}
+
+.modal-btn-cancel.ant-btn:hover,
+.ant-modal-footer .ant-btn-default:hover {
+  color: var(--color-primary) !important;
+  background: #fff !important;
+  box-shadow: 0 4px 16px rgba(var(--color-primary-rgb), 0.12) !important;
+}
+
+.ant-modal-footer .ant-btn-primary,
+.modal-btn-primary.ant-btn {
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  background: var(--gradient-header) !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.14),
+    0 4px 14px rgba(0, 0, 0, 0.12) !important;
+}
+
+.ant-modal-footer .ant-btn-primary:hover,
+.modal-btn-primary.ant-btn:hover {
+  color: #fff !important;
+  background: var(--gradient-header) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.12),
+    0 6px 18px rgba(0, 0, 0, 0.16) !important;
+}
+
+.ant-modal-footer .ant-btn-dangerous {
+  background: linear-gradient(135deg, #e86a6a 0%, #cf4a4a 100%) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+}
+
+.confirm-popup-footer .gradient-btn-ring,
+.modal-actions .gradient-btn-ring {
+  flex: 1;
+}
+
+.confirm-popup-footer .modal-btn-cancel,
+.confirm-popup-footer .gradient-btn-ring {
+  flex: 1;
+}

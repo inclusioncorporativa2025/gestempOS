@@ -320,3 +320,23 @@ export const editMiEmpresa = async (datos) => {
     throw error;
   }
 };
+
+export const getEmpresaBranding = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/branding`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || errorData.message || 'Error recuperando branding');
+    }
+
+    const data = await response.json();
+    return data.branding;
+  } catch (error) {
+    console.error('Error recuperando branding:', error);
+    throw error;
+  }
+};

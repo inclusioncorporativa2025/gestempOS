@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Typography, message, Switch } from 'antd';
+import { Typography, message, Switch } from 'antd';
+import GradientButton from '../components/shared/GradientButton';
 import {
   LoginOutlined,
   LogoutOutlined,
@@ -220,24 +221,23 @@ const Home = () => {
               const Icon = config.icon;
 
               return (
-                <Button
+                <GradientButton
                   key={registro.id}
-                  type="primary"
                   block
                   size="large"
                   className={`home-action-btn ${config.className}`}
                   loading={loading && loadingId === registro.id}
                   disabled={loading && loadingId !== registro.id}
                   onClick={() => solicitarConfirmacion(registro.id)}
+                  iconStart={<Icon />}
                 >
-                  <Icon />
                   <span>
                     {config.nombre}
                     {config.descripcion && (
                       <small className="home-action-desc">{config.descripcion}</small>
                     )}
                   </span>
-                </Button>
+                </GradientButton>
               );
             })}
           </div>

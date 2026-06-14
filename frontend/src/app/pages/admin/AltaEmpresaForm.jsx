@@ -1,5 +1,6 @@
 import React from 'react';
 import { Form, Input, Row, Col, Button, InputNumber } from 'antd';
+import GradientButton from '../../components/shared/GradientButton';
 import './AltaEmpresa.css';
 
 const AltaEmpresaForm = ({
@@ -82,9 +83,7 @@ const AltaEmpresaForm = ({
         </Form.Item>
       </Col>
       <Col xs={24}>
-        <Button type="primary" htmlType="submit" loading={loading} className="alta-btn-mr colorPrincipal">
-          {submitLabel}
-        </Button>
+        <GradientButton type="submit" text={submitLabel} loading={loading} className="alta-btn-mr" />
         <Button onClick={onCancel}>Limpiar</Button>
       </Col>
     </Row>

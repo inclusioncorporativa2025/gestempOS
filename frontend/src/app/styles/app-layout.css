@@ -1,6 +1,27 @@
-/* Área principal: ancho completo, sin franjas grises laterales */
+/* Área principal */
+.app-main-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  background: var(--background);
+  border-top-right-radius: 24px;
+  overflow: hidden;
+}
+
+.app-main-column > .app-header {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.app-main-column--auth {
+  width: 100%;
+}
+
 .app-shell-body {
-  background: #fff;
+  background: var(--background);
 }
 
 .app-main-layout {
@@ -8,7 +29,7 @@
   min-height: 0;
   width: 100%;
   padding: 0 !important;
-  background: #fff;
+  background: var(--background);
 }
 
 .app-main-content {
@@ -17,7 +38,7 @@
   width: 100%;
   margin: 0;
   padding: 0 !important;
-  background: #fff;
+  background: var(--background);
   overflow: auto;
 }
 

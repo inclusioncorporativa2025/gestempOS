@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Card,
   Col,
@@ -16,6 +17,7 @@ import {
   Tag,
   Tooltip,
 } from 'antd';
+import GradientButton from '../../components/shared/GradientButton';
 import {
   SearchOutlined,
   PlusOutlined,
@@ -56,6 +58,8 @@ const coincideBusqueda = (empresa, texto) => {
 };
 
 const BuscadorEmpresa = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const [altaForm] = Form.useForm();
@@ -70,6 +74,13 @@ const BuscadorEmpresa = () => {
   useEffect(() => {
     fetchEmpresas();
   }, []);
+
+  useEffect(() => {
+    if (location.state?.abrirAltaEmpresa) {
+      setIsAltaModalVisible(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
 
   const fetchEmpresas = async () => {
     setLoading(true);
@@ -243,23 +254,20 @@ const BuscadorEmpresa = () => {
         <div className="be-search-toolbar">
           <Input
             allowClear
-            size="large"
             prefix={<SearchOutlined />}
             placeholder="Buscar por nombre, email del responsable o identificador fiscal"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             className="be-search-input"
           />
-          <Button
-            type="primary"
-            size="large"
-            icon={<PlusOutlined />}
+          <GradientButton
+            text="Alta de empresa"
+            iconStart={<PlusOutlined />}
             className="be-alta-btn"
+            size="small"
             title="Alta de empresa"
             onClick={handleOpenAltaModal}
-          >
-            Alta de empresa
-          </Button>
+          />
         </div>
       </Card>
 
@@ -444,9 +452,7 @@ const BuscadorEmpresa = () => {
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Button type="primary" htmlType="submit" className="be-full-width">
-                Guardar
-              </Button>
+              <GradientButton type="submit" text="Guardar" className="be-full-width" />
             </Col>
             <Col span={12}>
               <Button onClick={handleCancelModal} className="be-full-width">

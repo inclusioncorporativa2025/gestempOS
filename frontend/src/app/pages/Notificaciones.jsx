@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Card, Col, Row, Button, Table, Layout,Modal,
+  Card, Col, Row, Button, Table, Layout, Modal,
   Typography, message, Popconfirm, Tooltip
 } from 'antd';
+import GradientButton from '../components/shared/GradientButton';
 import { EyeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -235,7 +236,7 @@ const setVisibleModalDetalles = async (info) => {
               okText="Sí"
               cancelText="No"
             >
-              <Button type="primary" className="notif-btn-mr">Aprobar</Button>
+              <GradientButton text="Aprobar" className="notif-btn-mr" />
             </Popconfirm>
             <Popconfirm
               title="¿Rechazar esta petición?"
@@ -294,7 +295,7 @@ const setVisibleModalDetalles = async (info) => {
               okText="Sí"
               cancelText="No"
             >
-              <Button type="primary" size="small" className="notif-btn-mr">Aprobar</Button>
+              <GradientButton text="Aprobar" size="small" className="notif-btn-mr" />
             </Popconfirm>
             <Popconfirm
               title="¿Rechazar este cierre?"

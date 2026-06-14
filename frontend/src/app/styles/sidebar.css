@@ -2,7 +2,7 @@
    Sidebar / menú de navegación moderno
    =========================================================================== */
 
-/* Shell: header + cuerpo caben en viewport sin desbordar el sider */
+/* Shell: sidebar + columna principal a altura completa */
 .app-shell.ant-layout {
   display: flex;
   flex-direction: column;
@@ -11,21 +11,19 @@
   overflow: hidden;
 }
 
-.app-shell > .ant-layout-header {
-  flex-shrink: 0;
-}
-
 .app-shell-body.ant-layout {
   flex: 1 1 auto;
   min-height: 0;
+  height: 100%;
   overflow: hidden;
   align-items: stretch;
+  flex-direction: row;
 }
 
 /* Contenedor del sidebar (escritorio) */
 .app-sider {
-  background: #ffffff !important;
-  border-right: 1px solid #eef0f4;
+  background: var(--background) !important;
+  border-right: 1px solid rgba(var(--color-primary-rgb), 0.1);
   box-shadow: 2px 0 12px rgba(15, 16, 32, 0.04);
   height: 100% !important;
   max-height: 100%;
@@ -137,7 +135,7 @@
 
 /* Hover */
 .app-menu .ant-menu-item:hover {
-  background: rgba(43, 169, 224, 0.08);
+  background: rgba(var(--color-primary-rgb), 0.08);
   color: var(--color-primary);
 }
 
@@ -223,6 +221,11 @@
   display: flex;
   flex-direction: column;
   min-height: 200px;
+}
+
+.app-drawer-body .app-sider-brand {
+  padding: 0 4px 16px;
+  margin-bottom: 8px;
 }
 
 .app-drawer-body .app-menu {

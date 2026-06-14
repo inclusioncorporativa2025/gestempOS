@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Typography, Table, Switch, Button, Modal, Input, Popconfirm, Select, Row, Col, message } from 'antd';
+import GradientButton from '../shared/GradientButton';
 import { getTipoRegistro, guardarTipoAcceso } from '../../../features/empresas/empresasService'; 
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import './GestionTipoAccesoCard.css';
@@ -117,15 +118,13 @@ const GestionTipoAccesoCard = () => {
             render: (_, record) => (
                 <Row gutter={[8, 8]} justify="center">
                     <Col>
-                        <Button
-                            type="primary"
-                            icon={<EditOutlined />}
+                        <GradientButton
                             size="small"
+                            text="Editar"
+                            iconStart={<EditOutlined />}
                             className="gta-action-btn"
                             onClick={() => handleEdit(record)}
-                        >
-                            Editar
-                        </Button>
+                        />
                     </Col>
                     <Col>
                         <Popconfirm
@@ -160,23 +159,19 @@ const GestionTipoAccesoCard = () => {
             />
             <Row gutter={[16, 16]} className="gta-actions-row">
                 <Col>
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
+                    <GradientButton
+                        text="Añadir Tipo Acceso"
+                        iconStart={<PlusOutlined />}
                         className="gta-main-btn"
                         onClick={() => setIsModalVisible(true)}
-                    >
-                        Añadir Tipo Acceso
-                    </Button>
+                    />
                 </Col>
                 <Col>
-                    <Button
-                        type="primary"
+                    <GradientButton
+                        text="Guardar Cambios"
                         className="gta-main-btn"
                         onClick={handleSaveChanges}
-                    >
-                        Guardar Cambios
-                    </Button>
+                    />
                 </Col>
             </Row>
 

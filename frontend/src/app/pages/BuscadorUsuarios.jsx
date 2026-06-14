@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Tag, Card, Table, Input, Button, Modal, Tooltip, Popconfirm, Form, message, Typography, DatePicker, Switch, Select, ConfigProvider, Dropdown } from 'antd';
-import { SearchOutlined, EditOutlined, DeleteOutlined, EyeOutlined, DownloadOutlined, UserAddOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import GradientButton from '../components/shared/GradientButton';
+import { SearchOutlined, EditOutlined, StopOutlined, EyeOutlined, DownloadOutlined, UserAddOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { getUsuariosEmpresa, deleteUsuario, editUsuario, getHorasTotalesMesByIdUsuario, descargarExcelDesdeAPI } from "../../features/user/usuarioService";
 import { getDatosUsuarioById } from '../../features/fichaje/fichajeService';
@@ -19,6 +20,7 @@ const { Title } = Typography;
 
 const BuscarUsuarios = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const tipoUsuario = getTipoUsuario();
     const [usuarios, setUsuarios] = useState([]);
     const [searchText, setSearchText] = useState('');
@@ -53,6 +55,14 @@ const BuscarUsuarios = () => {
         fetchUsuarios();
         obtenerJornadasEmpresa();
     }, []);
+
+    useEffect(() => {
+        const q = location.state?.headerSearch;
+        if (typeof q === 'string' && q.trim()) {
+            setSearchText(q.trim());
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location.state, location.pathname, navigate]);
 
     const filteredUsuarios = usuarios.filter((usuario) => {
         const matchesSearch =
@@ -228,10 +238,15 @@ const BuscarUsuarios = () => {
         }
     };
 
-    const handleDelete = async (key) => {
-        await deleteUsuario(key);
-        message.success("Usuario eliminado correctamente");
-        await fetchUsuarios();
+    const handleDarDeBaja = async (idUsuario) => {
+        try {
+            await deleteUsuario(idUsuario);
+            message.success('Empleado dado de baja correctamente');
+            await fetchUsuarios();
+        } catch (error) {
+            console.error('Error al dar de baja al empleado:', error);
+            message.error(error.message || 'No se pudo dar de baja al empleado');
+        }
     };
 
     const columnsDetalles = [
@@ -279,26 +294,51 @@ const BuscarUsuarios = () => {
                 <div className="bu-acciones">
                     {tipoUsuario !== 6 && (
                         <Tooltip title="Editar">
-                            <Button icon={<EditOutlined />} type="primary" size="small" onClick={() => handleEdit(record)} />
+                            <Button
+                                type="text"
+                                icon={<EditOutlined />}
+                                className="bu-accion-btn bu-accion-btn--edit"
+                                onClick={() => handleEdit(record)}
+                                aria-label="Editar"
+                            />
                         </Tooltip>
                     )}
-                    {tipoUsuario !== 6 && (
-                        <Tooltip title="Eliminar">
+                    {tipoUsuario !== 6 && record.activo !== false && record.activo !== 0 && (
+                        <Tooltip title="Dar de baja">
                             <Popconfirm
-                                title="¿Seguro que deseas eliminar este usuario?"
-                                onConfirm={() => handleDelete(record.id_usuario)}
-                                okText="Sí"
-                                cancelText="No"
+                                title="¿Dar de baja a este empleado?"
+                                description="No se borran sus datos ni sus fichajes; solo dejará de estar activo en la empresa."
+                                onConfirm={() => handleDarDeBaja(record.id_usuario)}
+                                okText="Dar de baja"
+                                cancelText="Cancelar"
                             >
-                                <Button icon={<DeleteOutlined />} type="danger" size="small" />
+                                <Button
+                                    type="text"
+                                    danger
+                                    icon={<StopOutlined />}
+                                    className="bu-accion-btn"
+                                    aria-label="Dar de baja"
+                                />
                             </Popconfirm>
                         </Tooltip>
                     )}
                     <Tooltip title="Detalles">
-                        <Button icon={<EyeOutlined />} type="default" size="small" onClick={() => handleViewDetailsDrawer(record)} />
+                        <Button
+                            type="text"
+                            icon={<EyeOutlined />}
+                            className="bu-accion-btn"
+                            onClick={() => handleViewDetailsDrawer(record)}
+                            aria-label="Detalles"
+                        />
                     </Tooltip>
                     <Tooltip title="Exportar">
-                        <Button icon={<DownloadOutlined />} type="default" size="small" onClick={() => setVisibleModalExportar(record.id_usuario)} />
+                        <Button
+                            type="text"
+                            icon={<DownloadOutlined />}
+                            className="bu-accion-btn"
+                            onClick={() => setVisibleModalExportar(record.id_usuario)}
+                            aria-label="Exportar"
+                        />
                     </Tooltip>
                 </div>
             ),
@@ -334,6 +374,7 @@ const BuscarUsuarios = () => {
 
     return (
         <ConfigProvider locale={esES}>
+            <div className="bu-page">
             <Card>
                 <div className="bu-toolbar">
                     <Input
@@ -345,14 +386,12 @@ const BuscarUsuarios = () => {
                     />
 
                     <div className="bu-toolbar-actions">
-                        <Button
-                            type="primary"
-                            className="colorPrincipal"
-                            icon={<UserAddOutlined />}
+                        <GradientButton
+                            text="Agregar"
+                            iconStart={<UserAddOutlined />}
+                            className="bu-add-btn"
                             onClick={() => setAltaEmpleadoOpen(true)}
-                        >
-                            Añadir personal
-                        </Button>
+                        />
                         <Dropdown menu={menuMasAcciones} trigger={['click']} placement="bottomRight">
                             <Button
                                 type="text"
@@ -475,6 +514,7 @@ const BuscarUsuarios = () => {
                     </Form>
                 </Modal>
             </Card>
+            </div>
         </ConfigProvider>
     );
 };

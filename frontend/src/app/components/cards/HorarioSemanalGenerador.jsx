@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Button, Select, TimePicker, Typography, message } from 'antd';
+import { Select, TimePicker, Typography, message } from 'antd';
+import GradientButton from '../shared/GradientButton';
 import { ThunderboltOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import './HorarioSemanalGenerador.css';
@@ -56,9 +57,11 @@ const HorarioSemanalGenerador = ({ form, diasSeleccionados }) => {
 
   const botonAplicar = (
     <div className="horario-generador__action">
-      <Button type="primary" icon={<ThunderboltOutlined />} onClick={aplicarPlantillaATodos}>
-        Aplicar a días seleccionados
-      </Button>
+      <GradientButton
+        text="Aplicar a días seleccionados"
+        iconStart={<ThunderboltOutlined />}
+        onClick={aplicarPlantillaATodos}
+      />
     </div>
   );
 

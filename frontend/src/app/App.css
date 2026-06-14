@@ -43,5 +43,5 @@
 
 
 .colorPrincipal{
-  background-color: #001529;
+  background-color: var(--color-dark);
 }

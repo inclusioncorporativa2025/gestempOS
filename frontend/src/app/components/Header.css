@@ -1,95 +1,539 @@
-.app-header-wrap {
-  display: contents;
-}
-
 .app-header {
+
   display: flex;
+
   justify-content: space-between;
+
   align-items: center;
-  max-height: 6%;
-  background: var(--gradient-header) !important;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+
+  gap: 20px;
+
+  min-height: 72px;
+
+  height: auto !important;
+
+  padding: 16px 28px 12px !important;
+
+  line-height: 1;
+
+  background: transparent !important;
+
+  border-bottom: none;
+
+  box-shadow: none;
+
 }
 
-/* Indicador de jornada (solo fuera de /home) */
-.app-header-jornada {
+
+
+.app-header__start {
+
   display: flex;
+
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  text-decoration: none;
-  color: #fff;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-6px) scale(0.96);
-  max-width: 0;
-  overflow: hidden;
-  padding-left: 0;
-  padding-right: 0;
-  margin-right: 0;
-  pointer-events: none;
-  transition:
-    opacity 0.35s ease,
-    visibility 0.35s ease,
-    transform 0.35s ease,
-    max-width 0.35s ease,
-    padding 0.35s ease,
-    margin 0.35s ease;
+
+  gap: 12px;
+
+  min-width: 0;
+
+  flex: 1 1 auto;
+
 }
+
+
+
+.app-header__end {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: flex-end;
+
+  gap: 10px;
+
+  flex-shrink: 0;
+
+  margin-left: auto;
+
+}
+
+
+
+/* Búsqueda tipo pill */
+
+.app-header-search.ant-input-affix-wrapper {
+
+  max-width: 420px;
+
+  width: 100%;
+
+  min-height: 46px;
+
+  padding: 8px 18px;
+
+  border-radius: 999px;
+
+  border: none !important;
+
+  background: #fff;
+
+  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.08);
+
+  transition: box-shadow 0.2s ease;
+
+}
+
+
+
+.app-header-search.ant-input-affix-wrapper:hover,
+
+.app-header-search.ant-input-affix-wrapper-focused {
+
+  border: none !important;
+
+  box-shadow: 0 4px 18px rgba(var(--color-primary-rgb), 0.14);
+
+}
+
+
+
+.app-header-search .ant-input {
+
+  font-size: 0.92rem;
+
+  font-weight: var(--font-weight-light);
+
+  color: #3d2f4d;
+
+  background: transparent !important;
+
+  border: none !important;
+
+  box-shadow: none !important;
+
+  outline: none !important;
+
+}
+
+
+
+.app-header-search .ant-input::placeholder {
+
+  color: #a89bb5;
+
+}
+
+
+
+.app-header-search .ant-input-prefix {
+
+  margin-inline-end: 10px;
+
+  color: #b5a8c2;
+
+  font-size: 1rem;
+
+}
+
+
+
+/* Iconos de acción */
+
+.app-header-icon-btn {
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 42px;
+
+  height: 42px;
+
+  border-radius: 50%;
+
+  border: 1px solid rgba(var(--color-primary-rgb), 0.12);
+
+  background: #fff;
+
+  color: #6b5f78;
+
+  font-size: 1.05rem;
+
+  cursor: pointer;
+
+  text-decoration: none;
+
+  box-shadow: 0 2px 8px rgba(var(--color-primary-dark-rgb), 0.05);
+
+  transition:
+
+    color 0.2s ease,
+
+    border-color 0.2s ease,
+
+    background 0.2s ease,
+
+    transform 0.15s ease;
+
+}
+
+
+
+.app-header-icon-btn:hover {
+
+  color: var(--color-primary);
+
+  border-color: rgba(var(--color-primary-rgb), 0.28);
+
+  background: #fff;
+
+}
+
+
+
+.app-header-divider {
+
+  width: 1px;
+
+  height: 28px;
+
+  margin: 0 6px;
+
+  background: rgba(var(--color-primary-rgb), 0.14);
+
+  flex-shrink: 0;
+
+}
+
+
+
+.app-header-brand {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  min-width: 0;
+
+}
+
+
+
+.app-header-brand .app-header-title {
+
+  margin: 0;
+
+}
+
+
+
+.app-header-logo {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 40px;
+
+  height: 40px;
+
+  border-radius: 50%;
+
+  flex-shrink: 0;
+
+  overflow: hidden;
+
+  background: rgba(var(--color-primary-rgb), 0.1);
+
+  border: 2px solid rgba(var(--color-primary-rgb), 0.18);
+
+  box-shadow: 0 2px 8px rgba(var(--color-primary-dark-rgb), 0.1);
+
+}
+
+
+
+.app-header-logo__img {
+
+  width: 100%;
+
+  height: 100%;
+
+  object-fit: cover;
+
+  display: block;
+
+}
+
+
+
+.app-header-logo__initials {
+
+  font-size: 0.78rem;
+
+  font-weight: var(--font-weight-medium);
+
+  letter-spacing: 0.04em;
+
+  color: var(--color-primary);
+
+  line-height: 1;
+
+  user-select: none;
+
+}
+
+
+
+/* Indicador de jornada */
+
+.app-header-jornada {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  padding: 8px 14px;
+
+  border-radius: 999px;
+
+  background: #fff;
+
+  border: 1px solid rgba(var(--color-primary-rgb), 0.1);
+
+  text-decoration: none;
+
+  color: #4a3d58;
+
+  box-shadow: 0 2px 8px rgba(var(--color-primary-dark-rgb), 0.06);
+
+  opacity: 0;
+
+  visibility: hidden;
+
+  transform: translateY(-4px);
+
+  max-width: 0;
+
+  overflow: hidden;
+
+  padding-left: 0;
+
+  padding-right: 0;
+
+  margin-left: 0;
+
+  pointer-events: none;
+
+  white-space: nowrap;
+
+  transition:
+
+    opacity 0.3s ease,
+
+    visibility 0.3s ease,
+
+    transform 0.3s ease,
+
+    max-width 0.3s ease,
+
+    padding 0.3s ease,
+
+    margin 0.3s ease;
+
+}
+
+
 
 .app-header-jornada--visible {
+
   opacity: 1;
+
   visibility: visible;
-  transform: translateY(0) scale(1);
-  max-width: 200px;
-  padding: 6px 12px;
-  margin-right: 4px;
+
+  transform: translateY(0);
+
+  max-width: 220px;
+
+  padding: 8px 14px;
+
+  margin-left: 4px;
+
   pointer-events: auto;
+
 }
+
+
 
 .app-header-jornada-dot {
+
   width: 8px;
+
   height: 8px;
+
   border-radius: 50%;
+
   flex-shrink: 0;
+
 }
+
+
 
 .app-header-jornada-dot--working {
+
   background: #52c41a;
-  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.35);
+
+  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.25);
+
   animation: header-dot-pulse 2s ease-in-out infinite;
+
 }
+
+
 
 .app-header-jornada-dot--pause {
+
   background: #faad14;
-  box-shadow: 0 0 0 3px rgba(250, 173, 20, 0.35);
+
+  box-shadow: 0 0 0 3px rgba(250, 173, 20, 0.25);
+
 }
+
+
 
 @keyframes header-dot-pulse {
+
   0%, 100% { opacity: 1; }
+
   50% { opacity: 0.55; }
+
 }
+
+
 
 .app-header-jornada-time {
+
   font-variant-numeric: tabular-nums;
-  font-size: 0.95rem;
+
+  font-size: 0.9rem;
+
   letter-spacing: 0.02em;
+
+  color: #3d2f4d;
+
 }
+
+
 
 .app-header-jornada-label {
-  font-size: 0.85rem;
-  opacity: 0.95;
+
+  font-size: 0.82rem;
+
+  color: #6b5f78;
+
 }
+
+
 
 .app-header-jornada:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+
+  border-color: rgba(var(--color-primary-rgb), 0.24);
+
+  color: var(--color-primary);
+
 }
 
+
+
 .app-header-title {
-  color: #fff;
+
+  margin: 0;
+
+  color: #2a1f36;
+
+  font-size: 1rem;
+
+  font-weight: var(--font-weight-medium);
+
+  line-height: 1.2;
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
 }
+
+
+
+@media (max-width: 768px) {
+
+  .app-header {
+
+    flex-wrap: wrap;
+
+    padding: 12px 16px 10px !important;
+
+    gap: 12px;
+
+  }
+
+
+
+  .app-header__start {
+
+    width: 100%;
+
+    order: 1;
+
+  }
+
+
+
+  .app-header-search.ant-input-affix-wrapper {
+
+    max-width: none;
+
+  }
+
+
+
+  .app-header-jornada--visible {
+
+    display: none;
+
+  }
+
+
+
+  .app-header__end {
+
+    width: 100%;
+
+    order: 2;
+
+    justify-content: flex-end;
+
+  }
+
+
+
+  .app-header-profile-name {
+
+    display: none;
+
+  }
+
+}
+
 

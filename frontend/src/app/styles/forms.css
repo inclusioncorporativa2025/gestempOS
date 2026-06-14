@@ -1,0 +1,372 @@
+/**
+
+ * Inputs y formularios: pill sin borde, solo sombra suave.
+
+ */
+
+
+
+/* Ant Design 5 outlined — sin borde */
+.ant-input-outlined,
+.ant-input-affix-wrapper-outlined,
+.ant-input-number-outlined,
+.ant-select-outlined .ant-select-selector,
+.ant-picker-outlined {
+  border: none !important;
+}
+
+/* —— Campos de una línea —— */
+
+.ant-input:not(textarea),
+
+.ant-input-affix-wrapper,
+
+.ant-input-number,
+
+.ant-input-number-affix-wrapper,
+
+.ant-input-number .ant-input-number-input,
+
+.ant-picker,
+
+.ant-picker-range,
+
+.ant-select-single .ant-select-selector,
+
+.ant-select-multiple .ant-select-selector,
+
+.ant-input-search .ant-input-affix-wrapper,
+
+.ant-input-group-wrapper .ant-input-affix-wrapper,
+
+.ant-input-group .ant-input-affix-wrapper {
+
+  min-height: var(--input-min-height);
+
+  border-radius: var(--input-radius-pill) !important;
+
+}
+
+
+
+/* Sin borde: affix wrapper (búsquedas, contraseñas…) */
+
+.ant-input-affix-wrapper {
+
+  padding-inline: 14px 16px;
+
+  border: none !important;
+
+  background: #fff;
+
+  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.08);
+
+  transition: box-shadow 0.2s ease;
+
+}
+
+
+
+.ant-input-affix-wrapper:not(.ant-input-affix-wrapper-disabled):hover {
+
+  box-shadow: 0 4px 16px rgba(var(--color-primary-rgb), 0.12);
+
+}
+
+
+
+.ant-input-affix-wrapper-focused,
+
+.ant-input-affix-wrapper:focus-within {
+
+  border: none !important;
+
+  box-shadow: 0 4px 18px rgba(var(--color-primary-rgb), 0.16) !important;
+
+}
+
+
+
+.ant-input-affix-wrapper .ant-input {
+
+  border: none !important;
+
+  border-radius: 0 !important;
+
+  min-height: auto;
+
+  background: transparent !important;
+
+  box-shadow: none !important;
+
+  outline: none !important;
+
+}
+
+
+
+.ant-input-affix-wrapper .ant-input:focus {
+
+  box-shadow: none !important;
+
+}
+
+
+
+/* Input simple (sin affix) */
+
+.ant-input:not(textarea):not(.ant-input-borderless) {
+
+  padding-inline: 16px;
+
+  border: none !important;
+
+  background: #fff;
+
+  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.08);
+
+}
+
+
+
+.ant-input:not(textarea):not(.ant-input-borderless):hover {
+
+  box-shadow: 0 4px 16px rgba(var(--color-primary-rgb), 0.12);
+
+}
+
+
+
+.ant-input:not(textarea):not(.ant-input-borderless):focus {
+
+  border: none !important;
+
+  box-shadow: 0 4px 18px rgba(var(--color-primary-rgb), 0.16);
+
+  outline: none;
+
+}
+
+
+
+/* Select */
+
+.ant-select-single .ant-select-selector,
+
+.ant-select-multiple .ant-select-selector {
+
+  border: none !important;
+
+  background: #fff !important;
+
+  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.08);
+
+}
+
+
+
+.ant-select-single .ant-select-selector {
+
+  padding-inline: 16px !important;
+
+}
+
+
+
+.ant-select-multiple .ant-select-selector {
+
+  padding: 4px 12px !important;
+
+}
+
+
+
+.ant-select:not(.ant-select-disabled):hover .ant-select-selector {
+
+  box-shadow: 0 4px 16px rgba(var(--color-primary-rgb), 0.12) !important;
+
+}
+
+
+
+.ant-select-focused .ant-select-selector {
+
+  border: none !important;
+
+  box-shadow: 0 4px 18px rgba(var(--color-primary-rgb), 0.16) !important;
+
+}
+
+
+
+/* DatePicker / TimePicker */
+
+.ant-picker {
+
+  padding: 6px 14px 6px 16px;
+
+  border: none !important;
+
+  background: #fff;
+
+  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.08);
+
+}
+
+
+
+.ant-picker:hover {
+
+  box-shadow: 0 4px 16px rgba(var(--color-primary-rgb), 0.12);
+
+}
+
+
+
+.ant-picker-focused {
+
+  border: none !important;
+
+  box-shadow: 0 4px 18px rgba(var(--color-primary-rgb), 0.16);
+
+}
+
+
+
+/* InputNumber */
+
+.ant-input-number {
+
+  border: none !important;
+
+  background: #fff;
+
+  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.08);
+
+  overflow: hidden;
+
+}
+
+
+
+.ant-input-number:hover {
+
+  box-shadow: 0 4px 16px rgba(var(--color-primary-rgb), 0.12);
+
+}
+
+
+
+.ant-input-number-focused {
+
+  border: none !important;
+
+  box-shadow: 0 4px 18px rgba(var(--color-primary-rgb), 0.16);
+
+}
+
+
+
+.ant-input-number .ant-input-number-input {
+
+  padding-inline: 16px;
+
+}
+
+
+
+/* Textarea */
+
+textarea.ant-input {
+
+  min-height: 96px;
+
+  padding: 12px 16px;
+
+  border-radius: var(--input-radius-area) !important;
+
+  border: none !important;
+
+  background: #fff;
+
+  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.08);
+
+}
+
+
+
+textarea.ant-input:hover {
+
+  box-shadow: 0 4px 16px rgba(var(--color-primary-rgb), 0.12);
+
+}
+
+
+
+textarea.ant-input:focus {
+
+  border: none !important;
+
+  box-shadow: 0 4px 18px rgba(var(--color-primary-rgb), 0.16);
+
+  outline: none;
+
+}
+
+
+
+/* Form labels */
+
+.ant-form-item-label > label {
+
+  font-weight: var(--font-weight-regular);
+
+  color: #4a3d58;
+
+}
+
+
+
+.tlp-month-picker.ant-picker {
+
+  min-height: 38px;
+
+}
+
+
+
+/* Botones Ant Design — anillo exterior (halo) */
+
+.ant-btn:not(.ant-btn-link) {
+
+  outline: 1px solid var(--btn-ring-color);
+
+  outline-offset: var(--btn-ring-gap);
+
+  transition:
+    outline-color 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.ant-btn:not(.ant-btn-link):hover,
+
+.ant-btn:not(.ant-btn-link):focus-visible {
+
+  outline-color: var(--btn-ring-color-hover);
+}
+
+.ant-btn-dangerous:not(.ant-btn-link) {
+
+  outline-color: var(--btn-ring-color-danger);
+}
+
+.ant-btn-dangerous:not(.ant-btn-link):hover,
+
+.ant-btn-dangerous:not(.ant-btn-link):focus-visible {
+
+  outline-color: rgba(207, 74, 74, 0.16);
+}
+
+

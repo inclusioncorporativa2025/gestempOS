@@ -7,6 +7,7 @@ import {
   PlusCircleOutlined,
   EditOutlined,
   EnvironmentOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import { crearPeticionEdicion, crearPeticionCierreMes, getPeticionesByIdUsuario, getPeticionesByIdEmpresa } from "../../features/fichaje/fichajeService";
 import { getDatosUsuarioById } from "../../features/fichaje/fichajeService";
@@ -69,6 +70,8 @@ const [exportModalVisible, setExportModalVisible] = useState(false);
 const [absenceModalVisible, setAbsenceModalVisible] = useState(false);
 
 const [exportDateRange, setExportDateRange] = useState(null);
+const [absenceFechaDesde, setAbsenceFechaDesde] = useState(null);
+const [absenceFechaHasta, setAbsenceFechaHasta] = useState(null);
 const [id_usuario, setIdUsuario] = useState(null);
 const [comentario, setComentario] = useState("");
 
@@ -109,14 +112,12 @@ const anadirAusencia = async () => {
       return message.error('Selecciona el tipo de ausencia');
     }
 
-    if (!exportDateRange || exportDateRange.length !== 2) {
-      return message.error("Por favor, selecciona un rango de fechas válido.");
+    if (!absenceFechaDesde || !absenceFechaHasta) {
+      return message.error("Selecciona la fecha desde y la fecha hasta.");
     }
 
-    const [fechaDesde, fechaHasta] = exportDateRange;
-
-    const fecha_desde = fechaDesde.format("DD-MM-YYYY");
-    const fecha_hasta = fechaHasta.format("DD-MM-YYYY");
+    const fecha_desde = absenceFechaDesde.format("DD-MM-YYYY");
+    const fecha_hasta = absenceFechaHasta.format("DD-MM-YYYY");
 
     // Si "todo el día" está marcado, se envían null las horas
     const hora_ausencia_desde = todoElDia ? null : horaDesde?.format("HH:mm:ss");
@@ -139,7 +140,8 @@ const anadirAusencia = async () => {
 
     // Cerrar modal y limpiar
     setAbsenceModalVisible(false);
-    setExportDateRange(null);
+    setAbsenceFechaDesde(null);
+    setAbsenceFechaHasta(null);
     setHoraDesde(null);
     setHoraHasta(null);
     setTodoElDia(false);
@@ -549,8 +551,12 @@ const handleMonthChange = (date, dateString) => {
                         picker="month"
                         className="tlp-month-picker"
                         format="MM/YYYY"
+                        placeholder=""
+                        allowClear={false}
+                        inputReadOnly
+                        suffixIcon={<CalendarOutlined />}
                         disabledDate={(current) => current && current > moment()}
-                        placeholder="Selecciona un mes"
+                        aria-label="Seleccionar mes"
                     />
                     <Dropdown menu={accionesMenu} trigger={['click']} placement="bottomRight">
                         <Button
@@ -665,20 +671,41 @@ const handleMonthChange = (date, dateString) => {
                 <Modal
                     title="Añadir ausencia"
                     open={absenceModalVisible}
-                    onCancel={() => setAbsenceModalVisible(false)}
+                    onCancel={() => {
+                        setAbsenceModalVisible(false);
+                        setAbsenceFechaDesde(null);
+                        setAbsenceFechaHasta(null);
+                    }}
                     onOk={anadirAusencia}
                     okText="Añadir"
                     cancelText="Cancelar"
                 >
                     <Row>
-                    <Col xs={24} sm={24} md={24} lg={24} xl={24}>
-                         <DatePicker.RangePicker
-                        picker="day"
+                    <Col xs={24} sm={12} md={12} lg={12} xl={12}>
+                        <DatePicker
                         className="tlp-full-width"
                         format="DD/MM/YYYY"
-                        onChange={(dates) => setExportDateRange(dates)}
-                        placeholder={"Desde-Hasta"}
-                        
+                        placeholder="Desde"
+                        value={absenceFechaDesde}
+                        onChange={(date) => {
+                            setAbsenceFechaDesde(date);
+                            if (date && absenceFechaHasta && absenceFechaHasta.isBefore(date, 'day')) {
+                                setAbsenceFechaHasta(null);
+                            }
+                        }}
+                        />
+                    </Col>
+                    <Col xs={24} sm={12} md={12} lg={12} xl={12}>
+                        <DatePicker
+                        className="tlp-full-width"
+                        format="DD/MM/YYYY"
+                        placeholder="Hasta"
+                        value={absenceFechaHasta}
+                        disabled={!absenceFechaDesde}
+                        disabledDate={(current) =>
+                            absenceFechaDesde && current.isBefore(absenceFechaDesde, 'day')
+                        }
+                        onChange={setAbsenceFechaHasta}
                         />
                     </Col>
                     

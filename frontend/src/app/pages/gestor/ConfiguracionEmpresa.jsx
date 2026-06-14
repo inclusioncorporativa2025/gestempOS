@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Button,
   Col,
   Form,
   Input,
@@ -10,6 +9,8 @@ import {
   message,
 } from 'antd';
 import { editMiEmpresa, getMiEmpresa } from '../../../features/empresas/empresasService';
+import { EMPRESA_BRANDING_UPDATED } from '../../../hooks/useEmpresaBranding';
+import GradientButton from '../../components/shared/GradientButton';
 import './Configuracion.css';
 
 const CAMPOS_EMPRESA = [
@@ -82,6 +83,7 @@ const ConfiguracionEmpresa = () => {
     setSaving(true);
     try {
       await editMiEmpresa(values);
+      window.dispatchEvent(new Event(EMPRESA_BRANDING_UPDATED));
       message.success('Datos de la empresa guardados correctamente');
     } catch (error) {
       message.error(error.message || 'Error al guardar los cambios');
@@ -224,16 +226,14 @@ const ConfiguracionEmpresa = () => {
             </Col>
             <Col xs={24} lg={12}>
               <Form.Item name="color_principal" label="Color principal">
-                <Input placeholder="#2ba9e0" />
+                <Input placeholder="#A85CE0" />
               </Form.Item>
             </Col>
           </Row>
         </section>
 
         <div className="config-empresa-actions">
-          <Button type="primary" htmlType="submit" className="colorPrincipal" loading={saving}>
-            Guardar cambios
-          </Button>
+        <GradientButton type="submit" text="Guardar cambios" loading={saving} />
         </div>
       </Form>
     </div>

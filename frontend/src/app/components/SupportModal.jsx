@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, Form, Input, Button, Typography, Descriptions, notification } from 'antd';
-import { MailOutlined } from '@ant-design/icons';
+import GradientButton from './shared/GradientButton';
 import { useAuth } from '../../config/AuthContext';
 import { SUPPORT_EMAIL } from '../../constants/support';
 import { enviarMensajeSoporte } from '../../features/support/supportService';
@@ -89,19 +89,15 @@ const SupportModal = ({ open, onClose }) => {
           Se enviará a <strong>{SUPPORT_EMAIL}</strong>
         </Text>
 
-        <div className="support-modal-actions">
-          <Button onClick={handleClose} disabled={loading}>
+        <div className="modal-actions">
+          <Button className="modal-btn-cancel" onClick={handleClose} disabled={loading}>
             Cancelar
           </Button>
-          <Button
-            type="primary"
-            htmlType="submit"
-            icon={<MailOutlined />}
+          <GradientButton
+            type="submit"
+            text="Enviar"
             loading={loading}
-            className="colorPrincipal"
-          >
-            Enviar a soporte
-          </Button>
+          />
         </div>
       </Form>
     </Modal>

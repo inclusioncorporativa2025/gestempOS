@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Checkbox, Typography, notification, Modal } from 'antd';
+import GradientButton from '../components/shared/GradientButton';
 import { doLogin, doForgotPassword } from "../../features/auth/authService";
 import { useAuth } from '../../config/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -164,9 +165,7 @@ const Login = () => {
               </Form.Item>
 
               <Form.Item className="login-submit">
-                <Button className="colorPrincipal" type="primary" htmlType="submit" block loading={loading}>
-                  Iniciar sesión
-                </Button>
+                <GradientButton type="submit" text="Iniciar sesión" block loading={loading} />
               </Form.Item>
 
               <Form.Item className="login-forgot">
@@ -205,9 +204,7 @@ const Login = () => {
           </Form.Item>
 
           <Form.Item>
-            <Button type="primary" htmlType="submit" block loading={resetLoading}>
-              Enviar enlace de recuperación
-            </Button>
+            <GradientButton type="submit" text="Enviar enlace de recuperación" block loading={resetLoading} />
           </Form.Item>
         </Form>
       </Modal>

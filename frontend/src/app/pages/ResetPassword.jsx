@@ -1,6 +1,7 @@
 // src/pages/ResetPassword.jsx
 import React, { useState } from 'react';
-import { Form, Input, Button, Typography, Card, notification, Result } from 'antd';
+import { Form, Input, Typography, Card, notification, Result } from 'antd';
+import GradientButton from '../components/shared/GradientButton';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { doResetPassword } from '../../features/auth/authService';
 import { APP_ROUTES } from '../../constants/routes';
@@ -46,7 +47,7 @@ const ResetPassword = () => {
           subTitle="El enlace de restablecimiento es incorrecto o está incompleto. Solicita uno nuevo desde el inicio de sesión."
           extra={
             <Link to={APP_ROUTES.login}>
-              <Button type="primary">Volver al inicio de sesión</Button>
+              <GradientButton text="Volver al inicio de sesión" />
             </Link>
           }
         />
@@ -99,9 +100,7 @@ const ResetPassword = () => {
           </Form.Item>
 
           <Form.Item>
-            <Button type="primary" htmlType="submit" block loading={loading} className="colorPrincipal">
-              Establecer contraseña
-            </Button>
+            <GradientButton type="submit" text="Establecer contraseña" block loading={loading} />
           </Form.Item>
         </Form>
       </Card>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Tooltip,Card, Typography, Table, Button, Collapse, Modal, Form, Input, TimePicker, message, Checkbox, Select, Row, Col } from 'antd';
+import GradientButton from '../shared/GradientButton';
 import { EditOutlined,InfoCircleOutlined, DeleteOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';  // Iconos para los botones de editar, eliminar, añadir y guardar
 import moment from 'moment';  // Importar moment.js para formatear fechas y horas correctamente
 import { crearJornada,obtenerUsuariosJornadas, deleteJornada,editarJornada,obtenerJornadasByIdEmpresa } from "../../../features/jornada/jornadaService";
@@ -311,14 +312,12 @@ const GestionTipoUsuariosCard = () => {
             <Title level={2}>Gestionar Tipos de Jornada</Title>
             <p>Aquí puedes gestionar los tipos de jornada y sus registros asociados.</p>
 
-            <Button
-                type="Success"
-                icon={<PlusOutlined />}
+            <GradientButton
+                text="Añadir Tipo de Jornada"
+                iconStart={<PlusOutlined />}
                 onClick={() => setIsAddModalVisible(true)}
                 className="gtu-add-btn"
-            >
-                Añadir Tipo de Jornada
-            </Button>
+            />
             <Collapse>
             {tiposJornada.map((tipo, index) => (
                 <Panel header={tipo.nombre} key={tipo.id || `tipo-${index}`}>

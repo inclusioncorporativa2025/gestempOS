@@ -260,7 +260,7 @@ const deleteUsuario= async (req, res) => {
       });
 
             res.status(201).json({
-            message: 'Usuario eliminado exitosamente',
+            message: 'Usuario dado de baja correctamente',
             creada: true,
             });
 

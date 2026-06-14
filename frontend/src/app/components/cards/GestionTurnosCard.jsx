@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Card, Typography, Table, Button, Row, Col, Modal, Form, Input, message, Popconfirm, TimePicker } from 'antd';
+import GradientButton from '../shared/GradientButton';
 import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import moment from 'moment';
 import './GestionTurnosCard.css';
@@ -135,14 +136,12 @@ const GestionTurnosCard = () => {
             />
             <Row justify="center" className="gturnos-add-row">
                 <Col xs={24} sm={12} md={8} lg={6} xl={4} xxl={4}>
-                    <Button 
-                        className="colorPrincipal gturnos-add-btn"
-                        type="primary"
-                        icon={<PlusOutlined />}
+                    <GradientButton
+                        className="gturnos-add-btn"
+                        text="Añadir Turno"
+                        iconStart={<PlusOutlined />}
                         onClick={() => openModal()}
-                    >
-                        Añadir Turno
-                    </Button>
+                    />
                 </Col>
             </Row>
 

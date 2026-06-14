@@ -32,6 +32,13 @@ const pickMiEmpresaParaCliente = (empresa) => ({
   color_principal: empresa.color_principal,
 });
 
+const pickEmpresaBranding = (empresa) => ({
+  nombre: empresa.nombre,
+  alias: empresa.alias,
+  logo_url: empresa.logo_url,
+  licencias: empresa.licencias,
+});
+
 const registerCompany = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
@@ -361,6 +368,29 @@ const getMiEmpresa = async (req, res) => {
   }
 };
 
+const getEmpresaBranding = async (req, res) => {
+  try {
+    const idEmpresa = Number(req.user?.id_empresa);
+    if (!idEmpresa) {
+      return res.status(200).json({
+        branding: { nombre: null, alias: null, logo_url: null },
+      });
+    }
+
+    const empresa = await Empresa.findByPk(idEmpresa);
+    if (!empresa) {
+      return res.status(404).json({ error: 'Empresa no encontrada' });
+    }
+
+    return res.status(200).json({
+      branding: pickEmpresaBranding(empresa),
+    });
+  } catch (error) {
+    console.error('Error al obtener branding de empresa:', error);
+    return res.status(500).json({ error: 'Error al obtener el branding de la empresa' });
+  }
+};
+
 const editMiEmpresa = async (req, res) => {
   try {
     const idEmpresa = Number(req.user?.id_empresa);
@@ -435,4 +465,5 @@ module.exports = {
   getEmpresasUsuarios,
   getMiEmpresa,
   editMiEmpresa,
+  getEmpresaBranding,
 };

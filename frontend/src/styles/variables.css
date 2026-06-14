@@ -1,67 +1,177 @@
 
 
+
+
 @font-face {
+
   font-family: 'Filson Soft';
+
   src: url('/fonts/Filson-Soft-Light.ttf') format('truetype');
+
   font-weight: 300;
+
   font-style: normal;
+
   font-display: swap;
+
 }
 
+
+
 @font-face {
+
   font-family: 'Filson Soft';
+
   src: url('/fonts/Filson-Soft-Regular.ttf') format('truetype');
+
   font-weight: 400;
+
   font-style: normal;
+
   font-display: swap;
+
 }
 
+
+
 @font-face {
+
   font-family: 'Filson Soft';
+
   src: url('/fonts/Filson-Soft-Medium.ttf') format('truetype');
+
   font-weight: 500;
+
   font-style: normal;
+
   font-display: swap;
+
 }
+
+
+
 
 
 :root {
+
   /* Familia tipográfica */
+
   --font-family-base: 'Filson Soft', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+
     'Roboto', 'Helvetica Neue', Arial, sans-serif;
 
+
+
   /* Pesos disponibles de Filson Soft */
+
   --font-weight-light: 300;
+
   --font-weight-regular: 400;
+
   --font-weight-medium: 500;
 
-  /* Colores de marca */
-  --color-primary: #2ba9e0;
-  --color-secondary: #e0529c;
-  --color-dark: #001529;
+
+
+  /* Colores principales */
+
+  --primary: #A85CE0;
+
+  --primary-dark: #9B4DDB;
+
+  --background: #F6F2FA;
+
+
+
+  /* Aliases de marca (compatibilidad con el resto de la app) */
+
+  --color-primary: var(--primary);
+
+  --color-primary-dark: var(--primary-dark);
+
+  --color-background: var(--background);
+
+  --color-secondary: #C78BF0;
+
+  --color-secondary-dark: #7E3FB8;
+
+  --color-dark: #2D1B42;
+
+
 
   /* Canales RGB (para usar con rgba() y opacidad) */
-  --color-primary-rgb: 43, 169, 224;
-  --color-secondary-rgb: 224, 82, 156;
 
-  /* Degradado de marca: primario → secundario */
+  --color-primary-rgb: 168, 92, 224;
+
+  --color-primary-dark-rgb: 155, 77, 219;
+
+  --color-secondary-rgb: 199, 139, 240;
+
+  --color-background-rgb: 246, 242, 250;
+
+
+
+  /* Formularios e inputs (pill como header) */
+
+  --input-radius-pill: 999px;
+
+  --input-radius-area: 16px;
+
+  --input-min-height: 42px;
+
+
+
+  /* Anillo exterior de botones (halo) */
+
+  --btn-ring-gap: 1.5px;
+
+  --btn-ring-color: rgba(var(--color-primary-rgb), 0.09);
+
+  --btn-ring-color-hover: rgba(var(--color-primary-rgb), 0.14);
+
+  --btn-ring-color-danger: rgba(207, 74, 74, 0.1);
+
+
+
+  /* Degradado de marca */
+
   --gradient-brand: linear-gradient(
+
     135deg,
-    var(--color-primary) 0%,
-    var(--color-secondary) 100%
-  );
-  --gradient-brand-horizontal: linear-gradient(
-    90deg,
-    var(--color-primary) 0%,
-    var(--color-secondary) 100%
+
+    var(--primary) 0%,
+
+    var(--primary-dark) 100%
+
   );
 
-  /* Header: primary y secondary mezclados con el fondo oscuro (marca sin saturación excesiva) */
-  --gradient-header: linear-gradient(
+  --gradient-brand-horizontal: linear-gradient(
+
     90deg,
-    color-mix(in srgb, var(--color-primary) 52%, var(--color-dark)) 0%,
-    color-mix(in srgb, var(--color-primary) 22%, var(--color-dark)) 38%,
-    color-mix(in srgb, var(--color-secondary) 22%, var(--color-dark)) 62%,
-    color-mix(in srgb, var(--color-secondary) 48%, var(--color-dark)) 100%
+
+    var(--primary) 0%,
+
+    var(--primary-dark) 100%
+
   );
+
+
+
+  /* Header y botones: violeta con profundidad */
+
+  --gradient-header: linear-gradient(
+
+    90deg,
+
+    color-mix(in srgb, var(--primary-dark) 72%, var(--color-dark)) 0%,
+
+    color-mix(in srgb, var(--primary) 58%, var(--color-dark)) 42%,
+
+    color-mix(in srgb, var(--primary) 48%, var(--color-dark)) 58%,
+
+    color-mix(in srgb, var(--primary-dark) 65%, var(--color-dark)) 100%
+
+  );
+
 }
+
+

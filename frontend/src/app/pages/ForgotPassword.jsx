@@ -1,6 +1,7 @@
 // src/pages/ForgotPassword.jsx
 import React, { useState } from 'react';
-import { Form, Input, Button, Typography, Card, message } from 'antd';
+import { Form, Input, Typography, Card, message } from 'antd';
+import GradientButton from '../components/shared/GradientButton';
 import { doForgotPassword } from '../../features/auth/authService';
 import './ForgotPassword.css';
 
@@ -41,9 +42,7 @@ const ForgotPassword = () => {
           </Form.Item>
 
           <Form.Item>
-            <Button type="primary" htmlType="submit" block loading={loading} className="colorPrincipal">
-              Enviar instrucciones
-            </Button>
+            <GradientButton type="submit" text="Enviar instrucciones" block loading={loading} />
           </Form.Item>
         </Form>
       </Card>

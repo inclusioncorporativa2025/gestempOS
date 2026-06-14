@@ -1,7 +1,7 @@
 .calendario-layout {
   width: 100%;
   min-height: 100%;
-  background: #fff;
+  background: var(--background);
   padding: 24px;
   box-sizing: border-box;
 }
@@ -89,7 +89,7 @@
   height: 5px;
   margin-top: 3px;
   border-radius: 50%;
-  background: #1677ff;
+  background: var(--color-primary);
 }
 
 .cal-ausencia-textos {
@@ -116,7 +116,7 @@
 }
 
 .cal-ausencia-tipo {
-  color: #1677ff;
+  color: var(--color-primary);
 }
 
 .cal-mas-ausencias {

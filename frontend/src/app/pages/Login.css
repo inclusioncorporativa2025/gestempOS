@@ -22,7 +22,7 @@
   -webkit-backdrop-filter: blur(20px) saturate(170%);
   border: 1px solid rgba(255, 255, 255, 0.72);
   box-shadow:
-    0 8px 32px rgba(0, 21, 41, 0.08),
+    0 8px 32px rgba(var(--color-primary-dark-rgb), 0.1),
     0 1px 0 rgba(255, 255, 255, 0.85) inset;
 }
 
@@ -111,16 +111,18 @@
 }
 
 .login-form-panel .ant-input,
-.login-form-panel .ant-input-password {
-  background: rgba(255, 255, 255, 0.55) !important;
-  border: 1px solid rgba(255, 255, 255, 0.85) !important;
-  border-radius: 10px !important;
+.login-form-panel .ant-input-password,
+.login-form-panel .ant-input-affix-wrapper {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border: none !important;
+  border-radius: var(--input-radius-pill) !important;
+  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.08);
 }
 
 .login-form-panel .ant-input:focus,
 .login-form-panel .ant-input-affix-wrapper-focused {
-  border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.15) !important;
+  border: none !important;
+  box-shadow: 0 4px 18px rgba(var(--color-primary-rgb), 0.16) !important;
 }
 
 @media (max-width: 900px) {

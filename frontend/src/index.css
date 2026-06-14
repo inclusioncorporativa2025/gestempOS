@@ -2,6 +2,8 @@ body {
   margin: 0;
   font-family: var(--font-family-base);
   font-weight: var(--font-weight-light);
+  background: var(--background);
+  color: #2a1f36;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

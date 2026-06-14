@@ -1,0 +1,94 @@
+/**
+ * Fondo unificado de la app (mismo que Fichar / Home).
+ * Sin contenedores blancos: solo el lavanda --background.
+ */
+.app-shell,
+.app-shell .ant-layout,
+.app-shell-body,
+.app-main-column,
+.app-main-layout,
+.app-main-content {
+  background: var(--background) !important;
+}
+
+.app-page,
+.home-page,
+.tlp-layout,
+.be-layout,
+.calendario-layout,
+.config-layout,
+.config-gestor-layout,
+.umf-layout,
+.notif-layout,
+.bu-page {
+  background: var(--background);
+}
+
+/* Cards Ant Design: transparentes sobre el fondo */
+.app-main-content .ant-card,
+.app-main-content .ant-card .ant-card-head,
+.app-main-content .ant-card .ant-card-body {
+  background: transparent !important;
+  border: none;
+  box-shadow: none;
+}
+
+.app-main-content .ant-card .ant-card-head {
+  border-bottom: none;
+  padding-inline: 0;
+}
+
+.app-main-content .ant-card .ant-card-body {
+  padding-inline: 0;
+}
+
+/* Tablas */
+.app-main-content .ant-table,
+.app-main-content .ant-table-container,
+.app-main-content .ant-table-content,
+.app-main-content .ant-table-content table {
+  background: transparent !important;
+}
+
+.app-main-content .ant-table-thead > tr > th {
+  background: rgba(var(--color-primary-rgb), 0.06) !important;
+  border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.1) !important;
+}
+
+.app-main-content .ant-table-tbody > tr > td {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.08) !important;
+}
+
+.app-main-content .ant-table-tbody > tr:hover > td {
+  background: rgba(var(--color-primary-rgb), 0.04) !important;
+}
+
+/* Collapse / acordeones */
+.app-main-content .ant-collapse,
+.app-main-content .ant-collapse-item,
+.app-main-content .ant-collapse-content,
+.app-main-content .ant-collapse-content-box {
+  background: transparent !important;
+}
+
+/* Empty state */
+.app-main-content .ant-empty {
+  background: transparent;
+}
+
+/* Calendario */
+.app-main-content .ant-picker-calendar,
+.app-main-content .ant-picker-calendar .ant-picker-panel,
+.app-main-content .ant-picker-calendar .ant-picker-body,
+.app-main-content .ant-picker-calendar .ant-picker-content {
+  background: transparent !important;
+}
+
+.app-main-content .ant-picker-calendar .ant-picker-cell-inner {
+  background: transparent;
+}
+
+.app-main-content .ant-picker-calendar .ant-picker-cell-selected .ant-picker-cell-inner {
+  background: rgba(var(--color-primary-rgb), 0.12) !important;
+}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, Button, Typography } from 'antd';
+import GradientButton from './GradientButton';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import './ConfirmPopup.css';
 
@@ -87,20 +88,18 @@ const ConfirmPopup = ({
 
       <div className="confirm-popup-footer">
         <Button
-          className="confirm-popup-btn-cancel"
+          className="modal-btn-cancel"
           onClick={onCancel}
           disabled={confirmLoading}
         >
           {cancelText}
         </Button>
-        <Button
-          type="primary"
+        <GradientButton
           className={`confirm-popup-btn-confirm confirm-popup-btn-confirm--${variantKey}`}
+          text={confirmText}
           loading={confirmLoading}
           onClick={handleConfirm}
-        >
-          {confirmText}
-        </Button>
+        />
       </div>
     </Modal>
   );

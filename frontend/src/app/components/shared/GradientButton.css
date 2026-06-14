@@ -1,0 +1,220 @@
+.gradient-btn-ring {
+  display: inline-flex;
+  padding: var(--btn-ring-gap);
+  border-radius: 999px;
+  background: var(--btn-ring-color);
+  vertical-align: middle;
+  line-height: 0;
+  transition: background 0.2s ease;
+}
+
+.gradient-btn-ring--block {
+  display: flex;
+  width: 100%;
+}
+
+.gradient-btn-ring--square {
+  border-radius: calc(14px + var(--btn-ring-gap));
+}
+
+.gradient-btn-ring:has(.gradient-btn:hover:not(:disabled)) {
+  background: var(--btn-ring-color-hover);
+}
+
+.gradient-btn-ring:has(.gradient-btn:focus-visible) {
+  background: var(--btn-ring-color-hover);
+}
+
+.gradient-btn-ring .gradient-btn {
+  flex: 1;
+  min-width: 0;
+}
+
+.gradient-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 11px 26px;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: var(--gradient-header);
+  color: #fff;
+  font-family: var(--font-family-base);
+  font-size: 0.95rem;
+  font-weight: var(--font-weight-light);
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.14),
+    0 4px 14px rgba(0, 0, 0, 0.12);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.gradient-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.34) 0%,
+    rgba(255, 255, 255, 0.1) 28%,
+    transparent 48%,
+    rgba(0, 0, 0, 0.08) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.gradient-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 14%;
+  width: 38%;
+  height: 32%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.42) 0%,
+    rgba(255, 255, 255, 0.08) 45%,
+    transparent 72%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  transform: rotate(-6deg);
+}
+
+.gradient-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+.gradient-btn:not(:has(.gradient-btn__text)) {
+  padding: 12px;
+  min-width: 46px;
+  aspect-ratio: 1;
+}
+
+.gradient-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.12),
+    0 6px 18px rgba(0, 0, 0, 0.16);
+}
+
+.gradient-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.14);
+}
+
+.gradient-btn:focus-visible {
+  outline: none;
+}
+
+.gradient-btn-ring:has(.gradient-btn:focus-visible) {
+  box-shadow: 0 0 0 1px rgba(var(--color-primary-rgb), 0.2);
+}
+
+.gradient-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.gradient-btn--block {
+  width: 100%;
+}
+
+.gradient-btn--square {
+  border-radius: 14px;
+}
+
+.gradient-btn--square::after {
+  left: 10%;
+  width: 30%;
+}
+
+.gradient-btn--small {
+  min-height: 34px;
+  padding: 6px 16px;
+  font-size: 0.85rem;
+  gap: 6px;
+}
+
+.gradient-btn--small:not(:has(.gradient-btn__text)) {
+  padding: 8px;
+  min-width: 34px;
+}
+
+.gradient-btn--large {
+  min-height: 54px;
+  padding: 14px 32px;
+  font-size: 1.05rem;
+  gap: 12px;
+}
+
+.gradient-btn--large:not(:has(.gradient-btn__text)) {
+  padding: 14px;
+  min-width: 54px;
+}
+
+.gradient-btn--loading {
+  position: relative;
+}
+
+.gradient-btn__text {
+  white-space: nowrap;
+}
+
+.gradient-btn__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.05em;
+  line-height: 0;
+}
+
+.gradient-btn__icon--start {
+  margin-right: -2px;
+}
+
+.gradient-btn__icon--end {
+  margin-left: -2px;
+}
+
+.gradient-btn__suffix {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.gradient-btn__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: gradient-btn-spin 0.7s linear infinite;
+}
+
+@keyframes gradient-btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

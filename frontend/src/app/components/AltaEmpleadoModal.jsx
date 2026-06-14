@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Form, Input, Select, Button, notification, message } from 'antd';
+import { Modal, Form, Input, Select, notification, message } from 'antd';
+import GradientButton from './shared/GradientButton';
 import { crearUsuario } from '../../features/user/usuarioService';
 import { obtenerJornadas } from '../../features/jornada/jornadaService';
 import { SUPPORT_EMAIL } from '../../constants/support';
@@ -157,15 +158,12 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
         </Form.Item>
 
         <Form.Item style={{ marginBottom: 0 }}>
-          <Button
-            type="primary"
-            className="colorPrincipal"
-            htmlType="submit"
+          <GradientButton
+            type="submit"
+            text="Enviar invitación"
             block
             loading={submitting}
-          >
-            Enviar invitación
-          </Button>
+          />
         </Form.Item>
       </Form>
     </Modal>
