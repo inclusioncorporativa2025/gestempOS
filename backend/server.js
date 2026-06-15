@@ -1,6 +1,7 @@
+require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
-const dotenv = require('dotenv');
 
 const configureMiddleware = require('./config/middleware');
 const configureRoutes = require('./routes');
@@ -8,10 +9,7 @@ const errorHandler = require('./middleware/errorHandler');
 const { connectToDatabase } = require('./config/db');
 // const firebaseAdmin = require('./config/firebase');
 
-dotenv.config();
-
-const app = express();
-const port = process.env.PORT || 5001;
+const app = express();const port = process.env.PORT || 5001;
 
 // Ruta básica para comprobar que el backend está vivo
 app.get('/', (req, res) => {
