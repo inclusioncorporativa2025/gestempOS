@@ -1043,6 +1043,42 @@ const getEstadoPersonalEmpresa = async (req, res) => {
       order: [['fecha_entrada', 'DESC']],
     });
 
+    const tz = 'Europe/Madrid';
+    const inicioDia = dayjs().tz(tz).startOf('day').toDate();
+    const finDia = dayjs().tz(tz).endOf('day').toDate();
+
+    const fichajesHoy = await Fichajes.findAll({
+      where: {
+        empresa_id: idEmpresa,
+        id_usuario: { [Op.in]: userIds },
+        fecha_baja: null,
+        fecha_entrada: { [Op.between]: [inicioDia, finDia] },
+      },
+      order: [['fecha_entrada', 'ASC']],
+    });
+
+    const descansosHoy = await Descansos.findAll({
+      where: {
+        empresa_id: idEmpresa,
+        id_usuario: { [Op.in]: userIds },
+        fecha_baja: null,
+        fecha_entrada: { [Op.between]: [inicioDia, finDia] },
+      },
+    });
+
+    const fichajesHoyPorUsuario = {};
+    fichajesHoy.forEach((f) => {
+      if (!fichajesHoyPorUsuario[f.id_usuario]) {
+        fichajesHoyPorUsuario[f.id_usuario] = [];
+      }
+      fichajesHoyPorUsuario[f.id_usuario].push(f);
+    });
+
+    const pausasPorUsuario = {};
+    descansosHoy.forEach((d) => {
+      pausasPorUsuario[d.id_usuario] = (pausasPorUsuario[d.id_usuario] || 0) + 1;
+    });
+
     const fichajePorUsuario = {};
     fichajesAbiertos.forEach((f) => {
       if (!fichajePorUsuario[f.id_usuario]) {
@@ -1062,14 +1098,26 @@ const getEstadoPersonalEmpresa = async (req, res) => {
       const descanso = descansoPorUsuario[u.id_usuario] || null;
       const estado = resolverEstadoJornada(fichaje, descanso);
 
+      let fechaEntradaJornada = fichaje?.fecha_entrada || null;
+      let fechaSalidaJornada = fichaje?.fecha_salida || null;
+
+      if (!fichaje) {
+        const fichajesUsuarioHoy = fichajesHoyPorUsuario[u.id_usuario] || [];
+        const ultimoFichajeHoy = fichajesUsuarioHoy[fichajesUsuarioHoy.length - 1] || null;
+        fechaEntradaJornada = ultimoFichajeHoy?.fecha_entrada || null;
+        fechaSalidaJornada = ultimoFichajeHoy?.fecha_salida || null;
+      }
+
       return {
         id_usuario: u.id_usuario,
         nombre: u.nombre,
         email: u.email,
         tipo_usuario: u.tipo_usuario,
         estado,
-        fecha_entrada: fichaje?.fecha_entrada || null,
+        fecha_entrada: fechaEntradaJornada,
+        fecha_salida: fechaSalidaJornada,
         fecha_descanso: descanso?.fecha_entrada || null,
+        num_pausas: pausasPorUsuario[u.id_usuario] || 0,
       };
     });
 

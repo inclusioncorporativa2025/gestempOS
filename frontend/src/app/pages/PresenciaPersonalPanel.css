@@ -124,3 +124,14 @@
 .presencia-table .ant-table-tbody > tr:hover > td {
   background: rgba(var(--color-primary-rgb), 0.04) !important;
 }
+
+.presencia-pausas {
+  display: inline-block;
+  min-width: 24px;
+  font-weight: var(--font-weight-medium);
+  color: #9aa5b1;
+}
+
+.presencia-pausas--active {
+  color: #d48806;
+}

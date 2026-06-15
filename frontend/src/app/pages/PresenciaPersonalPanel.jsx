@@ -28,23 +28,12 @@ const formatHora = (fecha) => {
   return d.isValid() ? d.format('HH:mm') : '—';
 };
 
-const formatDuracion = (fechaInicio) => {
-  if (!fechaInicio) return '—';
-  const inicio = dayjs.utc(fechaInicio).tz('Europe/Madrid');
-  if (!inicio.isValid()) return '—';
-  const diffMin = Math.max(0, dayjs().diff(inicio, 'minute'));
-  const horas = Math.floor(diffMin / 60);
-  const minutos = diffMin % 60;
-  return `${horas}h ${minutos}m`;
-};
-
 const PresenciaPersonalPanel = () => {
   const tipoUsuario = Number(getTipoUsuario());
   const [personal, setPersonal] = useState([]);
   const [resumen, setResumen] = useState({ trabajando: 0, descanso: 0, fuera: 0, total: 0 });
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
-  const [tick, setTick] = useState(0);
 
   const cargar = useCallback(async (silencioso = false) => {
     if (!ROLES_PRESENCIA_EQUIPO.includes(Number(getTipoUsuario()))) return;
@@ -76,11 +65,6 @@ const PresenciaPersonalPanel = () => {
     return () => window.removeEventListener(JORNADA_ACTUALIZADA, onActualizada);
   }, [cargar]);
 
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 30000);
-    return () => clearInterval(id);
-  }, []);
-
   const filtrado = useMemo(() => {
     const q = searchText.trim().toLowerCase();
     if (!q) return personal;
@@ -89,7 +73,7 @@ const PresenciaPersonalPanel = () => {
         (p.nombre || '').toLowerCase().includes(q) ||
         (p.email || '').toLowerCase().includes(q)
     );
-  }, [personal, searchText, tick]);
+  }, [personal, searchText]);
 
   const columns = [
     {
@@ -117,18 +101,27 @@ const PresenciaPersonalPanel = () => {
       title: 'Entrada',
       dataIndex: 'fecha_entrada',
       key: 'fecha_entrada',
-      width: 100,
+      width: 90,
       render: (fecha) => formatHora(fecha),
     },
     {
-      title: 'Tiempo',
-      key: 'tiempo',
-      width: 120,
-      render: (_, record) => {
-        if (record.estado === 'in') return formatDuracion(record.fecha_entrada);
-        if (record.estado === 'break') return formatDuracion(record.fecha_descanso);
-        return '—';
-      },
+      title: 'Salida',
+      dataIndex: 'fecha_salida',
+      key: 'fecha_salida',
+      width: 90,
+      render: (fecha) => formatHora(fecha),
+    },
+    {
+      title: 'Pausas',
+      dataIndex: 'num_pausas',
+      key: 'num_pausas',
+      width: 80,
+      align: 'center',
+      render: (num) => (
+        <span className={num > 0 ? 'presencia-pausas presencia-pausas--active' : 'presencia-pausas'}>
+          {num ?? 0}
+        </span>
+      ),
     },
   ];
 
