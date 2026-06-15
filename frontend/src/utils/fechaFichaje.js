@@ -18,7 +18,8 @@ export function parseFechaFichaje(fecha) {
   const d = dayjs(fecha).tz(ZONA);
   if (!d.isValid()) return null;
 
-  if (!d.isDST()) {
+  // CET = UTC+1 (60 min). Sequelize usa +02:00 fijo y desfasa 1h en invierno.
+  if (d.utcOffset() === 60) {
     return d.add(1, 'hour');
   }
 
