@@ -1,0 +1,71 @@
+.platform-hub__card {
+  height: 100%;
+  border-radius: 16px !important;
+  cursor: pointer;
+}
+
+.platform-hub__card .ant-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 180px;
+}
+
+.platform-hub__icon {
+  font-size: 28px;
+  color: var(--color-primary);
+}
+
+.platform-hub__title {
+  font-size: 16px;
+}
+
+.platform-hub__desc {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.platform-hub__link {
+  margin-top: auto;
+  font-size: 13px;
+  color: var(--color-primary);
+}
+
+.platform-accesos__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.platform-accesos__search {
+  flex: 1;
+  min-width: 220px;
+  max-width: 360px;
+}
+
+.platform-accesos__tipo {
+  min-width: 180px;
+}
+
+.platform-acceder__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 520px;
+  margin-bottom: 24px;
+}
+
+.platform-acceder__icon {
+  font-size: 28px;
+  color: var(--color-primary);
+}
+
+.platform-acceder__desc {
+  margin-bottom: 0 !important;
+}
+
+.platform-acceder__form {
+  max-width: 400px;
+}

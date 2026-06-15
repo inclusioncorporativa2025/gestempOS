@@ -5,6 +5,8 @@ const Usuario = require('../models/Usuario');
 const UsuarioEmpresa = require('../models/UsuarioEmpresa');
 const Empresa = require('../models/Empresa');
 const { hashToken, generarYEnviarReset } = require('../utils/mailService');
+const { registrarAcceso } = require('../services/accesoPlataformaService');
+const { getClientIp, getUserAgent } = require('../utils/request');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRATION;
@@ -127,6 +129,15 @@ const login = async (req, res) => {
 
     usuario.ultimo_login = new Date();
     await usuario.save();
+
+    await registrarAcceso({
+      idUsuario: usuario.id_usuario,
+      tipoEvento: 'login',
+      ruta: '/login',
+      ip: getClientIp(req),
+      userAgent: getUserAgent(req),
+      idEmpresa: empresaEstaOperativa(empresa) ? empresa.id_empresa : null,
+    });
 
     let id_empresa = null;
     let nombre_empresa = null;

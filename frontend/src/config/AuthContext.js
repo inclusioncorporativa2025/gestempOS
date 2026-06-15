@@ -4,6 +4,8 @@ import {
   setAuthToken,
   clearAuthSession,
   claimsToUser,
+  startImpersonation,
+  exitImpersonation,
 } from '../utils/authSession';
 
 const AuthContext = createContext();
@@ -28,13 +30,34 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, []);
 
+  const impersonate = useCallback((token) => {
+    const claims = startImpersonation(token);
+    setUser(claimsToUser(claims));
+  }, []);
+
+  const stopImpersonation = useCallback(() => {
+    const claims = exitImpersonation();
+    setUser(claimsToUser(claims));
+    return claims;
+  }, []);
+
   const patchUser = useCallback((partial) => {
     setUser((prev) => (prev ? { ...prev, ...partial } : null));
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ user, login, logout, patchUser, ready, isAuthenticated: Boolean(user) }}
+      value={{
+        user,
+        login,
+        logout,
+        impersonate,
+        stopImpersonation,
+        impersonating: Boolean(user?.impersonacion),
+        patchUser,
+        ready,
+        isAuthenticated: Boolean(user),
+      }}
     >
       {children}
     </AuthContext.Provider>

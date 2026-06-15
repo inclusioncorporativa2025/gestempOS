@@ -27,6 +27,9 @@ export const APP_ROUTES = {
   settingsEmpresa: '/settings/empresa',
   settingsJornada: '/settings/jornada',
   companies: '/companies',
+  platform: '/platform',
+  platformAccesos: '/platform/accesos',
+  platformAcceder: '/platform/acceder',
   notifications: '/notifications',
 };
 

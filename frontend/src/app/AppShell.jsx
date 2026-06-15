@@ -12,6 +12,7 @@ import {
   MailOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import Login from './pages/Login';
 import Home from './pages/Home';
@@ -35,7 +36,13 @@ import Calendario from './pages/Calendario';
 import BuscadorEmpresa from './pages/admin/BuscadorEmpresa';
 import BuscadorUsuarios from './pages/BuscadorUsuarios';
 import ProtectedRoute from './components/ProtectedRoute';
+import NavigationTracker from './components/NavigationTracker';
 import Notificaciones from './pages/Notificaciones';
+import PlatformLayout from './pages/platform/PlatformLayout';
+import PlatformHub from './pages/platform/PlatformHub';
+import PlatformAccesos from './pages/platform/PlatformAccesos';
+import PlatformAcceder from './pages/platform/PlatformAcceder';
+import ImpersonationBanner from './components/ImpersonationBanner';
 
 import './App.css';
 import './styles/sidebar.css';
@@ -81,6 +88,13 @@ const pages = [
     icon: <SlidersOutlined />,
     path: APP_ROUTES.settings,
     tipousuario: [1, 2, 3, 4, 5, 6],
+  },
+  {
+    label: 'Gestión interna',
+    key: '11',
+    icon: <AppstoreOutlined />,
+    path: APP_ROUTES.platform,
+    tipousuario: [1, 2],
   },
   {
     label: 'Empresas',
@@ -137,7 +151,7 @@ const AppShell = () => {
       : [];
 
   const paginaActual = pages.find((page) => {
-    if (page.path === APP_ROUTES.settings) {
+    if (page.path === APP_ROUTES.settings || page.path === APP_ROUTES.platform) {
       return (
         location.pathname === page.path ||
         location.pathname.startsWith(`${page.path}/`)
@@ -215,6 +229,7 @@ const AppShell = () => {
       }}
     >
       <Layout className="app-shell">
+        <NavigationTracker />
         <Layout className="app-shell-body">
           {!isAuthShellPage && !isMobile && (
             <div className="app-sider-wrap">
@@ -295,6 +310,7 @@ const AppShell = () => {
               isAuthShellPage ? 'app-main-column--auth' : '',
             ].filter(Boolean).join(' ')}
           >
+            {!isAuthShellPage && <ImpersonationBanner />}
             {!isAuthShellPage && <Header />}
 
             <Layout className={!isAuthShellPage ? 'app-main-layout' : undefined}>
@@ -365,6 +381,18 @@ const AppShell = () => {
                       </ConfiguracionOrgGate>
                     }
                   />
+                </Route>
+                <Route
+                  path={`${APP_ROUTES.platform}/*`}
+                  element={
+                    <ProtectedRoute allowedTypes={[1, 2]}>
+                      <PlatformLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<PlatformHub />} />
+                  <Route path="accesos" element={<PlatformAccesos />} />
+                  <Route path="acceder" element={<PlatformAcceder />} />
                 </Route>
                 <Route
                   path={APP_ROUTES.companies}

@@ -1,6 +1,7 @@
 import { jwtDecode } from 'jwt-decode';
 
 const TOKEN_KEY = 'authToken';
+const IMPERSONATOR_TOKEN_KEY = 'impersonatorToken';
 
 let cachedClaims = null;
 
@@ -54,9 +55,32 @@ export const getAuthToken = () => localStorage.getItem(TOKEN_KEY);
 
 export const clearAuthSession = () => {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(IMPERSONATOR_TOKEN_KEY);
   localStorage.removeItem('isLoggedIn');
   sessionStorage.clear();
   cachedClaims = null;
+};
+
+export const getImpersonatorToken = () => localStorage.getItem(IMPERSONATOR_TOKEN_KEY);
+
+export const isImpersonating = () => Boolean(getSession()?.impersonacion);
+
+export const startImpersonation = (impersonationToken) => {
+  const currentToken = getAuthToken();
+  if (currentToken && !getSession()?.impersonacion) {
+    localStorage.setItem(IMPERSONATOR_TOKEN_KEY, currentToken);
+  }
+  return setAuthToken(impersonationToken);
+};
+
+export const exitImpersonation = () => {
+  const adminToken = getImpersonatorToken();
+  localStorage.removeItem(IMPERSONATOR_TOKEN_KEY);
+  if (!adminToken) {
+    clearAuthSession();
+    return null;
+  }
+  return setAuthToken(adminToken);
 };
 
 export const getSession = () => {
@@ -75,6 +99,10 @@ export const claimsToUser = (claims) => {
     nombre_empresa: claims.nombre_empresa,
     alias: claims.alias,
     esquema: claims.esquema ?? claims.id_empresa,
+    impersonacion: Boolean(claims.impersonacion),
+    impersonado_por: claims.impersonado_por ?? null,
+    impersonado_por_email: claims.impersonado_por_email ?? null,
+    impersonado_por_nombre: claims.impersonado_por_nombre ?? null,
   };
 };
 
