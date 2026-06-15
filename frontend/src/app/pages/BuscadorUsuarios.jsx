@@ -7,6 +7,7 @@ import { APP_ROUTES } from '../../constants/routes';
 import { getUsuariosEmpresa, deleteUsuario, editUsuario, getHorasTotalesMesByIdUsuario, descargarExcelDesdeAPI } from "../../features/user/usuarioService";
 import { getDatosUsuarioById } from '../../features/fichaje/fichajeService';
 import { obtenerJornadas } from "../../features/jornada/jornadaService";
+import { parseFechaFichaje } from '../../utils/fechaFichaje';
 
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
@@ -128,12 +129,12 @@ const BuscarUsuarios = () => {
 
         getDatosUsuarioById(editingRecord.id_usuario).then((result) => {
             const filteredHoras = result.info.filter((item) => {
-                const fechaEntrada = dayjs(item.fecha_entrada);
-                return fechaEntrada.isSame(selectedDate, 'month');
+                const fechaEntrada = parseFechaFichaje(item.fecha_entrada);
+                return fechaEntrada?.isSame(selectedDate, 'month');
             });
             const registrosConDetalles = filteredHoras.map((item) => {
-                const horaEntrada = dayjs(item.fecha_entrada);
-                const horaSalida = item.fecha_salida ? dayjs(item.fecha_salida) : null;
+                const horaEntrada = parseFechaFichaje(item.fecha_entrada);
+                const horaSalida = item.fecha_salida ? parseFechaFichaje(item.fecha_salida) : null;
                 let dif_tiempo = 'No registrada';
                 if (horaSalida && horaEntrada.isValid() && horaSalida.isValid()) {
                     const diffMinutes = horaSalida.diff(horaEntrada, 'minute');
@@ -162,12 +163,12 @@ const BuscarUsuarios = () => {
         setEditingRecord(record);
         getDatosUsuarioById(record.id_usuario).then((result) => {
             const filteredHoras = result.info.filter((item) => {
-                const fechaEntrada = dayjs(item.fecha_entrada);
-                return fechaEntrada.isSame(dayjs(), 'month');
+                const fechaEntrada = parseFechaFichaje(item.fecha_entrada);
+                return fechaEntrada?.isSame(dayjs(), 'month');
             });
             const registrosConDetalles = filteredHoras.map((item) => {
-                const horaEntrada = dayjs(item.fecha_entrada);
-                const horaSalida = item.fecha_salida ? dayjs(item.fecha_salida) : null;
+                const horaEntrada = parseFechaFichaje(item.fecha_entrada);
+                const horaSalida = item.fecha_salida ? parseFechaFichaje(item.fecha_salida) : null;
                 let dif_tiempo = 'No registrada';
                 if (horaSalida && horaEntrada.isValid() && horaSalida.isValid()) {
                     const diffMinutes = horaSalida.diff(horaEntrada, 'minute');

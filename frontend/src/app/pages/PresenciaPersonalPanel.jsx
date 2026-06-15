@@ -1,16 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, Table, Tag, Input, Button, Empty, Spin, message } from 'antd';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
 import { getEstadoPersonalEmpresa } from '../../features/fichaje/fichajeService';
 import { getTipoUsuario } from '../../utils/authSession';
+import { formatHoraFichaje } from '../../utils/fechaFichaje';
 import { JORNADA_ACTUALIZADA } from '../../hooks/useEstadoJornada';
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import './PresenciaPersonalPanel.css';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
 
 const ESTADO_CONFIG = {
   in: { label: 'Trabajando', color: 'green', dotClass: 'presencia-dot--in' },
@@ -23,9 +18,8 @@ const REFRESH_MS = 30000;
 const ROLES_PRESENCIA_EQUIPO = [1, 2, 3, 4];
 
 const formatHora = (fecha) => {
-  if (!fecha) return '—';
-  const d = dayjs.utc(fecha).tz('Europe/Madrid');
-  return d.isValid() ? d.format('HH:mm') : '—';
+  const hora = formatHoraFichaje(fecha);
+  return hora || '—';
 };
 
 const PresenciaPersonalPanel = () => {

@@ -15,19 +15,16 @@ import { descargarExcelDesdeAPI } from "../../features/user/usuarioService";
 import { crearAusencia } from "../../features/ausencias/ausenciasService";
 
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc'; // Importa el plugin UTC
-import timezone from 'dayjs/plugin/timezone'; // Importa el plugin Timezone
-import moment from 'moment';
-import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'; // <-- Importa el plugin
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import 'dayjs/locale/es';
 import { getIdUsuario, getIdEmpresa } from '../../utils/authSession';
+import { parseFechaFichaje } from '../../utils/fechaFichaje';
 import { parseUbicacionCoords } from '../../utils/ubicacion';
 import UbicacionMapModal from '../components/UbicacionMapModal';
 import './TimeLogsPanel.css';
+import moment from 'moment';
 
-dayjs.extend(utc); // Extiende el uso de UTC
-dayjs.extend(timezone); // Extiende el uso de Timezone
-dayjs.extend(isSameOrBefore); // <-- Extiende dayjs
+dayjs.extend(isSameOrBefore);
 dayjs.locale('es');
 
 const formatEtiquetaDia = (dateStr) => {
@@ -184,9 +181,11 @@ const fetchData = async () => {
 
    const mergedData = (registros.info || []).map((item, index) => {
   const fechaBase = item.fecha_original || item.fecha_entrada || item.fecha_desde;
-  const fechaEntrada = item.fecha_entrada ? dayjs.utc(item.fecha_entrada).tz('Europe/Madrid') : null;
-  const fechaSalida = item.fecha_salida ? dayjs.utc(item.fecha_salida).tz('Europe/Madrid') : null;
-  const fecha = fechaBase ? dayjs(fechaBase) : null;
+  const fechaEntrada = item.fecha_entrada ? parseFechaFichaje(item.fecha_entrada) : null;
+  const fechaSalida = item.fecha_salida ? parseFechaFichaje(item.fecha_salida) : null;
+  const fecha = item.fecha_original
+    ? dayjs(item.fecha_original, 'YYYY-MM-DD')
+    : fechaEntrada;
 
   const tiposConDuracion = ['fichaje', 'descanso'];
   const totalHoras =

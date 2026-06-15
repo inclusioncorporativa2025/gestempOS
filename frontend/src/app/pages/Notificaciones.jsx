@@ -17,6 +17,7 @@ import {
   getDatosUsuarioMes,
   responderPeticionCierre,
 } from '../../features/fichaje/fichajeService';
+import { parseFechaFichaje } from '../../utils/fechaFichaje';
 
 import {
    getHorasTotalesMesByIdUsuario,
@@ -59,8 +60,8 @@ const setVisibleModalDetalles = async (info) => {
     const registros = response.info || [];
 
     const registrosConDetalles = registros.map((item) => {
-      const horaEntrada = dayjs(item.fecha_entrada);
-      const horaSalida = item.fecha_salida ? dayjs(item.fecha_salida) : null;
+      const horaEntrada = parseFechaFichaje(item.fecha_entrada);
+      const horaSalida = item.fecha_salida ? parseFechaFichaje(item.fecha_salida) : null;
 
       let dif_tiempo = 'No registrada';
       let minutosTrabajados = 0;
