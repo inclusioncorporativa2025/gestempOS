@@ -31,7 +31,7 @@ const HeaderEmpresaMenu = ({
   const cerrarPlan = () => setPlanAbierto(false);
 
   const irAnadirEmpresa = () => {
-    navigate(APP_ROUTES.companies, { state: { abrirAltaEmpresa: true } });
+    navigate(APP_ROUTES.platformEmpresas, { state: { abrirAltaEmpresa: true } });
   };
 
   const items = [

@@ -39,7 +39,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import NavigationTracker from './components/NavigationTracker';
 import Notificaciones from './pages/Notificaciones';
 import PlatformLayout from './pages/platform/PlatformLayout';
-import PlatformHub from './pages/platform/PlatformHub';
 import PlatformAccesos from './pages/platform/PlatformAccesos';
 import PlatformAcceder from './pages/platform/PlatformAcceder';
 import ImpersonationBanner from './components/ImpersonationBanner';
@@ -94,13 +93,6 @@ const pages = [
     key: '11',
     icon: <AppstoreOutlined />,
     path: APP_ROUTES.platform,
-    tipousuario: [1, 2],
-  },
-  {
-    label: 'Empresas',
-    key: '8',
-    icon: <SlidersOutlined />,
-    path: APP_ROUTES.companies,
     tipousuario: [1, 2],
   },
   {
@@ -172,7 +164,11 @@ const AppShell = () => {
     const page = pages.find((p) => p.key === key);
     if (page) {
       const dest =
-        page.path === APP_ROUTES.settings ? APP_ROUTES.settingsUsuario : page.path;
+        page.path === APP_ROUTES.settings
+          ? APP_ROUTES.settingsUsuario
+          : page.path === APP_ROUTES.platform
+            ? APP_ROUTES.platformEmpresas
+            : page.path;
       navigate(dest);
       closeDrawer();
     }
@@ -390,17 +386,14 @@ const AppShell = () => {
                     </ProtectedRoute>
                   }
                 >
-                  <Route index element={<PlatformHub />} />
+                  <Route index element={<Navigate to="empresas" replace />} />
+                  <Route path="empresas" element={<BuscadorEmpresa embedded />} />
                   <Route path="accesos" element={<PlatformAccesos />} />
                   <Route path="acceder" element={<PlatformAcceder />} />
                 </Route>
                 <Route
-                  path={APP_ROUTES.companies}
-                  element={
-                    <ProtectedRoute allowedTypes={[1, 2]}>
-                      <BuscadorEmpresa />
-                    </ProtectedRoute>
-                  }
+                  path="/companies"
+                  element={<Navigate to={APP_ROUTES.platformEmpresas} replace />}
                 />
                 <Route
                   path={APP_ROUTES.users}
@@ -442,7 +435,7 @@ const AppShell = () => {
                 />
                 <Route
                   path="/buscador-empresa"
-                  element={<Navigate to={APP_ROUTES.companies} replace />}
+                  element={<Navigate to={APP_ROUTES.platformEmpresas} replace />}
                 />
                 <Route
                   path="/buscador-usuarios"

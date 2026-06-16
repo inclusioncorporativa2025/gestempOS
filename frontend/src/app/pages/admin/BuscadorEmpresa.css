@@ -6,6 +6,12 @@
   box-sizing: border-box;
 }
 
+.be-layout--embedded {
+  padding: 0;
+  background: transparent;
+  min-height: auto;
+}
+
 .be-page-title {
   margin: 0 0 20px !important;
   text-align: center;

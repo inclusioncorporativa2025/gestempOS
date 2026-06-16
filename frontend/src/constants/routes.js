@@ -26,10 +26,11 @@ export const APP_ROUTES = {
   settingsUsuario: '/settings/usuario',
   settingsEmpresa: '/settings/empresa',
   settingsJornada: '/settings/jornada',
-  companies: '/companies',
+  companies: '/platform/empresas',
   platform: '/platform',
   platformAccesos: '/platform/accesos',
   platformAcceder: '/platform/acceder',
+  platformEmpresas: '/platform/empresas',
   notifications: '/notifications',
 };
 

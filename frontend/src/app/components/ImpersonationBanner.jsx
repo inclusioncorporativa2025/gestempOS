@@ -15,7 +15,7 @@ const ImpersonationBanner = () => {
 
   const handleExit = () => {
     stopImpersonation();
-    navigate(APP_ROUTES.platform);
+    navigate(APP_ROUTES.platformEmpresas);
   };
 
   return (

@@ -11,7 +11,7 @@ const { Text, Paragraph } = Typography;
 
 const rutaInicioPorTipo = (tipo) => {
   if (tipo === 6) return APP_ROUTES.users;
-  if ([1, 2].includes(tipo)) return APP_ROUTES.platform;
+  if ([1, 2].includes(tipo)) return APP_ROUTES.platformEmpresas;
   return APP_ROUTES.home;
 };
 

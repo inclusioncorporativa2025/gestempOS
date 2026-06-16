@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card, Col, Row, Button, Table, Layout, Modal,
-  Typography, message, Popconfirm, Tooltip
+  Typography, message, Popconfirm, Tooltip, DatePicker, Input
 } from 'antd';
 import GradientButton from '../components/shared/GradientButton';
-import { EyeOutlined } from '@ant-design/icons';
+import { EyeOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -17,6 +17,7 @@ import {
   getDatosUsuarioMes,
   responderPeticionCierre,
 } from '../../features/fichaje/fichajeService';
+import { notifyNotificacionesActualizadas } from '../../hooks/useNotificacionesPendientes';
 import { parseFechaFichaje } from '../../utils/fechaFichaje';
 
 import {
@@ -30,6 +31,39 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const { Title } = Typography;
+const { RangePicker } = DatePicker;
+
+const filtrarPorRango = (items, campoFecha, rango) => {
+  if (!rango?.[0] || !rango?.[1]) return items;
+  const desde = rango[0].startOf('day');
+  const hasta = rango[1].endOf('day');
+  return items.filter((item) => {
+    const fecha = dayjs(item[campoFecha]);
+    return (
+      fecha.isValid()
+      && !fecha.isBefore(desde)
+      && !fecha.isAfter(hasta)
+    );
+  });
+};
+
+const ordenarPorReciente = (items, campoFecha) =>
+  [...items].sort(
+    (a, b) => dayjs(b[campoFecha]).valueOf() - dayjs(a[campoFecha]).valueOf(),
+  );
+
+const normalizarTexto = (texto) =>
+  String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const filtrarPorNombre = (items, obtenerNombre, termino) => {
+  const busqueda = normalizarTexto(termino);
+  if (!busqueda) return items;
+  return items.filter((item) => normalizarTexto(obtenerNombre(item)).includes(busqueda));
+};
 
 const Notificaciones = () => {
 const [peticiones, setPeticiones] = useState([]);
@@ -39,6 +73,37 @@ const [visible, setVisible] = useState(false);
 const [registroHoras, setRegistroHoras] = useState([]);
 const [totalHoras, setTotalHoras] = useState('');
 const [totalHorasEsperadas, setTotalHorasEsperadas] = useState(0);
+const [rangoFechas, setRangoFechas] = useState(null);
+const [busquedaNombre, setBusquedaNombre] = useState('');
+
+  const peticionesFiltradas = useMemo(
+    () => ordenarPorReciente(
+      filtrarPorNombre(
+        filtrarPorRango(peticiones, 'fecha_alta', rangoFechas),
+        (item) => item.fichaje?.usuario?.nombre,
+        busquedaNombre,
+      ),
+      'fecha_alta',
+    ),
+    [peticiones, rangoFechas, busquedaNombre],
+  );
+
+  const cierresFiltrados = useMemo(
+    () => ordenarPorReciente(
+      filtrarPorNombre(
+        filtrarPorRango(cierresMensuales, 'fecha_alta', rangoFechas),
+        (item) => item.nombre_usuario_alta,
+        busquedaNombre,
+      ),
+      'fecha_alta',
+    ),
+    [cierresMensuales, rangoFechas, busquedaNombre],
+  );
+
+  const limpiarFiltros = () => {
+    setRangoFechas(null);
+    setBusquedaNombre('');
+  };
 
   useEffect(() => {
     fetchPeticiones();
@@ -162,6 +227,7 @@ const setVisibleModalDetalles = async (info) => {
       await responderPeticion(peticion, estado);
       message.success(`Petición ${estado === 2 ? 'aprobada' : 'rechazada'} correctamente`);
       fetchPeticiones();
+      notifyNotificacionesActualizadas();
     } catch (error) {
       message.error('Error al procesar la petición');
     }
@@ -172,6 +238,7 @@ const setVisibleModalDetalles = async (info) => {
       await responderPeticionCierre(peticion, estado);
       message.success(`Cierre mensual ${estado === 2 ? 'aprobado' : 'rechazado'}`);
       fetchCierresMensuales();
+      notifyNotificacionesActualizadas();
     } catch (error) {
       message.error('Error al procesar el cierre mensual');
     }
@@ -188,6 +255,14 @@ const setVisibleModalDetalles = async (info) => {
       title: 'Nombre',
       key: 'nombre',
       render: (_, record) => record.fichaje?.usuario?.nombre || '-',
+    },
+    {
+      title: 'Fecha solicitud',
+      dataIndex: 'fecha_alta',
+      key: 'fecha_alta',
+      render: (fecha) => formatearFecha(fecha),
+      sorter: (a, b) => dayjs(a.fecha_alta).valueOf() - dayjs(b.fecha_alta).valueOf(),
+      defaultSortOrder: 'descend',
     },
     {
       title: 'Fecha Entrada Original',
@@ -230,14 +305,14 @@ const setVisibleModalDetalles = async (info) => {
       render: (_, record) => {
         const estado = obtenerEstado(record);
         return estado === 'Pendiente' ? (
-          <>
+          <div className="notif-acciones">
             <Popconfirm
               title="¿Aprobar esta petición?"
               onConfirm={() => handleRespuesta(record, 2)}
               okText="Sí"
               cancelText="No"
             >
-              <GradientButton text="Aprobar" className="notif-btn-mr" />
+              <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
             </Popconfirm>
             <Popconfirm
               title="¿Rechazar esta petición?"
@@ -245,9 +320,11 @@ const setVisibleModalDetalles = async (info) => {
               okText="Sí"
               cancelText="No"
             >
-              <Button danger>Rechazar</Button>
+              <Button danger size="small" className="notif-btn-compact">
+                Rechazar
+              </Button>
             </Popconfirm>
-          </>
+          </div>
         ) : (
           <span className="notif-procesada">Ya procesada</span>
         );
@@ -277,6 +354,8 @@ const setVisibleModalDetalles = async (info) => {
       dataIndex: 'fecha_alta',
       key: 'fecha_alta',
       render: (fecha) => formatearFecha(fecha),
+      sorter: (a, b) => dayjs(a.fecha_alta).valueOf() - dayjs(b.fecha_alta).valueOf(),
+      defaultSortOrder: 'descend',
     },
     {
       title: 'Acciones',
@@ -289,14 +368,14 @@ const setVisibleModalDetalles = async (info) => {
           : 'Pendiente';
 
         return estado === 'Pendiente' ? (
-          <>
+          <div className="notif-acciones">
             <Popconfirm
               title="¿Aprobar este cierre?"
               onConfirm={() => handleRespuestaCierre(record, 2)}
               okText="Sí"
               cancelText="No"
             >
-              <GradientButton text="Aprobar" size="small" className="notif-btn-mr" />
+              <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
             </Popconfirm>
             <Popconfirm
               title="¿Rechazar este cierre?"
@@ -304,14 +383,17 @@ const setVisibleModalDetalles = async (info) => {
               okText="Sí"
               cancelText="No"
             >
-              <Button danger size="small" className="notif-btn-mr">Rechazar</Button>
+              <Button danger size="small" className="notif-btn-compact">
+                Rechazar
+              </Button>
             </Popconfirm>
             <Button
               icon={<EyeOutlined />}
               size="small"
-              onClick={() =>setVisibleModalDetalles(record)}
+              className="notif-btn-compact"
+              onClick={() => setVisibleModalDetalles(record)}
             />
-          </>
+          </div>
         ) : (
           <span className="notif-procesada">Ya procesado</span>
         );
@@ -322,12 +404,36 @@ const setVisibleModalDetalles = async (info) => {
   return (
     <Layout className="notif-layout">
       <Card className="notif-card" title={<Title level={2}>Notificaciones</Title>}>
+        <div className="notif-filtros">
+          <Input
+            className="notif-filtro-nombre"
+            placeholder="Buscar por nombre"
+            prefix={<SearchOutlined />}
+            value={busquedaNombre}
+            onChange={(e) => setBusquedaNombre(e.target.value)}
+            allowClear
+            aria-label="Buscar por nombre"
+          />
+          <RangePicker
+            value={rangoFechas}
+            onChange={setRangoFechas}
+            format="DD/MM/YYYY"
+            placeholder={['Desde', 'Hasta']}
+            allowClear
+            aria-label="Filtrar por rango de fechas"
+          />
+          {(rangoFechas || busquedaNombre.trim()) && (
+            <Button type="link" onClick={limpiarFiltros}>
+              Limpiar filtros
+            </Button>
+          )}
+        </div>
         <Row gutter={[16, 16]}>
           <Col span={24}>
             <Card title="Solicitudes de Corrección de Horario">
               <Table
                 columns={columnsCorreccion}
-                dataSource={peticiones}
+                dataSource={peticionesFiltradas}
                 loading={loading}
                 rowKey="id_peticion"
                 pagination={{ pageSize: 5 }}
@@ -338,7 +444,7 @@ const setVisibleModalDetalles = async (info) => {
             <Card title="Solicitudes de Cierre Mensual">
               <Table
                 columns={columnsCierreMensual}
-                dataSource={cierresMensuales}
+                dataSource={cierresFiltrados}
                 loading={loading}
                 rowKey={(record) => `${record.empresa_id}-${record.id_mes_cierre}`}
                 pagination={{ pageSize: 5 }}

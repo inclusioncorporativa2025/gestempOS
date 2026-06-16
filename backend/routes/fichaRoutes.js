@@ -19,6 +19,7 @@ const {
   getDatosUsuarioById,
   reverseGeocode,
   getEstadoPersonalEmpresa,
+  countNotificacionesPendientes,
 } = require('../controllers/fichajesController');
 const { requireRole, ROLE_GROUPS } = require('../middleware/authMiddleware');
 
@@ -39,6 +40,7 @@ router.post('/crearPeticionEdicion', requireRole(ROLE_GROUPS.FICHAJE), crearPeti
 router.post('/crearPeticionCierreMes', requireRole(ROLE_GROUPS.FICHAJE), crearPeticionCierreMes);
 router.post('/getPeticionesByIdUsuario', requireRole(ROLE_GROUPS.FICHAJE), getPeticionesByIdUsuario);
 
+router.post('/countNotificacionesPendientes', requireRole(GESTION_PETICIONES), countNotificacionesPendientes);
 router.post('/getPeticionesByIdEmpresa', requireRole(GESTION_PETICIONES), getPeticionesByIdEmpresa);
 router.post('/responderPeticion', requireRole(GESTION_PETICIONES), responderPeticion);
 router.post('/getCierresMensualesByIdEmpresa', requireRole(GESTION_PETICIONES), getCierresMensualesByIdEmpresa);

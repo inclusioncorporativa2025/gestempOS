@@ -13,8 +13,6 @@ const { formatUbicacionStorage } = require('../utils/ubicacion');
 const { getDireccionDesdeLatLng } = require('../utils/reverseGeocode');
 const { TIPO_REGISTRO_A_EVENTO } = require('../utils/registroHash');
 const { registrarEventoFichaje, verificarEventosMes } = require('../repositorios/fichajeRegistroEventosRepository');
-const nodemailer = require('nodemailer');
-const path = require('path');
 const {getTipoRegistro} = require('./companyController');
 const moment = require('moment-timezone');
 const dayjs = require('dayjs');
@@ -23,12 +21,67 @@ const utc = require('dayjs/plugin/utc');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 const Usuario = require('../models/Usuario');
 const UsuariosEmpresas = require('../models/UsuarioEmpresa');
+const { ROLE_GROUPS, ROLES } = require('../middleware/authMiddleware');
+const { enviarNotificacionGestion } = require('../utils/mailService');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(customParseFormat);
 
 const parseFechaRegistro = (valor) =>
   dayjs(valor, ['DD-MM-YYYY', 'YYYY-MM-DD'], true);
+
+const resolveIdEmpresa = (req) => {
+  const fromBody = Number(req.body?.idEmpresa ?? req.body?.id_empresa);
+  if (fromBody) return fromBody;
+  const fromToken = Number(req.user?.id_empresa);
+  return fromToken || null;
+};
+
+const esRootPlataforma = (req) => Number(req.user?.tipo_usuario) === ROLES.ROOT;
+
+const isEmailValido = (email) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+
+/** Gestores de la empresa + super-admins globales (tipo 1) con email válido. */
+const obtenerEmailsGestoresEmpresa = async (idEmpresa) => {
+  const usuariosEmpresa = await sequelize.query(
+    'SELECT id_usuario FROM m_usuarios_empresas WHERE id_empresa = :idEmpresa AND fecha_baja IS NULL',
+    {
+      type: QueryTypes.SELECT,
+      replacements: { idEmpresa },
+    },
+  );
+
+  const usuariosIds = usuariosEmpresa.map((u) => Number(u.id_usuario));
+
+  const [vinculados, rootsGlobales] = await Promise.all([
+    usuariosIds.length
+      ? Usuario.findAll({
+          where: {
+            id_usuario: { [Op.in]: usuariosIds },
+            tipo_usuario: { [Op.in]: ROLE_GROUPS.COMPANY_STAFF },
+            fecha_baja: null,
+          },
+          attributes: ['email'],
+          raw: true,
+        })
+      : [],
+    Usuario.findAll({
+      where: {
+        tipo_usuario: ROLES.ROOT,
+        fecha_baja: null,
+      },
+      attributes: ['email'],
+      raw: true,
+    }),
+  ]);
+
+  const emails = [...vinculados, ...rootsGlobales]
+    .map((u) => u.email)
+    .filter(isEmailValido);
+
+  return [...new Set(emails)];
+};
 
 const getDatosUsuario = async (req, res) => {
   const { idUsuario, idEmpresa } = req.body;
@@ -460,34 +513,6 @@ const crearPeticionEdicion = async (req, res) => {
       .millisecond(0)
       .utc();
 
-    const usuariosEmpresa = await sequelize.query(
-      'SELECT id_usuario FROM m_usuarios_empresas WHERE id_empresa = :idEmpresa AND fecha_baja IS NULL',
-      {
-        type: QueryTypes.SELECT,
-        replacements: { idEmpresa },
-      }
-    );
-
-    const usuariosIds = usuariosEmpresa.map(u => Number(u.id_usuario));
-
-    if (usuariosIds.length === 0) {
-      return res.status(400).json({ error: 'No hay usuarios activos en la empresa' });
-    }
-
-    const usuariosConEmail = await sequelize.query(
-      'SELECT email FROM m_usuarios WHERE id_usuario IN (:ids) AND tipo_usuario IN (3, 4)',
-      {
-        type: QueryTypes.SELECT,
-        replacements: { ids: usuariosIds },
-      }
-    );
-
-    const destinatarios = usuariosConEmail.map(u => u.email);
-
-    if (destinatarios.length === 0) {
-      return res.status(400).json({ error: 'No hay destinatarios válidos (tipo_usuario 3 o 4)' });
-    }
-
     const info = await createConId(Peticiones, idEmpresa, 'id_peticion', {
       id_usuario_peticion: idUsuario,
       fecha_alta: fechaConOffset,
@@ -503,9 +528,27 @@ const crearPeticionEdicion = async (req, res) => {
       raw: true,
     });
 
-    await enviarCorreoNotificacion(destinatarios, 'modificacion_horario', null, null);
+    const destinatarios = await obtenerEmailsGestoresEmpresa(idEmpresa);
+    console.log(
+      `[crearPeticionEdicion] empresa=${idEmpresa} destinatarios=${destinatarios.length}`,
+      destinatarios,
+    );
 
-    res.status(200).json({ message: 'Petición creada y notificación enviada', info });
+    try {
+      await enviarNotificacionGestion({
+        destinatarios,
+        tipo: 'modificacion_horario',
+        nombreSolicitante: usuarios?.nombre,
+      });
+    } catch (mailError) {
+      console.error('[crearPeticionEdicion] Error enviando correo:', mailError.message);
+    }
+
+    res.status(200).json({
+      message: 'Petición creada',
+      info,
+      notificacionEnviada: destinatarios.length > 0,
+    });
   } catch (error) {
     console.error('Error al crear petición:', error);
     res.status(500).json({ error: 'Error al crear petición' });
@@ -530,43 +573,34 @@ const crearPeticionCierreMes = async (req, res) => {
       fecha_alta: new Date(),
     });
 
-    const usuariosEmpresa = await sequelize.query(
-      'SELECT id_usuario FROM m_usuarios_empresas WHERE id_empresa = :idEmpresa AND fecha_baja IS NULL',
-      {
-        type: QueryTypes.SELECT,
-        replacements: { idEmpresa },
-      }
-    );
-
-    const usuariosIds = usuariosEmpresa.map(u => Number(u.id_usuario));
-
-    if (usuariosIds.length === 0) {
-      return res.status(400).json({ error: 'No hay usuarios activos en la empresa' });
-    }
-
-    const usuariosConEmail = await sequelize.query(
-      'SELECT email FROM m_usuarios WHERE id_usuario IN (:ids) AND tipo_usuario IN (3, 4)',
-      {
-        type: QueryTypes.SELECT,
-        replacements: { ids: usuariosIds },
-      }
-    );
-
-    const destinatarios = usuariosConEmail.map(u => u.email);
-
-    if (destinatarios.length === 0) {
-      return res.status(400).json({ error: 'No hay destinatarios válidos (tipo_usuario 3 o 4)' });
-    }
-
     const usuarios = await Usuario.findOne({
       where: { id_usuario: idUsuario },
       attributes: ['id_usuario', 'nombre', 'dni'],
       raw: true,
     });
 
-    await enviarCorreoNotificacion(destinatarios, 'cierre_jornada', usuarios,mesFormateado);
+    const destinatarios = await obtenerEmailsGestoresEmpresa(idEmpresa);
+    console.log(
+      `[crearPeticionCierreMes] empresa=${idEmpresa} destinatarios=${destinatarios.length}`,
+      destinatarios,
+    );
 
-    res.status(200).json({ message: 'Petición creada', info });
+    try {
+      await enviarNotificacionGestion({
+        destinatarios,
+        tipo: 'cierre_jornada',
+        nombreSolicitante: usuarios?.nombre,
+        mesCierre: mesFormateado,
+      });
+    } catch (mailError) {
+      console.error('[crearPeticionCierreMes] Error enviando correo:', mailError.message);
+    }
+
+    res.status(200).json({
+      message: 'Petición creada',
+      info,
+      notificacionEnviada: destinatarios.length > 0,
+    });
   } catch (error) {
     console.error('Error al crear petición:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -574,27 +608,36 @@ const crearPeticionCierreMes = async (req, res) => {
 };
 
 const getPeticionesByIdEmpresa = async (req, res) => {
-  const { idEmpresa } = req.body;
+  const esRoot = esRootPlataforma(req);
+  const idEmpresa = resolveIdEmpresa(req);
+
+  if (!esRoot && !idEmpresa) {
+    return res.status(400).json({ error: 'Empresa no indicada' });
+  }
 
   try {
 
     const peticiones = await Peticiones.findAll({
       where: {
-        empresa_id: idEmpresa,
         fecha_aceptacion: null,
-        fecha_cancelacion: null
+        fecha_cancelacion: null,
+        ...(esRoot ? {} : { empresa_id: idEmpresa }),
       },
-      order: [['fecha_alta', 'ASC']]
+      order: [['fecha_alta', 'DESC']]
     });
+
+    if (peticiones.length === 0) {
+      return res.status(200).json({ message: 'Peticiones recuperadas', data: [] });
+    }
 
     const listaIdFichaje = peticiones.map(p => p.id_fichaje);
     const fichajes = await Fichajes.findAll({
       where: {
-        empresa_id: idEmpresa,
-        id_fichaje: {
-          [Op.in]: listaIdFichaje
-        }
-      }
+        [Op.or]: peticiones.map((p) => ({
+          empresa_id: p.empresa_id,
+          id_fichaje: p.id_fichaje,
+        })),
+      },
     });
 
     const usuariosIds = fichajes.map(f => f.id_usuario);
@@ -669,7 +712,7 @@ const getPeticionesByIdUsuario = async (req, res) => {
         fecha_aceptacion: null,
         fecha_cancelacion: null,
       },
-      order: [['fecha_alta', 'ASC']],
+      order: [['fecha_alta', 'DESC']],
       raw: true,
     });
 
@@ -680,7 +723,7 @@ const getPeticionesByIdUsuario = async (req, res) => {
         fecha_baja: null,
         usuario_cancelacion:null
       },
-      order: [['fecha_alta', 'ASC']],
+      order: [['fecha_alta', 'DESC']],
       raw: true,
     });
 
@@ -823,19 +866,60 @@ const editarHoras = async (req, res) => {
     res.status(500).json({ error: 'Error al actualizar tipos de acceso' });
   }
 };
+const countNotificacionesPendientes = async (req, res) => {
+  const esRoot = esRootPlataforma(req);
+  const idEmpresa = resolveIdEmpresa(req);
+
+  if (!esRoot && !idEmpresa) {
+    return res.status(400).json({ error: 'Empresa no indicada' });
+  }
+
+  try {
+    const filtroEmpresa = esRoot ? {} : { empresa_id: idEmpresa };
+
+    const [correcciones, cierres] = await Promise.all([
+      Peticiones.count({
+        where: {
+          ...filtroEmpresa,
+          fecha_aceptacion: null,
+          fecha_cancelacion: null,
+        },
+      }),
+      MesesCierre.count({
+        where: {
+          ...filtroEmpresa,
+          fecha_baja: null,
+          fecha_aceptacion: null,
+          fecha_cancelacion: null,
+        },
+      }),
+    ]);
+
+    res.status(200).json({ correcciones, cierres, total: correcciones + cierres });
+  } catch (error) {
+    console.error('Error al contar notificaciones pendientes:', error);
+    res.status(500).json({ error: 'Error al contar notificaciones pendientes' });
+  }
+};
+
 const getCierresMensualesByIdEmpresa = async (req, res) => {
-  const { idEmpresa } = req.body;
+  const esRoot = esRootPlataforma(req);
+  const idEmpresa = resolveIdEmpresa(req);
+
+  if (!esRoot && !idEmpresa) {
+    return res.status(400).json({ error: 'Empresa no indicada' });
+  }
 
   try {
 
     const meses = await MesesCierre.findAll({
       where: {
-        empresa_id: idEmpresa,
         fecha_baja: null,
         fecha_aceptacion: null,
         fecha_cancelacion: null,
+        ...(esRoot ? {} : { empresa_id: idEmpresa }),
       },
-      order: [['fecha_alta', 'ASC']],
+      order: [['fecha_alta', 'DESC']],
       raw: true,
     });
 
@@ -871,94 +955,6 @@ const infoConNombre = meses.map(m => {
     res.status(500).json({ error: 'Error al recuperar datos' });
   }
 };
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT),
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-
-async function enviarCorreoNotificacion(destinatarios, tipoNotificacion,usuarios,mesCierre) {
-  let asunto = '';
-  let htmlBody = '';
-
-  switch (tipoNotificacion) {
-    case 'modificacion_horario':
-      asunto = 'Solicitud de modificación de horario';
-      htmlBody = `
-          <div style="text-align: center; margin-top: 20px;;">
-
-            <p>Se ha recibido una solicitud de cambio de horario.</p>
-            <p>Por favor, revísela desde la aplicación, en la pestaña <strong>"Notificaciones"</strong>, y gestione su aprobación o denegación.</p>
-    </div>
-
-      <div style="text-align: center; font-size: 12px;  margin-top: 20px;  color: black;">
-        <p><em>No respondas a este correo electrónico. Este buzón no se supervisa. Si necesitas ayuda, envíanos un correo electrónico</em></p>
-        <p><em>a info@fichaeneltrabajo.es o puedes llamarnos al 886 137 361. Recuerda que nuestro horario comercial es de L-V de 09:00 a 13:00.</em></p>
-        <p><em>Este mensaje y sus archivos adjuntos se dirige exclusivamente a su destinatario y puede contener información confidencial. Si no eres el</em></p>
-        <p><em>destinatario indicado, te notificamos que la utilización, divulgación y/o copia sin autorización está prohibida en virtud de la legislación</em></p>
-        <p><em>vigente. Si has recibido este mensaje por error, te rogamos que nos lo comuniques inmediatamente y procedas a su destrucción. Gracias.</em></p>
-        <p><em>De conformidad con lo dispuesto en las normativas vigentes en protección de datos GDPR y LOPD, te informamos que los datos personales</em></p>
-        <p><em>serán tratados bajo la responsabilidad de Inclusión Corporativa, S.L. para resolver tu consulta. Los datos serán conservados el tiempo</em></p>
-        <p><em>necesario para resolver tu consulta. Tras esto, tus datos serán conservados y no serán cedidos a terceros, salvo obligación legal. Puedes</em></p>
-        <p><em>ejercer los derechos de acceso, rectificación, portabilidad, supresión, limitación y oposición enviando un mensaje</em></p>
-        <p><em>a info@fichaeneltrabajo.es y si consideras que el tratamiento no se ajusta a la normativa vigente, podrás presentar una reclamación ante</em></p>
-        <p><em>la autoridad de control en www.agpd.es.</em></p>
-    </div>
-          `;
-      break;
-    case 'cierre_jornada':
-      asunto = 'Solicitud cierre jornada mensual';
-     const mesFormateado = moment(mesCierre, 'YYYY-MM').format('MM/YYYY');
-      htmlBody = `
-        <div style="text-align: center; margin-top: 20px;">
-          <p>La persona trabajadora <strong>${usuarios.nombre}</strong> ha creado una petición de cierre de jornada mensual correspondiente al periodo <strong>${mesFormateado}</strong>.</p>
-          <p>Por favor, revísela desde la aplicación, en la pestaña <strong>"Notificaciones"</strong>, y gestione su aprobación o denegación.</p>
-        </div>
-
-      <div style="text-align: center; font-size: 12px;  margin-top: 20px;  color: black;">
-        <p><em>No respondas a este correo electrónico. Este buzón no se supervisa. Si necesitas ayuda, envíanos un correo electrónico</em></p>
-        <p><em>a info@fichaeneltrabajo.es o puedes llamarnos al 886 137 361. Recuerda que nuestro horario comercial es de L-V de 09:00 a 13:00.</em></p>
-        <p><em>Este mensaje y sus archivos adjuntos se dirige exclusivamente a su destinatario y puede contener información confidencial. Si no eres el</em></p>
-        <p><em>destinatario indicado, te notificamos que la utilización, divulgación y/o copia sin autorización está prohibida en virtud de la legislación</em></p>
-        <p><em>vigente. Si has recibido este mensaje por error, te rogamos que nos lo comuniques inmediatamente y procedas a su destrucción. Gracias.</em></p>
-        <p><em>De conformidad con lo dispuesto en las normativas vigentes en protección de datos GDPR y LOPD, te informamos que los datos personales</em></p>
-        <p><em>serán tratados bajo la responsabilidad de Inclusión Corporativa, S.L. para resolver tu consulta. Los datos serán conservados el tiempo</em></p>
-        <p><em>necesario para resolver tu consulta. Tras esto, tus datos serán conservados y no serán cedidos a terceros, salvo obligación legal. Puedes</em></p>
-        <p><em>ejercer los derechos de acceso, rectificación, portabilidad, supresión, limitación y oposición enviando un mensaje</em></p>
-        <p><em>a info@fichaeneltrabajo.es y si consideras que el tratamiento no se ajusta a la normativa vigente, podrás presentar una reclamación ante</em></p>
-        <p><em>la autoridad de control en www.agpd.es.</em></p>
-    </div>
-          `;       break;
-    default:
-      break;
-  }
-
-  const mailOptions = {
-    from: 'Noreply@fichaeneltrabajo.es',
-    to: destinatarios.join(', '),
-    subject: asunto,
-    html: htmlBody,
-    attachments: [
-      {
-        filename: 'Logo-Horizontal INCOR-RGB.png',
-        path: path.resolve(__dirname, '../utils/images/Logo-Horizontal INCOR-RGB.png'),
-        cid: 'logo',
-      },
-    ],
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log('Correo enviado con éxito');
-  } catch (error) {
-    console.error('Error enviando correo:', error);
-  }
-}
 
 const reverseGeocode = async (req, res) => {
   const lat = Number(req.body?.lat);
@@ -1161,5 +1157,6 @@ module.exports = {
     getDatosUsuarioMes,
     responderPeticionCierre,
     getEstadoPersonalEmpresa,
+    countNotificacionesPendientes,
 
   };

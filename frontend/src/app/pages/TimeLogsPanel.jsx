@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Layout, Card, Table, Button, Row, Col, Modal, Form, Input, TimePicker, message, Select, DatePicker, Checkbox, Collapse, Empty, Dropdown, Tooltip } from 'antd';
+import { Layout, Card, Table, Button, Row, Col, Modal, Form, Input, TimePicker, message, Select, DatePicker, Checkbox, Collapse, Empty, Dropdown, Tooltip, Tag } from 'antd';
 import {
   MoreOutlined,
   SendOutlined,
@@ -20,6 +20,7 @@ import 'dayjs/locale/es';
 import { getIdUsuario, getIdEmpresa } from '../../utils/authSession';
 import { parseFechaFichaje } from '../../utils/fechaFichaje';
 import { parseUbicacionCoords } from '../../utils/ubicacion';
+import { notifyNotificacionesActualizadas } from '../../hooks/useNotificacionesPendientes';
 import UbicacionMapModal from '../components/UbicacionMapModal';
 import './TimeLogsPanel.css';
 import moment from 'moment';
@@ -251,6 +252,12 @@ const fetchData = async () => {
     } else {
       setFilteredData(sortedData);
     }
+
+    const peticionesResp = await getPeticionesByIdUsuario();
+    const pendingKeys = (peticionesResp?.peticiones || []).map(
+      (p) => `fichaje-${p.id_fichaje}`,
+    );
+    setFichajesConPeticion(pendingKeys);
   } catch (error) {
     console.error("Error al cargar los datos:", error);
     message.error("Error al cargar los datos");
@@ -282,6 +289,7 @@ const crearPeticionMensual = async () => {
       message.error('No se pudo crear la petición');
     } else {
       message.success('Petición creada exitosamente');
+      notifyNotificacionesActualizadas();
     }
 
   } catch (error) {
@@ -346,22 +354,9 @@ const crearPeticionMensual = async () => {
 
         await crearPeticionEdicion(peticionPayload);
 
-        const updatedData = data.map((item) => {
-            if (item.key === editingRecord.key) {
-                return {
-                    ...item,
-                    checkIn: values.checkIn,
-                    checkOut: values.checkOut,
-                    justificacion: values.justificacion,
-                };
-            }
-            return item;
-        });
-
-        setFichajesConPeticion(prev => [...prev, editingRecord.key]);
-        setData(updatedData);
-        setFilteredData(updatedData);
-        message.success('Registro actualizado correctamente');
+        setFichajesConPeticion((prev) => [...prev, editingRecord.key]);
+        notifyNotificacionesActualizadas();
+        message.success('Solicitud enviada. Pendiente de aprobación por un gestor.');
         setIsModalOpen(false);
         setEditingRecord(null);
     } catch (error) {
@@ -429,6 +424,9 @@ const handleMonthChange = (date, dateString) => {
         !!record.checkOut &&
         (!mesSeleccionadoFormateado || !mesCerrado);
 
+      const pendienteAprobacion =
+        record.tipo === 'Fichaje' && fichajesConPeticion.includes(record.key);
+
       const ubicaciones = [];
       const coordsEntrada = parseUbicacionCoords(record.ubicacionEntrada);
       const coordsSalida = parseUbicacionCoords(record.ubicacionSalida);
@@ -459,6 +457,11 @@ const handleMonthChange = (date, dateString) => {
                 aria-label="Editar fichaje"
               />
             </Tooltip>
+          )}
+          {pendienteAprobacion && (
+            <Tag color="orange" className="tlp-pendiente-tag">
+              Pendiente
+            </Tag>
           )}
         </div>
       );

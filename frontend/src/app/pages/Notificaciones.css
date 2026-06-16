@@ -10,6 +10,19 @@
   width: 100%;
 }
 
+.notif-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.notif-filtro-nombre {
+  width: 100%;
+  max-width: 280px;
+}
+
 .notif-modal {
   top: 50px;
 }
@@ -29,6 +42,30 @@
 
 .notif-btn-mr {
   margin-right: 8px;
+}
+
+.notif-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.notif-acciones .notif-btn-compact.gradient-btn {
+  min-height: 28px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+}
+
+.notif-acciones .gradient-btn-ring {
+  padding: 2px;
+}
+
+.notif-acciones .notif-btn-compact.ant-btn-sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+  line-height: 26px;
 }
 
 .notif-procesada {

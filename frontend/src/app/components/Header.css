@@ -138,6 +138,16 @@
 
 
 
+.app-header-notificaciones .ant-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-header-notificaciones .anticon {
+  font-size: 1.1rem;
+}
+
 /* Iconos de acción */
 
 .app-header-icon-btn {

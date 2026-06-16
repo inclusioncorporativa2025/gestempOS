@@ -57,7 +57,7 @@ const coincideBusqueda = (empresa, texto) => {
   );
 };
 
-const BuscadorEmpresa = () => {
+const BuscadorEmpresa = ({ embedded = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -225,10 +225,12 @@ const BuscadorEmpresa = () => {
   };
 
   return (
-    <Layout className="be-layout">
-      <Title level={2} className="be-page-title">
-        Administrar Empresas
-      </Title>
+    <Layout className={embedded ? 'be-layout be-layout--embedded' : 'be-layout'}>
+      {!embedded && (
+        <Title level={2} className="be-page-title">
+          Administrar Empresas
+        </Title>
+      )}
 
       <Row gutter={[16, 16]} className="be-stats-row">
         {tarjetasResumen.map(({ key, label, count, licenciasLabel, licencias, className }) => (

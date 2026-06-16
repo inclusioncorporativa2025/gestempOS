@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
   const isProd = mode === 'production';
   const apiBaseUrl =
     env.VITE_API_BASE_URL ||
-    (isProd ? '/api/' : 'http://127.0.0.1:5001/api/');
+    (isProd ? '/api/' : 'http://127.0.0.1:5000/api/');
   const appUrl =
     env.VITE_APP_URL ||
     (isProd ? 'https://app.fichaeneltrabajo.es' : 'http://localhost:3000');

@@ -318,6 +318,64 @@ const escapeHtml = (value) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
+const isEmailValido = (email) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+
+const enviarNotificacionGestion = async ({
+  destinatarios,
+  tipo,
+  nombreSolicitante,
+  mesCierre,
+}) => {
+  const validos = [...new Set((destinatarios || []).map((e) => String(e).trim()).filter(isEmailValido))];
+  if (!validos.length) {
+    console.warn(`[mail] enviarNotificacionGestion(${tipo}): sin destinatarios válidos`);
+    return { enviado: false, destinatarios: [] };
+  }
+
+  let subject = '';
+  let cuerpo = '';
+
+  if (tipo === 'modificacion_horario') {
+    subject = 'Solicitud de modificación de horario';
+    cuerpo = `
+      <p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#333;">
+        La persona trabajadora <strong>${escapeHtml(nombreSolicitante || 'Un empleado')}</strong>
+        ha solicitado un cambio de horario.
+      </p>
+      <p style="margin:0; font-size:15px; line-height:1.6; color:#333;">
+        Por favor, revísela desde la aplicación, en la pestaña <strong>Notificaciones</strong>,
+        y gestione su aprobación o denegación.
+      </p>`;
+  } else if (tipo === 'cierre_jornada') {
+    const mesFormateado = mesCierre
+      ? String(mesCierre).replace(/^(\d{4})-(\d{2})$/, '$2/$1')
+      : '';
+    subject = 'Solicitud cierre jornada mensual';
+    cuerpo = `
+      <p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#333;">
+        La persona trabajadora <strong>${escapeHtml(nombreSolicitante || 'Un empleado')}</strong>
+        ha creado una petición de cierre de jornada mensual correspondiente al periodo
+        <strong>${escapeHtml(mesFormateado)}</strong>.
+      </p>
+      <p style="margin:0; font-size:15px; line-height:1.6; color:#333;">
+        Por favor, revísela desde la aplicación, en la pestaña <strong>Notificaciones</strong>,
+        y gestione su aprobación o denegación.
+      </p>`;
+  } else {
+    throw new Error(`Tipo de notificación desconocido: ${tipo}`);
+  }
+
+  await enviarCorreo({
+    to: validos.join(', '),
+    subject,
+    html: emailLayout(cuerpo),
+  });
+
+  console.log(`[mail] Notificación ${tipo} enviada a ${validos.length} destinatario(s)`);
+  return { enviado: true, destinatarios: validos };
+};
+
 const buildSupportSubject = ({ nombreEmpresa, idEmpresa }) => {
   const empresa = nombreEmpresa || 'Sin empresa';
   const id = idEmpresa != null ? idEmpresa : 'N/A';
@@ -391,6 +449,7 @@ module.exports = {
   generarYEnviarReset,
   enviarBienvenidaEmpresa,
   enviarInvitacionEmpleado,
+  enviarNotificacionGestion,
   enviarCorreoSoporte,
   buildSupportSubject,
   SUPPORT_EMAIL,

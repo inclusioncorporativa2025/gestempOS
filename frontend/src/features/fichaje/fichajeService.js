@@ -2,12 +2,19 @@ import dayjs from 'dayjs';
 import tz from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import { getFechaEuropeMadrid } from '../../utils/Helper';
-import { getIdUsuario, getIdEmpresa } from '../../utils/authSession';
+import { getIdUsuario, getIdEmpresa, getTipoUsuario } from '../../utils/authSession';
 
 
 dayjs.extend(utc);
 dayjs.extend(tz);
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL+'ficha'; 
+
+const bodyGestionEmpresa = () => {
+  const tipoUsuario = getTipoUsuario();
+  if (tipoUsuario === 1) return {};
+  const idEmpresa = getIdEmpresa();
+  return idEmpresa ? { idEmpresa } : {};
+};
 
 const GEO_OPTIONS = {
   enableHighAccuracy: true,
@@ -116,14 +123,39 @@ export const getDireccionDesdeCoords = async (lat, lng) => {
   return data.direccion || '';
 };
 
+export const countNotificacionesPendientes = async () => {
+  try {
+    const tipoUsuario = getTipoUsuario();
+    const payload = bodyGestionEmpresa();
+    if (tipoUsuario !== 1 && !payload.idEmpresa) {
+      return { correcciones: 0, cierres: 0, total: 0 };
+    }
+
+    const response = await fetch(API_BASE_URL + `/countNotificacionesPendientes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('countNotificacionesPendientes:', errorData?.error || response.status);
+      return { correcciones: 0, cierres: 0, total: 0 };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error contando notificaciones pendientes:', error);
+    return { correcciones: 0, cierres: 0, total: 0 };
+  }
+};
+
 export const getCierresMensualesByIdEmpresa = async () => {
   try {
-    const idEmpresa = getIdEmpresa(); 
-
     const response = await fetch(API_BASE_URL+`/getCierresMensualesByIdEmpresa`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idEmpresa }),
+      body: JSON.stringify(bodyGestionEmpresa()),
     });
 
     if (!response.ok) {
@@ -237,12 +269,10 @@ export const crearPeticionCierreMes = async (mes) => {
 
 export const getPeticionesByIdEmpresa = async () => {
   try {
-    const idEmpresa = getIdEmpresa(); 
-
     const response = await fetch(API_BASE_URL+`/getPeticionesByIdEmpresa`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({  idEmpresa}),
+      body: JSON.stringify(bodyGestionEmpresa()),
     });
 
     if (!response.ok) {
