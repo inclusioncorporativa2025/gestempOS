@@ -25,6 +25,8 @@ import {
    getHorasTotalesMesByIdUsuario,
 
 } from '../../features/user/usuarioService';
+import { getTipoUsuario } from '../../utils/authSession';
+import NotificacionesEmpleado from './NotificacionesEmpleado';
 import './Notificaciones.css';
 
 dayjs.locale('es');
@@ -104,7 +106,7 @@ const submenuItems = [
   { key: 'cierres', label: 'Cierres mensuales' },
 ];
 
-const Notificaciones = () => {
+const NotificacionesGestor = () => {
 const [peticiones, setPeticiones] = useState([]);
 const [historialEdiciones, setHistorialEdiciones] = useState([]);
 const [cierresMensuales, setCierresMensuales] = useState([]);
@@ -873,6 +875,13 @@ const setVisibleModalDetalles = async (info) => {
       </Modal>
     </div>
   );
+};
+
+const Notificaciones = () => {
+  if (getTipoUsuario() === 5) {
+    return <NotificacionesEmpleado />;
+  }
+  return <NotificacionesGestor />;
 };
 
 export default Notificaciones;

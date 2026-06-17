@@ -100,7 +100,7 @@ const pages = [
     key: '10',
     icon: <MailOutlined />,
     path: APP_ROUTES.notifications,
-    tipousuario: [1, 3, 4],
+    tipousuario: [1, 3, 4, 5],
   },
 ];
 
@@ -406,7 +406,7 @@ const AppShell = () => {
                 <Route
                   path={APP_ROUTES.notifications}
                   element={
-                    <ProtectedRoute allowedTypes={[1, 3, 4]}>
+                    <ProtectedRoute allowedTypes={[1, 3, 4, 5]}>
                       <Notificaciones />
                     </ProtectedRoute>
                   }
