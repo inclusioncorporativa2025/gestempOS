@@ -150,6 +150,47 @@ export const countNotificacionesPendientes = async () => {
   }
 };
 
+export const countNotificacionesEmpleado = async () => {
+  try {
+    const idEmpresa = getIdEmpresa();
+    const idUsuario = getIdUsuario();
+    if (!idEmpresa || !idUsuario) return { total: 0 };
+
+    const response = await fetch(API_BASE_URL + '/countNotificacionesEmpleado', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idEmpresa, idUsuario }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      console.error('countNotificacionesEmpleado:', data?.error || response.status);
+      return { total: 0 };
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error contando notificaciones del empleado:', error);
+    return { total: 0 };
+  }
+};
+
+export const marcarPeticionesVistas = async () => {
+  try {
+    const idEmpresa = getIdEmpresa();
+    const idUsuario = getIdUsuario();
+    if (!idEmpresa || !idUsuario) return;
+
+    await fetch(API_BASE_URL + '/marcarPeticionesVistas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idEmpresa, idUsuario }),
+    });
+  } catch (error) {
+    console.error('Error marcando peticiones vistas:', error);
+  }
+};
+
 export const getHistorialEdicionesHorario = async () => {
   try {
     const response = await fetch(API_BASE_URL + `/getHistorialEdicionesHorario`, {
@@ -334,7 +375,7 @@ export const getDatosUsuarioMes = async (idUsuario,mes) => {
 };
 
 
-export const responderPeticion = async (peticion, estado) => {
+export const responderPeticion = async (peticion, estado, motivoRechazo) => {
   try {
     const idEmpresa = getIdEmpresa();
     const idUsuario = getIdUsuario();
@@ -342,15 +383,19 @@ export const responderPeticion = async (peticion, estado) => {
     const response = await fetch(API_BASE_URL+`/responderPeticion`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idEmpresa, idUsuario, idPeticion, estado }),
+      body: JSON.stringify({
+        idEmpresa,
+        idUsuario,
+        idPeticion,
+        estado,
+        ...(estado === 3 ? { motivoRechazo } : {}),
+      }),
     });
 
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Error respondiendo petición');
+      throw new Error(data.error || data.message || 'Error respondiendo petición');
     }
-
-    const data = await response.json();
 
     if (estado === 2) {
       await editarRegistro(peticion);

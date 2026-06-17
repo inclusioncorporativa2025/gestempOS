@@ -60,6 +60,11 @@ const Peticiones = sequelize.define('Peticiones', {
         type: DataTypes.TEXT,
         allowNull: true,
     },
+    notificacion_vista: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
 }, {
     tableName: 'peticiones',
     timestamps: false,

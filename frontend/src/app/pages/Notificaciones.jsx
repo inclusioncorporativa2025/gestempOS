@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Card, Button, Table, Modal, Menu, Spin,
+  Card, Button, Table, Modal, Menu, Spin, Form,
   Typography, message, Popconfirm, Tooltip, DatePicker, Input, Popover, Badge, Radio, Tag
 } from 'antd';
 import GradientButton from '../components/shared/GradientButton';
@@ -124,6 +124,10 @@ const [rangoFechasDraft, setRangoFechasDraft] = useState(null);
 const [estadoFiltroDraft, setEstadoFiltroDraft] = useState('todas');
 const [campoFechaRangoDraft, setCampoFechaRangoDraft] = useState('fecha_alta');
 const [activeTab, setActiveTab] = useState('horarios');
+const [rechazoModalAbierto, setRechazoModalAbierto] = useState(false);
+const [peticionARechazar, setPeticionARechazar] = useState(null);
+const [rechazando, setRechazando] = useState(false);
+const [formRechazo] = Form.useForm();
 
   const todasCorrecciones = useMemo(
     () => combinarCorrecciones(peticiones, historialEdiciones),
@@ -468,7 +472,37 @@ const setVisibleModalDetalles = async (info) => {
       fetchHistorialEdiciones();
       notifyNotificacionesActualizadas();
     } catch (error) {
-      message.error('Error al procesar la petición');
+      message.error(error.message || 'Error al procesar la petición');
+    }
+  };
+
+  const abrirModalRechazo = (peticion) => {
+    setPeticionARechazar(peticion);
+    formRechazo.resetFields();
+    setRechazoModalAbierto(true);
+  };
+
+  const cerrarModalRechazo = () => {
+    setRechazoModalAbierto(false);
+    setPeticionARechazar(null);
+    formRechazo.resetFields();
+  };
+
+  const confirmarRechazo = async () => {
+    try {
+      const values = await formRechazo.validateFields();
+      setRechazando(true);
+      await responderPeticion(peticionARechazar, 3, values.motivoRechazo);
+      message.success('Petición rechazada correctamente');
+      cerrarModalRechazo();
+      fetchPeticiones();
+      fetchHistorialEdiciones();
+      notifyNotificacionesActualizadas();
+    } catch (error) {
+      if (error?.errorFields) return;
+      message.error(error.message || 'Error al rechazar la petición');
+    } finally {
+      setRechazando(false);
     }
   };
 
@@ -557,6 +591,17 @@ const setVisibleModalDetalles = async (info) => {
         render: (_, record) => record.gestor?.nombre || '-',
       },
       {
+        title: 'Motivo rechazo',
+        key: 'motivo_rechazo',
+        render: (_, record) => (
+          <Tooltip title={record.motivo_rechazo}>
+            {record.motivo_rechazo?.length > 40
+              ? `${record.motivo_rechazo.slice(0, 40)}...`
+              : record.motivo_rechazo || '—'}
+          </Tooltip>
+        ),
+      },
+      {
         title: 'Fecha resolución',
         key: 'fecha_resolucion',
         render: (_, record) => formatearFecha(obtenerFechaResolucion(record)),
@@ -576,19 +621,17 @@ const setVisibleModalDetalles = async (info) => {
                 okText="Sí"
                 cancelText="No"
               >
-                <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
-              </Popconfirm>
-              <Popconfirm
-                title="¿Rechazar esta petición?"
-                onConfirm={() => handleRespuesta(record, 3)}
-                okText="Sí"
-                cancelText="No"
-              >
-                <Button danger size="small" className="notif-btn-compact">
-                  Rechazar
-                </Button>
-              </Popconfirm>
-            </div>
+              <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
+            </Popconfirm>
+            <Button
+              danger
+              size="small"
+              className="notif-btn-compact"
+              onClick={() => abrirModalRechazo(record)}
+            >
+              Rechazar
+            </Button>
+          </div>
           ) : (
             <span className="notif-procesada">—</span>
           );
@@ -597,8 +640,9 @@ const setVisibleModalDetalles = async (info) => {
     ];
 
     const ocultarPorEstado = {
-      pendientes: ['gestor', 'fecha_resolucion'],
-      aprobadas: ['acciones'],
+      pendientes: ['gestor', 'fecha_resolucion', 'motivo_rechazo'],
+      aprobadas: ['acciones', 'motivo_rechazo'],
+      rechazadas: ['acciones'],
     };
     const ocultar = ocultarPorEstado[estadoFiltro];
 
@@ -795,6 +839,38 @@ const setVisibleModalDetalles = async (info) => {
                 </div>
             </Card>
         </Modal>
+
+      <Modal
+        title="Motivo del rechazo"
+        open={rechazoModalAbierto}
+        onCancel={cerrarModalRechazo}
+        onOk={confirmarRechazo}
+        okText="Rechazar solicitud"
+        cancelText="Cancelar"
+        okButtonProps={{ danger: true, loading: rechazando }}
+        destroyOnClose
+      >
+        <p className="notif-rechazo-ayuda">
+          Indica el motivo para que el empleado pueda consultarlo en su registro.
+        </p>
+        <Form form={formRechazo} layout="vertical">
+          <Form.Item
+            name="motivoRechazo"
+            label="Motivo"
+            rules={[
+              { required: true, message: 'El motivo del rechazo es obligatorio' },
+              { min: 5, message: 'Escribe al menos 5 caracteres' },
+            ]}
+          >
+            <Input.TextArea
+              rows={4}
+              maxLength={500}
+              showCount
+              placeholder="Ej.: El horario solicitado no coincide con el registro del centro..."
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

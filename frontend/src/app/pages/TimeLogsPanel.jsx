@@ -9,7 +9,7 @@ import {
   EnvironmentOutlined,
   CalendarOutlined,
 } from '@ant-design/icons';
-import { crearPeticionEdicion, crearPeticionCierreMes, getPeticionesByIdUsuario, getPeticionesByIdEmpresa } from "../../features/fichaje/fichajeService";
+import { crearPeticionEdicion, crearPeticionCierreMes, getPeticionesByIdUsuario, getPeticionesByIdEmpresa, marcarPeticionesVistas } from "../../features/fichaje/fichajeService";
 import { getDatosUsuarioById } from "../../features/fichaje/fichajeService";
 import { descargarExcelDesdeAPI } from "../../features/user/usuarioService";
 import { crearAusencia } from "../../features/ausencias/ausenciasService";
@@ -65,7 +65,10 @@ const textoTooltipEstadoEdicion = (historial) => {
     return `Solicitud aprobada\nEntrada: ${origEntrada} → ${nuevaEntrada}\nSalida: ${origSalida} → ${nuevaSalida}`;
   }
   if (historial.fecha_cancelacion) {
-    return `Solicitud rechazada\nSe solicitó:\nEntrada: ${origEntrada} → ${nuevaEntrada}\nSalida: ${origSalida} → ${nuevaSalida}`;
+    const motivo = historial.motivo_rechazo
+      ? `\nMotivo: ${historial.motivo_rechazo}`
+      : '';
+    return `Solicitud rechazada\nSe solicitó:\nEntrada: ${origEntrada} → ${nuevaEntrada}\nSalida: ${origSalida} → ${nuevaSalida}${motivo}`;
   }
   return '';
 };
@@ -323,6 +326,8 @@ const fetchData = async () => {
     setFichajesConPeticion(pendingKeys);
     setHistorialPorFichaje(mapHistorial);
     setSolicitudesHorario(todasSolicitudes);
+    await marcarPeticionesVistas();
+    notifyNotificacionesActualizadas();
   } catch (error) {
     console.error("Error al cargar los datos:", error);
     message.error("Error al cargar los datos");
@@ -578,6 +583,11 @@ const handleMonthChange = (date, dateString) => {
           const estado = obtenerEstadoSolicitud(record);
           return <Tag color={colorEstadoSolicitud(estado)}>{estado}</Tag>;
         },
+      },
+      {
+        title: 'Motivo rechazo',
+        key: 'motivo_rechazo',
+        render: (_, record) => record.motivo_rechazo || '—',
       },
       {
         title: 'Fecha solicitud',

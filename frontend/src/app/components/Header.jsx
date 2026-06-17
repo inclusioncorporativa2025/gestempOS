@@ -27,7 +27,7 @@ const MyHeader = () => {
   const { user } = useAuth();
   const [searchValue, setSearchValue] = useState('');
   const { estadoJornada, horasTrabajadas, refetch } = useEstadoJornada();
-  const { pendientes: hayNotificacionesPendientes } = useNotificacionesPendientes();
+  const { pendientes: hayNotificacionesPendientes, esEmpleado } = useNotificacionesPendientes();
 
   const enHome = esRutaFichaje(location.pathname);
   const mostrarJornadaEnHeader =
@@ -116,7 +116,7 @@ const MyHeader = () => {
         </button>
 
         <Link
-          to={APP_ROUTES.notifications}
+          to={esEmpleado ? APP_ROUTES.timeLogs : APP_ROUTES.notifications}
           className="app-header-icon-btn app-header-notificaciones"
           aria-label={hayNotificacionesPendientes ? 'Notificaciones pendientes' : 'Notificaciones'}
         >

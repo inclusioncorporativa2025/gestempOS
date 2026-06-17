@@ -435,3 +435,9 @@
 .notif-procesada {
   color: #888;
 }
+
+.notif-rechazo-ayuda {
+  margin-bottom: 12px;
+  color: #5a6472;
+  font-size: 0.9rem;
+}

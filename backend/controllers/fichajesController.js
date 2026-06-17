@@ -750,16 +750,27 @@ const getHistorialEdicionesHorario = async (req, res) => {
 };
 
 const responderPeticion = async (req, res) => {
-  const { idEmpresa, idUsuario, idPeticion, estado } = req.body;
+  const { idEmpresa, idUsuario, idPeticion, estado, motivoRechazo } = req.body;
 
   try {
     const fechaActual = dayjs().tz('Europe/Madrid').toDate();
 
+    if (estado === 3 && !String(motivoRechazo || '').trim()) {
+      return res.status(400).json({ error: 'El motivo del rechazo es obligatorio' });
+    }
+
     const updateData = {
       id_usuario_gestor: idUsuario,
+      notificacion_vista: false,
       ...(estado === 3
-        ? { fecha_cancelacion: fechaActual }
-        : { fecha_aceptacion: fechaActual })
+        ? {
+          fecha_cancelacion: fechaActual,
+          motivo_rechazo: String(motivoRechazo).trim(),
+        }
+        : {
+          fecha_aceptacion: fechaActual,
+          motivo_rechazo: null,
+        }),
     };
 
     const info = await Peticiones.update(updateData, {
@@ -771,6 +782,63 @@ const responderPeticion = async (req, res) => {
   } catch (error) {
     console.error('Error al recuperar petición:', error);
     res.status(500).json({ error: 'Error' });
+  }
+};
+
+const countNotificacionesEmpleado = async (req, res) => {
+  const { idUsuario, idEmpresa } = req.body;
+
+  if (!idUsuario || !idEmpresa) {
+    return res.status(400).json({ error: 'Datos de usuario incompletos' });
+  }
+
+  try {
+    const total = await Peticiones.count({
+      where: {
+        empresa_id: idEmpresa,
+        id_usuario_peticion: idUsuario,
+        notificacion_vista: false,
+        [Op.or]: [
+          { fecha_aceptacion: { [Op.ne]: null } },
+          { fecha_cancelacion: { [Op.ne]: null } },
+        ],
+      },
+    });
+
+    res.status(200).json({ total });
+  } catch (error) {
+    console.error('Error al contar notificaciones del empleado:', error);
+    res.status(500).json({ error: 'Error al contar notificaciones' });
+  }
+};
+
+const marcarPeticionesVistas = async (req, res) => {
+  const { idUsuario, idEmpresa } = req.body;
+
+  if (!idUsuario || !idEmpresa) {
+    return res.status(400).json({ error: 'Datos de usuario incompletos' });
+  }
+
+  try {
+    const [actualizadas] = await Peticiones.update(
+      { notificacion_vista: true },
+      {
+        where: {
+          empresa_id: idEmpresa,
+          id_usuario_peticion: idUsuario,
+          notificacion_vista: false,
+          [Op.or]: [
+            { fecha_aceptacion: { [Op.ne]: null } },
+            { fecha_cancelacion: { [Op.ne]: null } },
+          ],
+        },
+      },
+    );
+
+    res.status(200).json({ message: 'Notificaciones marcadas como vistas', actualizadas });
+  } catch (error) {
+    console.error('Error al marcar peticiones vistas:', error);
+    res.status(500).json({ error: 'Error al marcar notificaciones' });
   }
 };
 
@@ -1253,7 +1321,9 @@ module.exports = {
     getDatosUsuarioMes,
     responderPeticionCierre,
     getEstadoPersonalEmpresa,
-    countNotificacionesPendientes,
-    getHistorialEdicionesHorario,
+  countNotificacionesPendientes,
+  countNotificacionesEmpleado,
+  marcarPeticionesVistas,
+  getHistorialEdicionesHorario,
 
   };
