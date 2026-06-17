@@ -24,7 +24,7 @@ router.post('/edit', requireRole(ROLE_GROUPS.USER_WRITE), editUsuario);
 router.post('/delete', requireRole(ROLE_GROUPS.USER_WRITE), deleteUsuario);
 router.post(
   '/getHorasTotalesMesByIdUsuario',
-  requireRole(ROLE_GROUPS.COMPANY_STAFF),
+  requireRole(ROLE_GROUPS.FICHAJE),
   getHorasTotalesMesByIdUsuario,
 );
 router.post('/exportar', requireRole(ROLE_GROUPS.COMPANY_STAFF), exportarDatosExcel);

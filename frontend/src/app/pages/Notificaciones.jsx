@@ -432,8 +432,8 @@ const setVisibleModalDetalles = async (info) => {
     const minutosTotales = registrosConDetalles.reduce((sum, item) => sum + (item.minutos || 0), 0);
     const totalHorasTexto = `${Math.floor(minutosTotales / 60)}h ${minutosTotales % 60}m`;
 
-  const jornadaUsuario = await getHorasTotalesMesByIdUsuario(info.mes,info.usuario_alta);
-        setTotalHorasEsperadas(jornadaUsuario.horasMensuales);
+    const jornadaUsuario = await getHorasTotalesMesByIdUsuario(info.mes, info.usuario_alta);
+    setTotalHorasEsperadas(jornadaUsuario?.horasMensuales || 'No configurada');
 
     setRegistroHoras(registrosConDetalles);
     setTotalHoras(totalHorasTexto);

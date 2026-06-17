@@ -221,30 +221,26 @@ export const editMiPerfil = async (values) => {
 };
 
 
-export const getHorasTotalesMesByIdUsuario = async (mes,idUsuario) =>{
-
-  try{
+export const getHorasTotalesMesByIdUsuario = async (mes, idUsuario) => {
+  try {
     const idUsuario_accion = getIdUsuario();
     const idEmpresa = getIdEmpresa();
 
-    const response = await fetch(API_BASE_URL+`/getHorasTotalesMesByIdUsuario`, {
+    const response = await fetch(API_BASE_URL + '/getHorasTotalesMesByIdUsuario', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idUsuario_accion,idEmpresa,mes,idUsuario}),
+      body: JSON.stringify({ idUsuario_accion, idEmpresa, mes, idUsuario }),
     });
 
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Error deleteUsuario');
+      throw new Error(data.message || 'Error al obtener horas esperadas del mes');
     }
 
-    const data = await response.json();
-
-    return data;  // Retorna la respuesta del servidor (esto podría ser un mensaje de éxito o los datos del usuario)
-
+    return data;
   } catch (error) {
-    console.error('Error borrando usuario:', error);
-    throw error;
+    console.error('Error getHorasTotalesMesByIdUsuario:', error);
+    return { horasMensuales: 'No configurada' };
   }
 };
 

@@ -367,7 +367,7 @@ const NotificacionesEmpleado = () => {
       const totalHorasTexto = `${Math.floor(minutosTotales / 60)}h ${minutosTotales % 60}m`;
 
       const jornadaUsuario = await getHorasTotalesMesByIdUsuario(info.mes, idUsuario);
-      setTotalHorasEsperadas(jornadaUsuario.horasMensuales);
+      setTotalHorasEsperadas(jornadaUsuario?.horasMensuales || 'No configurada');
       setRegistroHoras(registrosConDetalles);
       setTotalHoras(totalHorasTexto);
       setVisible(true);

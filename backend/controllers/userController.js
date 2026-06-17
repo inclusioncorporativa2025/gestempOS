@@ -23,6 +23,7 @@ const duration = require('dayjs/plugin/duration');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 const FestivoEmpresa = require('../models/FestivoEmpresa');
 const isBetween = require('dayjs/plugin/isBetween');
+const { ROLES } = require('../middleware/authMiddleware');
 dayjs.extend(isoWeek);
 const ExcelJS = require('exceljs');
 dayjs.extend(duration);
@@ -368,7 +369,18 @@ const deleteUsuario= async (req, res) => {
     }
 };
 const getHorasTotalesMesByIdUsuario = async (req, res) => {
-    const { idUsuario_accion, idEmpresa, mes, idUsuario } = req.body;
+    const { idEmpresa, mes, idUsuario } = req.body;
+    const tipoUsuario = Number(req.user?.tipo_usuario);
+
+    if (tipoUsuario === ROLES.EMPLEADO && Number(idUsuario) !== Number(req.user?.id_usuario)) {
+        return res.status(403).json({ message: 'No autorizado para consultar datos de otro usuario' });
+    }
+
+    if (!idEmpresa || !mes || !idUsuario) {
+        return res.status(400).json({ message: 'Datos incompletos' });
+    }
+
+    const mesNormalizado = String(mes).length === 7 ? mes : dayjs(mes).format('YYYY-MM');
     var horas = 0;
     var minutos = 0;
     try {
@@ -379,7 +391,7 @@ const getHorasTotalesMesByIdUsuario = async (req, res) => {
         });
 
         if (!info.length) {
-            return res.status(404).json({ message: 'No se encontró jornada para este usuario' });
+            return res.status(200).json({ horasMensuales: 'No configurada' });
         }
 
         const tipoJornada = info[0].id_jornada;
@@ -398,15 +410,15 @@ const getHorasTotalesMesByIdUsuario = async (req, res) => {
                 fecha_baja: null,
 
                 fecha: {
-                    [Op.gte]: dayjs(`${mes}-01`).startOf('month').toDate(),
-                    [Op.lte]: dayjs(`${mes}-01`).endOf('month').toDate()
+                    [Op.gte]: dayjs(`${mesNormalizado}-01`).startOf('month').toDate(),
+                    [Op.lte]: dayjs(`${mesNormalizado}-01`).endOf('month').toDate()
                 }
             },
             order: [['fecha', 'ASC']]
         });
 
         if (!infoJornada.length) {
-            return res.status(404).json({ message: 'No se encontró información de jornada' });
+            return res.status(200).json({ horasMensuales: 'No configurada' });
         }
 
         let diasJornada = [];
@@ -423,7 +435,7 @@ const getHorasTotalesMesByIdUsuario = async (req, res) => {
                 'Domingo': 0
             };
 
-            const fechaMes = dayjs(`${mes}-01`);
+            const fechaMes = dayjs(`${mesNormalizado}-01`);
             const daysInMonth = fechaMes.daysInMonth();
             let totalMinutos = 0;
 
