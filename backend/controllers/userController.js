@@ -5,6 +5,7 @@ const UsuarioJornada = require('../models/UsuarioJornada');
 const Jornada = require('../models/Jornada');
 const fichajes = require('../models/Fichajes');
 const mesesCierre = require('../models/MesesCierre');
+const { MESES_CIERRE_ATTRS } = require('../utils/mesesCierreCompat');
 const Ausencias = require('../models/Ausencias');
 const Descansos = require('../models/Descansos');
 const axios = require('axios');
@@ -647,6 +648,7 @@ const exportarDatosExcel = async (req, res) => {
         const meses = Object.keys(fichajesPorMes);
 
         const cierres = await mesesCierre.findAll({
+            attributes: MESES_CIERRE_ATTRS,
             where: {
                 empresa_id: idEmpresa,
                 usuario_alta: id_usuario,

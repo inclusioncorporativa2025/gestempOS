@@ -47,16 +47,21 @@ const getNextId = async (model, empresaId, idField, transaction) => {
  * @param {number} empresaId
  * @param {string} idField
  * @param {object} data  Datos del registro (sin empresa_id ni id)
+ * @param {import('sequelize').Transaction} [transaction]
+ * @param {string[]} [fields] Columnas a persistir (evita columnas aún no migradas)
  * @returns {Promise<object>} Instancia creada
  */
-const createConId = async (model, empresaId, idField, data, transaction) => {
+const createConId = async (model, empresaId, idField, data, transaction, fields) => {
   const empresa = parseEmpresaId(empresaId);
 
   const crear = async (tx) => {
     const nextId = await getNextId(model, empresa, idField, tx);
     return model.create(
       { ...data, empresa_id: empresa, [idField]: nextId },
-      { transaction: tx }
+      {
+        transaction: tx,
+        ...(fields?.length ? { fields: [...fields, 'empresa_id', idField] } : {}),
+      },
     );
   };
 

@@ -23,6 +23,10 @@ const Usuario = require('../models/Usuario');
 const UsuariosEmpresas = require('../models/UsuarioEmpresa');
 const { ROLE_GROUPS, ROLES } = require('../middleware/authMiddleware');
 const { enviarNotificacionGestion } = require('../utils/mailService');
+const {
+  MESES_CIERRE_ATTRS,
+  mesesCierreSoportaNotificacionVista,
+} = require('../utils/mesesCierreCompat');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(customParseFormat);
@@ -335,20 +339,21 @@ const responderPeticionCierre = async (req, res) => {
   }
 
   try {
+    const soportaNotifVista = await mesesCierreSoportaNotificacionVista();
     const updateData = {};
     if (estado === 2) {
       updateData.fecha_aceptacion = dayjs().toDate();
       updateData.fecha_cancelacion = null;
       updateData.usuario_aceptacion = idUsuario;
       updateData.usuario_cancelacion = null;
-      updateData.notificacion_vista = false;
+      if (soportaNotifVista) updateData.notificacion_vista = false;
 
     } else if (estado === 3) {
       updateData.fecha_cancelacion = dayjs().toDate();
       updateData.fecha_aceptacion = null;
       updateData.usuario_cancelacion = idUsuario;
       updateData.usuario_aceptacion = null;
-      updateData.notificacion_vista = false;
+      if (soportaNotifVista) updateData.notificacion_vista = false;
 
     } else {
       return res.status(400).json({ error: 'Estado no válido' });
@@ -652,6 +657,7 @@ const crearPeticionCierreMes = async (req, res) => {
     }
 
     const existente = await MesesCierre.findOne({
+      attributes: MESES_CIERRE_ATTRS,
       where: {
         empresa_id: idEmpresa,
         usuario_alta: idUsuario,
@@ -673,7 +679,7 @@ const crearPeticionCierreMes = async (req, res) => {
       usuario_alta: idUsuario,
       mes: mesFormateado,
       fecha_alta: new Date(),
-    });
+    }, undefined, MESES_CIERRE_ATTRS);
 
     const usuarios = await Usuario.findOne({
       where: { id_usuario: idUsuario },
@@ -818,6 +824,20 @@ const countNotificacionesEmpleado = async (req, res) => {
   }
 
   try {
+    const soportaNotifVista = await mesesCierreSoportaNotificacionVista();
+    const cierresWhere = {
+      empresa_id: idEmpresa,
+      usuario_alta: idUsuario,
+      fecha_baja: null,
+      [Op.or]: [
+        { fecha_aceptacion: { [Op.ne]: null } },
+        { fecha_cancelacion: { [Op.ne]: null } },
+      ],
+    };
+    if (soportaNotifVista) {
+      cierresWhere.notificacion_vista = false;
+    }
+
     const [peticionesCount, cierresCount] = await Promise.all([
       Peticiones.count({
         where: {
@@ -830,18 +850,9 @@ const countNotificacionesEmpleado = async (req, res) => {
           ],
         },
       }),
-      MesesCierre.count({
-        where: {
-          empresa_id: idEmpresa,
-          usuario_alta: idUsuario,
-          fecha_baja: null,
-          notificacion_vista: false,
-          [Op.or]: [
-            { fecha_aceptacion: { [Op.ne]: null } },
-            { fecha_cancelacion: { [Op.ne]: null } },
-          ],
-        },
-      }),
+      soportaNotifVista
+        ? MesesCierre.count({ where: cierresWhere })
+        : Promise.resolve(0),
     ]);
 
     res.status(200).json({ total: peticionesCount + cierresCount });
@@ -859,6 +870,7 @@ const marcarPeticionesVistas = async (req, res) => {
   }
 
   try {
+    const soportaNotifVista = await mesesCierreSoportaNotificacionVista();
     const [actualizadasPeticiones, actualizadasCierres] = await Promise.all([
       Peticiones.update(
         { notificacion_vista: true },
@@ -874,21 +886,23 @@ const marcarPeticionesVistas = async (req, res) => {
           },
         },
       ),
-      MesesCierre.update(
-        { notificacion_vista: true },
-        {
-          where: {
-            empresa_id: idEmpresa,
-            usuario_alta: idUsuario,
-            fecha_baja: null,
-            notificacion_vista: false,
-            [Op.or]: [
-              { fecha_aceptacion: { [Op.ne]: null } },
-              { fecha_cancelacion: { [Op.ne]: null } },
-            ],
-          },
-        },
-      ),
+      soportaNotifVista
+        ? MesesCierre.update(
+            { notificacion_vista: true },
+            {
+              where: {
+                empresa_id: idEmpresa,
+                usuario_alta: idUsuario,
+                fecha_baja: null,
+                notificacion_vista: false,
+                [Op.or]: [
+                  { fecha_aceptacion: { [Op.ne]: null } },
+                  { fecha_cancelacion: { [Op.ne]: null } },
+                ],
+              },
+            },
+          )
+        : Promise.resolve([0]),
     ]);
 
     res.status(200).json({
@@ -931,6 +945,7 @@ const getPeticionesByIdUsuario = async (req, res) => {
     });
 
     const mesesCierre = await MesesCierre.findAll({
+      attributes: MESES_CIERRE_ATTRS,
       where: {
         empresa_id: idEmpresa,
         usuario_alta: idUsuario,
@@ -1164,6 +1179,7 @@ const getCierresMensualesByIdEmpresa = async (req, res) => {
   try {
 
     const meses = await MesesCierre.findAll({
+      attributes: MESES_CIERRE_ATTRS,
       where: {
         fecha_baja: null,
         fecha_aceptacion: null,
@@ -1194,6 +1210,7 @@ const getHistorialCierresMensuales = async (req, res) => {
 
   try {
     const meses = await MesesCierre.findAll({
+      attributes: MESES_CIERRE_ATTRS,
       where: {
         fecha_baja: null,
         [Op.or]: [
