@@ -85,6 +85,10 @@ const colorEstadoSolicitud = (estado) => {
   return 'orange';
 };
 
+const mesTieneCierreActivo = (mesesCierre, mesFormateado) =>
+  (mesesCierre || []).some(
+    (mc) => mc.mes === mesFormateado && !mc.fecha_cancelacion,
+  );
 
 const TimeLogsPanel = () => {
     const [data, setData] = useState([]);
@@ -97,8 +101,6 @@ const TimeLogsPanel = () => {
     const [fichajesConPeticion, setFichajesConPeticion] = useState([]);
     const [historialPorFichaje, setHistorialPorFichaje] = useState({});
     const [solicitudesHorario, setSolicitudesHorario] = useState([]);
-    const [mesesCerrados, setMesesCerrados] = useState([]);
-
 const [mesesCierre, setMesesCierre] = useState([]);
 const [exportModalVisible, setExportModalVisible] = useState(false);
 const [absenceModalVisible, setAbsenceModalVisible] = useState(false);
@@ -356,9 +358,10 @@ const crearPeticionMensual = async () => {
     const data = await crearPeticionCierreMes(mesFormateado);
 
     if (data?.error) {
-      message.error('No se pudo crear la petición');
+      message.error(data.error || 'No se pudo crear la petición');
     } else {
       message.success('Petición creada exitosamente');
+      await fetchData();
       notifyNotificacionesActualizadas();
     }
 
@@ -487,7 +490,7 @@ const handleMonthChange = (date, dateString) => {
 
       const mesSeleccionadoFormateado =
         selectedMonth != null && selectedMonth ? selectedMonth.format('YYYY-MM') : null;
-      const mesCerrado = mesesCierre.some((mc) => mc.mes === mesSeleccionadoFormateado);
+      const mesCerrado = mesTieneCierreActivo(mesesCierre, mesSeleccionadoFormateado);
 
       const isEditable =
         record.tipo === 'Fichaje' &&

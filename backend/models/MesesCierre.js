@@ -48,6 +48,11 @@ const MesesCierre = sequelize.define('MesesCierre', {
         type: DataTypes.DATE,
         allowNull: true,
     },
+    notificacion_vista: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
 }, {
     tableName: 'meses_cierre',
     timestamps: false,

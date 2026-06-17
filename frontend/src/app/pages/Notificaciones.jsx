@@ -14,6 +14,7 @@ import {
   getPeticionesByIdEmpresa,
   responderPeticion,
   getCierresMensualesByIdEmpresa,
+  getHistorialCierresMensuales,
   getDatosUsuarioMes,
   responderPeticionCierre,
   getHistorialEdicionesHorario,
@@ -101,6 +102,19 @@ const filtrarPorEstado = (items, estado) => {
 const obtenerNombreCorreccion = (item) =>
   item.fichaje?.usuario?.nombre || item.solicitante?.nombre || '';
 
+const combinarCierres = (pendientes, historial) => {
+  const ids = new Set();
+  const merged = [];
+  [...(pendientes || []), ...(historial || [])].forEach((item) => {
+    const key = `${item.empresa_id}-${item.id_mes_cierre}`;
+    if (!ids.has(key)) {
+      ids.add(key);
+      merged.push(item);
+    }
+  });
+  return merged;
+};
+
 const submenuItems = [
   { key: 'horarios', label: 'Cambios de horarios' },
   { key: 'cierres', label: 'Cierres mensuales' },
@@ -110,8 +124,10 @@ const NotificacionesGestor = () => {
 const [peticiones, setPeticiones] = useState([]);
 const [historialEdiciones, setHistorialEdiciones] = useState([]);
 const [cierresMensuales, setCierresMensuales] = useState([]);
+const [historialCierres, setHistorialCierres] = useState([]);
 const [loading, setLoading] = useState(true);
 const [loadingHistorial, setLoadingHistorial] = useState(true);
+const [loadingHistorialCierres, setLoadingHistorialCierres] = useState(true);
 const [visible, setVisible] = useState(false);
 const [registroHoras, setRegistroHoras] = useState([]);
 const [totalHoras, setTotalHoras] = useState('');
@@ -136,8 +152,13 @@ const [formRechazo] = Form.useForm();
     [peticiones, historialEdiciones],
   );
 
+  const todosCierres = useMemo(
+    () => combinarCierres(cierresMensuales, historialCierres),
+    [cierresMensuales, historialCierres],
+  );
+
   const contadoresActivos = useMemo(() => {
-    const items = activeTab === 'horarios' ? todasCorrecciones : (cierresMensuales || []);
+    const items = activeTab === 'horarios' ? todasCorrecciones : todosCierres;
     return {
       pendientes: items.filter(
         (item) => !item.fecha_aceptacion && !item.fecha_cancelacion,
@@ -145,7 +166,7 @@ const [formRechazo] = Form.useForm();
       aprobadas: items.filter((item) => item.fecha_aceptacion).length,
       rechazadas: items.filter((item) => item.fecha_cancelacion).length,
     };
-  }, [activeTab, todasCorrecciones, cierresMensuales]);
+  }, [activeTab, todasCorrecciones, todosCierres]);
 
   const campoFechaActivo = campoFechaRango === 'fecha_resolucion'
     ? null
@@ -175,7 +196,7 @@ const [formRechazo] = Form.useForm();
     () => ordenarPorReciente(
       filtrarPorNombre(
         filtrarPorRango(
-          filtrarPorEstado(cierresMensuales, estadoFiltro),
+          filtrarPorEstado(todosCierres, estadoFiltro),
           'fecha_alta',
           rangoFechas,
         ),
@@ -184,7 +205,7 @@ const [formRechazo] = Form.useForm();
       ),
       'fecha_alta',
     ),
-    [cierresMensuales, rangoFechas, busquedaNombre, estadoFiltro],
+    [todosCierres, rangoFechas, busquedaNombre, estadoFiltro],
   );
 
   const sincronizarFiltrosDraft = () => {
@@ -341,7 +362,19 @@ const [formRechazo] = Form.useForm();
     fetchPeticiones();
     fetchCierresMensuales();
     fetchHistorialEdiciones();
+    fetchHistorialCierres();
   }, []);
+
+  const fetchHistorialCierres = async () => {
+    try {
+      const response = await getHistorialCierresMensuales();
+      setHistorialCierres(response.info || []);
+    } catch (error) {
+      message.error('Error al obtener historial de cierres mensuales');
+    } finally {
+      setLoadingHistorialCierres(false);
+    }
+  };
 
   const fetchHistorialEdiciones = async () => {
     try {
@@ -513,6 +546,7 @@ const setVisibleModalDetalles = async (info) => {
       await responderPeticionCierre(peticion, estado);
       message.success(`Cierre mensual ${estado === 2 ? 'aprobado' : 'rechazado'}`);
       fetchCierresMensuales();
+      fetchHistorialCierres();
       notifyNotificacionesActualizadas();
     } catch (error) {
       message.error('Error al procesar el cierre mensual');
@@ -655,75 +689,109 @@ const setVisibleModalDetalles = async (info) => {
     return columnas;
   }, [estadoFiltro]);
 
-  const columnsCierreMensual = [
-    {
-    title: 'Usuario',
-    dataIndex: 'nombre_usuario_alta',
-    key: 'nombre_usuario_alta',
-    },
-    {
-    title: 'DNI',
-    dataIndex: 'dni_usuario_alta',
-    key: 'dni_usuario_alta',
-},
-    {
-      title: 'Mes',
-      dataIndex: 'mes',
-      key: 'mes',
-      render: (mes) => dayjs(mes).format('MMMM [de] YYYY'),
-    },
-    {
-      title: 'Fecha Petición',
-      dataIndex: 'fecha_alta',
-      key: 'fecha_alta',
-      render: (fecha) => formatearFecha(fecha),
-      sorter: (a, b) => dayjs(a.fecha_alta).valueOf() - dayjs(b.fecha_alta).valueOf(),
-      defaultSortOrder: 'descend',
-    },
-    {
-      title: 'Acciones',
-      key: 'acciones',
-      width: 220,
-      render: (_, record) => {
-        const estado = record.fecha_aceptacion
-          ? 'Aprobado'
-          : record.fecha_cancelacion
-          ? 'Rechazado'
-          : 'Pendiente';
+  const columnsCierreMensual = useMemo(() => {
+    const columnas = [
+      {
+        title: 'Usuario',
+        dataIndex: 'nombre_usuario_alta',
+        key: 'nombre_usuario_alta',
+      },
+      {
+        title: 'DNI',
+        dataIndex: 'dni_usuario_alta',
+        key: 'dni_usuario_alta',
+      },
+      {
+        title: 'Mes',
+        dataIndex: 'mes',
+        key: 'mes',
+        render: (mes) => dayjs(mes).format('MMMM [de] YYYY'),
+      },
+      {
+        title: 'Fecha Petición',
+        dataIndex: 'fecha_alta',
+        key: 'fecha_alta',
+        render: (fecha) => formatearFecha(fecha),
+        sorter: (a, b) => dayjs(a.fecha_alta).valueOf() - dayjs(b.fecha_alta).valueOf(),
+        defaultSortOrder: 'descend',
+      },
+      {
+        title: 'Estado',
+        key: 'estado',
+        render: (_, record) => {
+          const estado = obtenerEstado(record);
+          return <Tag color={colorEstadoTag(estado)}>{estado}</Tag>;
+        },
+      },
+      {
+        title: 'Fecha resolución',
+        key: 'fecha_resolucion',
+        render: (_, record) => formatearFecha(obtenerFechaResolucion(record)),
+      },
+      {
+        title: 'Detalle',
+        key: 'detalle',
+        width: 90,
+        render: (_, record) => (
+          <Button
+            icon={<EyeOutlined />}
+            size="small"
+            className="notif-btn-compact"
+            onClick={() => setVisibleModalDetalles(record)}
+          />
+        ),
+      },
+      {
+        title: 'Acciones',
+        key: 'acciones',
+        width: 190,
+        fixed: 'right',
+        render: (_, record) => {
+          const estado = obtenerEstado(record);
 
-        return estado === 'Pendiente' ? (
-          <div className="notif-acciones">
-            <Popconfirm
-              title="¿Aprobar este cierre?"
-              onConfirm={() => handleRespuestaCierre(record, 2)}
-              okText="Sí"
-              cancelText="No"
-            >
-              <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
-            </Popconfirm>
-            <Popconfirm
-              title="¿Rechazar este cierre?"
-              onConfirm={() => handleRespuestaCierre(record, 3)}
-              okText="Sí"
-              cancelText="No"
-            >
-              <Button danger size="small" className="notif-btn-compact">
-                Rechazar
-              </Button>
-            </Popconfirm>
-            <Button
-              icon={<EyeOutlined />}
-              size="small"
-              className="notif-btn-compact"
-              onClick={() => setVisibleModalDetalles(record)}
-            />
-          </div>
-        ) : (
-          <span className="notif-procesada">Ya procesado</span>
-        );
-      }
+          if (estado !== 'Pendiente') {
+            return <span className="notif-procesada">—</span>;
+          }
+
+          return (
+            <div className="notif-acciones">
+              <Popconfirm
+                title="¿Aprobar este cierre?"
+                onConfirm={() => handleRespuestaCierre(record, 2)}
+                okText="Sí"
+                cancelText="No"
+              >
+                <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
+              </Popconfirm>
+              <Popconfirm
+                title="¿Rechazar este cierre?"
+                onConfirm={() => handleRespuestaCierre(record, 3)}
+                okText="Sí"
+                cancelText="No"
+              >
+                <Button danger size="small" className="notif-btn-compact">
+                  Rechazar
+                </Button>
+              </Popconfirm>
+            </div>
+          );
+        },
+      },
+    ];
+
+    const ocultarPorEstado = {
+      pendientes: ['fecha_resolucion'],
+      aprobadas: ['acciones'],
+      rechazadas: ['acciones'],
+    };
+    const ocultar = ocultarPorEstado[estadoFiltro];
+
+    if (ocultar?.length) {
+      return columnas.filter((col) => !ocultar.includes(col.key));
     }
-  ];
+
+    return columnas;
+  }, [estadoFiltro]);
 
   return (
     <div className="notif-layout">
@@ -795,7 +863,7 @@ const setVisibleModalDetalles = async (info) => {
         aria-label="Buscar por nombre"
       />
 
-      <Spin spinning={activeTab === 'horarios' ? (loading || loadingHistorial) : loading}>
+      <Spin spinning={activeTab === 'horarios' ? (loading || loadingHistorial) : (loading || loadingHistorialCierres)}>
         {activeTab === 'horarios' ? (
           <Table
             className="notif-table"

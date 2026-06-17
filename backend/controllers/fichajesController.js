@@ -286,10 +286,15 @@ const getDatosUsuarioById = async (req, res) => {
 };
 
 const getDatosUsuarioMes = async (req, res) => {
-  const {idEmpresa, idUsuario , mes } = req.body;
+  const { idEmpresa, idUsuario, mes } = req.body;
 
   if (!idUsuario || !idEmpresa || !mes) {
     return res.status(400).json({ error: 'Error datos proporcionados' });
+  }
+
+  const tipoUsuario = Number(req.user?.tipo_usuario);
+  if (tipoUsuario === ROLES.EMPLEADO && Number(idUsuario) !== Number(req.user?.id_usuario)) {
+    return res.status(403).json({ error: 'No autorizado para consultar datos de otro usuario' });
   }
 
   try {
@@ -334,14 +339,16 @@ const responderPeticionCierre = async (req, res) => {
     if (estado === 2) {
       updateData.fecha_aceptacion = dayjs().toDate();
       updateData.fecha_cancelacion = null;
-      updateData.usuario_aceptacion =idUsuario;
-      updateData.usuario_cancelacion =null;
+      updateData.usuario_aceptacion = idUsuario;
+      updateData.usuario_cancelacion = null;
+      updateData.notificacion_vista = false;
 
     } else if (estado === 3) {
       updateData.fecha_cancelacion = dayjs().toDate();
       updateData.fecha_aceptacion = null;
-      updateData.usuario_cancelacion =idUsuario;
+      updateData.usuario_cancelacion = idUsuario;
       updateData.usuario_aceptacion = null;
+      updateData.notificacion_vista = false;
 
     } else {
       return res.status(400).json({ error: 'Estado no válido' });
@@ -644,6 +651,24 @@ const crearPeticionCierreMes = async (req, res) => {
       return res.status(400).json({ error: 'Formato de mes inválido' });
     }
 
+    const existente = await MesesCierre.findOne({
+      where: {
+        empresa_id: idEmpresa,
+        usuario_alta: idUsuario,
+        mes: mesFormateado,
+        fecha_baja: null,
+        fecha_cancelacion: null,
+      },
+    });
+
+    if (existente) {
+      return res.status(409).json({
+        error: existente.fecha_aceptacion
+          ? 'Este mes ya está cerrado y aprobado'
+          : 'Ya existe una solicitud de cierre pendiente para este mes',
+      });
+    }
+
     const info = await createConId(MesesCierre, idEmpresa, 'id_mes_cierre', {
       usuario_alta: idUsuario,
       mes: mesFormateado,
@@ -793,19 +818,33 @@ const countNotificacionesEmpleado = async (req, res) => {
   }
 
   try {
-    const total = await Peticiones.count({
-      where: {
-        empresa_id: idEmpresa,
-        id_usuario_peticion: idUsuario,
-        notificacion_vista: false,
-        [Op.or]: [
-          { fecha_aceptacion: { [Op.ne]: null } },
-          { fecha_cancelacion: { [Op.ne]: null } },
-        ],
-      },
-    });
+    const [peticionesCount, cierresCount] = await Promise.all([
+      Peticiones.count({
+        where: {
+          empresa_id: idEmpresa,
+          id_usuario_peticion: idUsuario,
+          notificacion_vista: false,
+          [Op.or]: [
+            { fecha_aceptacion: { [Op.ne]: null } },
+            { fecha_cancelacion: { [Op.ne]: null } },
+          ],
+        },
+      }),
+      MesesCierre.count({
+        where: {
+          empresa_id: idEmpresa,
+          usuario_alta: idUsuario,
+          fecha_baja: null,
+          notificacion_vista: false,
+          [Op.or]: [
+            { fecha_aceptacion: { [Op.ne]: null } },
+            { fecha_cancelacion: { [Op.ne]: null } },
+          ],
+        },
+      }),
+    ]);
 
-    res.status(200).json({ total });
+    res.status(200).json({ total: peticionesCount + cierresCount });
   } catch (error) {
     console.error('Error al contar notificaciones del empleado:', error);
     res.status(500).json({ error: 'Error al contar notificaciones' });
@@ -820,22 +859,42 @@ const marcarPeticionesVistas = async (req, res) => {
   }
 
   try {
-    const [actualizadas] = await Peticiones.update(
-      { notificacion_vista: true },
-      {
-        where: {
-          empresa_id: idEmpresa,
-          id_usuario_peticion: idUsuario,
-          notificacion_vista: false,
-          [Op.or]: [
-            { fecha_aceptacion: { [Op.ne]: null } },
-            { fecha_cancelacion: { [Op.ne]: null } },
-          ],
+    const [actualizadasPeticiones, actualizadasCierres] = await Promise.all([
+      Peticiones.update(
+        { notificacion_vista: true },
+        {
+          where: {
+            empresa_id: idEmpresa,
+            id_usuario_peticion: idUsuario,
+            notificacion_vista: false,
+            [Op.or]: [
+              { fecha_aceptacion: { [Op.ne]: null } },
+              { fecha_cancelacion: { [Op.ne]: null } },
+            ],
+          },
         },
-      },
-    );
+      ),
+      MesesCierre.update(
+        { notificacion_vista: true },
+        {
+          where: {
+            empresa_id: idEmpresa,
+            usuario_alta: idUsuario,
+            fecha_baja: null,
+            notificacion_vista: false,
+            [Op.or]: [
+              { fecha_aceptacion: { [Op.ne]: null } },
+              { fecha_cancelacion: { [Op.ne]: null } },
+            ],
+          },
+        },
+      ),
+    ]);
 
-    res.status(200).json({ message: 'Notificaciones marcadas como vistas', actualizadas });
+    res.status(200).json({
+      message: 'Notificaciones marcadas como vistas',
+      actualizadas: actualizadasPeticiones[0] + actualizadasCierres[0],
+    });
   } catch (error) {
     console.error('Error al marcar peticiones vistas:', error);
     res.status(500).json({ error: 'Error al marcar notificaciones' });
@@ -876,7 +935,6 @@ const getPeticionesByIdUsuario = async (req, res) => {
         empresa_id: idEmpresa,
         usuario_alta: idUsuario,
         fecha_baja: null,
-        usuario_cancelacion:null
       },
       order: [['fecha_alta', 'DESC']],
       raw: true,
@@ -1066,6 +1124,35 @@ const countNotificacionesPendientes = async (req, res) => {
   }
 };
 
+const enriquecerMesesCierreConUsuarios = async (meses) => {
+  const userIds = [...new Set(meses.map((m) => m.usuario_alta))];
+
+  const usuarios = userIds.length
+    ? await Usuario.findAll({
+        where: { id_usuario: userIds },
+        attributes: ['id_usuario', 'nombre', 'dni'],
+        raw: true,
+      })
+    : [];
+
+  const mapUsuarios = {};
+  usuarios.forEach((usuario) => {
+    mapUsuarios[usuario.id_usuario] = {
+      nombre: usuario.nombre,
+      dni: usuario.dni,
+    };
+  });
+
+  return meses.map((m) => {
+    const usuario = mapUsuarios[m.usuario_alta] || {};
+    return {
+      ...m,
+      nombre_usuario_alta: usuario.nombre || 'Desconocido',
+      dni_usuario_alta: usuario.dni || 'Desconocido',
+    };
+  });
+};
+
 const getCierresMensualesByIdEmpresa = async (req, res) => {
   const esRoot = esRootPlataforma(req);
   const idEmpresa = resolveIdEmpresa(req);
@@ -1087,36 +1174,44 @@ const getCierresMensualesByIdEmpresa = async (req, res) => {
       raw: true,
     });
 
-    const userIds = [...new Set(meses.map(m => m.usuario_alta))];
-
-    const usuarios = await Usuario.findAll({
-      where: { id_usuario: userIds },
-      attributes: ['id_usuario', 'nombre','dni'],
-      raw: true,
-    });
-
-const mapUsuarios = {};
-usuarios.forEach(usuario => {
-  mapUsuarios[usuario.id_usuario] = {
-    nombre: usuario.nombre,
-    dni: usuario.dni
-  };
-});
-
-const infoConNombre = meses.map(m => {
-  const usuario = mapUsuarios[m.usuario_alta] || {};
-  return {
-    ...m,
-    nombre_usuario_alta: usuario.nombre || 'Desconocido',
-    dni_usuario_alta: usuario.dni || 'Desconocido'
-  };
-});
+    const infoConNombre = await enriquecerMesesCierreConUsuarios(meses);
 
     res.status(200).json({ message: 'Peticiones recuperadas', info: infoConNombre });
 
   } catch (error) {
     console.error('Error al recuperar peticiones:', error);
     res.status(500).json({ error: 'Error al recuperar datos' });
+  }
+};
+
+const getHistorialCierresMensuales = async (req, res) => {
+  const esRoot = esRootPlataforma(req);
+  const idEmpresa = resolveIdEmpresa(req);
+
+  if (!esRoot && !idEmpresa) {
+    return res.status(400).json({ error: 'Empresa no indicada' });
+  }
+
+  try {
+    const meses = await MesesCierre.findAll({
+      where: {
+        fecha_baja: null,
+        [Op.or]: [
+          { fecha_aceptacion: { [Op.ne]: null } },
+          { fecha_cancelacion: { [Op.ne]: null } },
+        ],
+        ...(esRoot ? {} : { empresa_id: idEmpresa }),
+      },
+      order: [['fecha_alta', 'DESC']],
+      raw: true,
+    });
+
+    const infoConNombre = await enriquecerMesesCierreConUsuarios(meses);
+
+    res.status(200).json({ message: 'Historial recuperado', info: infoConNombre });
+  } catch (error) {
+    console.error('Error al recuperar historial de cierres:', error);
+    res.status(500).json({ error: 'Error al recuperar historial' });
   }
 };
 
@@ -1318,6 +1413,7 @@ module.exports = {
     responderPeticion,
     crearPeticionCierreMes,
     getCierresMensualesByIdEmpresa,
+    getHistorialCierresMensuales,
     getDatosUsuarioMes,
     responderPeticionCierre,
     getEstadoPersonalEmpresa,

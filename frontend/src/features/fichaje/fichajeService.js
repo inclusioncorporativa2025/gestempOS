@@ -212,6 +212,27 @@ export const getHistorialEdicionesHorario = async () => {
   }
 };
 
+export const getHistorialCierresMensuales = async () => {
+  try {
+    const response = await fetch(API_BASE_URL + '/getHistorialCierresMensuales', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyGestionEmpresa()),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      console.error('getHistorialCierresMensuales:', data?.error || response.status);
+      return { info: [] };
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error obteniendo historial de cierres:', error);
+    return { info: [] };
+  }
+};
+
 export const getCierresMensualesByIdEmpresa = async () => {
   try {
     const response = await fetch(API_BASE_URL+`/getCierresMensualesByIdEmpresa`, {
@@ -308,25 +329,25 @@ export const crearPeticionEdicion = async (values) => {
 
 export const crearPeticionCierreMes = async (mes) => {
   try {
-    const idUsuario = getIdUsuario(); 
-    const idEmpresa = getIdEmpresa(); 
+    const idUsuario = getIdUsuario();
+    const idEmpresa = getIdEmpresa();
 
-    const response = await fetch(API_BASE_URL+`/crearPeticionCierreMes`, {
+    const response = await fetch(API_BASE_URL + '/crearPeticionCierreMes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idUsuario, idEmpresa, mes }),
     });
 
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-       await response.json();
+      return { error: data.error || 'Error al crear la petición de cierre' };
     }
 
-    const data = await response.json();
-
-    return data; 
+    return data;
   } catch (error) {
-    console.error('Error obteniendo datos:', error);
-  }   
+    console.error('Error creando petición de cierre:', error);
+    return { error: 'Error al crear la petición de cierre' };
+  }
 };
 
 

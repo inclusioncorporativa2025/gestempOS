@@ -23,6 +23,7 @@ const {
   countNotificacionesEmpleado,
   marcarPeticionesVistas,
   getHistorialEdicionesHorario,
+  getHistorialCierresMensuales,
 } = require('../controllers/fichajesController');
 const { requireRole, ROLE_GROUPS } = require('../middleware/authMiddleware');
 
@@ -50,7 +51,8 @@ router.post('/marcarPeticionesVistas', requireRole(ROLE_GROUPS.FICHAJE), marcarP
 router.post('/getPeticionesByIdEmpresa', requireRole(GESTION_PETICIONES), getPeticionesByIdEmpresa);
 router.post('/responderPeticion', requireRole(GESTION_PETICIONES), responderPeticion);
 router.post('/getCierresMensualesByIdEmpresa', requireRole(GESTION_PETICIONES), getCierresMensualesByIdEmpresa);
-router.post('/getDatosUsuarioMes', requireRole(GESTION_PETICIONES), getDatosUsuarioMes);
+router.post('/getHistorialCierresMensuales', requireRole(GESTION_PETICIONES), getHistorialCierresMensuales);
+router.post('/getDatosUsuarioMes', requireRole(ROLE_GROUPS.FICHAJE), getDatosUsuarioMes);
 router.post('/responderPeticionCierre', requireRole(GESTION_PETICIONES), responderPeticionCierre);
 router.post('/getEstadoPersonalEmpresa', requireRole(ROLE_GROUPS.PRESENCIA_EQUIPO), getEstadoPersonalEmpresa);
 
