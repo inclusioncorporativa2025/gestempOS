@@ -1,26 +1,377 @@
 .notif-layout {
-  background-color: var(--background);
+  width: 100%;
   min-height: 100%;
   padding: 24px;
   box-sizing: border-box;
+  background: var(--background);
 }
 
-.notif-card {
-  margin-top: 16px;
-  width: 100%;
+.notif-layout__title {
+  margin: 0 0 20px !important;
+  font-weight: 500 !important;
 }
 
-.notif-filtros {
+.notif-submenu {
+  display: inline-flex !important;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 24px;
+  padding: 5px;
+  gap: 4px;
+  background: #fff;
+  border: none !important;
+  border-radius: 999px;
+  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.08);
+  line-height: 1;
+}
+
+.notif-submenu.ant-menu-horizontal {
+  border-bottom: none !important;
+}
+
+.notif-submenu .ant-menu-item {
+  top: 0 !important;
+  height: 36px;
+  line-height: 36px;
+  margin: 0 !important;
+  padding-inline: 18px !important;
+  border-radius: 999px !important;
+  color: #5a6472;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.notif-submenu .ant-menu-item::after {
+  display: none !important;
+}
+
+.notif-submenu .ant-menu-item:hover {
+  background: rgba(var(--color-primary-rgb), 0.08) !important;
+  color: var(--color-primary) !important;
+}
+
+.notif-submenu .ant-menu-item-selected {
+  background: rgba(var(--color-primary-rgb), 0.14) !important;
+  color: #5a6472 !important;
+  font-weight: var(--font-weight-medium);
+}
+
+.notif-submenu .ant-menu-item-selected:hover {
+  background: rgba(var(--color-primary-rgb), 0.18) !important;
+  color: #5a6472 !important;
+}
+
+.notif-stats-row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
   margin-bottom: 16px;
 }
 
-.notif-filtro-nombre {
+.notif-stats {
+  display: flex;
+  flex: 1;
+  gap: 12px;
+  min-width: 0;
+}
+
+.notif-stat {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 14px 18px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+  text-align: left;
+  appearance: none;
+}
+
+.notif-stat:hover {
+  transform: translateY(-1px);
+}
+
+.notif-stat--active {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.notif-stat-value {
+  font-size: 1.5rem;
+  font-weight: var(--font-weight-medium, 600);
+  line-height: 1.1;
+  color: #1a2332;
+}
+
+.notif-stat-label {
+  font-size: 0.82rem;
+  color: #5a6472;
+}
+
+.notif-stat--pendiente {
+  background: rgba(250, 173, 20, 0.12);
+}
+
+.notif-stat--aprobada {
+  background: rgba(82, 196, 26, 0.1);
+}
+
+.notif-stat--rechazada {
+  background: rgba(90, 100, 114, 0.08);
+}
+
+.notif-filter-btn {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  padding: 0;
+  flex-shrink: 0;
+  color: #5a6472;
+}
+
+.notif-filter-btn:hover {
+  color: var(--color-primary) !important;
+  background: rgba(var(--color-primary-rgb), 0.08) !important;
+}
+
+.notif-search {
+  max-width: 360px;
   width: 100%;
-  max-width: 280px;
+  margin-bottom: 16px;
+  border-radius: 999px;
+}
+
+.notif-search.ant-input-affix-wrapper {
+  border-radius: 999px;
+  padding: 8px 14px;
+}
+
+.notif-search .ant-input {
+  border-radius: 999px;
+}
+
+.notif-table .ant-table {
+  background: transparent;
+}
+
+.notif-table .ant-table-thead > tr > th {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.1) !important;
+}
+
+.notif-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.06) !important;
+}
+
+.notif-table .ant-table-tbody > tr:hover > td {
+  background: rgba(var(--color-primary-rgb), 0.04) !important;
+}
+
+.notif-filter-popover .ant-popover-inner {
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.notif-filter-panel {
+  width: 340px;
+  max-width: 100%;
+}
+
+.notif-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.notif-filter-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.notif-filter-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.notif-filter-section-title {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #8c8c8c;
+}
+
+.notif-filter-calendario-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.notif-calendario-btn {
+  flex-shrink: 0;
+  min-width: 118px;
+  height: 38px;
+  border-radius: 8px;
+  border-color: #d9d9d9;
+  font-weight: 500;
+}
+
+.notif-filter-radio-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-filter-radio-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  color: #8c8c8c;
+}
+
+.notif-filter-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notif-filter-radio-group .ant-radio-wrapper {
+  margin-inline-end: 0;
+  font-size: 0.82rem;
+}
+
+.notif-filter-estado-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notif-filter-estado-group .ant-radio-wrapper {
+  margin-inline-end: 0;
+  font-size: 0.85rem;
+}
+
+.notif-filter-select {
+  width: 100%;
+}
+
+.notif-filter-footer {
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px 16px;
+}
+
+.notif-filter-btn-limpiar,
+.notif-filter-btn-aplicar {
+  flex: 1;
+  height: 40px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.notif-filter-btn-limpiar {
+  background: #f5f5f5;
+  border-color: #f5f5f5;
+  color: #595959;
+}
+
+.notif-filter-btn-limpiar:hover {
+  background: #ebebeb !important;
+  border-color: #ebebeb !important;
+  color: #262626 !important;
+}
+
+.notif-mini-calendar-popover .ant-popover-inner {
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.notif-mini-calendar-panel {
+  width: 268px;
+}
+
+.notif-mini-calendar-hint {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #f0f0f0;
+  font-size: 0.72rem;
+  color: #666;
+}
+
+.notif-mini-calendar-inner {
+  position: relative;
+  min-height: 268px;
+}
+
+.notif-mini-range-input-hidden.ant-picker {
+  position: absolute;
+  width: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.notif-mini-calendar-inner .ant-picker-dropdown {
+  position: static !important;
+  inset: auto !important;
+  padding: 0;
+}
+
+.notif-mini-range-popup .ant-picker-panel-container,
+.notif-mini-calendar-inner .ant-picker-panel-container {
+  box-shadow: none;
+  background: transparent;
+}
+
+.notif-mini-range-popup .ant-picker-panels > .ant-picker-panel:last-child,
+.notif-mini-calendar-inner .ant-picker-panels > .ant-picker-panel:last-child {
+  display: none;
+}
+
+.notif-mini-range-popup .ant-picker-panel,
+.notif-mini-calendar-inner .ant-picker-panel {
+  width: 252px;
+  border: none;
+}
+
+.notif-mini-range-popup .ant-picker-header,
+.notif-mini-calendar-inner .ant-picker-header {
+  border-bottom: none;
+}
+
+.notif-mini-range-popup .ant-picker-content th,
+.notif-mini-calendar-inner .ant-picker-content th {
+  font-size: 0.72rem;
+  color: #8c8c8c;
+}
+
+.notif-mini-range-popup .ant-picker-cell,
+.notif-mini-calendar-inner .ant-picker-cell {
+  padding: 1px 0;
+}
+
+.notif-mini-range-popup .ant-picker-cell-inner,
+.notif-mini-calendar-inner .ant-picker-cell-inner {
+  min-width: 28px;
+  height: 28px;
+  line-height: 28px;
+  font-size: 0.82rem;
+  border-radius: 6px;
 }
 
 .notif-modal {
@@ -45,10 +396,17 @@
 }
 
 .notif-acciones {
-  display: flex;
-  flex-wrap: wrap;
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
+}
+
+.notif-acciones > .ant-popconfirm,
+.notif-acciones > .ant-btn {
+  flex-shrink: 0;
 }
 
 .notif-acciones .notif-btn-compact.gradient-btn {
@@ -58,7 +416,13 @@
 }
 
 .notif-acciones .gradient-btn-ring {
+  display: inline-flex;
+  width: auto;
   padding: 2px;
+}
+
+.notif-acciones .gradient-btn-ring .gradient-btn {
+  flex: 0 0 auto;
 }
 
 .notif-acciones .notif-btn-compact.ant-btn-sm {

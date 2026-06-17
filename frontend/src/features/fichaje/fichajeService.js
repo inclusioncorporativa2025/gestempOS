@@ -158,12 +158,13 @@ export const getHistorialEdicionesHorario = async () => {
       body: JSON.stringify(bodyGestionEmpresa()),
     });
 
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      await response.json();
+      console.error('getHistorialEdicionesHorario:', data?.error || response.status);
       return { data: [] };
     }
 
-    return await response.json();
+    return data;
   } catch (error) {
     console.error('Error obteniendo historial de ediciones:', error);
     return { data: [] };
@@ -178,16 +179,17 @@ export const getCierresMensualesByIdEmpresa = async () => {
       body: JSON.stringify(bodyGestionEmpresa()),
     });
 
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      await response.json();
+      console.error('getCierresMensualesByIdEmpresa:', data?.error || response.status);
+      return { info: [] };
     }
 
-    const data = await response.json();
-
-    return data; 
+    return data;
   } catch (error) {
     console.error('Error obteniendo datos:', error);
-  }   
+    return { info: [] };
+  }
 };
 
 export const responderPeticionCierre = async (peticion, estado) => {
@@ -295,16 +297,17 @@ export const getPeticionesByIdEmpresa = async () => {
       body: JSON.stringify(bodyGestionEmpresa()),
     });
 
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-       await response.json();
+      console.error('getPeticionesByIdEmpresa:', data?.error || response.status);
+      return { data: [] };
     }
 
-    const data = await response.json();
-
-    return data; 
+    return data;
   } catch (error) {
     console.error('Error obteniendo datos:', error);
-  }   
+    return { data: [] };
+  }
 };
 
 

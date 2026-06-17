@@ -56,6 +56,10 @@ const Peticiones = sequelize.define('Peticiones', {
         type: DataTypes.DATE,
         allowNull: true,
     },
+    motivo_rechazo: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+    },
 }, {
     tableName: 'peticiones',
     timestamps: false,

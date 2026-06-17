@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Card, Col, Row, Button, Table, Layout, Modal,
-  Typography, message, Popconfirm, Tooltip, DatePicker, Input
+  Card, Button, Table, Modal, Menu, Spin,
+  Typography, message, Popconfirm, Tooltip, DatePicker, Input, Popover, Badge, Radio, Tag
 } from 'antd';
 import GradientButton from '../components/shared/GradientButton';
-import { EyeOutlined, SearchOutlined } from '@ant-design/icons';
+import { EyeOutlined, SearchOutlined, FilterOutlined, CalendarOutlined, CloseOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -34,12 +34,13 @@ dayjs.extend(timezone);
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
 
-const filtrarPorRango = (items, campoFecha, rango) => {
+const filtrarPorRango = (items, campoFecha, rango, obtenerFecha) => {
   if (!rango?.[0] || !rango?.[1]) return items;
   const desde = rango[0].startOf('day');
   const hasta = rango[1].endOf('day');
   return items.filter((item) => {
-    const fecha = dayjs(item[campoFecha]);
+    const raw = obtenerFecha ? obtenerFecha(item) : item[campoFecha];
+    const fecha = dayjs(raw);
     return (
       fecha.isValid()
       && !fecha.isBefore(desde)
@@ -47,6 +48,9 @@ const filtrarPorRango = (items, campoFecha, rango) => {
     );
   });
 };
+
+const obtenerFechaResolucionItem = (item) =>
+  item.fecha_aceptacion || item.fecha_cancelacion;
 
 const ordenarPorReciente = (items, campoFecha) =>
   [...items].sort(
@@ -66,6 +70,40 @@ const filtrarPorNombre = (items, obtenerNombre, termino) => {
   return items.filter((item) => normalizarTexto(obtenerNombre(item)).includes(busqueda));
 };
 
+const combinarCorrecciones = (pendientes, historial) => {
+  const ids = new Set();
+  const merged = [];
+  [...(pendientes || []), ...(historial || [])].forEach((item) => {
+    if (!ids.has(item.id_peticion)) {
+      ids.add(item.id_peticion);
+      merged.push(item);
+    }
+  });
+  return merged;
+};
+
+const filtrarPorEstado = (items, estado) => {
+  if (!estado || estado === 'todas') return items;
+  if (estado === 'pendientes') {
+    return items.filter((item) => !item.fecha_aceptacion && !item.fecha_cancelacion);
+  }
+  if (estado === 'aprobadas') {
+    return items.filter((item) => Boolean(item.fecha_aceptacion));
+  }
+  if (estado === 'rechazadas') {
+    return items.filter((item) => Boolean(item.fecha_cancelacion));
+  }
+  return items;
+};
+
+const obtenerNombreCorreccion = (item) =>
+  item.fichaje?.usuario?.nombre || item.solicitante?.nombre || '';
+
+const submenuItems = [
+  { key: 'horarios', label: 'Cambios de horarios' },
+  { key: 'cierres', label: 'Cierres mensuales' },
+];
+
 const Notificaciones = () => {
 const [peticiones, setPeticiones] = useState([]);
 const [historialEdiciones, setHistorialEdiciones] = useState([]);
@@ -78,47 +116,220 @@ const [totalHoras, setTotalHoras] = useState('');
 const [totalHorasEsperadas, setTotalHorasEsperadas] = useState(0);
 const [rangoFechas, setRangoFechas] = useState(null);
 const [busquedaNombre, setBusquedaNombre] = useState('');
+const [filtroAbierto, setFiltroAbierto] = useState(false);
+const [calendarioAbierto, setCalendarioAbierto] = useState(false);
+const [estadoFiltro, setEstadoFiltro] = useState('todas');
+const [campoFechaRango, setCampoFechaRango] = useState('fecha_alta');
+const [rangoFechasDraft, setRangoFechasDraft] = useState(null);
+const [estadoFiltroDraft, setEstadoFiltroDraft] = useState('todas');
+const [campoFechaRangoDraft, setCampoFechaRangoDraft] = useState('fecha_alta');
+const [activeTab, setActiveTab] = useState('horarios');
 
-  const peticionesFiltradas = useMemo(
+  const todasCorrecciones = useMemo(
+    () => combinarCorrecciones(peticiones, historialEdiciones),
+    [peticiones, historialEdiciones],
+  );
+
+  const contadoresActivos = useMemo(() => {
+    const items = activeTab === 'horarios' ? todasCorrecciones : (cierresMensuales || []);
+    return {
+      pendientes: items.filter(
+        (item) => !item.fecha_aceptacion && !item.fecha_cancelacion,
+      ).length,
+      aprobadas: items.filter((item) => item.fecha_aceptacion).length,
+      rechazadas: items.filter((item) => item.fecha_cancelacion).length,
+    };
+  }, [activeTab, todasCorrecciones, cierresMensuales]);
+
+  const campoFechaActivo = campoFechaRango === 'fecha_resolucion'
+    ? null
+    : campoFechaRango;
+  const obtenerFechaFiltro = campoFechaRango === 'fecha_resolucion'
+    ? obtenerFechaResolucionItem
+    : null;
+
+  const correccionesFiltradas = useMemo(
     () => ordenarPorReciente(
       filtrarPorNombre(
-        filtrarPorRango(peticiones, 'fecha_alta', rangoFechas),
-        (item) => item.fichaje?.usuario?.nombre,
+        filtrarPorRango(
+          filtrarPorEstado(todasCorrecciones, estadoFiltro),
+          campoFechaActivo,
+          rangoFechas,
+          obtenerFechaFiltro,
+        ),
+        obtenerNombreCorreccion,
         busquedaNombre,
       ),
       'fecha_alta',
     ),
-    [peticiones, rangoFechas, busquedaNombre],
+    [todasCorrecciones, estadoFiltro, rangoFechas, busquedaNombre, campoFechaRango],
   );
 
   const cierresFiltrados = useMemo(
     () => ordenarPorReciente(
       filtrarPorNombre(
-        filtrarPorRango(cierresMensuales, 'fecha_alta', rangoFechas),
+        filtrarPorRango(
+          filtrarPorEstado(cierresMensuales, estadoFiltro),
+          'fecha_alta',
+          rangoFechas,
+        ),
         (item) => item.nombre_usuario_alta,
         busquedaNombre,
       ),
       'fecha_alta',
     ),
-    [cierresMensuales, rangoFechas, busquedaNombre],
+    [cierresMensuales, rangoFechas, busquedaNombre, estadoFiltro],
   );
 
-  const historialFiltrado = useMemo(
-    () => ordenarPorReciente(
-      filtrarPorNombre(
-        filtrarPorRango(historialEdiciones, 'fecha_alta', rangoFechas),
-        (item) => item.fichaje?.usuario?.nombre || item.solicitante?.nombre,
-        busquedaNombre,
-      ),
-      'fecha_alta',
-    ),
-    [historialEdiciones, rangoFechas, busquedaNombre],
-  );
-
-  const limpiarFiltros = () => {
-    setRangoFechas(null);
-    setBusquedaNombre('');
+  const sincronizarFiltrosDraft = () => {
+    setRangoFechasDraft(rangoFechas);
+    setEstadoFiltroDraft(estadoFiltro);
+    setCampoFechaRangoDraft(campoFechaRango);
   };
+
+  const limpiarFiltrosDraft = () => {
+    setRangoFechasDraft(null);
+    setEstadoFiltroDraft('todas');
+    setCampoFechaRangoDraft('fecha_alta');
+    setCalendarioAbierto(false);
+  };
+
+  const aplicarFiltros = () => {
+    setRangoFechas(rangoFechasDraft);
+    setEstadoFiltro(estadoFiltroDraft);
+    setCampoFechaRango(campoFechaRangoDraft);
+    setCalendarioAbierto(false);
+    setFiltroAbierto(false);
+  };
+
+  const seleccionarEstadoRapido = (estado) => {
+    const siguiente = estadoFiltro === estado ? 'todas' : estado;
+    setEstadoFiltro(siguiente);
+    setEstadoFiltroDraft(siguiente);
+  };
+
+  const handleTabChange = ({ key }) => {
+    setActiveTab(key);
+    setEstadoFiltro('todas');
+    setEstadoFiltroDraft('todas');
+  };
+
+  const handleFiltroOpenChange = (open) => {
+    if (open) {
+      sincronizarFiltrosDraft();
+    } else {
+      setCalendarioAbierto(false);
+    }
+    setFiltroAbierto(open);
+  };
+
+  const filtrosAvanzadosActivos = Boolean(rangoFechas)
+    || estadoFiltro !== 'todas'
+    || campoFechaRango !== 'fecha_alta';
+
+  const hintCalendario = !rangoFechasDraft?.[0]
+    ? 'Selecciona fecha de inicio'
+    : !rangoFechasDraft?.[1]
+    ? 'Selecciona fecha de fin'
+    : `${rangoFechasDraft[0].format('DD/MM/YYYY')} – ${rangoFechasDraft[1].format('DD/MM/YYYY')}`;
+
+  const textoBotonCalendario = rangoFechasDraft?.[0] && rangoFechasDraft?.[1]
+    ? `${rangoFechasDraft[0].format('DD/MM')} – ${rangoFechasDraft[1].format('DD/MM')}`
+    : 'Calendario';
+
+  const contenidoMiniCalendario = (
+    <div
+      className="notif-mini-calendar-panel"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <span className="notif-mini-calendar-hint">{hintCalendario}</span>
+      <div className="notif-mini-calendar-inner">
+        <RangePicker
+          open
+          value={rangoFechasDraft}
+          onChange={(dates) => {
+            setRangoFechasDraft(dates);
+            if (dates?.[0] && dates?.[1]) {
+              setCalendarioAbierto(false);
+            }
+          }}
+          format="DD/MM/YYYY"
+          allowClear
+          getPopupContainer={(trigger) => trigger.parentElement}
+          popupClassName="notif-mini-range-popup"
+          className="notif-mini-range-input-hidden"
+          aria-label="Seleccionar rango de fechas"
+        />
+      </div>
+    </div>
+  );
+
+  const contenidoFiltro = (
+    <div className="notif-filter-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="notif-filter-header">
+        <span className="notif-filter-title">Filtros</span>
+        <Button
+          type="text"
+          size="small"
+          icon={<CloseOutlined />}
+          onClick={() => handleFiltroOpenChange(false)}
+          aria-label="Cerrar filtros"
+        />
+      </div>
+
+      <div className="notif-filter-section">
+        <span className="notif-filter-section-title">Estado</span>
+        <Radio.Group
+          value={estadoFiltroDraft}
+          onChange={(e) => setEstadoFiltroDraft(e.target.value)}
+          className="notif-filter-estado-group"
+        >
+          <Radio value="todas">Todas</Radio>
+          <Radio value="pendientes">Pendientes</Radio>
+          <Radio value="aprobadas">Aprobadas</Radio>
+          <Radio value="rechazadas">Rechazadas</Radio>
+        </Radio.Group>
+      </div>
+
+      <div className="notif-filter-section">
+        <span className="notif-filter-section-title">Calendario</span>
+        <div className="notif-filter-calendario-row">
+          <Popover
+            content={contenidoMiniCalendario}
+            trigger="click"
+            placement="bottomLeft"
+            open={calendarioAbierto}
+            onOpenChange={setCalendarioAbierto}
+            overlayClassName="notif-mini-calendar-popover"
+          >
+            <Button className="notif-calendario-btn" icon={<CalendarOutlined />}>
+              {textoBotonCalendario}
+            </Button>
+          </Popover>
+          <div className="notif-filter-radio-col">
+            <span className="notif-filter-radio-label">Aplicar el rango a</span>
+            <Radio.Group
+              value={campoFechaRangoDraft}
+              onChange={(e) => setCampoFechaRangoDraft(e.target.value)}
+              className="notif-filter-radio-group"
+            >
+              <Radio value="fecha_alta">F. solicitud</Radio>
+              <Radio value="fecha_resolucion">F. resolución</Radio>
+            </Radio.Group>
+          </div>
+        </div>
+      </div>
+
+      <div className="notif-filter-footer">
+        <Button className="notif-filter-btn-limpiar" onClick={limpiarFiltrosDraft}>
+          Limpiar
+        </Button>
+        <Button type="primary" className="notif-filter-btn-aplicar" onClick={aplicarFiltros}>
+          Aplicar filtros
+        </Button>
+      </div>
+    </div>
+  );
 
   useEffect(() => {
     fetchPeticiones();
@@ -278,151 +489,125 @@ const setVisibleModalDetalles = async (info) => {
         { title: 'Hora Salida', dataIndex: 'hora_salida', key: 'hora_salida' },
         { title: 'Dif. Tiempo', dataIndex: 'dif_tiempo', key: 'dif_tiempo' }
     ];
-  const columnsCorreccion = [
-    {
-      title: 'Nombre',
-      key: 'nombre',
-      render: (_, record) => record.fichaje?.usuario?.nombre || '-',
-    },
-    {
-      title: 'Fecha solicitud',
-      dataIndex: 'fecha_alta',
-      key: 'fecha_alta',
-      render: (fecha) => formatearFecha(fecha),
-      sorter: (a, b) => dayjs(a.fecha_alta).valueOf() - dayjs(b.fecha_alta).valueOf(),
-      defaultSortOrder: 'descend',
-    },
-    {
-      title: 'Fecha Entrada Original',
-      key: 'entrada_original',
-      render: (_, record) => formatearFecha(record.fichaje?.fecha_entrada),
-    },
-    {
-      title: 'Fecha Salida Original',
-      key: 'salida_original',
-      render: (_, record) => formatearFecha(record.fichaje?.fecha_salida),
-    },
-    {
-      title: 'Fecha Entrada Solicitada',
-      key: 'entrada_solicitada',
-      render: (_, record) => formatearFecha(record.nueva_entrada),
-    },
-    {
-      title: 'Fecha Salida Solicitada',
-      key: 'salida_solicitada',
-      render: (_, record) => formatearFecha(record.nueva_salida),
-    },
-    {
-      title: 'Justificación',
-      dataIndex: 'justificacion',
-      key: 'justificacion',
-      render: (text) => (
-        <Tooltip title={text}>
-          {text?.length > 40 ? `${text.slice(0, 40)}...` : text}
-        </Tooltip>
-      ),
-    },
-    {
-      title: 'Estado',
-      key: 'estado',
-      render: (_, record) => obtenerEstado(record),
-    },
-    {
-      title: 'Acciones',
-      key: 'acciones',
-      render: (_, record) => {
-        const estado = obtenerEstado(record);
-        return estado === 'Pendiente' ? (
-          <div className="notif-acciones">
-            <Popconfirm
-              title="¿Aprobar esta petición?"
-              onConfirm={() => handleRespuesta(record, 2)}
-              okText="Sí"
-              cancelText="No"
-            >
-              <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
-            </Popconfirm>
-            <Popconfirm
-              title="¿Rechazar esta petición?"
-              onConfirm={() => handleRespuesta(record, 3)}
-              okText="Sí"
-              cancelText="No"
-            >
-              <Button danger size="small" className="notif-btn-compact">
-                Rechazar
-              </Button>
-            </Popconfirm>
-          </div>
-        ) : (
-          <span className="notif-procesada">Ya procesada</span>
-        );
-      }
-    }
-  ];
+  const colorEstadoTag = (estado) => {
+    if (estado === 'Aprobada') return 'green';
+    if (estado === 'Rechazada') return 'red';
+    return 'orange';
+  };
 
   const obtenerFechaResolucion = (record) =>
     record.fecha_aceptacion || record.fecha_cancelacion;
 
-  const columnsHistorial = [
-    {
-      title: 'Nombre',
-      key: 'nombre',
-      render: (_, record) => record.fichaje?.usuario?.nombre || record.solicitante?.nombre || '-',
-    },
-    {
-      title: 'Fecha solicitud',
-      dataIndex: 'fecha_alta',
-      key: 'fecha_alta',
-      render: (fecha) => formatearFecha(fecha),
-      sorter: (a, b) => dayjs(a.fecha_alta).valueOf() - dayjs(b.fecha_alta).valueOf(),
-      defaultSortOrder: 'descend',
-    },
-    {
-      title: 'Entrada original',
-      key: 'entrada_original',
-      render: (_, record) => formatearFecha(record.entrada_original || record.fichaje?.fecha_entrada),
-    },
-    {
-      title: 'Salida original',
-      key: 'salida_original',
-      render: (_, record) => formatearFecha(record.salida_original || record.fichaje?.fecha_salida),
-    },
-    {
-      title: 'Entrada solicitada',
-      key: 'nueva_entrada',
-      render: (_, record) => formatearFecha(record.nueva_entrada),
-    },
-    {
-      title: 'Salida solicitada',
-      key: 'nueva_salida',
-      render: (_, record) => formatearFecha(record.nueva_salida),
-    },
-    {
-      title: 'Justificación',
-      dataIndex: 'justificacion',
-      key: 'justificacion',
-      render: (text) => (
-        <Tooltip title={text}>
-          {text?.length > 40 ? `${text.slice(0, 40)}...` : text}
-        </Tooltip>
-      ),
-    },
-    {
-      title: 'Estado',
-      key: 'estado',
-      render: (_, record) => obtenerEstado(record),
-    },
-    {
-      title: 'Gestor',
-      key: 'gestor',
-      render: (_, record) => record.gestor?.nombre || '-',
-    },
-    {
-      title: 'Fecha resolución',
-      key: 'fecha_resolucion',
-      render: (_, record) => formatearFecha(obtenerFechaResolucion(record)),
-    },
-  ];
+  const columnsCorreccion = useMemo(() => {
+    const columnas = [
+      {
+        title: 'Nombre',
+        key: 'nombre',
+        render: (_, record) => obtenerNombreCorreccion(record) || '-',
+      },
+      {
+        title: 'Fecha solicitud',
+        dataIndex: 'fecha_alta',
+        key: 'fecha_alta',
+        render: (fecha) => formatearFecha(fecha),
+        sorter: (a, b) => dayjs(a.fecha_alta).valueOf() - dayjs(b.fecha_alta).valueOf(),
+        defaultSortOrder: 'descend',
+      },
+      {
+        title: 'Entrada original',
+        key: 'entrada_original',
+        render: (_, record) => formatearFecha(record.entrada_original || record.fichaje?.fecha_entrada),
+      },
+      {
+        title: 'Salida original',
+        key: 'salida_original',
+        render: (_, record) => formatearFecha(record.salida_original || record.fichaje?.fecha_salida),
+      },
+      {
+        title: 'Entrada solicitada',
+        key: 'entrada_solicitada',
+        render: (_, record) => formatearFecha(record.nueva_entrada),
+      },
+      {
+        title: 'Salida solicitada',
+        key: 'salida_solicitada',
+        render: (_, record) => formatearFecha(record.nueva_salida),
+      },
+      {
+        title: 'Justificación',
+        dataIndex: 'justificacion',
+        key: 'justificacion',
+        render: (text) => (
+          <Tooltip title={text}>
+            {text?.length > 40 ? `${text.slice(0, 40)}...` : text}
+          </Tooltip>
+        ),
+      },
+      {
+        title: 'Estado',
+        key: 'estado',
+        render: (_, record) => {
+          const estado = obtenerEstado(record);
+          return <Tag color={colorEstadoTag(estado)}>{estado}</Tag>;
+        },
+      },
+      {
+        title: 'Gestor',
+        key: 'gestor',
+        render: (_, record) => record.gestor?.nombre || '-',
+      },
+      {
+        title: 'Fecha resolución',
+        key: 'fecha_resolucion',
+        render: (_, record) => formatearFecha(obtenerFechaResolucion(record)),
+      },
+      {
+        title: 'Acciones',
+        key: 'acciones',
+        fixed: 'right',
+        width: 190,
+        render: (_, record) => {
+          const estado = obtenerEstado(record);
+          return estado === 'Pendiente' ? (
+            <div className="notif-acciones">
+              <Popconfirm
+                title="¿Aprobar esta petición?"
+                onConfirm={() => handleRespuesta(record, 2)}
+                okText="Sí"
+                cancelText="No"
+              >
+                <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
+              </Popconfirm>
+              <Popconfirm
+                title="¿Rechazar esta petición?"
+                onConfirm={() => handleRespuesta(record, 3)}
+                okText="Sí"
+                cancelText="No"
+              >
+                <Button danger size="small" className="notif-btn-compact">
+                  Rechazar
+                </Button>
+              </Popconfirm>
+            </div>
+          ) : (
+            <span className="notif-procesada">—</span>
+          );
+        },
+      },
+    ];
+
+    const ocultarPorEstado = {
+      pendientes: ['gestor', 'fecha_resolucion'],
+      aprobadas: ['acciones'],
+    };
+    const ocultar = ocultarPorEstado[estadoFiltro];
+
+    if (ocultar?.length) {
+      return columnas.filter((col) => !ocultar.includes(col.key));
+    }
+
+    return columnas;
+  }, [estadoFiltro]);
 
   const columnsCierreMensual = [
     {
@@ -452,6 +637,7 @@ const setVisibleModalDetalles = async (info) => {
     {
       title: 'Acciones',
       key: 'acciones',
+      width: 220,
       render: (_, record) => {
         const estado = record.fecha_aceptacion
           ? 'Aprobado'
@@ -494,70 +680,99 @@ const setVisibleModalDetalles = async (info) => {
   ];
 
   return (
-    <Layout className="notif-layout">
-      <Card className="notif-card" title={<Title level={2}>Notificaciones</Title>}>
-        <div className="notif-filtros">
-          <Input
-            className="notif-filtro-nombre"
-            placeholder="Buscar por nombre"
-            prefix={<SearchOutlined />}
-            value={busquedaNombre}
-            onChange={(e) => setBusquedaNombre(e.target.value)}
-            allowClear
-            aria-label="Buscar por nombre"
-          />
-          <RangePicker
-            value={rangoFechas}
-            onChange={setRangoFechas}
-            format="DD/MM/YYYY"
-            placeholder={['Desde', 'Hasta']}
-            allowClear
-            aria-label="Filtrar por rango de fechas"
-          />
-          {(rangoFechas || busquedaNombre.trim()) && (
-            <Button type="link" onClick={limpiarFiltros}>
-              Limpiar filtros
-            </Button>
-          )}
+    <div className="notif-layout">
+      <Title level={3} className="notif-layout__title">
+        Notificaciones
+      </Title>
+
+      <Menu
+        className="notif-submenu"
+        mode="horizontal"
+        selectedKeys={[activeTab]}
+        items={submenuItems}
+        onClick={handleTabChange}
+      />
+
+      <div className="notif-stats-row">
+        <div className="notif-stats">
+          <button
+            type="button"
+            className={`notif-stat notif-stat--pendiente${estadoFiltro === 'pendientes' ? ' notif-stat--active' : ''}`}
+            onClick={() => seleccionarEstadoRapido('pendientes')}
+          >
+            <span className="notif-stat-value">{contadoresActivos.pendientes}</span>
+            <span className="notif-stat-label">Pendientes</span>
+          </button>
+          <button
+            type="button"
+            className={`notif-stat notif-stat--aprobada${estadoFiltro === 'aprobadas' ? ' notif-stat--active' : ''}`}
+            onClick={() => seleccionarEstadoRapido('aprobadas')}
+          >
+            <span className="notif-stat-value">{contadoresActivos.aprobadas}</span>
+            <span className="notif-stat-label">Aprobadas</span>
+          </button>
+          <button
+            type="button"
+            className={`notif-stat notif-stat--rechazada${estadoFiltro === 'rechazadas' ? ' notif-stat--active' : ''}`}
+            onClick={() => seleccionarEstadoRapido('rechazadas')}
+          >
+            <span className="notif-stat-value">{contadoresActivos.rechazadas}</span>
+            <span className="notif-stat-label">Rechazadas</span>
+          </button>
         </div>
-        <Row gutter={[16, 16]}>
-          <Col span={24}>
-            <Card title="Solicitudes de Corrección de Horario">
-              <Table
-                columns={columnsCorreccion}
-                dataSource={peticionesFiltradas}
-                loading={loading}
-                rowKey="id_peticion"
-                pagination={{ pageSize: 5 }}
-              />
-            </Card>
-          </Col>
-          <Col span={24}>
-            <Card title="Historial de modificaciones de horario">
-              <Table
-                columns={columnsHistorial}
-                dataSource={historialFiltrado}
-                loading={loadingHistorial}
-                rowKey="id_peticion"
-                pagination={{ pageSize: 5 }}
-                scroll={{ x: 1200 }}
-              />
-            </Card>
-          </Col>
-          <Col span={24}>
-            <Card title="Solicitudes de Cierre Mensual">
-              <Table
-                columns={columnsCierreMensual}
-                dataSource={cierresFiltrados}
-                loading={loading}
-                rowKey={(record) => `${record.empresa_id}-${record.id_mes_cierre}`}
-                pagination={{ pageSize: 5 }}
-              />
-            </Card>
-          </Col>
-        </Row>
-      </Card>
-        <Modal
+        <Popover
+          content={contenidoFiltro}
+          trigger="click"
+          placement="bottomRight"
+          open={filtroAbierto}
+          onOpenChange={handleFiltroOpenChange}
+          overlayClassName="notif-filter-popover"
+        >
+          <Badge dot={filtrosAvanzadosActivos} offset={[-2, 2]}>
+            <Button
+              type="text"
+              className="notif-filter-btn"
+              icon={<FilterOutlined />}
+              aria-label="Abrir filtros"
+            />
+          </Badge>
+        </Popover>
+      </div>
+
+      <Input
+        className="notif-search"
+        placeholder="Buscar por nombre"
+        prefix={<SearchOutlined />}
+        value={busquedaNombre}
+        onChange={(e) => setBusquedaNombre(e.target.value)}
+        allowClear
+        aria-label="Buscar por nombre"
+      />
+
+      <Spin spinning={activeTab === 'horarios' ? (loading || loadingHistorial) : loading}>
+        {activeTab === 'horarios' ? (
+          <Table
+            className="notif-table"
+            columns={columnsCorreccion}
+            dataSource={correccionesFiltradas}
+            rowKey="id_peticion"
+            pagination={{ pageSize: 8, hideOnSinglePage: true }}
+            scroll={{ x: 1300 }}
+            size="middle"
+          />
+        ) : (
+          <Table
+            className="notif-table"
+            columns={columnsCierreMensual}
+            dataSource={cierresFiltrados}
+            rowKey={(record) => `${record.empresa_id}-${record.id_mes_cierre}`}
+            pagination={{ pageSize: 8, hideOnSinglePage: true }}
+            size="middle"
+          />
+        )}
+      </Spin>
+
+      <Modal
             open={visible}
             onCancel={() => setVisible(false)}
             footer={null}
@@ -580,7 +795,7 @@ const setVisibleModalDetalles = async (info) => {
                 </div>
             </Card>
         </Modal>
-    </Layout>
+    </div>
   );
 };
 
