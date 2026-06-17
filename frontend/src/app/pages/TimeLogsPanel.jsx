@@ -49,6 +49,39 @@ const calcularDifTiempo = (entrada, salida) => {
   return `${diffHrs}h ${diffMin}min`;
 };
 
+const formatearFechaHoraHistorial = (fecha) => {
+  if (!fecha) return '-';
+  const d = parseFechaFichaje(fecha);
+  return d.isValid() ? d.format('DD/MM/YYYY HH:mm') : '-';
+};
+
+const textoTooltipEstadoEdicion = (historial) => {
+  if (!historial) return '';
+  const origEntrada = formatearFechaHoraHistorial(historial.entrada_original);
+  const origSalida = formatearFechaHoraHistorial(historial.salida_original);
+  const nuevaEntrada = formatearFechaHoraHistorial(historial.nueva_entrada);
+  const nuevaSalida = formatearFechaHoraHistorial(historial.nueva_salida);
+  if (historial.fecha_aceptacion) {
+    return `Solicitud aprobada\nEntrada: ${origEntrada} → ${nuevaEntrada}\nSalida: ${origSalida} → ${nuevaSalida}`;
+  }
+  if (historial.fecha_cancelacion) {
+    return `Solicitud rechazada\nSe solicitó:\nEntrada: ${origEntrada} → ${nuevaEntrada}\nSalida: ${origSalida} → ${nuevaSalida}`;
+  }
+  return '';
+};
+
+const obtenerEstadoSolicitud = (peticion) => {
+  if (peticion.fecha_aceptacion) return 'Aprobada';
+  if (peticion.fecha_cancelacion) return 'Rechazada';
+  return 'Pendiente';
+};
+
+const colorEstadoSolicitud = (estado) => {
+  if (estado === 'Aprobada') return 'green';
+  if (estado === 'Rechazada') return 'red';
+  return 'orange';
+};
+
 
 const TimeLogsPanel = () => {
     const [data, setData] = useState([]);
@@ -59,6 +92,8 @@ const TimeLogsPanel = () => {
     const [form] = Form.useForm();
     const [isSubmitDisabled, setIsSubmitDisabled] = useState(true);  // Estado para habilitar/deshabilitar el botón Enviar
     const [fichajesConPeticion, setFichajesConPeticion] = useState([]);
+    const [historialPorFichaje, setHistorialPorFichaje] = useState({});
+    const [solicitudesHorario, setSolicitudesHorario] = useState([]);
     const [mesesCerrados, setMesesCerrados] = useState([]);
 
 const [mesesCierre, setMesesCierre] = useState([]);
@@ -180,12 +215,35 @@ const fetchData = async () => {
 
     const registros = await getDatosUsuarioById(idUsuario);
 
+    const peticionesResp = await getPeticionesByIdUsuario();
+    const mapHistorial = {};
+    (peticionesResp?.historialEdiciones || []).forEach((p) => {
+      const key = p.id_fichaje;
+      const existente = mapHistorial[key];
+      if (
+        !existente
+        || dayjs(p.fecha_alta).isAfter(dayjs(existente.fecha_alta))
+      ) {
+        mapHistorial[key] = p;
+      }
+    });
+
+    const todasSolicitudes = [
+      ...(peticionesResp?.peticiones || []),
+      ...(peticionesResp?.historialEdiciones || []),
+    ].sort((a, b) => dayjs(b.fecha_alta).valueOf() - dayjs(a.fecha_alta).valueOf());
+
    const mergedData = (registros.info || []).map((item, index) => {
-  const fechaBase = item.fecha_original || item.fecha_entrada || item.fecha_desde;
   const fechaEntrada = item.fecha_entrada ? parseFechaFichaje(item.fecha_entrada) : null;
   const fechaSalida = item.fecha_salida ? parseFechaFichaje(item.fecha_salida) : null;
+  const historial = item.id_fichaje ? mapHistorial[item.id_fichaje] : null;
+  const fechaOriginalHistorial = historial?.entrada_original
+    ? parseFechaFichaje(historial.entrada_original)
+    : null;
   const fecha = item.fecha_original
     ? dayjs(item.fecha_original, 'YYYY-MM-DD')
+    : fechaOriginalHistorial && fechaOriginalHistorial.isValid()
+    ? fechaOriginalHistorial
     : fechaEntrada;
 
   const tiposConDuracion = ['fichaje', 'descanso'];
@@ -228,6 +286,12 @@ const fetchData = async () => {
     ubicacionEntrada: item.ubicacion_entrada,
     ubicacionSalida: item.ubicacion_salida,
     comentarios: item.comentarios,
+    estadoEdicion: historial?.fecha_aceptacion
+      ? 'aprobada'
+      : historial?.fecha_cancelacion
+      ? 'rechazada'
+      : null,
+    historialEdicion: historial,
   };
 });
 
@@ -253,11 +317,12 @@ const fetchData = async () => {
       setFilteredData(sortedData);
     }
 
-    const peticionesResp = await getPeticionesByIdUsuario();
     const pendingKeys = (peticionesResp?.peticiones || []).map(
       (p) => `fichaje-${p.id_fichaje}`,
     );
     setFichajesConPeticion(pendingKeys);
+    setHistorialPorFichaje(mapHistorial);
+    setSolicitudesHorario(todasSolicitudes);
   } catch (error) {
     console.error("Error al cargar los datos:", error);
     message.error("Error al cargar los datos");
@@ -333,8 +398,10 @@ const crearPeticionMensual = async () => {
         }
 
         // Validar que la hora de entrada sea anterior a la salida
-        const entrada = dayjs(values.date).hour(values.checkIn.hour()).minute(values.checkIn.minute());
-        const salida = dayjs(values.dateOut).hour(values.checkOut.hour()).minute(values.checkOut.minute());
+        const fechaEntrada = dayjs(editingRecord.date, 'DD/MM/YYYY');
+        const fechaSalida = dayjs(editingRecord.dateOut || editingRecord.date, 'DD/MM/YYYY');
+        const entrada = fechaEntrada.hour(values.checkIn.hour()).minute(values.checkIn.minute());
+        const salida = fechaSalida.hour(values.checkOut.hour()).minute(values.checkOut.minute());
 
 
         if (entrada.isAfter(salida)) {
@@ -342,23 +409,22 @@ const crearPeticionMensual = async () => {
             return;
         }
 
-        // Crear el payload
         const peticionPayload = {
             id_fichaje: editingRecord.key.replace('fichaje-', ''),
-            fecha: entrada.format(),       // formato ISO
-            fechaSalida: salida.format(),  // formato ISO
-            hora_entrada: entrada.format('HH:mm'),
-            hora_salida: salida.format('HH:mm'),
+            fecha: dayjs(editingRecord.date, 'DD/MM/YYYY').format(),
+            fechaSalida: dayjs(editingRecord.dateOut || editingRecord.date, 'DD/MM/YYYY').format(),
+            hora_entrada: values.checkIn.format('HH:mm'),
+            hora_salida: values.checkOut.format('HH:mm'),
             justificacion: values.justificacion,
         };
 
         await crearPeticionEdicion(peticionPayload);
 
-        setFichajesConPeticion((prev) => [...prev, editingRecord.key]);
         notifyNotificacionesActualizadas();
         message.success('Solicitud enviada. Pendiente de aprobación por un gestor.');
         setIsModalOpen(false);
         setEditingRecord(null);
+        await fetchData();
     } catch (error) {
         console.error('Error en el envío:', error);
         message.error('Error al enviar la solicitud');
@@ -463,9 +529,69 @@ const handleMonthChange = (date, dateString) => {
               Pendiente
             </Tag>
           )}
+          {record.estadoEdicion === 'aprobada' && (
+            <Tooltip title={textoTooltipEstadoEdicion(record.historialEdicion)}>
+              <Tag color="green" className="tlp-estado-tag">
+                Aprobada
+              </Tag>
+            </Tooltip>
+          )}
+          {record.estadoEdicion === 'rechazada' && (
+            <Tooltip title={textoTooltipEstadoEdicion(record.historialEdicion)}>
+              <Tag color="red" className="tlp-estado-tag">
+                Rechazada
+              </Tag>
+            </Tooltip>
+          )}
         </div>
       );
     };
+
+    const columnsSolicitudes = [
+      {
+        title: 'Fecha fichaje',
+        key: 'fecha_fichaje',
+        render: (_, record) => formatearFechaHoraHistorial(record.entrada_original).split(' ')[0],
+      },
+      {
+        title: 'Entrada solicitada',
+        key: 'nueva_entrada',
+        render: (_, record) => {
+          const orig = formatearFechaHoraHistorial(record.entrada_original);
+          const nueva = formatearFechaHoraHistorial(record.nueva_entrada);
+          return `${orig} → ${nueva}`;
+        },
+      },
+      {
+        title: 'Salida solicitada',
+        key: 'nueva_salida',
+        render: (_, record) => {
+          const orig = formatearFechaHoraHistorial(record.salida_original);
+          const nueva = formatearFechaHoraHistorial(record.nueva_salida);
+          return `${orig} → ${nueva}`;
+        },
+      },
+      {
+        title: 'Estado',
+        key: 'estado',
+        render: (_, record) => {
+          const estado = obtenerEstadoSolicitud(record);
+          return <Tag color={colorEstadoSolicitud(estado)}>{estado}</Tag>;
+        },
+      },
+      {
+        title: 'Fecha solicitud',
+        key: 'fecha_alta',
+        render: (_, record) => formatearFechaHoraHistorial(record.fecha_alta),
+      },
+      {
+        title: 'Fecha resolución',
+        key: 'fecha_resolucion',
+        render: (_, record) => formatearFechaHoraHistorial(
+          record.fecha_aceptacion || record.fecha_cancelacion,
+        ),
+      },
+    ];
 
     const columns = [
       {
@@ -608,6 +734,27 @@ const handleMonthChange = (date, dateString) => {
                   />
                 )}
 
+                {solicitudesHorario.length > 0 && (
+                  <Collapse
+                    className="tlp-solicitudes-collapse"
+                    items={[{
+                      key: 'solicitudes',
+                      label: `Mis solicitudes de horario (${solicitudesHorario.length})`,
+                      children: (
+                        <Table
+                          className="tlp-solicitudes-table"
+                          columns={columnsSolicitudes}
+                          dataSource={solicitudesHorario}
+                          rowKey="id_peticion"
+                          pagination={{ pageSize: 5 }}
+                          scroll={{ x: 900 }}
+                          size="small"
+                        />
+                      ),
+                    }]}
+                  />
+                )}
+
                 <Modal
                     title="Editar Registro"
                     open={isModalOpen}
@@ -619,7 +766,7 @@ const handleMonthChange = (date, dateString) => {
                     <Form form={form} layout="vertical">
                         <Form.Item label="Fecha Entrada" name="date"
                          rules={[{ required: true, message: 'Por favor, ingresa la fecha de entrada' }]}>
-                        <DatePicker format="DD/MM/YYYY" className="tlp-full-width" />
+                        <DatePicker format="DD/MM/YYYY" className="tlp-full-width" disabled />
                         </Form.Item>
                         <Form.Item
                             label="Hora Entrada"
@@ -629,7 +776,7 @@ const handleMonthChange = (date, dateString) => {
                             <TimePicker format="HH:mm" />
                         </Form.Item>
                         <Form.Item label="Fecha Salida" name="dateOut" rules={[{ required: true, message: 'Por favor, ingresa la fecha de entrada' }]} >
-                        <DatePicker format="DD/MM/YYYY" className="tlp-full-width" />
+                        <DatePicker format="DD/MM/YYYY" className="tlp-full-width" disabled />
 
                         </Form.Item>
                         <Form.Item

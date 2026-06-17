@@ -16,6 +16,7 @@ import {
   getCierresMensualesByIdEmpresa,
   getDatosUsuarioMes,
   responderPeticionCierre,
+  getHistorialEdicionesHorario,
 } from '../../features/fichaje/fichajeService';
 import { notifyNotificacionesActualizadas } from '../../hooks/useNotificacionesPendientes';
 import { parseFechaFichaje } from '../../utils/fechaFichaje';
@@ -67,8 +68,10 @@ const filtrarPorNombre = (items, obtenerNombre, termino) => {
 
 const Notificaciones = () => {
 const [peticiones, setPeticiones] = useState([]);
+const [historialEdiciones, setHistorialEdiciones] = useState([]);
 const [cierresMensuales, setCierresMensuales] = useState([]);
 const [loading, setLoading] = useState(true);
+const [loadingHistorial, setLoadingHistorial] = useState(true);
 const [visible, setVisible] = useState(false);
 const [registroHoras, setRegistroHoras] = useState([]);
 const [totalHoras, setTotalHoras] = useState('');
@@ -100,6 +103,18 @@ const [busquedaNombre, setBusquedaNombre] = useState('');
     [cierresMensuales, rangoFechas, busquedaNombre],
   );
 
+  const historialFiltrado = useMemo(
+    () => ordenarPorReciente(
+      filtrarPorNombre(
+        filtrarPorRango(historialEdiciones, 'fecha_alta', rangoFechas),
+        (item) => item.fichaje?.usuario?.nombre || item.solicitante?.nombre,
+        busquedaNombre,
+      ),
+      'fecha_alta',
+    ),
+    [historialEdiciones, rangoFechas, busquedaNombre],
+  );
+
   const limpiarFiltros = () => {
     setRangoFechas(null);
     setBusquedaNombre('');
@@ -108,7 +123,19 @@ const [busquedaNombre, setBusquedaNombre] = useState('');
   useEffect(() => {
     fetchPeticiones();
     fetchCierresMensuales();
+    fetchHistorialEdiciones();
   }, []);
+
+  const fetchHistorialEdiciones = async () => {
+    try {
+      const response = await getHistorialEdicionesHorario();
+      setHistorialEdiciones(response.data || []);
+    } catch (error) {
+      message.error('Error al obtener historial de modificaciones');
+    } finally {
+      setLoadingHistorial(false);
+    }
+  };
 
   const fetchPeticiones = async () => {
     try {
@@ -227,6 +254,7 @@ const setVisibleModalDetalles = async (info) => {
       await responderPeticion(peticion, estado);
       message.success(`Petición ${estado === 2 ? 'aprobada' : 'rechazada'} correctamente`);
       fetchPeticiones();
+      fetchHistorialEdiciones();
       notifyNotificacionesActualizadas();
     } catch (error) {
       message.error('Error al procesar la petición');
@@ -330,6 +358,70 @@ const setVisibleModalDetalles = async (info) => {
         );
       }
     }
+  ];
+
+  const obtenerFechaResolucion = (record) =>
+    record.fecha_aceptacion || record.fecha_cancelacion;
+
+  const columnsHistorial = [
+    {
+      title: 'Nombre',
+      key: 'nombre',
+      render: (_, record) => record.fichaje?.usuario?.nombre || record.solicitante?.nombre || '-',
+    },
+    {
+      title: 'Fecha solicitud',
+      dataIndex: 'fecha_alta',
+      key: 'fecha_alta',
+      render: (fecha) => formatearFecha(fecha),
+      sorter: (a, b) => dayjs(a.fecha_alta).valueOf() - dayjs(b.fecha_alta).valueOf(),
+      defaultSortOrder: 'descend',
+    },
+    {
+      title: 'Entrada original',
+      key: 'entrada_original',
+      render: (_, record) => formatearFecha(record.entrada_original || record.fichaje?.fecha_entrada),
+    },
+    {
+      title: 'Salida original',
+      key: 'salida_original',
+      render: (_, record) => formatearFecha(record.salida_original || record.fichaje?.fecha_salida),
+    },
+    {
+      title: 'Entrada solicitada',
+      key: 'nueva_entrada',
+      render: (_, record) => formatearFecha(record.nueva_entrada),
+    },
+    {
+      title: 'Salida solicitada',
+      key: 'nueva_salida',
+      render: (_, record) => formatearFecha(record.nueva_salida),
+    },
+    {
+      title: 'Justificación',
+      dataIndex: 'justificacion',
+      key: 'justificacion',
+      render: (text) => (
+        <Tooltip title={text}>
+          {text?.length > 40 ? `${text.slice(0, 40)}...` : text}
+        </Tooltip>
+      ),
+    },
+    {
+      title: 'Estado',
+      key: 'estado',
+      render: (_, record) => obtenerEstado(record),
+    },
+    {
+      title: 'Gestor',
+      key: 'gestor',
+      render: (_, record) => record.gestor?.nombre || '-',
+    },
+    {
+      title: 'Fecha resolución',
+      key: 'fecha_resolucion',
+      render: (_, record) => formatearFecha(obtenerFechaResolucion(record)),
+    },
   ];
 
   const columnsCierreMensual = [
@@ -437,6 +529,18 @@ const setVisibleModalDetalles = async (info) => {
                 loading={loading}
                 rowKey="id_peticion"
                 pagination={{ pageSize: 5 }}
+              />
+            </Card>
+          </Col>
+          <Col span={24}>
+            <Card title="Historial de modificaciones de horario">
+              <Table
+                columns={columnsHistorial}
+                dataSource={historialFiltrado}
+                loading={loadingHistorial}
+                rowKey="id_peticion"
+                pagination={{ pageSize: 5 }}
+                scroll={{ x: 1200 }}
               />
             </Card>
           </Col>

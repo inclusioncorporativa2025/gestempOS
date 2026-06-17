@@ -150,6 +150,26 @@ export const countNotificacionesPendientes = async () => {
   }
 };
 
+export const getHistorialEdicionesHorario = async () => {
+  try {
+    const response = await fetch(API_BASE_URL + `/getHistorialEdicionesHorario`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyGestionEmpresa()),
+    });
+
+    if (!response.ok) {
+      await response.json();
+      return { data: [] };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error obteniendo historial de ediciones:', error);
+    return { data: [] };
+  }
+};
+
 export const getCierresMensualesByIdEmpresa = async () => {
   try {
     const response = await fetch(API_BASE_URL+`/getCierresMensualesByIdEmpresa`, {

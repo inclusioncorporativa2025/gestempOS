@@ -83,6 +83,72 @@ const obtenerEmailsGestoresEmpresa = async (idEmpresa) => {
   return [...new Set(emails)];
 };
 
+const combinarFechaConHoraMadrid = (fechaBase, horaHHmm) => {
+  const tz = 'Europe/Madrid';
+  const base = dayjs(fechaBase).tz(tz);
+  const [horas, minutos] = String(horaHHmm).split(':').map(Number);
+  return dayjs
+    .tz(
+      `${base.format('YYYY-MM-DD')} ${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`,
+      'YYYY-MM-DD HH:mm',
+      tz,
+    )
+    .utc()
+    .toDate();
+};
+
+const enriquecerPeticionesConDetalle = async (peticiones) => {
+  if (!peticiones.length) return [];
+
+  const peticionRows = peticiones.map((p) => (p.toJSON ? p.toJSON() : p));
+
+  const fichajes = await Fichajes.findAll({
+    where: {
+      [Op.or]: peticionRows.map((p) => ({
+        empresa_id: p.empresa_id,
+        id_fichaje: p.id_fichaje,
+      })),
+    },
+  });
+
+  const usuarioIds = new Set();
+  fichajes.forEach((f) => usuarioIds.add(f.id_usuario));
+  peticionRows.forEach((p) => {
+    if (p.id_usuario_peticion) usuarioIds.add(p.id_usuario_peticion);
+    if (p.id_usuario_gestor) usuarioIds.add(p.id_usuario_gestor);
+  });
+
+  const usuarios = await Usuario.findAll({
+    where: {
+      id_usuario: { [Op.in]: [...usuarioIds] },
+      fecha_baja: null,
+    },
+  });
+
+  const fichajesMap = Object.fromEntries(
+    fichajes.map((f) => [`${f.empresa_id}-${f.id_fichaje}`, f.toJSON()]),
+  );
+  const usuariosMap = Object.fromEntries(usuarios.map((u) => [u.id_usuario, u.toJSON()]));
+
+  return peticionRows.map((peticion) => {
+    const fichaje = fichajesMap[`${peticion.empresa_id}-${peticion.id_fichaje}`] || null;
+    const solicitante = usuariosMap[peticion.id_usuario_peticion] || null;
+    const gestor = peticion.id_usuario_gestor
+      ? usuariosMap[peticion.id_usuario_gestor] || null
+      : null;
+    const empleado = fichaje ? usuariosMap[fichaje.id_usuario] || solicitante : solicitante;
+
+    return {
+      ...peticion,
+      fichaje: fichaje
+        ? { ...fichaje, usuario: empleado || null }
+        : null,
+      solicitante,
+      gestor,
+    };
+  });
+};
+
 const getDatosUsuario = async (req, res) => {
   const { idUsuario, idEmpresa } = req.body;
 
@@ -162,10 +228,17 @@ const getDatosUsuarioById = async (req, res) => {
       return dias;
     };
 
-    const fichajesNormalizados = fichajes.map(f => ({
-      ...f.toJSON(),
-      tipo: 'fichaje'
-    }));
+    const fichajesNormalizados = fichajes.map((f) => {
+      const raw = f.toJSON();
+      const entrada = raw.fecha_entrada
+        ? dayjs(raw.fecha_entrada).tz('Europe/Madrid')
+        : null;
+      return {
+        ...raw,
+        tipo: 'fichaje',
+        fecha_original: entrada ? entrada.format('YYYY-MM-DD') : null,
+      };
+    });
 
     const ausenciasNormalizadas = ausencias.flatMap(a => {
       const raw = a.toJSON();
@@ -497,21 +570,23 @@ const crearPeticionEdicion = async (req, res) => {
     const { idUsuario, idEmpresa, values } = req.body;
     const fechaConOffset = new Date();
 
-    const tz = 'Europe/Madrid';
+    const fichaje = await Fichajes.findOne({
+      where: {
+        empresa_id: idEmpresa,
+        id_fichaje: values.id_fichaje,
+        fecha_baja: null,
+      },
+    });
 
-    const nueva_entrada = dayjs.tz(values.fecha, tz)
-      .hour(Number(values.hora_entrada.split(':')[0]))
-      .minute(Number(values.hora_entrada.split(':')[1]))
-      .second(0)
-      .millisecond(0)
-      .utc();
+    if (!fichaje) {
+      return res.status(404).json({ error: 'Fichaje no encontrado' });
+    }
 
-    const nueva_salida = dayjs.tz(values.fechaSalida, tz)
-      .hour(Number(values.hora_salida.split(':')[0]))
-      .minute(Number(values.hora_salida.split(':')[1]))
-      .second(0)
-      .millisecond(0)
-      .utc();
+    const entrada_original = fichaje.fecha_entrada;
+    const salida_original = fichaje.fecha_salida || fichaje.fecha_entrada;
+
+    const nueva_entrada = combinarFechaConHoraMadrid(entrada_original, values.hora_entrada);
+    const nueva_salida = combinarFechaConHoraMadrid(salida_original, values.hora_salida);
 
     const info = await createConId(Peticiones, idEmpresa, 'id_peticion', {
       id_usuario_peticion: idUsuario,
@@ -519,6 +594,8 @@ const crearPeticionEdicion = async (req, res) => {
       id_fichaje: values.id_fichaje,
       nueva_entrada,
       nueva_salida,
+      entrada_original,
+      salida_original,
       justificacion: values.justificacion,
     });
 
@@ -630,48 +707,45 @@ const getPeticionesByIdEmpresa = async (req, res) => {
       return res.status(200).json({ message: 'Peticiones recuperadas', data: [] });
     }
 
-    const listaIdFichaje = peticiones.map(p => p.id_fichaje);
-    const fichajes = await Fichajes.findAll({
-      where: {
-        [Op.or]: peticiones.map((p) => ({
-          empresa_id: p.empresa_id,
-          id_fichaje: p.id_fichaje,
-        })),
-      },
-    });
-
-    const usuariosIds = fichajes.map(f => f.id_usuario);
-    const usuarios = await Usuario.findAll({
-      where: {
-        id_usuario: {
-          [Op.in]: usuariosIds
-        },
-        fecha_baja: null
-      }
-    });
-
-    const fichajesMap = Object.fromEntries(fichajes.map(f => [f.id_fichaje, f.toJSON()]));
-    const usuariosMap = Object.fromEntries(usuarios.map(u => [u.id_usuario, u.toJSON()]));
-
-    const resultado = peticiones.map(peticion => {
-      const peticionJson = peticion.toJSON();
-      const fichaje = fichajesMap[peticion.id_fichaje];
-      const usuario = fichaje ? usuariosMap[fichaje.id_usuario] : null;
-      return {
-        ...peticionJson,
-        fichaje: fichaje
-          ? {
-              ...fichaje,
-              usuario: usuario || null
-            }
-          : null
-      };
-    });
+    const resultado = await enriquecerPeticionesConDetalle(peticiones);
 
     res.status(200).json({ message: 'Peticiones recuperadas', data: resultado });
   } catch (error) {
     console.error('Error al recuperar peticion:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+const getHistorialEdicionesHorario = async (req, res) => {
+  const esRoot = esRootPlataforma(req);
+  const idEmpresa = resolveIdEmpresa(req);
+  const idUsuario = req.body?.idUsuario;
+
+  if (!esRoot && !idEmpresa) {
+    return res.status(400).json({ error: 'Empresa no indicada' });
+  }
+
+  try {
+    const where = {
+      [Op.or]: [
+        { fecha_aceptacion: { [Op.ne]: null } },
+        { fecha_cancelacion: { [Op.ne]: null } },
+      ],
+      ...(esRoot ? {} : { empresa_id: idEmpresa }),
+      ...(idUsuario ? { id_usuario_peticion: idUsuario } : {}),
+    };
+
+    const peticiones = await Peticiones.findAll({
+      where,
+      order: [['fecha_alta', 'DESC']],
+    });
+
+    const data = await enriquecerPeticionesConDetalle(peticiones);
+
+    res.status(200).json({ message: 'Historial recuperado', data });
+  } catch (error) {
+    console.error('Error al recuperar historial de ediciones:', error);
+    res.status(500).json({ error: 'Error al recuperar historial' });
   }
 };
 
@@ -716,6 +790,19 @@ const getPeticionesByIdUsuario = async (req, res) => {
       raw: true,
     });
 
+    const historialEdiciones = await Peticiones.findAll({
+      where: {
+        empresa_id: idEmpresa,
+        id_usuario_peticion: idUsuario,
+        [Op.or]: [
+          { fecha_aceptacion: { [Op.ne]: null } },
+          { fecha_cancelacion: { [Op.ne]: null } },
+        ],
+      },
+      order: [['fecha_alta', 'DESC']],
+      raw: true,
+    });
+
     const mesesCierre = await MesesCierre.findAll({
       where: {
         empresa_id: idEmpresa,
@@ -730,6 +817,7 @@ const getPeticionesByIdUsuario = async (req, res) => {
     res.status(200).json({
       message: 'Peticiones y meses cierre recuperados',
       peticiones,
+      historialEdiciones,
       mesesCierre,
     });
 
@@ -831,6 +919,8 @@ const editarHoras = async (req, res) => {
 
     const horaEntrada = peticion.nueva_entrada;
     const horaSalida = peticion.nueva_salida;
+    const origEntrada = peticion.entrada_original;
+    const origSalida = peticion.salida_original;
 
     const result = await sequelize.transaction(async (transaction) => {
       const [filas] = await Fichajes.update(
@@ -851,7 +941,13 @@ const editarHoras = async (req, res) => {
         idUsuario: peticion.id_usuario_peticion,
         tipo: 'edicion_autorizada',
         fechaInput: horaEntrada,
-        observaciones: `id_peticion=${id_peticion};entrada=${dayjs(horaEntrada).toISOString()};salida=${dayjs(horaSalida).toISOString()}`,
+        observaciones: [
+          `id_peticion=${id_peticion}`,
+          `orig_entrada=${origEntrada ? dayjs(origEntrada).toISOString() : 'null'}`,
+          `orig_salida=${origSalida ? dayjs(origSalida).toISOString() : 'null'}`,
+          `nueva_entrada=${dayjs(horaEntrada).toISOString()}`,
+          `nueva_salida=${dayjs(horaSalida).toISOString()}`,
+        ].join(';'),
         idFichaje: id_fichaje,
         usuarioAlta: id_usuario_gestor,
         transaction,
@@ -1158,5 +1254,6 @@ module.exports = {
     responderPeticionCierre,
     getEstadoPersonalEmpresa,
     countNotificacionesPendientes,
+    getHistorialEdicionesHorario,
 
   };

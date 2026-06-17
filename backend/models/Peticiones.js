@@ -32,6 +32,14 @@ const Peticiones = sequelize.define('Peticiones', {
         type: DataTypes.DATE,
         allowNull: true,
     },
+    entrada_original: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
+    salida_original: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
     justificacion: {
         type: DataTypes.TEXT,
         allowNull: true,

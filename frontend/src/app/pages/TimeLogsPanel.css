@@ -456,12 +456,17 @@
 
 }
 
-
-
 .tlp-edit-btn:disabled {
 
   color: #c5cdd6;
 
 }
 
+.tlp-pendiente-tag,
+.tlp-estado-tag {
+  margin-inline-start: 0;
+}
 
+.tlp-solicitudes-collapse {
+  margin-block-start: 1.5rem;
+}
