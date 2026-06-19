@@ -2,13 +2,32 @@ import { jsPDF } from 'jspdf';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { DECLARACION_CIERRE_MENSUAL } from './cierreMensualLegal';
+import { SUPPORT_EMAIL } from '../constants/support';
 
 dayjs.locale('es');
 
+const PAGE_WIDTH = 210;
+const PAGE_HEIGHT = 297;
 const MARGIN = 14;
 const LINE_HEIGHT = 6;
-const PAGE_WIDTH = 210;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
+
+const HEADER_HEIGHT = 30;
+const FOOTER_HEIGHT = 18;
+const CONTENT_TOP = HEADER_HEIGHT + 10;
+const CONTENT_BOTTOM = PAGE_HEIGHT - FOOTER_HEIGHT - 6;
+
+/** Paleta de marca (variables.css) */
+const BRAND = {
+  primary: [168, 92, 224],
+  primaryDark: [155, 77, 219],
+  secondary: [199, 139, 240],
+  secondaryDark: [126, 63, 184],
+  background: [246, 242, 250],
+  dark: [45, 27, 66],
+  white: [255, 255, 255],
+  muted: [110, 98, 125],
+};
 
 const sanitizarNombreArchivo = (texto) =>
   String(texto || 'empleado')
@@ -19,10 +38,87 @@ const sanitizarNombreArchivo = (texto) =>
     .replace(/^-|-$/g, '')
     .toLowerCase();
 
-const escribirParrafo = (doc, texto, x, y, maxWidth) => {
+const escribirParrafo = (doc, texto, x, y, maxWidth, lineHeight = LINE_HEIGHT) => {
   const lineas = doc.splitTextToSize(texto, maxWidth);
   doc.text(lineas, x, y);
-  return y + lineas.length * LINE_HEIGHT;
+  return y + lineas.length * lineHeight;
+};
+
+const dibujarHeader = (doc, mesLabel) => {
+  doc.setFillColor(...BRAND.primaryDark);
+  doc.rect(0, 0, PAGE_WIDTH, HEADER_HEIGHT - 4, 'F');
+
+  doc.setFillColor(...BRAND.secondary);
+  doc.rect(0, HEADER_HEIGHT - 4, PAGE_WIDTH, 2, 'F');
+
+  doc.setFillColor(...BRAND.primary);
+  doc.rect(0, HEADER_HEIGHT - 2, PAGE_WIDTH, 2, 'F');
+
+  doc.setTextColor(...BRAND.white);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.text('Certificado de cierre mensual', MARGIN, 13);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(235, 225, 248);
+  doc.text('Registro de jornada laboral', MARGIN, 20);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...BRAND.white);
+  doc.text('fichaeneltrabajo.es', PAGE_WIDTH - MARGIN, 12, { align: 'right' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(235, 225, 248);
+  doc.text(mesLabel, PAGE_WIDTH - MARGIN, 19, { align: 'right' });
+};
+
+const dibujarFooter = (doc, pageNum, totalPages, fechaGeneracion) => {
+  const footerY = PAGE_HEIGHT - FOOTER_HEIGHT;
+
+  doc.setFillColor(...BRAND.background);
+  doc.rect(0, footerY, PAGE_WIDTH, FOOTER_HEIGHT, 'F');
+
+  doc.setDrawColor(...BRAND.secondary);
+  doc.setLineWidth(0.4);
+  doc.line(MARGIN, footerY + 1, PAGE_WIDTH - MARGIN, footerY + 1);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...BRAND.muted);
+  doc.text(`Generado el ${fechaGeneracion}`, MARGIN, footerY + 7);
+  doc.text(`Página ${pageNum} de ${totalPages}`, PAGE_WIDTH - MARGIN, footerY + 7, {
+    align: 'right',
+  });
+
+  doc.setTextColor(...BRAND.primaryDark);
+  doc.setFontSize(6.5);
+  doc.text(SUPPORT_EMAIL, PAGE_WIDTH / 2, footerY + 13, { align: 'center' });
+};
+
+const dibujarTituloSeccion = (doc, titulo, y) => {
+  doc.setFillColor(...BRAND.background);
+  doc.roundedRect(MARGIN, y - 4, CONTENT_WIDTH, 8, 1.5, 1.5, 'F');
+
+  doc.setDrawColor(...BRAND.secondary);
+  doc.setLineWidth(0.3);
+  doc.line(MARGIN, y - 4, MARGIN, y + 4);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...BRAND.primaryDark);
+  doc.text(titulo, MARGIN + 4, y + 1);
+
+  return y + 10;
+};
+
+const asegurarEspacio = (doc, y, necesario, onNuevaPagina) => {
+  if (y + necesario <= CONTENT_BOTTOM) return y;
+  doc.addPage();
+  onNuevaPagina();
+  return CONTENT_TOP;
 };
 
 /**
@@ -44,16 +140,13 @@ export const generarPdfCierreMensual = ({
   const mesLabel = dayjs(`${mes}-01`).isValid()
     ? dayjs(`${mes}-01`).format('MMMM [de] YYYY')
     : mes;
+  const fechaGeneracion = dayjs().format('DD/MM/YYYY HH:mm');
 
-  let y = MARGIN;
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.text('Certificado de cierre mensual', MARGIN, y);
-  y += 10;
+  let y = CONTENT_TOP;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
+  doc.setTextColor(...BRAND.dark);
   doc.text(`Empleado: ${nombreEmpleado || '—'}`, MARGIN, y);
   y += LINE_HEIGHT;
   doc.text(`Periodo: ${mesLabel}`, MARGIN, y);
@@ -68,101 +161,114 @@ export const generarPdfCierreMensual = ({
     );
     y += LINE_HEIGHT;
   }
-  y += 4;
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('Declaración del empleado', MARGIN, y);
-  y += LINE_HEIGHT;
-
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(9);
-  y = escribirParrafo(doc, DECLARACION_CIERRE_MENSUAL, MARGIN, y, CONTENT_WIDTH);
   y += 6;
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('Registro de jornada', MARGIN, y);
-  y += LINE_HEIGHT + 2;
+  y = dibujarTituloSeccion(doc, 'Declaración del empleado', y);
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(9);
+  doc.setTextColor(...BRAND.muted);
+  y = escribirParrafo(doc, DECLARACION_CIERRE_MENSUAL, MARGIN, y, CONTENT_WIDTH);
+  y += 8;
+
+  y = asegurarEspacio(doc, y, 20, () => {});
+  y = dibujarTituloSeccion(doc, 'Registro de jornada', y);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.text('Fecha', MARGIN, y);
-  doc.text('Entrada', MARGIN + 35, y);
-  doc.text('Salida', MARGIN + 60, y);
-  doc.text('Tiempo', MARGIN + 85, y);
-  y += LINE_HEIGHT;
+  doc.setTextColor(...BRAND.dark);
+  doc.setFillColor(...BRAND.primary);
+  doc.rect(MARGIN, y - 3, CONTENT_WIDTH, 7, 'F');
+  doc.setTextColor(...BRAND.white);
+  doc.text('Fecha', MARGIN + 2, y + 1);
+  doc.text('Entrada', MARGIN + 37, y + 1);
+  doc.text('Salida', MARGIN + 62, y + 1);
+  doc.text('Tiempo', MARGIN + 87, y + 1);
+  y += LINE_HEIGHT + 3;
 
   doc.setFont('helvetica', 'normal');
-  doc.setDrawColor(200);
-  doc.line(MARGIN, y - 2, PAGE_WIDTH - MARGIN, y - 2);
+  doc.setTextColor(...BRAND.dark);
 
   const filas = registros.length > 0 ? registros : [];
   if (filas.length === 0) {
+    doc.setTextColor(...BRAND.muted);
     doc.text('Sin registros de fichaje en este periodo.', MARGIN, y);
     y += LINE_HEIGHT;
   } else {
-    filas.forEach((fila) => {
-      if (y > 250) {
-        doc.addPage();
-        y = MARGIN;
+    filas.forEach((fila, index) => {
+      y = asegurarEspacio(doc, y, LINE_HEIGHT, () => {});
+      if (index % 2 === 0) {
+        doc.setFillColor(...BRAND.background);
+        doc.rect(MARGIN, y - 3.5, CONTENT_WIDTH, LINE_HEIGHT, 'F');
       }
-      doc.text(String(fila.fecha || '—'), MARGIN, y);
-      doc.text(String(fila.hora_entrada || '—'), MARGIN + 35, y);
-      doc.text(String(fila.hora_salida || '—'), MARGIN + 60, y);
-      doc.text(String(fila.dif_tiempo || '—'), MARGIN + 85, y);
+      doc.setTextColor(...BRAND.dark);
+      doc.text(String(fila.fecha || '—'), MARGIN + 2, y);
+      doc.text(String(fila.hora_entrada || '—'), MARGIN + 37, y);
+      doc.text(String(fila.hora_salida || '—'), MARGIN + 62, y);
+      doc.text(String(fila.dif_tiempo || '—'), MARGIN + 87, y);
       y += LINE_HEIGHT;
     });
   }
 
   y += 4;
+  y = asegurarEspacio(doc, y, 16, () => {});
+
+  doc.setDrawColor(...BRAND.secondary);
+  doc.setLineWidth(0.3);
+  doc.line(MARGIN, y, PAGE_WIDTH - MARGIN, y);
+  y += 5;
+
   doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...BRAND.primaryDark);
   doc.text(`Total horas trabajadas: ${totalHoras || '—'}`, MARGIN, y);
   y += LINE_HEIGHT;
   doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...BRAND.dark);
   doc.text(`Total horas esperadas: ${totalHorasEsperadas || 'No configurada'}`, MARGIN, y);
   y += 10;
 
   if (firmaImagen) {
-    if (y > 220) {
-      doc.addPage();
-      y = MARGIN;
-    }
-    doc.setFont('helvetica', 'bold');
-    doc.text('Firma del empleado', MARGIN, y);
-    y += LINE_HEIGHT;
+    y = asegurarEspacio(doc, y, 50, () => {});
+    y = dibujarTituloSeccion(doc, 'Firma del empleado', y);
     try {
-      doc.addImage(firmaImagen, 'PNG', MARGIN, y, 70, 28);
-      y += 34;
+      doc.setDrawColor(...BRAND.secondary);
+      doc.setLineWidth(0.4);
+      doc.roundedRect(MARGIN, y, 72, 30, 2, 2, 'S');
+      doc.addImage(firmaImagen, 'PNG', MARGIN + 1, y + 1, 70, 28);
+      y += 36;
     } catch {
       doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...BRAND.muted);
       doc.text('(No se pudo incrustar la imagen de la firma)', MARGIN, y);
       y += LINE_HEIGHT;
     }
   }
 
-  doc.setFontSize(8);
-  doc.setTextColor(80);
-  if (firmaHash) {
-    y = escribirParrafo(doc, `Huella de firma: ${firmaHash}`, MARGIN, y, CONTENT_WIDTH);
-  }
-  if (hashRegistroMes) {
-    y = escribirParrafo(
-      doc,
-      `Hash de integridad del registro del mes: ${hashRegistroMes}`,
-      MARGIN,
-      y,
-      CONTENT_WIDTH,
-    );
+  if (firmaHash || hashRegistroMes) {
+    y = asegurarEspacio(doc, y, 20, () => {});
+    doc.setFontSize(7.5);
+    doc.setTextColor(...BRAND.muted);
+    if (firmaHash) {
+      y = escribirParrafo(doc, `Huella de firma: ${firmaHash}`, MARGIN, y, CONTENT_WIDTH, 4.5);
+    }
+    if (hashRegistroMes) {
+      y = escribirParrafo(
+        doc,
+        `Hash de integridad del registro del mes: ${hashRegistroMes}`,
+        MARGIN,
+        y,
+        CONTENT_WIDTH,
+        4.5,
+      );
+    }
   }
 
-  doc.setTextColor(0);
-  doc.setFontSize(7);
-  doc.text(
-    `Documento generado el ${dayjs().format('DD/MM/YYYY HH:mm')}`,
-    MARGIN,
-    290,
-  );
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i += 1) {
+    doc.setPage(i);
+    dibujarHeader(doc, mesLabel);
+    dibujarFooter(doc, i, totalPages, fechaGeneracion);
+  }
 
   const nombreArchivo = `cierre-mensual-${mes}-${sanitizarNombreArchivo(nombreEmpleado)}.pdf`;
   doc.save(nombreArchivo);
