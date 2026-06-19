@@ -120,7 +120,7 @@ const LandingFooter = () => {
     {
       label: 'Gestión de equipos',
       href: LANDING_ROUTES.features,
-      title: 'Gestión de empleados y supervisores',
+      title: 'Gestión de personal y supervisores',
     },
     {
       label: 'Informes de jornada',

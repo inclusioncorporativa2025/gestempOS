@@ -11,7 +11,7 @@ const labelTipoUsuario = (tipo) => {
   if (n === 2) return 'Admin de plataforma';
   if (n === 3) return 'Administrador';
   if (n === 4) return 'Supervisor';
-  if (n === 5) return 'Empleado';
+  if (n === 5) return 'Personal';
   if (n === 6) return 'Inspector';
   return 'Usuario';
 };

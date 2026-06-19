@@ -963,11 +963,11 @@ const setVisibleModalDetalles = async (info) => {
                 </div>
                 {firmaCierreDetalle?.firmado && (
                   <div className="notif-firma-cierre">
-                    <p className="notif-firma-cierre__titulo">Solicitud firmada por el empleado</p>
+                    <p className="notif-firma-cierre__titulo">Solicitud firmada por el personal</p>
                     {firmaCierreDetalle.firma_imagen && (
                       <img
                         src={firmaCierreDetalle.firma_imagen}
-                        alt="Firma del empleado"
+                        alt="Firma del personal"
                         className="notif-firma-cierre__img"
                       />
                     )}
@@ -993,7 +993,7 @@ const setVisibleModalDetalles = async (info) => {
         destroyOnClose
       >
         <p className="notif-rechazo-ayuda">
-          Indica el motivo para que el empleado pueda consultarlo en su registro.
+          Indica el motivo para que el personal pueda consultarlo en su registro.
         </p>
         <Form form={formRechazo} layout="vertical">
           <Form.Item

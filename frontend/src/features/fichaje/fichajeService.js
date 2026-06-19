@@ -30,13 +30,13 @@ const GEO_MAX_WAIT_MS = 12000;
 const geoErrorMessage = (error) => {
   switch (error?.code) {
     case 1:
-      return 'Permiso de ubicación denegado. Actívalo en el navegador o en los ajustes del sistema.';
+      return 'Permiso de GPS denegado. Actívalo en el navegador o en los ajustes del sistema.';
     case 2:
-      return 'No se pudo determinar la ubicación. Comprueba que el GPS esté activo.';
+      return 'No se pudo obtener la posición. Comprueba que el GPS esté activo.';
     case 3:
       return 'Tiempo de espera agotado. Prueba al aire libre o con mejor señal.';
     default:
-      return error?.message || 'Error al obtener la ubicación';
+      return error?.message || 'Error al obtener la posición GPS';
   }
 };
 

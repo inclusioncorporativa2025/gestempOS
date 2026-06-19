@@ -117,7 +117,7 @@ const LandingPage = () => {
           </h1>
           <p className="landing-lead">
             Centraliza fichajes, permisos y configuración por empresa. Simple para el
-            empleado, potente para el gestor.
+            personal, potente para el gestor.
           </p>
           <div className="landing-hero-actions">
             <CtaButton

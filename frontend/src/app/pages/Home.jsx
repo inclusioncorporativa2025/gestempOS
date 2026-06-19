@@ -149,7 +149,7 @@ const Home = () => {
         const precisionM = response.ubicacionPrecisionM;
         if (guardarUbicacion && precisionM != null && precisionM > 80) {
           message.warning(
-            `Ubicación guardada con precisión aproximada (±${Math.round(precisionM)} m). Para mejorarla, usa el móvil con GPS activo y buena señal.`,
+            `Posición GPS registrada con precisión aproximada (±${Math.round(precisionM)} m). Para mejorarla, usa el móvil con GPS activo y buena señal.`,
             8,
           );
         }
@@ -177,7 +177,7 @@ const Home = () => {
 
   const confirmMeta = [{ label: 'Hora', value: confirmHora }];
   if (guardarUbicacion) {
-    confirmMeta.push({ value: 'Se guardará tu ubicación' });
+    confirmMeta.push({ value: 'Se registrará tu posición con GPS' });
   }
 
   return (
@@ -244,13 +244,13 @@ const Home = () => {
 
           <footer className="home-footer">
             <div>
-              <span className="home-footer-text">Guardar ubicación</span>
+              <span className="home-footer-text">Activar GPS</span>
               <span className="home-footer-hint">Opcional al fichar</span>
             </div>
             <Switch
               checked={guardarUbicacion}
               onChange={setGuardarUbicacion}
-              aria-label="Guardar ubicación al fichar"
+              aria-label="Activar GPS al fichar"
             />
           </footer>
         </div>

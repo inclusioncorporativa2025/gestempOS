@@ -242,11 +242,11 @@ const BuscarUsuarios = () => {
     const handleDarDeBaja = async (idUsuario) => {
         try {
             await deleteUsuario(idUsuario);
-            message.success('Empleado dado de baja correctamente');
+            message.success('Personal dado de baja correctamente');
             await fetchUsuarios();
         } catch (error) {
             console.error('Error al dar de baja al empleado:', error);
-            message.error(error.message || 'No se pudo dar de baja al empleado');
+            message.error(error.message || 'No se pudo dar de baja al personal');
         }
     };
 
@@ -307,7 +307,7 @@ const BuscarUsuarios = () => {
                     {tipoUsuario !== 6 && record.activo !== false && record.activo !== 0 && (
                         <Tooltip title="Dar de baja">
                             <Popconfirm
-                                title="¿Dar de baja a este empleado?"
+                                title="¿Dar de baja a este personal?"
                                 description="No se borran sus datos ni sus fichajes; solo dejará de estar activo en la empresa."
                                 onConfirm={() => handleDarDeBaja(record.id_usuario)}
                                 okText="Dar de baja"

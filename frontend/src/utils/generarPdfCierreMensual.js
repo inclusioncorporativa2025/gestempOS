@@ -30,7 +30,7 @@ const BRAND = {
 };
 
 const sanitizarNombreArchivo = (texto) =>
-  String(texto || 'empleado')
+  String(texto || 'personal')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z0-9-_]+/g, '-')
@@ -147,7 +147,7 @@ export const generarPdfCierreMensual = ({
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(...BRAND.dark);
-  doc.text(`Empleado: ${nombreEmpleado || '—'}`, MARGIN, y);
+  doc.text(`Personal: ${nombreEmpleado || '—'}`, MARGIN, y);
   y += LINE_HEIGHT;
   doc.text(`Periodo: ${mesLabel}`, MARGIN, y);
   y += LINE_HEIGHT;
@@ -163,7 +163,7 @@ export const generarPdfCierreMensual = ({
   }
   y += 6;
 
-  y = dibujarTituloSeccion(doc, 'Declaración del empleado', y);
+  y = dibujarTituloSeccion(doc, 'Declaración del personal', y);
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(9);
   doc.setTextColor(...BRAND.muted);
@@ -229,7 +229,7 @@ export const generarPdfCierreMensual = ({
 
   if (firmaImagen) {
     y = asegurarEspacio(doc, y, 50, () => {});
-    y = dibujarTituloSeccion(doc, 'Firma del empleado', y);
+    y = dibujarTituloSeccion(doc, 'Firma del personal', y);
     try {
       doc.setDrawColor(...BRAND.secondary);
       doc.setLineWidth(0.4);

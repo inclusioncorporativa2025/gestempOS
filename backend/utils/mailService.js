@@ -340,7 +340,7 @@ const enviarNotificacionGestion = async ({
     subject = 'Solicitud de modificación de horario';
     cuerpo = `
       <p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#333;">
-        La persona trabajadora <strong>${escapeHtml(nombreSolicitante || 'Un empleado')}</strong>
+        La persona trabajadora <strong>${escapeHtml(nombreSolicitante || 'Un miembro del personal')}</strong>
         ha solicitado un cambio de horario.
       </p>
       <p style="margin:0; font-size:15px; line-height:1.6; color:#333;">
@@ -354,7 +354,7 @@ const enviarNotificacionGestion = async ({
     subject = 'Solicitud cierre jornada mensual';
     cuerpo = `
       <p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#333;">
-        La persona trabajadora <strong>${escapeHtml(nombreSolicitante || 'Un empleado')}</strong>
+        La persona trabajadora <strong>${escapeHtml(nombreSolicitante || 'Un miembro del personal')}</strong>
         ha creado una petición de cierre de jornada mensual correspondiente al periodo
         <strong>${escapeHtml(mesFormateado)}</strong>.
       </p>
