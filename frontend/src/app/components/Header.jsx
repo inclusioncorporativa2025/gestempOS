@@ -10,6 +10,8 @@ import { APP_ROUTES } from '../../constants/routes';
 import { useEstadoJornada } from '../../hooks/useEstadoJornada';
 import { useNotificacionesPendientes } from '../../hooks/useNotificacionesPendientes';
 import { useEmpresaBranding } from '../../hooks/useEmpresaBranding';
+import { getTipoUsuario } from '../../utils/authSession';
+import { puedeVerFichaPersonal } from '../../utils/tipoUsuarioLabel';
 import { useAuth } from '../../config/AuthContext';
 import HeaderEmpresaMenu from './HeaderEmpresaMenu';
 import './Header.css';
@@ -25,6 +27,8 @@ const MyHeader = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const tipoUsuario = getTipoUsuario();
+  const mostrarBuscador = puedeVerFichaPersonal(tipoUsuario);
   const [searchValue, setSearchValue] = useState('');
   const { estadoJornada, horasTrabajadas, refetch } = useEstadoJornada();
   const { pendientes: hayNotificacionesPendientes } = useNotificacionesPendientes();
@@ -64,6 +68,7 @@ const MyHeader = () => {
   return (
     <Header className="app-header">
       <div className="app-header__start">
+        {mostrarBuscador && (
         <Input
           className="app-header-search"
           placeholder="Buscar personal..."
@@ -74,6 +79,7 @@ const MyHeader = () => {
           allowClear
           aria-label="Buscar personal"
         />
+        )}
 
         {location.pathname !== APP_ROUTES.login && (
           <Link

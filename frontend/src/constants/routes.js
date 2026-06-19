@@ -20,6 +20,7 @@ export const APP_ROUTES = {
   home: '/home',
   timeLogs: '/time-logs',
   users: '/users',
+  userProfile: '/users/:id',
   usersAdd: '/users/add',
   calendar: '/calendar',
   settings: '/settings',

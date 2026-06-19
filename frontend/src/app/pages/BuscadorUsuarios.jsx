@@ -13,6 +13,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import esES from 'antd/es/locale/es_ES';
 import { getTipoUsuario } from '../../utils/authSession';
+import { puedeVerFichaPersonal } from '../../utils/tipoUsuarioLabel';
 import AltaEmpleadoModal from '../components/AltaEmpleadoModal';
 import './BuscadorUsuarios.css';
 dayjs.locale('es');
@@ -23,6 +24,7 @@ const BuscarUsuarios = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const tipoUsuario = getTipoUsuario();
+    const verFichaPersonal = puedeVerFichaPersonal(tipoUsuario);
     const [usuarios, setUsuarios] = useState([]);
     const [searchText, setSearchText] = useState('');
     const [isModalVisible, setIsModalVisible] = useState(false);
@@ -158,6 +160,10 @@ const BuscarUsuarios = () => {
         });
     };
 
+    const irAFichaPersonal = (record) => {
+        navigate(`${APP_ROUTES.users}/${record.id_usuario}`);
+    };
+
     const handleViewDetailsDrawer = (record) => {
         setVisible(true);
         setEditingRecord(record);
@@ -273,7 +279,22 @@ const BuscarUsuarios = () => {
     ];
 
     const columns = [
-        { title: 'Nombre', dataIndex: 'nombre', key: 'nombre' },
+        {
+            title: 'Nombre',
+            dataIndex: 'nombre',
+            key: 'nombre',
+            render: (nombre, record) => (
+                verFichaPersonal ? (
+                    <Button
+                        type="link"
+                        className="bu-nombre-link"
+                        onClick={() => irAFichaPersonal(record)}
+                    >
+                        {nombre}
+                    </Button>
+                ) : nombre
+            ),
+        },
         { title: 'Email', dataIndex: 'email', key: 'email' },
         { title: 'DNI', dataIndex: 'dni', key: 'dni' },
         {
@@ -323,13 +344,17 @@ const BuscarUsuarios = () => {
                             </Popconfirm>
                         </Tooltip>
                     )}
-                    <Tooltip title="Detalles">
+                    <Tooltip title={verFichaPersonal ? 'Ver ficha' : 'Detalles'}>
                         <Button
                             type="text"
                             icon={<EyeOutlined />}
                             className="bu-accion-btn"
-                            onClick={() => handleViewDetailsDrawer(record)}
-                            aria-label="Detalles"
+                            onClick={() => (
+                              verFichaPersonal
+                                ? irAFichaPersonal(record)
+                                : handleViewDetailsDrawer(record)
+                            )}
+                            aria-label={verFichaPersonal ? 'Ver ficha de personal' : 'Detalles'}
                         />
                     </Tooltip>
                     <Tooltip title="Exportar">

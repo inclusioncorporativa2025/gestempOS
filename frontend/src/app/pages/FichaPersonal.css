@@ -1,0 +1,76 @@
+.fp-page {
+  min-height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+  background: var(--background);
+}
+
+.fp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.fp-header-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.fp-back-btn {
+  margin-bottom: 12px;
+  padding-left: 0;
+}
+
+.fp-title {
+  margin: 0 !important;
+  color: var(--color-dark) !important;
+}
+
+.fp-subtitle {
+  display: block;
+  margin-top: 4px;
+  color: #6b7280;
+}
+
+.fp-card {
+  border-radius: 12px;
+  border: 1px solid rgba(var(--color-primary-rgb), 0.1);
+}
+
+.fp-datos-grid .ant-descriptions-item-label {
+  font-weight: 500;
+  color: #5a6472;
+}
+
+.fp-jornada-vacia {
+  padding: 24px 0;
+}
+
+.fp-totales {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #eef0f4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-weight: 500;
+}
+
+.fp-total-sep {
+  color: var(--color-primary-dark);
+}
+
+.fp-month-picker {
+  margin-bottom: 16px;
+  width: 100%;
+  max-width: 220px;
+}
+
+.fp-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px;
+}

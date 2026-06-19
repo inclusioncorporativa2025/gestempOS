@@ -35,6 +35,7 @@ import ConfiguracionJornada from './pages/gestor/ConfiguracionJornada';
 import Calendario from './pages/Calendario';
 import BuscadorEmpresa from './pages/admin/BuscadorEmpresa';
 import BuscadorUsuarios from './pages/BuscadorUsuarios';
+import FichaPersonal from './pages/FichaPersonal';
 import ProtectedRoute from './components/ProtectedRoute';
 import NavigationTracker from './components/NavigationTracker';
 import Notificaciones from './pages/Notificaciones';
@@ -394,6 +395,14 @@ const AppShell = () => {
                 <Route
                   path="/companies"
                   element={<Navigate to={APP_ROUTES.platformEmpresas} replace />}
+                />
+                <Route
+                  path={`${APP_ROUTES.users}/:id`}
+                  element={
+                    <ProtectedRoute allowedTypes={[1, 2, 3, 4]}>
+                      <FichaPersonal />
+                    </ProtectedRoute>
+                  }
                 />
                 <Route
                   path={APP_ROUTES.users}
