@@ -1,0 +1,27 @@
+.signature-pad {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.signature-pad__hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary, #666);
+}
+
+.signature-pad__canvas {
+  width: 100%;
+  max-width: 420px;
+  height: 160px;
+  border: 1px dashed var(--color-border, #d9d9d9);
+  border-radius: 8px;
+  background: #fff;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.signature-pad__clear {
+  align-self: flex-start;
+  padding-left: 0;
+}

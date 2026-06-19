@@ -1,5 +1,52 @@
-.tlp-layout {
+.tlp-cierre-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
+.tlp-cierre-modal__intro,
+.tlp-cierre-modal__aviso {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--color-text, #333);
+}
+
+.tlp-cierre-modal__aviso {
+  font-size: 13px;
+  color: var(--color-text-secondary, #666);
+}
+
+.tlp-cierre-modal__legal {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--color-bg-subtle, #fafafa);
+  border: 1px solid var(--color-border, #f0f0f0);
+}
+
+.tlp-cierre-modal__legal-titulo {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tlp-cierre-modal__legal-texto {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--color-text-secondary, #555);
+  font-style: italic;
+}
+
+.tlp-cierre-notif p {
+  margin: 0 0 4px;
+}
+
+.tlp-cierre-notif__btn {
+  padding: 0;
+  height: auto;
+}
+
+.tlp-layout {
   width: 100%;
 
   min-height: 100%;

@@ -48,6 +48,18 @@ const MesesCierre = sequelize.define('MesesCierre', {
         type: DataTypes.DATE,
         allowNull: true,
     },
+    firma_imagen: {
+        type: DataTypes.TEXT('medium'),
+        allowNull: true,
+    },
+    firma_hash: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+    },
+    hash_registro_mes: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+    },
     notificacion_vista: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

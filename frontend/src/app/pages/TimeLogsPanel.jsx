@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Layout, Card, Table, Button, Row, Col, Modal, Form, Input, TimePicker, message, Select, DatePicker, Checkbox, Collapse, Empty, Dropdown, Tooltip, Tag } from 'antd';
+import { Layout, Card, Table, Button, Row, Col, Modal, Form, Input, TimePicker, message, notification, Select, DatePicker, Checkbox, Collapse, Empty, Dropdown, Tooltip, Tag } from 'antd';
 import {
   MoreOutlined,
-  SendOutlined,
   ExportOutlined,
   PlusCircleOutlined,
   EditOutlined,
   EnvironmentOutlined,
   CalendarOutlined,
+  FileProtectOutlined,
 } from '@ant-design/icons';
 import { crearPeticionEdicion, crearPeticionCierreMes, getPeticionesByIdUsuario, getPeticionesByIdEmpresa, marcarPeticionesVistas } from "../../features/fichaje/fichajeService";
 import { getDatosUsuarioById } from "../../features/fichaje/fichajeService";
@@ -17,11 +17,14 @@ import { crearAusencia } from "../../features/ausencias/ausenciasService";
 import dayjs from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import 'dayjs/locale/es';
-import { getIdUsuario, getIdEmpresa } from '../../utils/authSession';
+import { getIdUsuario, getIdEmpresa, getNombreUsuario } from '../../utils/authSession';
 import { parseFechaFichaje } from '../../utils/fechaFichaje';
 import { parseUbicacionCoords } from '../../utils/ubicacion';
 import { notifyNotificacionesActualizadas } from '../../hooks/useNotificacionesPendientes';
+import { DECLARACION_CIERRE_MENSUAL, ETIQUETA_CONFIRMACION_CIERRE } from '../../utils/cierreMensualLegal';
+import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import UbicacionMapModal from '../components/UbicacionMapModal';
+import SignaturePad from '../components/shared/SignaturePad';
 import './TimeLogsPanel.css';
 import moment from 'moment';
 
@@ -118,6 +121,10 @@ const [selectedEntrada, setSelectedEntrada] = useState(null);
 const [diasExpandidos, setDiasExpandidos] = useState([]);
 const [mapModalOpen, setMapModalOpen] = useState(false);
 const [mapUbicacion, setMapUbicacion] = useState(null);
+const [cierreModalOpen, setCierreModalOpen] = useState(false);
+const [firmaCierre, setFirmaCierre] = useState(null);
+const [confirmoRegistros, setConfirmoRegistros] = useState(false);
+const [enviandoCierre, setEnviandoCierre] = useState(false);
 const entradas = ['Vacaciones','Baja','Asuntos Propios','Otros']
 
     const verUbicacionEnMapa = (ubicacion) => {
@@ -346,29 +353,107 @@ const getPeticionesEmpresa =  async () => {
     
 }
 
-const crearPeticionMensual = async () => {
+const crearPeticionMensual = async (firmaImagen) => {
   try {
     if (!selectedMonth || !selectedMonth.isValid()) {
       message.error('Mes no válido');
-      return;
+      return false;
     }
 
     const mesFormateado = selectedMonth.format('YYYY-MM');
-
-    const data = await crearPeticionCierreMes(mesFormateado);
+    const data = await crearPeticionCierreMes(mesFormateado, firmaImagen);
 
     if (data?.error) {
       message.error(data.error || 'No se pudo crear la petición');
-    } else {
-      message.success('Petición creada exitosamente');
-      await fetchData();
-      notifyNotificacionesActualizadas();
+      return false;
     }
 
+    const registrosPdf = filteredData
+      .filter((r) => r.tipo === 'Fichaje')
+      .map((r) => ({
+        fecha: r.date,
+        hora_entrada: r.checkIn,
+        hora_salida: r.checkOut,
+        dif_tiempo: r.totalH,
+      }));
+
+    const totalMin = registrosPdf.reduce((sum, r) => {
+      const match = String(r.dif_tiempo || '').match(/(\d+)h\s*(\d+)m/);
+      return sum + (match ? parseInt(match[1], 10) * 60 + parseInt(match[2], 10) : 0);
+    }, 0);
+    const totalHorasPdf = `${Math.floor(totalMin / 60)}h ${totalMin % 60}m`;
+
+    const datosPdf = {
+      nombreEmpleado: getNombreUsuario(),
+      mes: mesFormateado,
+      registros: registrosPdf,
+      totalHoras: totalHorasPdf,
+      totalHorasEsperadas: '',
+      firmaImagen,
+      firmaHash: data?.info?.firma_hash || null,
+      hashRegistroMes: data?.info?.hash_registro_mes || null,
+      fechaSolicitud: new Date().toISOString(),
+      estado: 'Pendiente',
+    };
+
+    notification.success({
+      message: 'Solicitud de cierre enviada',
+      description: (
+        <div className="tlp-cierre-notif">
+          <p>Tu solicitud firmada ha sido enviada al gestor para su revisión.</p>
+          <Button
+            type="link"
+            size="small"
+            className="tlp-cierre-notif__btn"
+            onClick={() => generarPdfCierreMensual(datosPdf)}
+          >
+            Descargar copia en PDF
+          </Button>
+        </div>
+      ),
+      duration: 10,
+    });
+
+    await fetchData();
+    notifyNotificacionesActualizadas();
+    return true;
   } catch (error) {
-    message.error('Error al crear petición');
+    message.error('Error al crear la solicitud de cierre');
     console.error(error);
+    return false;
   }
+};
+
+const abrirModalCierre = () => {
+  if (!selectedMonth?.isValid()) {
+    message.warning('Selecciona primero el mes que deseas cerrar');
+    return;
+  }
+  setFirmaCierre(null);
+  setConfirmoRegistros(false);
+  setCierreModalOpen(true);
+};
+
+const cerrarModalCierre = () => {
+  setCierreModalOpen(false);
+  setFirmaCierre(null);
+  setConfirmoRegistros(false);
+};
+
+const confirmarCierreMensual = async () => {
+  if (!confirmoRegistros) {
+    message.warning('Debes confirmar que los registros del mes son correctos');
+    return;
+  }
+  if (!firmaCierre) {
+    message.warning('Debes firmar la solicitud antes de enviarla');
+    return;
+  }
+
+  setEnviandoCierre(true);
+  const ok = await crearPeticionMensual(firmaCierre);
+  setEnviandoCierre(false);
+  if (ok) cerrarModalCierre();
 };
 
     useEffect(() => {
@@ -454,7 +539,7 @@ const handleMonthChange = (date, dateString) => {
 
         // Verificar si el mes ya existe en mesesCierre
         const mesFormateado = date.format('YYYY-MM');
-        const existeMes = mesesCierre.some(mc => mc.mes === mesFormateado);
+        const existeMes = mesTieneCierreActivo(mesesCierre, mesFormateado);
 
         // Nuevo: comprobar si es mes actual
         const hoy = moment();
@@ -470,19 +555,10 @@ const handleMonthChange = (date, dateString) => {
 
 
 
-    // Función para mostrar el modal de confirmación
-    const enviarRegistro = () => {
-        Modal.confirm({
-            title: '¿Desea cerrar el periodo de trabajo y enviar el registro de trabajo?',
-            content: '',
-            okText: 'Sí',
-            cancelText: 'No',
-            onOk: () => { crearPeticionMensual(); },
-            onCancel: () => {
-                // Si el usuario cancela, no se hace nada
-            },
-        });
-    };
+    const registrosMesSeleccionado = useMemo(() => {
+      if (!selectedMonth?.isValid()) return 0;
+      return filteredData.filter((item) => item.tipo === 'Fichaje').length;
+    }, [filteredData, selectedMonth]);
 
     const renderAcciones = (_, record) => {
       const tiposConUbicacion = ['Fichaje', 'Descanso'];
@@ -657,14 +733,14 @@ const handleMonthChange = (date, dateString) => {
     const accionesMenu = {
       items: [
         {
-          key: 'enviar',
-          label: 'Enviar',
-          icon: <SendOutlined />,
+          key: 'cierre',
+          label: 'Solicitar cierre mensual',
+          icon: <FileProtectOutlined />,
           disabled: isSubmitDisabled,
         },
         {
           key: 'exportar',
-          label: 'Exportar',
+          label: 'Exportar registros',
           icon: <ExportOutlined />,
         },
         {
@@ -674,7 +750,7 @@ const handleMonthChange = (date, dateString) => {
         },
       ],
       onClick: ({ key }) => {
-        if (key === 'enviar') enviarRegistro();
+        if (key === 'cierre') abrirModalCierre();
         if (key === 'exportar') setVisibleModalExportar();
         if (key === 'ausencia') setAbsenceModalVisible(true);
       },
@@ -934,6 +1010,43 @@ const handleMonthChange = (date, dateString) => {
                         value={comentario}
                         onChange={(e) => setComentario(e.target.value)}
                         />                    
+                </Modal>
+
+                <Modal
+                  title="Solicitar cierre mensual firmado"
+                  open={cierreModalOpen}
+                  onCancel={cerrarModalCierre}
+                  onOk={confirmarCierreMensual}
+                  okText="Enviar solicitud firmada"
+                  cancelText="Cancelar"
+                  confirmLoading={enviandoCierre}
+                  okButtonProps={{ disabled: !confirmoRegistros || !firmaCierre }}
+                  width={520}
+                  destroyOnClose
+                  className="tlp-cierre-modal"
+                >
+                  <div className="tlp-cierre-modal__body">
+                    <p className="tlp-cierre-modal__intro">
+                      Vas a enviar al gestor la solicitud de <strong>cierre del mes de{' '}
+                      {selectedMonth?.isValid() ? selectedMonth.format('MMMM [de] YYYY') : '—'}</strong>.
+                      Incluye los fichajes registrados en ese periodo ({registrosMesSeleccionado} fichajes)
+                      y quedará vinculada a tu firma y a una huella de integridad del registro.
+                    </p>
+                    <p className="tlp-cierre-modal__aviso">
+                      Una vez enviada, no podrás editar los fichajes de ese mes hasta que el gestor resuelva la solicitud.
+                    </p>
+                    <div className="tlp-cierre-modal__legal">
+                      <p className="tlp-cierre-modal__legal-titulo">Declaración</p>
+                      <p className="tlp-cierre-modal__legal-texto">{DECLARACION_CIERRE_MENSUAL}</p>
+                    </div>
+                    <Checkbox
+                      checked={confirmoRegistros}
+                      onChange={(e) => setConfirmoRegistros(e.target.checked)}
+                    >
+                      {ETIQUETA_CONFIRMACION_CIERRE}
+                    </Checkbox>
+                    <SignaturePad onChange={setFirmaCierre} />
+                  </div>
                 </Modal>
 
             <UbicacionMapModal

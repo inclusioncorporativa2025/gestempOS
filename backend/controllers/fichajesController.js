@@ -1,4 +1,5 @@
 const { Op } = require('sequelize');
+const crypto = require('crypto');
 
 const { sequelize } = require('../config/db');
 const { QueryTypes } = require('sequelize');
@@ -26,6 +27,9 @@ const { enviarNotificacionGestion } = require('../utils/mailService');
 const {
   MESES_CIERRE_ATTRS,
   mesesCierreSoportaNotificacionVista,
+  mesesCierreSoportaFirma,
+  getMesesCierreListAttrs,
+  getMesesCierreCreateFields,
 } = require('../utils/mesesCierreCompat');
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -646,7 +650,22 @@ const crearPeticionEdicion = async (req, res) => {
 
 const crearPeticionCierreMes = async (req, res) => {
   try {
-    const { idUsuario, idEmpresa, mes } = req.body;
+    const { idUsuario, idEmpresa, mes, firmaImagen } = req.body;
+
+    if (!firmaImagen || typeof firmaImagen !== 'string' || !firmaImagen.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Debe firmar la solicitud antes de enviarla' });
+    }
+
+    if (firmaImagen.length > 600000) {
+      return res.status(400).json({ error: 'La imagen de firma es demasiado grande' });
+    }
+
+    const soportaFirma = await mesesCierreSoportaFirma();
+    if (!soportaFirma) {
+      return res.status(503).json({
+        error: 'El servidor aún no tiene habilitada la firma de cierres. Contacte con soporte.',
+      });
+    }
 
     const mesFormateado = moment(mes, ['MM/YYYY', 'YYYY-MM', moment.ISO_8601], true).isValid()
       ? moment(mes, ['MM/YYYY', 'YYYY-MM', moment.ISO_8601]).format('YYYY-MM')
@@ -656,8 +675,9 @@ const crearPeticionCierreMes = async (req, res) => {
       return res.status(400).json({ error: 'Formato de mes inválido' });
     }
 
+    const listAttrs = await getMesesCierreListAttrs();
     const existente = await MesesCierre.findOne({
-      attributes: MESES_CIERRE_ATTRS,
+      attributes: listAttrs,
       where: {
         empresa_id: idEmpresa,
         usuario_alta: idUsuario,
@@ -675,11 +695,23 @@ const crearPeticionCierreMes = async (req, res) => {
       });
     }
 
+    const auditoria = await verificarEventosMes(idEmpresa, idUsuario, mesFormateado);
+    const hashRegistroMes = auditoria.hashRaiz
+      || crypto.createHash('sha256').update(`sin-registros|${idEmpresa}|${idUsuario}|${mesFormateado}`).digest('hex');
+
+    const firmaHash = crypto.createHash('sha256')
+      .update(`${idUsuario}|${idEmpresa}|${mesFormateado}|${hashRegistroMes}|${firmaImagen}`)
+      .digest('hex');
+
+    const createFields = await getMesesCierreCreateFields(true);
     const info = await createConId(MesesCierre, idEmpresa, 'id_mes_cierre', {
       usuario_alta: idUsuario,
       mes: mesFormateado,
       fecha_alta: new Date(),
-    }, undefined, MESES_CIERRE_ATTRS);
+      firma_imagen: firmaImagen,
+      firma_hash: firmaHash,
+      hash_registro_mes: hashRegistroMes,
+    }, undefined, createFields);
 
     const usuarios = await Usuario.findOne({
       where: { id_usuario: idUsuario },
@@ -706,7 +738,14 @@ const crearPeticionCierreMes = async (req, res) => {
 
     res.status(200).json({
       message: 'Petición creada',
-      info,
+      info: {
+        id_mes_cierre: info.id_mes_cierre,
+        empresa_id: info.empresa_id,
+        mes: mesFormateado,
+        firma_hash: firmaHash,
+        hash_registro_mes: hashRegistroMes,
+        fecha_alta: info.fecha_alta,
+      },
       notificacionEnviada: destinatarios.length > 0,
     });
   } catch (error) {
@@ -945,7 +984,7 @@ const getPeticionesByIdUsuario = async (req, res) => {
     });
 
     const mesesCierre = await MesesCierre.findAll({
-      attributes: MESES_CIERRE_ATTRS,
+      attributes: await getMesesCierreListAttrs(),
       where: {
         empresa_id: idEmpresa,
         usuario_alta: idUsuario,
@@ -1179,7 +1218,7 @@ const getCierresMensualesByIdEmpresa = async (req, res) => {
   try {
 
     const meses = await MesesCierre.findAll({
-      attributes: MESES_CIERRE_ATTRS,
+      attributes: await getMesesCierreListAttrs(),
       where: {
         fecha_baja: null,
         fecha_aceptacion: null,
@@ -1210,7 +1249,7 @@ const getHistorialCierresMensuales = async (req, res) => {
 
   try {
     const meses = await MesesCierre.findAll({
-      attributes: MESES_CIERRE_ATTRS,
+      attributes: await getMesesCierreListAttrs(),
       where: {
         fecha_baja: null,
         [Op.or]: [
@@ -1229,6 +1268,64 @@ const getHistorialCierresMensuales = async (req, res) => {
   } catch (error) {
     console.error('Error al recuperar historial de cierres:', error);
     res.status(500).json({ error: 'Error al recuperar historial' });
+  }
+};
+
+const getFirmaCierreMensual = async (req, res) => {
+  const { idEmpresa, id_mes_cierre, idUsuario } = req.body;
+  const tipoUsuario = Number(req.user?.tipo_usuario);
+
+  if (!idEmpresa || !id_mes_cierre) {
+    return res.status(400).json({ error: 'Datos incompletos' });
+  }
+
+  try {
+    const soportaFirma = await mesesCierreSoportaFirma();
+    if (!soportaFirma) {
+      return res.status(200).json({ firmado: false });
+    }
+
+    const registro = await MesesCierre.findOne({
+      attributes: [
+        'empresa_id',
+        'id_mes_cierre',
+        'usuario_alta',
+        'mes',
+        'firma_imagen',
+        'firma_hash',
+        'hash_registro_mes',
+        'fecha_alta',
+      ],
+      where: {
+        empresa_id: idEmpresa,
+        id_mes_cierre,
+        fecha_baja: null,
+      },
+      raw: true,
+    });
+
+    if (!registro) {
+      return res.status(404).json({ error: 'Cierre mensual no encontrado' });
+    }
+
+    if (
+      tipoUsuario === ROLES.EMPLEADO
+      && Number(registro.usuario_alta) !== Number(req.user?.id_usuario)
+    ) {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+
+    res.status(200).json({
+      firmado: Boolean(registro.firma_hash),
+      firma_imagen: registro.firma_imagen || null,
+      firma_hash: registro.firma_hash || null,
+      hash_registro_mes: registro.hash_registro_mes || null,
+      mes: registro.mes,
+      fecha_alta: registro.fecha_alta,
+    });
+  } catch (error) {
+    console.error('Error al obtener firma del cierre:', error);
+    res.status(500).json({ error: 'Error al obtener la firma' });
   }
 };
 
@@ -1431,6 +1528,7 @@ module.exports = {
     crearPeticionCierreMes,
     getCierresMensualesByIdEmpresa,
     getHistorialCierresMensuales,
+    getFirmaCierreMensual,
     getDatosUsuarioMes,
     responderPeticionCierre,
     getEstadoPersonalEmpresa,

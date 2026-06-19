@@ -212,6 +212,28 @@ export const getHistorialEdicionesHorario = async () => {
   }
 };
 
+export const getFirmaCierreMensual = async (idMesCierre) => {
+  try {
+    const idEmpresa = getIdEmpresa();
+    const response = await fetch(API_BASE_URL + '/getFirmaCierreMensual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idEmpresa, id_mes_cierre: idMesCierre }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      console.error('getFirmaCierreMensual:', data?.error || response.status);
+      return { firmado: false };
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error obteniendo firma del cierre:', error);
+    return { firmado: false };
+  }
+};
+
 export const getHistorialCierresMensuales = async () => {
   try {
     const response = await fetch(API_BASE_URL + '/getHistorialCierresMensuales', {
@@ -327,7 +349,7 @@ export const crearPeticionEdicion = async (values) => {
 };
 
 
-export const crearPeticionCierreMes = async (mes) => {
+export const crearPeticionCierreMes = async (mes, firmaImagen) => {
   try {
     const idUsuario = getIdUsuario();
     const idEmpresa = getIdEmpresa();
@@ -335,7 +357,7 @@ export const crearPeticionCierreMes = async (mes) => {
     const response = await fetch(API_BASE_URL + '/crearPeticionCierreMes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idUsuario, idEmpresa, mes }),
+      body: JSON.stringify({ idUsuario, idEmpresa, mes, firmaImagen }),
     });
 
     const data = await response.json().catch(() => ({}));

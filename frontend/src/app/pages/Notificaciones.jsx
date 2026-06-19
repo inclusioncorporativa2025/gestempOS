@@ -4,7 +4,7 @@ import {
   Typography, message, Popconfirm, Tooltip, DatePicker, Input, Popover, Badge, Radio, Tag
 } from 'antd';
 import GradientButton from '../components/shared/GradientButton';
-import { EyeOutlined, SearchOutlined, FilterOutlined, CalendarOutlined, CloseOutlined } from '@ant-design/icons';
+import { EyeOutlined, SearchOutlined, FilterOutlined, CalendarOutlined, CloseOutlined, DownloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -18,6 +18,7 @@ import {
   getDatosUsuarioMes,
   responderPeticionCierre,
   getHistorialEdicionesHorario,
+  getFirmaCierreMensual,
 } from '../../features/fichaje/fichajeService';
 import { notifyNotificacionesActualizadas } from '../../hooks/useNotificacionesPendientes';
 import { parseFechaFichaje } from '../../utils/fechaFichaje';
@@ -27,6 +28,7 @@ import {
 
 } from '../../features/user/usuarioService';
 import { getTipoUsuario } from '../../utils/authSession';
+import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import NotificacionesEmpleado from './NotificacionesEmpleado';
 import './Notificaciones.css';
 
@@ -132,6 +134,8 @@ const [visible, setVisible] = useState(false);
 const [registroHoras, setRegistroHoras] = useState([]);
 const [totalHoras, setTotalHoras] = useState('');
 const [totalHorasEsperadas, setTotalHorasEsperadas] = useState(0);
+const [firmaCierreDetalle, setFirmaCierreDetalle] = useState(null);
+const [detalleCierreContext, setDetalleCierreContext] = useState(null);
 const [rangoFechas, setRangoFechas] = useState(null);
 const [busquedaNombre, setBusquedaNombre] = useState('');
 const [filtroAbierto, setFiltroAbierto] = useState(false);
@@ -398,6 +402,13 @@ const [formRechazo] = Form.useForm();
 
 const setVisibleModalDetalles = async (info) => {
   try {
+    setFirmaCierreDetalle(null);
+    setDetalleCierreContext({
+      nombreEmpleado: info.nombre_usuario_alta || '—',
+      mes: info.mes,
+      estado: obtenerEstado(info),
+      fechaSolicitud: info.fecha_alta,
+    });
     const response = await getDatosUsuarioMes(info.usuario_alta, info.mes);
     const registros = response.info || [];
 
@@ -437,6 +448,12 @@ const setVisibleModalDetalles = async (info) => {
 
     setRegistroHoras(registrosConDetalles);
     setTotalHoras(totalHorasTexto);
+
+    if (info.id_mes_cierre) {
+      const firma = await getFirmaCierreMensual(info.id_mes_cierre);
+      setFirmaCierreDetalle(firma);
+    }
+
     setVisible(true);
   } catch (error) {
     message.error('Error al cargar los datos del usuario');
@@ -553,7 +570,23 @@ const setVisibleModalDetalles = async (info) => {
     }
   };
 
-    const columnsDetalles = [
+  const descargarPdfCierre = () => {
+    if (!detalleCierreContext) return;
+    generarPdfCierreMensual({
+      nombreEmpleado: detalleCierreContext.nombreEmpleado,
+      mes: detalleCierreContext.mes,
+      registros: registroHoras,
+      totalHoras,
+      totalHorasEsperadas,
+      firmaImagen: firmaCierreDetalle?.firma_imagen,
+      firmaHash: firmaCierreDetalle?.firma_hash,
+      hashRegistroMes: firmaCierreDetalle?.hash_registro_mes,
+      fechaSolicitud: detalleCierreContext.fechaSolicitud,
+      estado: detalleCierreContext.estado,
+    });
+  };
+
+  const columnsDetalles = [
         { title: 'Fecha', dataIndex: 'fecha', key: 'fecha' },
         { title: 'Hora Entrada', dataIndex: 'hora_entrada', key: 'hora_entrada' },
         { title: 'Hora Salida', dataIndex: 'hora_salida', key: 'hora_salida' },
@@ -720,7 +753,12 @@ const setVisibleModalDetalles = async (info) => {
         key: 'estado',
         render: (_, record) => {
           const estado = obtenerEstado(record);
-          return <Tag color={colorEstadoTag(estado)}>{estado}</Tag>;
+          return (
+            <span className="notif-estado-cell">
+              <Tag color={colorEstadoTag(estado)}>{estado}</Tag>
+              {record.firma_hash && <Tag color="blue">Firmado</Tag>}
+            </span>
+          );
         },
       },
       {
@@ -888,13 +926,29 @@ const setVisibleModalDetalles = async (info) => {
 
       <Modal
             open={visible}
-            onCancel={() => setVisible(false)}
+            onCancel={() => {
+              setVisible(false);
+              setFirmaCierreDetalle(null);
+              setDetalleCierreContext(null);
+            }}
             footer={null}
             width="80%"
             className="notif-modal"
             destroyOnClose
         >
-            <Card title={<Title className="notif-modal-title" level={2}>Registro mensual</Title>}>
+            <Card
+              title={<Title className="notif-modal-title" level={2}>Registro mensual</Title>}
+              extra={(
+                <Button
+                  type="default"
+                  icon={<DownloadOutlined />}
+                  onClick={descargarPdfCierre}
+                  disabled={!detalleCierreContext}
+                >
+                  Descargar PDF
+                </Button>
+              )}
+            >
         
              <Table
                 columns={columnsDetalles}
@@ -907,6 +961,24 @@ const setVisibleModalDetalles = async (info) => {
                     <span className="notif-total-sep">Total de horas trabajadas: {totalHoras}</span>
                     <span>Total de horas esperadas: {totalHorasEsperadas}</span>
                 </div>
+                {firmaCierreDetalle?.firmado && (
+                  <div className="notif-firma-cierre">
+                    <p className="notif-firma-cierre__titulo">Solicitud firmada por el empleado</p>
+                    {firmaCierreDetalle.firma_imagen && (
+                      <img
+                        src={firmaCierreDetalle.firma_imagen}
+                        alt="Firma del empleado"
+                        className="notif-firma-cierre__img"
+                      />
+                    )}
+                    <p className="notif-firma-cierre__hash">
+                      Huella de firma: <code>{firmaCierreDetalle.firma_hash}</code>
+                    </p>
+                    <p className="notif-firma-cierre__hash">
+                      Hash del registro del mes: <code>{firmaCierreDetalle.hash_registro_mes}</code>
+                    </p>
+                  </div>
+                )}
             </Card>
         </Modal>
 

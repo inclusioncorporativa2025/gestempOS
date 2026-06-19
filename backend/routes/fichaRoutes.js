@@ -24,6 +24,7 @@ const {
   marcarPeticionesVistas,
   getHistorialEdicionesHorario,
   getHistorialCierresMensuales,
+  getFirmaCierreMensual,
 } = require('../controllers/fichajesController');
 const { requireRole, ROLE_GROUPS } = require('../middleware/authMiddleware');
 
@@ -52,6 +53,7 @@ router.post('/getPeticionesByIdEmpresa', requireRole(GESTION_PETICIONES), getPet
 router.post('/responderPeticion', requireRole(GESTION_PETICIONES), responderPeticion);
 router.post('/getCierresMensualesByIdEmpresa', requireRole(GESTION_PETICIONES), getCierresMensualesByIdEmpresa);
 router.post('/getHistorialCierresMensuales', requireRole(GESTION_PETICIONES), getHistorialCierresMensuales);
+router.post('/getFirmaCierreMensual', requireRole(ROLE_GROUPS.FICHAJE), getFirmaCierreMensual);
 router.post('/getDatosUsuarioMes', requireRole(ROLE_GROUPS.FICHAJE), getDatosUsuarioMes);
 router.post('/responderPeticionCierre', requireRole(GESTION_PETICIONES), responderPeticionCierre);
 router.post('/getEstadoPersonalEmpresa', requireRole(ROLE_GROUPS.PRESENCIA_EQUIPO), getEstadoPersonalEmpresa);
