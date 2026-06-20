@@ -1,0 +1,47 @@
+.select-empresa-modal__header {
+  margin-bottom: 20px;
+}
+
+.select-empresa-modal__title {
+  margin-bottom: 4px !important;
+}
+
+.select-empresa-modal__list {
+  margin-bottom: 20px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.select-empresa-modal__item {
+  cursor: pointer;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.select-empresa-modal__item:hover {
+  background: rgba(var(--color-primary-rgb), 0.04);
+}
+
+.select-empresa-modal__item--active {
+  border-color: rgba(var(--color-primary-rgb), 0.45);
+  background: rgba(var(--color-primary-rgb), 0.08);
+}
+
+.select-empresa-modal__item-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.select-empresa-modal__icon {
+  font-size: 20px;
+  color: rgba(var(--color-primary-rgb), 0.85);
+}
+
+.select-empresa-modal__alias {
+  display: block;
+  font-size: 12px;
+}

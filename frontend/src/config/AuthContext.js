@@ -25,6 +25,12 @@ export const AuthProvider = ({ children }) => {
     setUser(claimsToUser(claims));
   }, []);
 
+  const refreshSession = useCallback((token) => {
+    const claims = setAuthToken(token);
+    setUser(claimsToUser(claims));
+    return claimsToUser(claims);
+  }, []);
+
   const logout = useCallback(() => {
     clearAuthSession();
     setUser(null);
@@ -50,6 +56,7 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         login,
+        refreshSession,
         logout,
         impersonate,
         stopImpersonation,

@@ -1,9 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const { login, forgotPassword, resetPassword } = require('../controllers/authLocalController');
+const {
+  login,
+  selectEmpresa,
+  switchEmpresa,
+  misEmpresas,
+  forgotPassword,
+  resetPassword,
+} = require('../controllers/authLocalController');
 const { registerCompanyPublic } = require('../controllers/companyController');
+const { requireAuth } = require('../middleware/authMiddleware');
 
 router.post('/login', login);
+
+router.post('/select-empresa', selectEmpresa);
+
+router.get('/mis-empresas', requireAuth, misEmpresas);
+
+router.post('/switch-empresa', requireAuth, switchEmpresa);
 
 router.post('/register-company', registerCompanyPublic);
 

@@ -99,6 +99,7 @@ export const claimsToUser = (claims) => {
     nombre_empresa: claims.nombre_empresa,
     alias: claims.alias,
     esquema: claims.esquema ?? claims.id_empresa,
+    empresas: claims.empresas ?? null,
     impersonacion: Boolean(claims.impersonacion),
     impersonado_por: claims.impersonado_por ?? null,
     impersonado_por_email: claims.impersonado_por_email ?? null,

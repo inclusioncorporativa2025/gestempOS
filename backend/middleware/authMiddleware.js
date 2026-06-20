@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 const Empresa = require('../models/Empresa');
+const UsuarioEmpresa = require('../models/UsuarioEmpresa');
+const { usuarioTieneAccesoEmpresa } = require('../services/usuarioEmpresaService');
 
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@fichaeneltrabajo.es';
 
@@ -125,6 +127,18 @@ const requireOwnEmpresa = async (req, res, next) => {
         code: 'EMPRESA_INACTIVA',
         message:
           'El acceso de su empresa no está disponible en este momento. Si necesita ayuda, contacte con soporte.',
+        supportEmail: SUPPORT_EMAIL,
+      });
+    }
+
+    const tieneAcceso = await usuarioTieneAccesoEmpresa(
+      Number(req.user.id_usuario),
+      empresaToken,
+    );
+    if (!tieneAcceso) {
+      return res.status(403).json({
+        code: 'EMPRESA_NO_VINCULADA',
+        message: 'No tienes acceso a esta empresa.',
         supportEmail: SUPPORT_EMAIL,
       });
     }

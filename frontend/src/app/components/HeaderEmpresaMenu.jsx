@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { Dropdown, Modal, Typography } from 'antd';
-import { DownOutlined } from '@ant-design/icons';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Dropdown, Modal, Typography, notification } from 'antd';
+import { CheckOutlined, DownOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { SUPPORT_EMAIL } from '../../constants/support';
-import { getTipoUsuario } from '../../utils/authSession';
+import { getIdEmpresa, getTipoUsuario, isImpersonating } from '../../utils/authSession';
+import { fetchMisEmpresas, doSwitchEmpresa } from '../../features/auth/authService';
+import { useAuth } from '../../config/AuthContext';
 import './HeaderEmpresaMenu.css';
 
 const { Text, Paragraph } = Typography;
@@ -22,10 +24,34 @@ const HeaderEmpresaMenu = ({
   onLogoError,
 }) => {
   const navigate = useNavigate();
+  const { refreshSession, impersonating } = useAuth();
   const [planAbierto, setPlanAbierto] = useState(false);
+  const [empresas, setEmpresas] = useState([]);
+  const [cambiandoEmpresa, setCambiandoEmpresa] = useState(false);
   const tipoUsuario = getTipoUsuario();
-  const puedeVerMenu = TIPOS_MENU_EMPRESA.includes(tipoUsuario);
+  const empresaActiva = getIdEmpresa();
   const puedeAnadirEmpresa = TIPOS_PLATAFORMA.includes(tipoUsuario);
+  const tieneVariasEmpresas = empresas.length > 1;
+  const puedeVerMenu =
+    TIPOS_MENU_EMPRESA.includes(tipoUsuario) || tieneVariasEmpresas;
+
+  const cargarEmpresas = useCallback(async () => {
+    if (impersonating || isImpersonating()) {
+      return;
+    }
+    try {
+      const data = await fetchMisEmpresas();
+      setEmpresas(data.empresas || []);
+    } catch {
+      setEmpresas([]);
+    }
+  }, [impersonating]);
+
+  useEffect(() => {
+    if (empresaActiva) {
+      cargarEmpresas();
+    }
+  }, [empresaActiva, cargarEmpresas]);
 
   const abrirPlan = () => setPlanAbierto(true);
   const cerrarPlan = () => setPlanAbierto(false);
@@ -34,12 +60,59 @@ const HeaderEmpresaMenu = ({
     navigate(APP_ROUTES.platformEmpresas, { state: { abrirAltaEmpresa: true } });
   };
 
+  const cambiarEmpresa = async (idEmpresa) => {
+    if (idEmpresa === empresaActiva || cambiandoEmpresa) {
+      return;
+    }
+
+    setCambiandoEmpresa(true);
+    try {
+      const data = await doSwitchEmpresa(idEmpresa);
+      refreshSession(data.token);
+      notification.success({
+        message: 'Empresa cambiada',
+        description: `Ahora estás en ${data.empresa?.nombre || 'la empresa seleccionada'}`,
+      });
+      navigate(APP_ROUTES.home, { replace: true });
+      window.location.reload();
+    } catch (error) {
+      notification.error({
+        message: 'No se pudo cambiar de empresa',
+        description: error.message,
+      });
+    } finally {
+      setCambiandoEmpresa(false);
+    }
+  };
+
   const items = [
-    {
-      key: 'plan',
-      label: 'Ver plan contratado',
-      onClick: abrirPlan,
-    },
+    ...(tieneVariasEmpresas
+      ? [
+          { key: 'cambiar-empresa-title', type: 'group', label: 'Cambiar empresa' },
+          ...empresas.map((empresa) => ({
+            key: `empresa-${empresa.id_empresa}`,
+            label: (
+              <span className="app-header-empresa-option">
+                <span className="app-header-empresa-option__name">{empresa.nombre}</span>
+                {empresa.id_empresa === empresaActiva ? (
+                  <CheckOutlined className="app-header-empresa-option__check" />
+                ) : null}
+              </span>
+            ),
+            onClick: () => cambiarEmpresa(empresa.id_empresa),
+          })),
+          { type: 'divider' },
+        ]
+      : []),
+    ...(TIPOS_MENU_EMPRESA.includes(tipoUsuario)
+      ? [
+          {
+            key: 'plan',
+            label: 'Ver plan contratado',
+            onClick: abrirPlan,
+          },
+        ]
+      : []),
     ...(puedeAnadirEmpresa
       ? [
           {
@@ -87,6 +160,11 @@ const HeaderEmpresaMenu = ({
           trigger={['click']}
           placement="bottomRight"
           overlayClassName="app-header-empresa-dropdown"
+          onOpenChange={(open) => {
+            if (open) {
+              cargarEmpresas();
+            }
+          }}
         >
           {trigger}
         </Dropdown>
@@ -124,4 +202,3 @@ const HeaderEmpresaMenu = ({
 };
 
 export default HeaderEmpresaMenu;
-

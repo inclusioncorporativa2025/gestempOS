@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Checkbox, Typography, notification, Modal } from 'antd';
 import GradientButton from '../components/shared/GradientButton';
-import { doLogin, doForgotPassword } from "../../features/auth/authService";
+import { doLogin, doForgotPassword, doSelectEmpresa } from "../../features/auth/authService";
 import { useAuth } from '../../config/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { SUPPORT_EMAIL } from '../../constants/support';
+import SelectEmpresaModal from '../components/SelectEmpresaModal';
 import './Login.css';
 
 const { Title, Text } = Typography;
@@ -14,6 +15,11 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [empresaModalOpen, setEmpresaModalOpen] = useState(false);
+  const [empresasPendientes, setEmpresasPendientes] = useState([]);
+  const [preAuthToken, setPreAuthToken] = useState(null);
+  const [usuarioPendiente, setUsuarioPendiente] = useState(null);
+  const [seleccionEmpresaLoading, setSeleccionEmpresaLoading] = useState(false);
   const [email, setEmail] = useState("");
   const navigate = useNavigate();
   const { user, login, ready } = useAuth();
@@ -24,24 +30,54 @@ const Login = () => {
     }
   }, [ready, user, navigate]);
 
+  const completarAcceso = (data) => {
+    if (!data?.token) {
+      throw new Error('No se recibió el token de sesión');
+    }
+
+    login(data.token);
+
+    notification.success({
+      message: "Inicio de sesión exitoso",
+      description: `Hola, ${data.usuario?.nombre || usuarioPendiente?.nombre || ''}`,
+    });
+
+    navigate(APP_ROUTES.home);
+  };
+
+  const handleSeleccionEmpresa = async (idEmpresa) => {
+    setSeleccionEmpresaLoading(true);
+    try {
+      const data = await doSelectEmpresa(preAuthToken, idEmpresa);
+      setEmpresaModalOpen(false);
+      setPreAuthToken(null);
+      setEmpresasPendientes([]);
+      completarAcceso(data);
+    } catch (error) {
+      notification.error({
+        message: 'Error',
+        description: error.message || 'No se pudo acceder a la empresa seleccionada',
+      });
+    } finally {
+      setSeleccionEmpresaLoading(false);
+    }
+  };
+
   const handleSubmit = async (values) => {
     setLoading(true);
 
     try {
       const data = await doLogin(values.email, values.password);
 
-      if (!data?.token) {
-        throw new Error('No se recibió el token de sesión');
+      if (data.code === 'EMPRESA_SELECTION_REQUIRED') {
+        setPreAuthToken(data.preAuthToken);
+        setEmpresasPendientes(data.empresas || []);
+        setUsuarioPendiente(data.usuario || null);
+        setEmpresaModalOpen(true);
+        return;
       }
 
-      login(data.token);
-
-      notification.success({
-        message: "Inicio de sesión exitoso",
-        description: `Hola, ${data.usuario?.nombre || ''}`,
-      });
-
-      navigate(APP_ROUTES.home);
+      completarAcceso(data);
     } catch (error) {
       if (error.code === 'PASSWORD_RESET_REQUIRED') {
         notification.info({
@@ -208,6 +244,18 @@ const Login = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      <SelectEmpresaModal
+        open={empresaModalOpen}
+        empresas={empresasPendientes}
+        loading={seleccionEmpresaLoading}
+        onSelect={handleSeleccionEmpresa}
+        onCancel={() => {
+          setEmpresaModalOpen(false);
+          setPreAuthToken(null);
+          setEmpresasPendientes([]);
+        }}
+      />
     </div>
   );
 };

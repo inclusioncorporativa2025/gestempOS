@@ -2,75 +2,27 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
 const Usuario = require('../models/Usuario');
-const UsuarioEmpresa = require('../models/UsuarioEmpresa');
 const Empresa = require('../models/Empresa');
 const { hashToken, generarYEnviarReset } = require('../utils/mailService');
 const { registrarAcceso } = require('../services/accesoPlataformaService');
 const { getClientIp, getUserAgent } = require('../utils/request');
+const {
+  TIPOS_PLATAFORMA,
+  empresaEstaOperativa,
+  listarMembresiasActivas,
+  listarEmpresasParaSelector,
+  obtenerMembresiaActiva,
+  emitirJwtSesion,
+  emitirPreAuthToken,
+  verificarPreAuthToken,
+} = require('../services/usuarioEmpresaService');
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRATION;
 const BCRYPT_ROUNDS = 10;
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@fichaeneltrabajo.es';
 
-/** Tipos de plataforma: no exigen empresa activa en el login */
-const TIPOS_PLATAFORMA = [1, 2];
-
 const usuarioActivo = (usuario) =>
   usuario && usuario.activo !== false && usuario.activo !== 0;
-
-const empresaEstaOperativa = (empresa) =>
-  empresa &&
-  !empresa.fecha_baja &&
-  empresa.activo !== false &&
-  empresa.activo !== 0;
-
-const obtenerEmpresaDelUsuario = async (idUsuario) => {
-  const usuarioEmpresa = await UsuarioEmpresa.findOne({
-    where: { id_usuario: idUsuario, fecha_baja: null },
-  });
-
-  if (!usuarioEmpresa) {
-    return { usuarioEmpresa: null, empresa: null };
-  }
-
-  const empresa = await Empresa.findOne({
-    where: { id_empresa: usuarioEmpresa.id_empresa },
-  });
-
-  return { usuarioEmpresa, empresa };
-};
-
-/**
- * Usuarios de empresa (3–6) solo pueden autenticarse si su empresa está activa y sin baja.
- */
-const validarAccesoEmpresa = (usuario, empresa, usuarioEmpresa) => {
-  const tipo = Number(usuario.tipo_usuario);
-
-  if (TIPOS_PLATAFORMA.includes(tipo)) {
-    return null;
-  }
-
-  if (!usuarioEmpresa) {
-    return {
-      status: 403,
-      code: 'EMPRESA_NO_VINCULADA',
-      message:
-        'Su usuario no está vinculado a ninguna empresa. Contacte con el administrador de la plataforma.',
-    };
-  }
-
-  if (!empresaEstaOperativa(empresa)) {
-    return {
-      status: 403,
-      code: 'EMPRESA_INACTIVA',
-      message:
-        'La empresa asociada a su cuenta no está activa o ha sido dada de baja. Contacte con el administrador de la plataforma.',
-    };
-  }
-
-  return null;
-};
 
 const sanitizeUsuario = (usuario) => ({
   id_usuario: usuario.id_usuario,
@@ -80,6 +32,56 @@ const sanitizeUsuario = (usuario) => ({
   dni: usuario.dni,
   activo: usuario.activo,
 });
+
+/**
+ * Usuarios de empresa (3–6) deben tener al menos una empresa operativa vinculada.
+ */
+const validarAccesoEmpresa = (usuario, membresiasActivas) => {
+  const tipo = Number(usuario.tipo_usuario);
+
+  if (TIPOS_PLATAFORMA.includes(tipo)) {
+    return null;
+  }
+
+  if (!membresiasActivas.length) {
+    return {
+      status: 403,
+      code: 'EMPRESA_NO_VINCULADA',
+      message:
+        'Su usuario no está vinculado a ninguna empresa. Contacte con el administrador de la plataforma.',
+    };
+  }
+
+  return null;
+};
+
+const completarLoginConEmpresa = async (req, res, usuario, membresia, empresa) => {
+  usuario.ultimo_login = new Date();
+  await usuario.save();
+
+  await registrarAcceso({
+    idUsuario: usuario.id_usuario,
+    tipoEvento: 'login',
+    ruta: '/login',
+    ip: getClientIp(req),
+    userAgent: getUserAgent(req),
+    idEmpresa: empresaEstaOperativa(empresa) ? empresa.id_empresa : null,
+  });
+
+  const operativa = empresaEstaOperativa(empresa);
+  const id_empresa = operativa ? empresa.id_empresa : null;
+  const nombre_empresa = operativa ? empresa.nombre : null;
+  const alias = operativa ? empresa.alias : null;
+
+  const token = emitirJwtSesion(usuario, empresa, membresia);
+
+  return res.status(200).json({
+    message: 'Login exitoso',
+    token,
+    usuario: sanitizeUsuario(usuario),
+    empresa: id_empresa ? { id_empresa, nombre: nombre_empresa, alias } : null,
+  });
+};
 
 const login = async (req, res) => {
   const { email, password } = req.body;
@@ -95,8 +97,8 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 
-    const { usuarioEmpresa, empresa } = await obtenerEmpresaDelUsuario(usuario.id_usuario);
-    const bloqueoEmpresa = validarAccesoEmpresa(usuario, empresa, usuarioEmpresa);
+    const membresiasActivas = await listarMembresiasActivas(usuario.id_usuario);
+    const bloqueoEmpresa = validarAccesoEmpresa(usuario, membresiasActivas);
     if (bloqueoEmpresa) {
       return res.status(bloqueoEmpresa.status).json({
         code: bloqueoEmpresa.code,
@@ -105,14 +107,13 @@ const login = async (req, res) => {
       });
     }
 
-    // Usuario sin contraseña establecida (p.ej. migración) o que requiere reset:
-    // enviamos automáticamente el correo para que establezca su contraseña.
     if (!usuario.password_hash || usuario.requiere_reset_password) {
       const enlace = await generarYEnviarReset(usuario);
 
       const respuesta = {
         code: 'PASSWORD_RESET_REQUIRED',
-        message: 'Tras mejoras en el sistema, por motivos de seguridad debes restablecer la contraseña. Se te ha enviado un correo con los pasos a seguir.',
+        message:
+          'Tras mejoras en el sistema, por motivos de seguridad debes restablecer la contraseña. Se te ha enviado un correo con los pasos a seguir.',
       };
 
       if (process.env.NODE_ENV !== 'production') {
@@ -127,54 +128,144 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 
-    usuario.ultimo_login = new Date();
-    await usuario.save();
+    const tipo = Number(usuario.tipo_usuario);
+    const requiereSeleccion =
+      !TIPOS_PLATAFORMA.includes(tipo) && membresiasActivas.length > 1;
 
-    await registrarAcceso({
-      idUsuario: usuario.id_usuario,
-      tipoEvento: 'login',
-      ruta: '/login',
-      ip: getClientIp(req),
-      userAgent: getUserAgent(req),
-      idEmpresa: empresaEstaOperativa(empresa) ? empresa.id_empresa : null,
-    });
-
-    let id_empresa = null;
-    let nombre_empresa = null;
-    let alias = null;
-
-    if (empresaEstaOperativa(empresa)) {
-      id_empresa = empresa.id_empresa;
-      nombre_empresa = empresa.nombre;
-      alias = empresa.alias;
+    if (requiereSeleccion) {
+      const empresas = await listarEmpresasParaSelector(usuario.id_usuario, usuario);
+      return res.status(200).json({
+        code: 'EMPRESA_SELECTION_REQUIRED',
+        message: 'Selecciona la empresa con la que deseas acceder',
+        preAuthToken: emitirPreAuthToken(usuario.id_usuario),
+        empresas,
+        usuario: sanitizeUsuario(usuario),
+      });
     }
 
-    const token = jwt.sign(
-      {
-        id_usuario: usuario.id_usuario,
-        email: usuario.email,
-        tipo_usuario: usuario.tipo_usuario,
-        nombre: usuario.nombre,
-        id_empresa,
-        nombre_empresa,
-        alias,
-        esquema: id_empresa,
-      },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
+    const { membresia, empresa } = membresiasActivas[0] ?? {
+      membresia: null,
+      empresa: null,
+    };
 
-    return res.status(200).json({
-      message: 'Login exitoso',
-      token,
-      usuario: sanitizeUsuario(usuario),
-      empresa: id_empresa
-        ? { id_empresa, nombre: nombre_empresa, alias }
-        : null,
-    });
+    return completarLoginConEmpresa(req, res, usuario, membresia, empresa);
   } catch (error) {
     console.error('Error en login:', error.message);
     return res.status(500).json({ message: 'Error al iniciar sesión' });
+  }
+};
+
+const selectEmpresa = async (req, res) => {
+  const { preAuthToken, id_empresa: idEmpresaBody } = req.body;
+  const idEmpresa = Number(idEmpresaBody);
+
+  if (!preAuthToken || !idEmpresa) {
+    return res.status(400).json({ message: 'Token de selección y empresa son obligatorios' });
+  }
+
+  try {
+    const payload = verificarPreAuthToken(preAuthToken);
+    const usuario = await Usuario.findOne({
+      where: { id_usuario: payload.id_usuario, fecha_baja: null },
+    });
+
+    if (!usuarioActivo(usuario)) {
+      return res.status(401).json({ message: 'Sesión de selección no válida' });
+    }
+
+    const membresia = await obtenerMembresiaActiva(usuario.id_usuario, idEmpresa);
+    if (!membresia) {
+      return res.status(403).json({ message: 'No tienes acceso a esa empresa' });
+    }
+
+    const empresa = await Empresa.findByPk(idEmpresa);
+    if (!empresaEstaOperativa(empresa)) {
+      return res.status(403).json({
+        code: 'EMPRESA_INACTIVA',
+        message: 'La empresa seleccionada no está disponible en este momento.',
+        supportEmail: SUPPORT_EMAIL,
+      });
+    }
+
+    return completarLoginConEmpresa(req, res, usuario, membresia, empresa);
+  } catch (error) {
+    console.error('Error en selectEmpresa:', error.message);
+    return res.status(401).json({ message: 'Token de selección inválido o caducado' });
+  }
+};
+
+const switchEmpresa = async (req, res) => {
+  const idEmpresa = Number(req.body?.id_empresa);
+
+  if (!idEmpresa) {
+    return res.status(400).json({ message: 'id_empresa es obligatorio' });
+  }
+
+  if (req.user.impersonacion) {
+    return res.status(403).json({
+      message: 'No se puede cambiar de empresa durante una sesión suplantada',
+    });
+  }
+
+  try {
+    const usuario = await Usuario.findOne({
+      where: { id_usuario: req.user.id_usuario, fecha_baja: null },
+    });
+
+    if (!usuarioActivo(usuario)) {
+      return res.status(401).json({ message: 'Usuario no válido' });
+    }
+
+    const membresia = await obtenerMembresiaActiva(usuario.id_usuario, idEmpresa);
+    if (!membresia) {
+      return res.status(403).json({ message: 'No tienes acceso a esa empresa' });
+    }
+
+    const empresa = await Empresa.findByPk(idEmpresa);
+    if (!empresaEstaOperativa(empresa)) {
+      return res.status(403).json({
+        code: 'EMPRESA_INACTIVA',
+        message: 'La empresa seleccionada no está disponible en este momento.',
+        supportEmail: SUPPORT_EMAIL,
+      });
+    }
+
+    const token = emitirJwtSesion(usuario, empresa, membresia);
+
+    return res.status(200).json({
+      message: 'Empresa cambiada',
+      token,
+      empresa: {
+        id_empresa: empresa.id_empresa,
+        nombre: empresa.nombre,
+        alias: empresa.alias,
+      },
+    });
+  } catch (error) {
+    console.error('Error en switchEmpresa:', error.message);
+    return res.status(500).json({ message: 'Error al cambiar de empresa' });
+  }
+};
+
+const misEmpresas = async (req, res) => {
+  try {
+    const usuario = await Usuario.findOne({
+      where: { id_usuario: req.user.id_usuario, fecha_baja: null },
+    });
+
+    if (!usuarioActivo(usuario)) {
+      return res.status(401).json({ message: 'Usuario no válido' });
+    }
+
+    const empresas = await listarEmpresasParaSelector(usuario.id_usuario, usuario);
+
+    return res.status(200).json({
+      empresas,
+      empresa_activa: req.user.id_empresa ? Number(req.user.id_empresa) : null,
+    });
+  } catch (error) {
+    console.error('Error en misEmpresas:', error.message);
+    return res.status(500).json({ message: 'Error al obtener empresas' });
   }
 };
 
@@ -196,8 +287,8 @@ const forgotPassword = async (req, res) => {
       return res.status(200).json(respuestaGenerica);
     }
 
-    const { usuarioEmpresa, empresa } = await obtenerEmpresaDelUsuario(usuario.id_usuario);
-    if (validarAccesoEmpresa(usuario, empresa, usuarioEmpresa)) {
+    const membresiasActivas = await listarMembresiasActivas(usuario.id_usuario);
+    if (validarAccesoEmpresa(usuario, membresiasActivas)) {
       return res.status(200).json(respuestaGenerica);
     }
 
@@ -255,6 +346,9 @@ const resetPassword = async (req, res) => {
 
 module.exports = {
   login,
+  selectEmpresa,
+  switchEmpresa,
+  misEmpresas,
   forgotPassword,
   resetPassword,
 };

@@ -16,6 +16,7 @@ const {
   obtenerDisponibilidadLicencias,
 } = require('../repositorios/usuariosEmpresasRepository');
 const { enviarInvitacionEmpleado } = require('../utils/mailService');
+const { obtenerMembresiaActiva, resolverTipoSesion } = require('../services/usuarioEmpresaService');
 const { Op } = require('sequelize');
 const dayjs = require('dayjs');
 const isoWeek = require('dayjs/plugin/isoWeek');
@@ -61,7 +62,16 @@ const getMiPerfil = async (req, res) => {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
 
-        return res.status(200).json({ perfil: sanitizePerfil(usuario) });
+        const perfil = sanitizePerfil(usuario);
+        const idEmpresa = Number(req.user.id_empresa);
+        if (idEmpresa) {
+            const membresia = await obtenerMembresiaActiva(idUsuario, idEmpresa);
+            if (membresia) {
+                perfil.tipo_usuario = resolverTipoSesion(usuario, membresia);
+            }
+        }
+
+        return res.status(200).json({ perfil });
     } catch (error) {
         console.error('Error en getMiPerfil:', error.message);
         return res.status(500).json({ message: 'Error al cargar el perfil' });
@@ -172,10 +182,13 @@ const getUsuariosEmpresa = async (req, res) => {
 
         const idUsuarios = await UsuarioEmpresa.findAll({
             where: { id_empresa: idEmpresa, fecha_baja: null },
-            attributes: ['id_usuario']
+            attributes: ['id_usuario', 'tipo_usuario']
         });
 
         const idUsuariosArray = idUsuarios.map(usuario => usuario.id_usuario);
+        const tipoPorUsuario = new Map(
+            idUsuarios.map((vinculo) => [vinculo.id_usuario, vinculo.tipo_usuario]),
+        );
 
         const usuarios = await Usuario.findAll({
             where: {
@@ -202,6 +215,7 @@ const getUsuariosEmpresa = async (req, res) => {
 
             return {
                 ...usuario.toJSON(),
+                tipo_usuario: tipoPorUsuario.get(usuario.id_usuario) ?? usuario.tipo_usuario,
                 jornadas: jornadasUsuario
             };
         });
@@ -221,39 +235,77 @@ const crearUsuario= async (req, res) => {
         const disponibilidad = await obtenerDisponibilidadLicencias(idEmpresa);
 
         if(disponibilidad.disponible){
-            const usuario = await crearUsuarioRepo(nombreUsuario,email,date,idUsuarioAccion,dni, tipoUsuario);
-            if(usuario.name === 'SequelizeUniqueConstraintError'){
-                res.status(500).json({
-                    message: 'Correo en uso',
-                    error: 'Correo en uso',
-                  });
+            let usuario = await Usuario.findOne({
+                where: { email, fecha_baja: null },
+            });
+            let usuarioNuevo = false;
 
-            }else{
-            await crearUsuarioEmpresa(usuario.dataValues.id_usuario, idEmpresa, idUsuarioAccion, date);
+            if (usuario) {
+                const vinculoActivo = await UsuarioEmpresa.findOne({
+                    where: {
+                        id_usuario: usuario.id_usuario,
+                        id_empresa: idEmpresa,
+                        fecha_baja: null,
+                    },
+                });
+
+                if (vinculoActivo) {
+                    return res.status(409).json({
+                        message: 'El usuario ya pertenece a esta empresa',
+                        error: 'Ya en empresa',
+                        codigo: 'YA_EN_EMPRESA',
+                    });
+                }
+            } else {
+                usuario = await crearUsuarioRepo(nombreUsuario, email, date, idUsuarioAccion, dni, tipoUsuario);
+                if (usuario.name === 'SequelizeUniqueConstraintError') {
+                    return res.status(500).json({
+                        message: 'Correo en uso',
+                        error: 'Correo en uso',
+                    });
+                }
+                usuarioNuevo = true;
+            }
+
+            await crearUsuarioEmpresa(
+                usuario.dataValues?.id_usuario ?? usuario.id_usuario,
+                idEmpresa,
+                idUsuarioAccion,
+                date,
+                tipoUsuario,
+            );
+
+            const idUsuario = usuario.dataValues?.id_usuario ?? usuario.id_usuario;
+
             if (horario) {
-              await crearUsuarioHorario(usuario.dataValues.id_usuario, horario, idUsuarioAccion, idEmpresa);
+              await crearUsuarioHorario(idUsuario, horario, idUsuarioAccion, idEmpresa);
             }
 
             const empresa = await Empresa.findOne({ where: { id_empresa: idEmpresa } });
-            const usuarioDb = await Usuario.findByPk(usuario.dataValues.id_usuario);
+            const usuarioDb = await Usuario.findByPk(idUsuario);
 
-            let emailInvitacionEnviado = true;
+            let emailInvitacionEnviado = false;
             let devInvitacionUrl = null;
 
-            try {
-              devInvitacionUrl = await enviarInvitacionEmpleado(usuarioDb, {
-                nombreEmpresa: empresa?.nombre,
-              });
-            } catch (mailError) {
-              emailInvitacionEnviado = false;
-              console.error('Usuario creado pero falló el email de invitación:', mailError.message);
+            if (usuarioNuevo || usuarioDb.requiere_reset_password) {
+                try {
+                  devInvitacionUrl = await enviarInvitacionEmpleado(usuarioDb, {
+                    nombreEmpresa: empresa?.nombre,
+                  });
+                  emailInvitacionEnviado = true;
+                } catch (mailError) {
+                  console.error('Usuario vinculado pero falló el email de invitación:', mailError.message);
+                }
             }
 
             const respuesta = {
-              message: emailInvitacionEnviado
-                ? 'Usuario creado. Se ha enviado un correo de invitación para crear la contraseña (válido 7 días).'
-                : 'Usuario creado, pero no se pudo enviar el correo de invitación. Use "Olvidé mi contraseña" con su email.',
+              message: usuarioNuevo
+                ? (emailInvitacionEnviado
+                    ? 'Usuario creado. Se ha enviado un correo de invitación para crear la contraseña (válido 7 días).'
+                    : 'Usuario creado, pero no se pudo enviar el correo de invitación. Use "Olvidé mi contraseña" con su email.')
+                : 'Usuario existente vinculado correctamente a la empresa.',
               creada: true,
+              vinculado: !usuarioNuevo,
               emailInvitacionEnviado,
             };
 
@@ -261,8 +313,7 @@ const crearUsuario= async (req, res) => {
               respuesta.devInvitacionUrl = devInvitacionUrl;
             }
 
-            res.status(201).json(respuesta);
-            }
+            return res.status(201).json(respuesta);
 
         } else {
             res.status(200).json({
@@ -275,6 +326,12 @@ const crearUsuario= async (req, res) => {
         }
 
     } catch (error) {
+      if (error.code === 'YA_EN_EMPRESA') {
+        return res.status(409).json({
+          message: 'El usuario ya pertenece a esta empresa',
+          codigo: 'YA_EN_EMPRESA',
+        });
+      }
       console.error(error);
       res.status(500).json({
         message: 'Hubo un error al procesar el registro',
@@ -297,11 +354,23 @@ const editUsuario= async (req, res) => {
                 nombre : values.nombre,
                 dni : values.dni,
                 activo : values.activo,
-                tipo_usuario : values.tipoUsuario
             },
             {
                 where: { id_usuario: idUsuario }
             }
+        );
+
+        await UsuarioEmpresa.update(
+            {
+                tipo_usuario: values.tipoUsuario,
+            },
+            {
+                where: {
+                    id_usuario: idUsuario,
+                    id_empresa: idEmpresa,
+                    fecha_baja: null,
+                },
+            },
         );
 
         const usuarioJornadaResult =  await UsuarioJornada.findOne({

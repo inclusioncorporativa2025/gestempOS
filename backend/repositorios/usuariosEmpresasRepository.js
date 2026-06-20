@@ -47,18 +47,39 @@ const validarCrearUsuario = async (idEmpresa) => {
   return disponible;
 };
 
-const crearUsuarioEmpresa = async (id_usuario, id_empresa, idUsuarioAccion, fechaAlta) => {
+const crearUsuarioEmpresa = async (id_usuario, id_empresa, idUsuarioAccion, fechaAlta, tipoUsuario) => {
   try {
+    const existente = await UsuarioEmpresa.findOne({
+      where: { id_usuario, id_empresa },
+    });
+
+    if (existente) {
+      if (!existente.fecha_baja) {
+        const error = new Error('El usuario ya pertenece a esta empresa');
+        error.code = 'YA_EN_EMPRESA';
+        throw error;
+      }
+
+      existente.fecha_baja = null;
+      existente.usuario_baja = null;
+      existente.fecha_alta = fechaAlta;
+      existente.usuario_alta = idUsuarioAccion;
+      existente.tipo_usuario = tipoUsuario;
+      await existente.save();
+      return existente;
+    }
+
     const usuarioEmpresa = await createGlobalConId(UsuarioEmpresa, 'id_usuario_empresa', {
-      id_usuario: id_usuario,
-      id_empresa: id_empresa,
+      id_usuario,
+      id_empresa,
+      tipo_usuario: tipoUsuario,
       fecha_alta: fechaAlta,
       usuario_alta: idUsuarioAccion,
     });
     return usuarioEmpresa;
   } catch (error) {
     console.error(error);
-    return error;
+    throw error;
   }
 };
 

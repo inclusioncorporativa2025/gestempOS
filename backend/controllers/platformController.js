@@ -2,34 +2,19 @@ const { Op } = require('sequelize');
 const jwt = require('jsonwebtoken');
 const AccesoPlataforma = require('../models/AccesoPlataforma');
 const Usuario = require('../models/Usuario');
-const UsuarioEmpresa = require('../models/UsuarioEmpresa');
-const Empresa = require('../models/Empresa');
 const { registrarAcceso } = require('../services/accesoPlataformaService');
 const { getClientIp, getUserAgent } = require('../utils/request');
 const { ROLE_GROUPS } = require('../middleware/authMiddleware');
+const {
+  listarMembresiasActivas,
+  construirClaimsSesion,
+} = require('../services/usuarioEmpresaService');
 
-const JWT_SECRET = process.env.JWT_SECRET;
 const IMPERSONATION_EXPIRES_IN = process.env.IMPERSONATION_JWT_EXPIRES_IN || '1h';
 const TIPOS_PLATAFORMA = ROLE_GROUPS.PLATFORM;
 
 const usuarioActivo = (usuario) =>
   usuario && usuario.activo !== false && usuario.activo !== 0;
-
-const obtenerEmpresaDelUsuario = async (idUsuario) => {
-  const usuarioEmpresa = await UsuarioEmpresa.findOne({
-    where: { id_usuario: idUsuario, fecha_baja: null },
-  });
-
-  if (!usuarioEmpresa) {
-    return { usuarioEmpresa: null, empresa: null };
-  }
-
-  const empresa = await Empresa.findOne({
-    where: { id_empresa: usuarioEmpresa.id_empresa },
-  });
-
-  return { usuarioEmpresa, empresa };
-};
 
 const sanitizeUsuario = (usuario) => ({
   id_usuario: usuario.id_usuario,
@@ -154,6 +139,9 @@ const listarAccesos = async (req, res) => {
 
 const accederComoUsuario = async (req, res) => {
   const email = String(req.body?.email || '').trim().toLowerCase();
+  const idEmpresaSolicitada = req.body?.id_empresa != null
+    ? Number(req.body.id_empresa)
+    : null;
 
   if (!email) {
     return res.status(400).json({ message: 'El correo es obligatorio' });
@@ -186,39 +174,46 @@ const accederComoUsuario = async (req, res) => {
       });
     }
 
-    const { usuarioEmpresa, empresa } = await obtenerEmpresaDelUsuario(usuario.id_usuario);
-    if (!usuarioEmpresa) {
+    const membresiasActivas = await listarMembresiasActivas(usuario.id_usuario);
+    if (!membresiasActivas.length) {
       return res.status(403).json({
         message: 'El usuario no está vinculado a ninguna empresa',
       });
     }
 
-    let id_empresa = null;
-    let nombre_empresa = null;
-    let alias = null;
-
-    if (empresa) {
-      id_empresa = empresa.id_empresa;
-      nombre_empresa = empresa.nombre;
-      alias = empresa.alias;
+    let seleccion = membresiasActivas[0];
+    if (idEmpresaSolicitada) {
+      const encontrada = membresiasActivas.find(
+        (item) => item.empresa.id_empresa === idEmpresaSolicitada,
+      );
+      if (!encontrada) {
+        return res.status(403).json({ message: 'El usuario no pertenece a esa empresa' });
+      }
+      seleccion = encontrada;
+    } else if (membresiasActivas.length > 1) {
+      return res.status(200).json({
+        code: 'EMPRESA_SELECTION_REQUIRED',
+        message: 'El usuario pertenece a varias empresas. Indica id_empresa.',
+        empresas: membresiasActivas.map(({ empresa, membresia }) => ({
+          id_empresa: empresa.id_empresa,
+          nombre: empresa.nombre,
+          alias: empresa.alias,
+          tipo_usuario: membresia.tipo_usuario ?? usuario.tipo_usuario,
+        })),
+      });
     }
 
+    const { membresia, empresa } = seleccion;
+    const id_empresa = empresa.id_empresa;
+
     const token = jwt.sign(
-      {
-        id_usuario: usuario.id_usuario,
-        email: usuario.email,
-        tipo_usuario: usuario.tipo_usuario,
-        nombre: usuario.nombre,
-        id_empresa,
-        nombre_empresa,
-        alias,
-        esquema: id_empresa,
+      construirClaimsSesion(usuario, empresa, membresia, {
         impersonacion: true,
         impersonado_por: Number(req.user.id_usuario),
         impersonado_por_email: req.user.email,
         impersonado_por_nombre: req.user.nombre,
-      },
-      JWT_SECRET,
+      }),
+      process.env.JWT_SECRET,
       { expiresIn: IMPERSONATION_EXPIRES_IN },
     );
 
@@ -236,7 +231,7 @@ const accederComoUsuario = async (req, res) => {
       token,
       expiraEn: IMPERSONATION_EXPIRES_IN,
       usuario: sanitizeUsuario(usuario),
-      empresa: id_empresa ? { id_empresa, nombre: nombre_empresa, alias } : null,
+      empresa: { id_empresa, nombre: empresa.nombre, alias: empresa.alias },
     });
   } catch (error) {
     console.error('Error en accederComoUsuario:', error.message);

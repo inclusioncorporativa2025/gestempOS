@@ -40,6 +40,25 @@
   margin-right: 4px;
 }
 
+.app-header-empresa-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 180px;
+}
+
+.app-header-empresa-option__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-header-empresa-option__check {
+  color: rgba(var(--color-primary-rgb), 0.9);
+  font-size: 12px;
+}
+
 .app-header-empresa-dropdown .ant-dropdown-menu {
   min-width: 200px;
   border-radius: 12px;

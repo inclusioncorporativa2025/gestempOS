@@ -85,6 +85,7 @@ const registerCompany = async (req, res) => {
             id_usuario_empresa: idUsuarioEmpresa,
             id_usuario: usuarioAdmin.id_usuario,
             id_empresa: empresa.id_empresa,
+            tipo_usuario: 3,
             fecha_alta: fecha,
             usuario_alta : idUsuarioAccion,
         }, { transaction });
