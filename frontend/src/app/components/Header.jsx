@@ -9,7 +9,6 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { useEstadoJornada } from '../../hooks/useEstadoJornada';
 import { useNotificacionesPendientes } from '../../hooks/useNotificacionesPendientes';
-import { useEmpresaBranding } from '../../hooks/useEmpresaBranding';
 import { getTipoUsuario } from '../../utils/authSession';
 import { puedeVerFichaPersonal } from '../../utils/tipoUsuarioLabel';
 import { useAuth } from '../../config/AuthContext';
@@ -43,17 +42,7 @@ const MyHeader = () => {
     }
   }, [enHome, location.pathname, refetch]);
 
-  const {
-    label,
-    nombreEmpresa,
-    licencias,
-    logoUrl,
-    iniciales,
-    mostrarLogo,
-    onLogoError,
-  } = useEmpresaBranding();
-
-  const displayName = user?.nombre || label || 'Usuario';
+  const displayName = user?.nombre || 'Usuario';
 
   const handleSearch = (value) => {
     const q = (value ?? searchValue).trim();
@@ -133,15 +122,7 @@ const MyHeader = () => {
 
         <span className="app-header-divider" aria-hidden="true" />
 
-        <HeaderEmpresaMenu
-          label={displayName}
-          nombreEmpresa={nombreEmpresa}
-          licencias={licencias}
-          logoUrl={logoUrl}
-          iniciales={iniciales}
-          mostrarLogo={mostrarLogo}
-          onLogoError={onLogoError}
-        />
+        <HeaderEmpresaMenu label={displayName} />
       </div>
     </Header>
   );

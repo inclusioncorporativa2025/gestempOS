@@ -3,6 +3,7 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
+  width: 100%;
   padding: 4px 6px 12px;
   margin-bottom: 4px;
   border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.1);
@@ -11,6 +12,31 @@
 .app-sider-brand--collapsed {
   justify-content: center;
   padding: 8px 4px 12px;
+}
+
+.app-sider-brand-trigger {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-sider-brand-trigger--collapsed {
+  width: auto;
+}
+
+.app-sider-brand--interactive {
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.app-sider-brand-trigger:hover .app-sider-brand--interactive,
+.app-sider-brand-trigger:focus-visible .app-sider-brand--interactive {
+  background: rgba(var(--color-primary-rgb), 0.06);
 }
 
 .app-sider-brand__icon-wrap {
@@ -23,10 +49,18 @@
   border-radius: 10px;
   background: rgba(var(--color-primary-rgb), 0.1);
   color: var(--color-primary);
+  overflow: hidden;
 }
 
 .app-sider-brand__icon {
   font-size: 1.1rem;
+}
+
+.app-sider-brand__logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .app-sider-brand__label {
@@ -41,8 +75,59 @@
   text-overflow: ellipsis;
 }
 
+.app-sider-brand__chevron {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  color: #9a8aa8;
+  margin-right: 2px;
+}
+
 .app-sider-brand--collapsed .app-sider-brand__icon-wrap {
   width: 40px;
   height: 40px;
   border-radius: 12px;
+}
+
+.app-sider-empresa-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 180px;
+}
+
+.app-sider-empresa-option__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-sider-empresa-option__check {
+  color: rgba(var(--color-primary-rgb), 0.9);
+  font-size: 12px;
+}
+
+.app-sider-empresa-dropdown .ant-dropdown-menu {
+  min-width: 220px;
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 8px 28px rgba(var(--color-primary-dark-rgb), 0.12);
+}
+
+.app-sider-plan-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.app-sider-plan-modal__empresa,
+.app-sider-plan-modal__licencias {
+  margin: 0 0 12px !important;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.app-sider-plan-modal__hint {
+  margin: 8px 0 0 !important;
+  font-size: 0.92rem;
 }
