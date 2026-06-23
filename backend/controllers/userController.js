@@ -17,6 +17,13 @@ const {
 } = require('../repositorios/usuariosEmpresasRepository');
 const { enviarInvitacionEmpleado } = require('../utils/mailService');
 const { obtenerMembresiaActiva, resolverTipoSesion } = require('../services/usuarioEmpresaService');
+const { calcularResumenHorasMes, resolverTipoHora } = require('../services/horasResumenService');
+const {
+  obtenerSaldoBolsa,
+  listarMovimientosBolsa,
+  registrarAjusteManual,
+} = require('../services/bolsaHorasService');
+const { normalizarTipoHoraInput } = require('../utils/tipoHora');
 const { Op } = require('sequelize');
 const dayjs = require('dayjs');
 const isoWeek = require('dayjs/plugin/isoWeek');
@@ -182,12 +189,12 @@ const getUsuariosEmpresa = async (req, res) => {
 
         const idUsuarios = await UsuarioEmpresa.findAll({
             where: { id_empresa: idEmpresa, fecha_baja: null },
-            attributes: ['id_usuario', 'tipo_usuario']
+            attributes: ['id_usuario', 'tipo_usuario', 'tipo_hora']
         });
 
         const idUsuariosArray = idUsuarios.map(usuario => usuario.id_usuario);
-        const tipoPorUsuario = new Map(
-            idUsuarios.map((vinculo) => [vinculo.id_usuario, vinculo.tipo_usuario]),
+        const membresiaPorUsuario = new Map(
+            idUsuarios.map((vinculo) => [vinculo.id_usuario, vinculo]),
         );
 
         const usuarios = await Usuario.findAll({
@@ -212,10 +219,12 @@ const getUsuariosEmpresa = async (req, res) => {
         const usuariosConJornadas = usuarios.map(usuario => {
 
             const jornadasUsuario = usuarioJornadas.filter(jornada => jornada.id_usuario === usuario.id_usuario);
+            const membresia = membresiaPorUsuario.get(usuario.id_usuario);
 
             return {
                 ...usuario.toJSON(),
-                tipo_usuario: tipoPorUsuario.get(usuario.id_usuario) ?? usuario.tipo_usuario,
+                tipo_usuario: membresia?.tipo_usuario ?? usuario.tipo_usuario,
+                tipo_hora: membresia?.tipo_hora ?? null,
                 jornadas: jornadasUsuario
             };
         });
@@ -231,7 +240,8 @@ const getUsuariosEmpresa = async (req, res) => {
 const crearUsuario= async (req, res) => {
     try{
         const date = new Date()
-        const {email,nombreUsuario,dni, idEmpresa, idUsuarioAccion, tipoUsuario, horario} = req.body;
+        const {email,nombreUsuario,dni, idEmpresa, idUsuarioAccion, tipoUsuario, horario, tipoHora} = req.body;
+        const tipoHoraNormalizado = normalizarTipoHoraInput(tipoHora);
         const disponibilidad = await obtenerDisponibilidadLicencias(idEmpresa);
 
         if(disponibilidad.disponible){
@@ -273,6 +283,7 @@ const crearUsuario= async (req, res) => {
                 idUsuarioAccion,
                 date,
                 tipoUsuario,
+                tipoHoraNormalizado,
             );
 
             const idUsuario = usuario.dataValues?.id_usuario ?? usuario.id_usuario;
@@ -360,10 +371,13 @@ const editUsuario= async (req, res) => {
             }
         );
 
+        const updateMembresia = { tipo_usuario: values.tipoUsuario };
+        if (Object.prototype.hasOwnProperty.call(values, 'tipoHora')) {
+            updateMembresia.tipo_hora = normalizarTipoHoraInput(values.tipoHora);
+        }
+
         await UsuarioEmpresa.update(
-            {
-                tipo_usuario: values.tipoUsuario,
-            },
+            updateMembresia,
             {
                 where: {
                     id_usuario: idUsuario,
@@ -449,102 +463,143 @@ const getHorasTotalesMesByIdUsuario = async (req, res) => {
         return res.status(400).json({ message: 'Datos incompletos' });
     }
 
-    const mesNormalizado = String(mes).length === 7 ? mes : dayjs(mes).format('YYYY-MM');
-    var horas = 0;
-    var minutos = 0;
     try {
-        const info = await UsuarioJornada.findAll({
-            where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
-            order: [['fecha_alta', 'DESC']],
-            limit: 1
-        });
-
-        if (!info.length) {
-            return res.status(200).json({ horasMensuales: 'No configurada' });
-        }
-
-        const tipoJornada = info[0].id_jornada;
-
-        const infoJornada = await Jornada.findAll({
-            where: {
-                empresa_id: idEmpresa,
-                fecha_baja: null,
-                id_jornada: tipoJornada
-            }
-        });
-
-        const festivos = await FestivoEmpresa.findAll({
-            where: {
-                empresa_id: idEmpresa,
-                fecha_baja: null,
-
-                fecha: {
-                    [Op.gte]: dayjs(`${mesNormalizado}-01`).startOf('month').toDate(),
-                    [Op.lte]: dayjs(`${mesNormalizado}-01`).endOf('month').toDate()
-                }
-            },
-            order: [['fecha', 'ASC']]
-        });
-
-        if (!infoJornada.length) {
-            return res.status(200).json({ horasMensuales: 'No configurada' });
-        }
-
-        let diasJornada = [];
-        if (Number(infoJornada[0].dataValues.tipo) === 1) {
-            diasJornada = infoJornada[0].column1.dias;
-
-            const diasSemanaMap = {
-                'Lunes': 1,
-                'Martes': 2,
-                'Miércoles': 3,
-                'Jueves': 4,
-                'Viernes': 5,
-                'Sábado': 6,
-                'Domingo': 0
-            };
-
-            const fechaMes = dayjs(`${mesNormalizado}-01`);
-            const daysInMonth = fechaMes.daysInMonth();
-            let totalMinutos = 0;
-
-            for (let day = 1; day <= daysInMonth; day++) {
-                const fecha = fechaMes.date(day);
-                const diaSemana = fecha.day();
-
-                const esFestivo = festivos.some(festivo => dayjs(festivo.fecha).date() === fecha.date());
-
-                if (esFestivo) {
-                    continue;
-                }
-
-                diasJornada.forEach((dia) => {
-                    const diaConfig = diasSemanaMap[dia.dia];
-                    if (diaConfig === diaSemana) {
-                        dia.horario.forEach(({ horaEntrada, horaSalida }) => {
-                            const entrada = dayjs(`2020-01-01T${horaEntrada}`);
-                            const salida = dayjs(`2020-01-01T${horaSalida}`);
-                            const duracion = salida.diff(entrada, 'minute');
-                            totalMinutos += duracion;
-                        });
-                    }
-                });
-            }
-
-            horas = Math.floor(totalMinutos / 60);
-            minutos = totalMinutos % 60;
-        } else {
-            horas = infoJornada[0].column1.horasMensuales;
-            minutos = 0;
-        }
-
+        const resumen = await calcularResumenHorasMes(
+            idEmpresa,
+            idUsuario,
+            mes,
+            req.user?.id_usuario ?? null,
+        );
         return res.status(200).json({
-            horasMensuales: `${horas}h ${minutos}m`
+            horasMensuales: resumen.horasMensuales ?? 'No configurada',
+            resumen,
         });
-
     } catch (error) {
         return res.status(500).json({
             message: 'Hubo un error al procesar el registro',
+            error: error.message,
+        });
+    }
+};
+
+const getResumenHorasMes = async (req, res) => {
+    const { idEmpresa, mes, idUsuario } = req.body;
+    const tipoUsuario = Number(req.user?.tipo_usuario);
+
+    if (tipoUsuario === ROLES.EMPLEADO && Number(idUsuario) !== Number(req.user?.id_usuario)) {
+        return res.status(403).json({ message: 'No autorizado para consultar datos de otro usuario' });
+    }
+
+    if (!idEmpresa || !mes || !idUsuario) {
+        return res.status(400).json({ message: 'Datos incompletos' });
+    }
+
+    try {
+        const resumen = await calcularResumenHorasMes(
+            idEmpresa,
+            idUsuario,
+            mes,
+            req.user?.id_usuario ?? null,
+        );
+        return res.status(200).json({ resumen });
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Error al calcular el resumen de horas',
+            error: error.message,
+        });
+    }
+};
+
+const getTipoHoraUsuario = async (req, res) => {
+    const { idEmpresa, idUsuario } = req.body;
+    const tipoUsuario = Number(req.user?.tipo_usuario);
+
+    if (tipoUsuario === ROLES.EMPLEADO && Number(idUsuario) !== Number(req.user?.id_usuario)) {
+        return res.status(403).json({ message: 'No autorizado' });
+    }
+
+    if (!idEmpresa || !idUsuario) {
+        return res.status(400).json({ message: 'Datos incompletos' });
+    }
+
+    try {
+        const info = await resolverTipoHora(idEmpresa, idUsuario);
+        return res.status(200).json(info);
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Error al obtener el tipo de hora',
+            error: error.message,
+        });
+    }
+};
+
+const getBolsaHoras = async (req, res) => {
+    const { idEmpresa, idUsuario, mes } = req.body;
+    const tipoUsuario = Number(req.user?.tipo_usuario);
+
+    if (tipoUsuario === ROLES.EMPLEADO && Number(idUsuario) !== Number(req.user?.id_usuario)) {
+        return res.status(403).json({ message: 'No autorizado' });
+    }
+
+    if (!idEmpresa || !idUsuario) {
+        return res.status(400).json({ message: 'Datos incompletos' });
+    }
+
+    try {
+        if (mes) {
+            await calcularResumenHorasMes(
+                idEmpresa,
+                idUsuario,
+                mes,
+                req.user?.id_usuario ?? null,
+            );
+        }
+
+        const [saldo, movimientos] = await Promise.all([
+            obtenerSaldoBolsa(idEmpresa, idUsuario),
+            listarMovimientosBolsa(idEmpresa, idUsuario),
+        ]);
+
+        return res.status(200).json({ saldo, movimientos });
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Error al obtener la bolsa de horas',
+            error: error.message,
+        });
+    }
+};
+
+const ajustarBolsaHoras = async (req, res) => {
+    const { idEmpresa, idUsuario, minutos, motivo } = req.body;
+    const idUsuarioAccion = req.user?.id_usuario;
+
+    if (!idEmpresa || !idUsuario || minutos == null) {
+        return res.status(400).json({ message: 'Datos incompletos' });
+    }
+
+    try {
+        await registrarAjusteManual(
+            idEmpresa,
+            idUsuario,
+            minutos,
+            motivo,
+            idUsuarioAccion,
+        );
+
+        const saldo = await obtenerSaldoBolsa(idEmpresa, idUsuario);
+        const movimientos = await listarMovimientosBolsa(idEmpresa, idUsuario);
+
+        return res.status(201).json({
+            message: 'Ajuste registrado correctamente',
+            saldo,
+            movimientos,
+        });
+    } catch (error) {
+        if (error.code === 'AJUSTE_CERO' || error.code === 'MOTIVO_REQUERIDO') {
+            return res.status(400).json({ message: error.message, code: error.code });
+        }
+        return res.status(500).json({
+            message: 'Error al registrar el ajuste',
             error: error.message,
         });
     }
@@ -885,5 +940,9 @@ module.exports = {
     editUsuario,
     deleteUsuario,
     getHorasTotalesMesByIdUsuario,
+    getResumenHorasMes,
+    getTipoHoraUsuario,
+    getBolsaHoras,
+    ajustarBolsaHoras,
     importarUsuariosEmpresa
 };

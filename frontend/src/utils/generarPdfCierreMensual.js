@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { DECLARACION_CIERRE_MENSUAL } from './cierreMensualLegal';
 import { SUPPORT_EMAIL } from '../constants/support';
+import { TIPO_HORA_BOLSA } from './tipoHora';
 
 dayjs.locale('es');
 
@@ -121,6 +122,40 @@ const asegurarEspacio = (doc, y, necesario, onNuevaPagina) => {
   return CONTENT_TOP;
 };
 
+const dibujarSeccionBolsaHoras = (doc, resumenHoras, y) => {
+  if (!resumenHoras || Number(resumenHoras.tipo_hora) !== TIPO_HORA_BOLSA) return y;
+
+  y = asegurarEspacio(doc, y, 40, () => {});
+  y = dibujarTituloSeccion(doc, 'Bolsa de horas', y);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...BRAND.dark);
+
+  const lineas = [
+    resumenHoras.tipo_hora_label && `Tipo de hora: ${resumenHoras.tipo_hora_label}`,
+    resumenHoras.delta && `Variación del mes: ${resumenHoras.delta}`,
+    resumenHoras.saldo_bolsa_anterior != null
+      && `Saldo anterior al mes: ${resumenHoras.saldo_bolsa_anterior}`,
+    resumenHoras.saldo_bolsa && `Saldo acumulado: ${resumenHoras.saldo_bolsa}`,
+  ].filter(Boolean);
+
+  lineas.forEach((linea) => {
+    y = asegurarEspacio(doc, y, LINE_HEIGHT, () => {});
+    doc.text(linea, MARGIN, y);
+    y += LINE_HEIGHT;
+  });
+
+  if (resumenHoras.desglose) {
+    y += 2;
+    doc.setTextColor(...BRAND.muted);
+    doc.setFont('helvetica', 'italic');
+    y = escribirParrafo(doc, resumenHoras.desglose, MARGIN, y, CONTENT_WIDTH);
+  }
+
+  return y + 8;
+};
+
 /**
  * Genera y descarga un PDF del cierre mensual firmado.
  */
@@ -130,6 +165,7 @@ export const generarPdfCierreMensual = ({
   registros = [],
   totalHoras = '',
   totalHorasEsperadas = '',
+  resumenHoras = null,
   firmaImagen = null,
   firmaHash = null,
   hashRegistroMes = null,
@@ -225,7 +261,19 @@ export const generarPdfCierreMensual = ({
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...BRAND.dark);
   doc.text(`Total horas esperadas: ${totalHorasEsperadas || 'No configurada'}`, MARGIN, y);
-  y += 10;
+  y += LINE_HEIGHT;
+
+  if (resumenHoras?.desglose && Number(resumenHoras.tipo_hora) !== TIPO_HORA_BOLSA) {
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND.muted);
+    y = escribirParrafo(doc, resumenHoras.desglose, MARGIN, y, CONTENT_WIDTH);
+    y += 4;
+  } else {
+    y += 4;
+  }
+
+  y = dibujarSeccionBolsaHoras(doc, resumenHoras, y);
+  y += 2;
 
   if (firmaImagen) {
     y = asegurarEspacio(doc, y, 50, () => {});

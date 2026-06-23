@@ -134,6 +134,7 @@ const [visible, setVisible] = useState(false);
 const [registroHoras, setRegistroHoras] = useState([]);
 const [totalHoras, setTotalHoras] = useState('');
 const [totalHorasEsperadas, setTotalHorasEsperadas] = useState(0);
+const [resumenHoras, setResumenHoras] = useState(null);
 const [firmaCierreDetalle, setFirmaCierreDetalle] = useState(null);
 const [detalleCierreContext, setDetalleCierreContext] = useState(null);
 const [rangoFechas, setRangoFechas] = useState(null);
@@ -403,6 +404,7 @@ const [formRechazo] = Form.useForm();
 const setVisibleModalDetalles = async (info) => {
   try {
     setFirmaCierreDetalle(null);
+    setResumenHoras(null);
     setDetalleCierreContext({
       nombreEmpleado: info.nombre_usuario_alta || '—',
       mes: info.mes,
@@ -445,6 +447,7 @@ const setVisibleModalDetalles = async (info) => {
 
     const jornadaUsuario = await getHorasTotalesMesByIdUsuario(info.mes, info.usuario_alta);
     setTotalHorasEsperadas(jornadaUsuario?.horasMensuales || 'No configurada');
+    setResumenHoras(jornadaUsuario?.resumen || null);
 
     setRegistroHoras(registrosConDetalles);
     setTotalHoras(totalHorasTexto);
@@ -578,6 +581,7 @@ const setVisibleModalDetalles = async (info) => {
       registros: registroHoras,
       totalHoras,
       totalHorasEsperadas,
+      resumenHoras,
       firmaImagen: firmaCierreDetalle?.firma_imagen,
       firmaHash: firmaCierreDetalle?.firma_hash,
       hashRegistroMes: firmaCierreDetalle?.hash_registro_mes,
@@ -929,6 +933,7 @@ const setVisibleModalDetalles = async (info) => {
             onCancel={() => {
               setVisible(false);
               setFirmaCierreDetalle(null);
+              setResumenHoras(null);
               setDetalleCierreContext(null);
             }}
             footer={null}

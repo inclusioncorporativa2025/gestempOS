@@ -14,6 +14,7 @@ import 'dayjs/locale/es';
 import esES from 'antd/es/locale/es_ES';
 import { getTipoUsuario } from '../../utils/authSession';
 import { puedeVerFichaPersonal } from '../../utils/tipoUsuarioLabel';
+import { opcionesTipoHora, tipoHoraFormValue } from '../../utils/tipoHora';
 import AltaEmpleadoModal from '../components/AltaEmpleadoModal';
 import './BuscadorUsuarios.css';
 dayjs.locale('es');
@@ -213,7 +214,8 @@ const BuscarUsuarios = () => {
             fechaAlta: dayjs(record.fecha_alta),
             activo: record.activo,
             tipoUsuario: record.tipo_usuario === "5" || record.tipo_usuario === "4" ? record.tipo_usuario : "3",
-            horario: jornadaNombre? jornadaNombre:""
+            horario: jornadaNombre? jornadaNombre:"",
+            tipoHora: tipoHoraFormValue(record.tipo_hora),
         });
     
         setJornadasCargadas(true);
@@ -536,6 +538,13 @@ const BuscarUsuarios = () => {
                                     </Select.Option>
                                 ))}
                             </Select>
+                        </Form.Item>
+                        <Form.Item
+                            label="Tipo de hora"
+                            name="tipoHora"
+                            tooltip="Heredar usa el tipo configurado en la jornada del empleado."
+                        >
+                            <Select options={opcionesTipoHora} />
                         </Form.Item>
                     </Form>
                 </Modal>

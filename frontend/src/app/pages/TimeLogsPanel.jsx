@@ -11,7 +11,7 @@ import {
 } from '@ant-design/icons';
 import { crearPeticionEdicion, crearPeticionCierreMes, getPeticionesByIdUsuario, getPeticionesByIdEmpresa, marcarPeticionesVistas } from "../../features/fichaje/fichajeService";
 import { getDatosUsuarioById } from "../../features/fichaje/fichajeService";
-import { descargarExcelDesdeAPI } from "../../features/user/usuarioService";
+import { descargarExcelDesdeAPI, getHorasTotalesMesByIdUsuario } from "../../features/user/usuarioService";
 import { crearAusencia } from "../../features/ausencias/ausenciasService";
 
 import dayjs from 'dayjs';
@@ -361,6 +361,7 @@ const crearPeticionMensual = async (firmaImagen) => {
     }
 
     const mesFormateado = selectedMonth.format('YYYY-MM');
+    const idUsuario = getIdUsuario();
     const data = await crearPeticionCierreMes(mesFormateado, firmaImagen);
 
     if (data?.error) {
@@ -383,12 +384,15 @@ const crearPeticionMensual = async (firmaImagen) => {
     }, 0);
     const totalHorasPdf = `${Math.floor(totalMin / 60)}h ${totalMin % 60}m`;
 
+    const jornadaMes = await getHorasTotalesMesByIdUsuario(mesFormateado, idUsuario);
+
     const datosPdf = {
       nombreEmpleado: getNombreUsuario(),
       mes: mesFormateado,
       registros: registrosPdf,
       totalHoras: totalHorasPdf,
-      totalHorasEsperadas: '',
+      totalHorasEsperadas: jornadaMes?.horasMensuales || '',
+      resumenHoras: jornadaMes?.resumen || null,
       firmaImagen,
       firmaHash: data?.info?.firma_hash || null,
       hashRegistroMes: data?.info?.hash_registro_mes || null,

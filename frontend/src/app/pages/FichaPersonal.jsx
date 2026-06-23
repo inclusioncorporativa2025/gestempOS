@@ -34,7 +34,10 @@ import {
   getHistorialCierresMensuales,
   getFirmaCierreMensual,
 } from '../../features/fichaje/fichajeService';
-import { parseFechaFichaje } from '../../utils/fechaFichaje';
+import { etiquetaTipoHora, TIPO_HORA_BOLSA } from '../../utils/tipoHora';
+import BolsaHorasPanel from '../components/BolsaHorasPanel';
+import { getTipoUsuario } from '../../utils/authSession';
+import { puedeVerFichaPersonal } from '../../utils/tipoUsuarioLabel';
 import { etiquetaTipoUsuario } from '../../utils/tipoUsuarioLabel';
 import {
   combinarCierres,
@@ -66,6 +69,7 @@ const FichaPersonal = () => {
   const [registroHoras, setRegistroHoras] = useState([]);
   const [totalHoras, setTotalHoras] = useState('0h 0m');
   const [totalHorasEsperadas, setTotalHorasEsperadas] = useState('—');
+  const [resumenHoras, setResumenHoras] = useState(null);
   const [loadingRegistro, setLoadingRegistro] = useState(false);
 
   const [detalleCierreOpen, setDetalleCierreOpen] = useState(false);
@@ -73,6 +77,7 @@ const FichaPersonal = () => {
   const [registroDetalleCierre, setRegistroDetalleCierre] = useState([]);
   const [totalHorasDetalle, setTotalHorasDetalle] = useState('0h 0m');
   const [totalEsperadasDetalle, setTotalEsperadasDetalle] = useState('—');
+  const [resumenHorasDetalle, setResumenHorasDetalle] = useState(null);
   const [firmaCierreDetalle, setFirmaCierreDetalle] = useState(null);
   const [loadingDetalleCierre, setLoadingDetalleCierre] = useState(false);
 
@@ -183,6 +188,7 @@ const FichaPersonal = () => {
       setRegistroHoras(registros);
       setTotalHoras(calcularTotalHoras(registros));
       setTotalHorasEsperadas(jornadaMes?.horasMensuales || 'No configurada');
+      setResumenHoras(jornadaMes?.resumen || null);
     } catch {
       message.error('Error al cargar el registro del mes');
       setRegistroHoras([]);
@@ -234,6 +240,7 @@ const FichaPersonal = () => {
       setRegistroDetalleCierre(registros);
       setTotalHorasDetalle(calcularTotalHoras(registros));
       setTotalEsperadasDetalle(jornadaMes?.horasMensuales || 'No configurada');
+      setResumenHorasDetalle(jornadaMes?.resumen || null);
 
       if (cierre.id_mes_cierre) {
         const firma = await getFirmaCierreMensual(cierre.id_mes_cierre);
@@ -254,6 +261,7 @@ const FichaPersonal = () => {
       registros: registroDetalleCierre,
       totalHoras: totalHorasDetalle,
       totalHorasEsperadas: totalEsperadasDetalle,
+      resumenHoras: resumenHorasDetalle,
       firmaImagen: firmaCierreDetalle?.firma_imagen || null,
       firmaHash: firmaCierreDetalle?.firma_hash || null,
       hashRegistroMes: firmaCierreDetalle?.hash_registro_mes || null,
@@ -339,6 +347,11 @@ const FichaPersonal = () => {
 
   if (!usuario) return null;
 
+  const tipoUsuarioActual = getTipoUsuario();
+  const puedeAjustarBolsa = puedeVerFichaPersonal(tipoUsuarioActual) && Number(tipoUsuarioActual) !== 6;
+  const tipoHoraEfectivo = usuario.tipo_hora ?? jornadaAsignada?.tipo_hora ?? resumenHoras?.tipo_hora;
+  const esBolsa = Number(tipoHoraEfectivo) === TIPO_HORA_BOLSA;
+
   const tabItems = [
     {
       key: 'datos',
@@ -355,6 +368,13 @@ const FichaPersonal = () => {
           <Descriptions.Item label="DNI">{usuario.dni}</Descriptions.Item>
           <Descriptions.Item label="Tipo">
             {etiquetaTipoUsuario(usuario.tipo_usuario)}
+          </Descriptions.Item>
+          <Descriptions.Item label="Tipo de hora">
+            {usuario.tipo_hora != null
+              ? etiquetaTipoHora(usuario.tipo_hora)
+              : jornadaAsignada?.tipo_hora
+                ? `${etiquetaTipoHora(jornadaAsignada.tipo_hora)} (jornada)`
+                : '—'}
           </Descriptions.Item>
           <Descriptions.Item label="Fecha de alta">
             {usuario.fecha_alta ? dayjs(usuario.fecha_alta).format('DD/MM/YYYY') : '—'}
@@ -396,6 +416,19 @@ const FichaPersonal = () => {
         />
       ),
     },
+    ...(esBolsa
+      ? [{
+          key: 'bolsa',
+          label: 'Bolsa de horas',
+          children: (
+            <BolsaHorasPanel
+              idUsuario={idUsuario}
+              mesSincronizar={selectedMonth.format('YYYY-MM')}
+              puedeAjustar={puedeAjustarBolsa}
+            />
+          ),
+        }]
+      : []),
     {
       key: 'registro',
       label: 'Registro mensual',
@@ -423,6 +456,13 @@ const FichaPersonal = () => {
               Total horas trabajadas: {totalHoras}
             </span>
             <span>Total horas esperadas: {totalHorasEsperadas}</span>
+            {resumenHoras?.tipo_hora_label && (
+              <span>Tipo de hora: {resumenHoras.tipo_hora_label}</span>
+            )}
+            {resumenHoras?.desglose && <span>{resumenHoras.desglose}</span>}
+            {resumenHoras?.saldo_bolsa && (
+              <span>Saldo bolsa: {resumenHoras.saldo_bolsa}</span>
+            )}
           </div>
         </>
       ),
@@ -498,6 +538,15 @@ const FichaPersonal = () => {
                   Total horas trabajadas: {totalHorasDetalle}
                 </span>
                 <span>Total horas esperadas: {totalEsperadasDetalle}</span>
+                {resumenHorasDetalle?.tipo_hora_label && (
+                  <span>Tipo de hora: {resumenHorasDetalle.tipo_hora_label}</span>
+                )}
+                {resumenHorasDetalle?.desglose && (
+                  <span>{resumenHorasDetalle.desglose}</span>
+                )}
+                {resumenHorasDetalle?.saldo_bolsa && (
+                  <span>Saldo bolsa: {resumenHorasDetalle.saldo_bolsa}</span>
+                )}
               </div>
               {firmaCierreDetalle?.firmado && (
                 <div style={{ marginTop: 16 }}>

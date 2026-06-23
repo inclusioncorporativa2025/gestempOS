@@ -4,6 +4,7 @@ import GradientButton from './shared/GradientButton';
 import { crearUsuario } from '../../features/user/usuarioService';
 import { obtenerJornadas } from '../../features/jornada/jornadaService';
 import { SUPPORT_EMAIL } from '../../constants/support';
+import { opcionesTipoHora, TIPO_HORA_INHERIT, etiquetaTipoHora } from '../../utils/tipoHora';
 
 const { Option } = Select;
 
@@ -58,6 +59,7 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
         values.dni,
         values.tipoUsuario,
         values.tipoHorario,
+        values.tipoHora,
       );
 
       if (!response.creada) {
@@ -107,7 +109,12 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
       destroyOnClose
       width={520}
     >
-      <Form form={form} layout="vertical" onFinish={handleFinish}>
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleFinish}
+        initialValues={{ tipoHora: TIPO_HORA_INHERIT }}
+      >
         <Form.Item
           label="Nombre completo"
           name="nombreCompleto"
@@ -141,9 +148,18 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
             {jornadas.map((jornada) => (
               <Option key={jornada.id_jornada} value={jornada.id_jornada}>
                 {jornada.nombre}
+                {jornada.tipo_hora ? ` (${etiquetaTipoHora(jornada.tipo_hora)})` : ''}
               </Option>
             ))}
           </Select>
+        </Form.Item>
+
+        <Form.Item
+          label="Tipo de hora (extra / complementaria / bolsa)"
+          name="tipoHora"
+          tooltip="Por defecto se usa el configurado en la jornada. Puedes definir uno distinto para este empleado."
+        >
+          <Select options={opcionesTipoHora} />
         </Form.Item>
 
         <Form.Item

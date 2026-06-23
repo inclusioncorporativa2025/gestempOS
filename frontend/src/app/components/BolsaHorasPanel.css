@@ -1,0 +1,27 @@
+.bolsa-horas-panel__card {
+  margin-top: 8px;
+}
+
+.bolsa-horas-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.bolsa-horas-panel__saldo {
+  margin: 4px 0 8px !important;
+}
+
+.bolsa-horas-panel__ajuste-campos {
+  width: 100%;
+}
+
+.bolsa-horas-panel__signo-select {
+  min-width: 140px;
+  height: 32px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 0 8px;
+}

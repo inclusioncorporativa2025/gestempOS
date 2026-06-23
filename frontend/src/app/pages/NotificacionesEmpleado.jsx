@@ -88,6 +88,7 @@ const NotificacionesEmpleado = () => {
   const [registroHoras, setRegistroHoras] = useState([]);
   const [totalHoras, setTotalHoras] = useState('');
   const [totalHorasEsperadas, setTotalHorasEsperadas] = useState(0);
+  const [resumenHoras, setResumenHoras] = useState(null);
   const [firmaCierreDetalle, setFirmaCierreDetalle] = useState(null);
   const [detalleCierreContext, setDetalleCierreContext] = useState(null);
   const [rangoFechas, setRangoFechas] = useState(null);
@@ -333,6 +334,7 @@ const NotificacionesEmpleado = () => {
   const setVisibleModalDetalles = async (info) => {
     try {
       setFirmaCierreDetalle(null);
+      setResumenHoras(null);
       setDetalleCierreContext({
         nombreEmpleado: getNombreUsuario(),
         mes: info.mes,
@@ -379,6 +381,7 @@ const NotificacionesEmpleado = () => {
 
       const jornadaUsuario = await getHorasTotalesMesByIdUsuario(info.mes, idUsuario);
       setTotalHorasEsperadas(jornadaUsuario?.horasMensuales || 'No configurada');
+      setResumenHoras(jornadaUsuario?.resumen || null);
       setRegistroHoras(registrosConDetalles);
       setTotalHoras(totalHorasTexto);
 
@@ -401,6 +404,7 @@ const NotificacionesEmpleado = () => {
       registros: registroHoras,
       totalHoras,
       totalHorasEsperadas,
+      resumenHoras,
       firmaImagen: firmaCierreDetalle?.firma_imagen,
       firmaHash: firmaCierreDetalle?.firma_hash,
       hashRegistroMes: firmaCierreDetalle?.hash_registro_mes,
@@ -633,6 +637,7 @@ const NotificacionesEmpleado = () => {
           setVisible(false);
           setFirmaCierreDetalle(null);
           setDetalleCierreContext(null);
+          setResumenHoras(null);
         }}
         footer={null}
         width="80%"
@@ -662,6 +667,17 @@ const NotificacionesEmpleado = () => {
           <div className="notif-totales">
             <span className="notif-total-sep">Total de horas trabajadas: {totalHoras}</span>
             <span>Total de horas esperadas: {totalHorasEsperadas}</span>
+            {resumenHoras?.tipo_hora_label && (
+              <span>Tipo de hora: {resumenHoras.tipo_hora_label}
+                {resumenHoras.tipo_hora_origen === 'membresia' ? ' (personal)' : resumenHoras.tipo_hora_origen === 'jornada' ? ' (jornada)' : ''}
+              </span>
+            )}
+            {resumenHoras?.desglose && (
+              <span>{resumenHoras.desglose}</span>
+            )}
+            {resumenHoras?.saldo_bolsa && (
+              <span>Saldo bolsa acumulado: {resumenHoras.saldo_bolsa}</span>
+            )}
           </div>
           {firmaCierreDetalle?.firmado && (
             <div className="notif-firma-cierre">

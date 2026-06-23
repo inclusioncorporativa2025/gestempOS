@@ -29,6 +29,10 @@ const UsuariosEmpresas = sequelize.define('UsuariosEmpresas', {
         type: DataTypes.INTEGER,
         allowNull: true,
     },
+    tipo_hora: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
     fecha_alta: {
         type: DataTypes.DATE,
         allowNull: false,

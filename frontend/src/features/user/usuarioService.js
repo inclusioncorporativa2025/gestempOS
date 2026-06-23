@@ -105,7 +105,7 @@ export const importarUsuariosEmpresa = async (values) => {
     
 
 
-export const crearUsuario = async (email,nombreUsuario,dni, tipoUsuario, horario) =>{
+export const crearUsuario = async (email, nombreUsuario, dni, tipoUsuario, horario, tipoHora) =>{
 
   try{
     const idEmpresa = getIdEmpresa();
@@ -116,7 +116,16 @@ export const crearUsuario = async (email,nombreUsuario,dni, tipoUsuario, horario
     const response = await fetch(API_BASE_URL+`/crear`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email,nombreUsuario,dni, idEmpresa,idUsuarioAccion,tipoUsuario,horario }),
+      body: JSON.stringify({
+        email,
+        nombreUsuario,
+        dni,
+        idEmpresa,
+        idUsuarioAccion,
+        tipoUsuario,
+        horario,
+        tipoHora: tipoHora === 'inherit' ? null : tipoHora,
+      }),
     });
 
     if (!response.ok) {
@@ -240,7 +249,68 @@ export const getHorasTotalesMesByIdUsuario = async (mes, idUsuario) => {
     return data;
   } catch (error) {
     console.error('Error getHorasTotalesMesByIdUsuario:', error);
-    return { horasMensuales: 'No configurada' };
+    return { horasMensuales: 'No configurada', resumen: null };
   }
+};
+
+export const getResumenHorasMes = async (mes, idUsuario) => {
+  try {
+    const idEmpresa = getIdEmpresa();
+
+    const response = await fetch(API_BASE_URL + '/getResumenHorasMes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idEmpresa, mes, idUsuario }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || 'Error al obtener resumen de horas');
+    }
+
+    return data.resumen;
+  } catch (error) {
+    console.error('Error getResumenHorasMes:', error);
+    return null;
+  }
+};
+
+export const getBolsaHoras = async (idUsuario, mes = null) => {
+  try {
+    const idEmpresa = getIdEmpresa();
+
+    const response = await fetch(API_BASE_URL + '/getBolsaHoras', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idEmpresa, idUsuario, mes }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || 'Error al obtener bolsa de horas');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error getBolsaHoras:', error);
+    throw error;
+  }
+};
+
+export const ajustarBolsaHoras = async (idUsuario, minutos, motivo) => {
+  const idEmpresa = getIdEmpresa();
+
+  const response = await fetch(API_BASE_URL + '/ajustarBolsaHoras', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idEmpresa, idUsuario, minutos, motivo }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || 'Error al registrar el ajuste');
+  }
+
+  return data;
 };
 

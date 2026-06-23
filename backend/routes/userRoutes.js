@@ -10,6 +10,10 @@ const {
   exportarDatosExcel,
   deleteUsuario,
   getHorasTotalesMesByIdUsuario,
+  getResumenHorasMes,
+  getTipoHoraUsuario,
+  getBolsaHoras,
+  ajustarBolsaHoras,
   importarUsuariosEmpresa,
 } = require('../controllers/userController');
 const { requireRole, ROLE_GROUPS } = require('../middleware/authMiddleware');
@@ -26,6 +30,26 @@ router.post(
   '/getHorasTotalesMesByIdUsuario',
   requireRole(ROLE_GROUPS.FICHAJE),
   getHorasTotalesMesByIdUsuario,
+);
+router.post(
+  '/getResumenHorasMes',
+  requireRole(ROLE_GROUPS.FICHAJE),
+  getResumenHorasMes,
+);
+router.post(
+  '/getTipoHoraUsuario',
+  requireRole(ROLE_GROUPS.FICHAJE),
+  getTipoHoraUsuario,
+);
+router.post(
+  '/getBolsaHoras',
+  requireRole(ROLE_GROUPS.FICHAJE),
+  getBolsaHoras,
+);
+router.post(
+  '/ajustarBolsaHoras',
+  requireRole(ROLE_GROUPS.USER_WRITE),
+  ajustarBolsaHoras,
 );
 router.post('/exportar', requireRole(ROLE_GROUPS.COMPANY_STAFF), exportarDatosExcel);
 router.post('/importar', requireRole(ROLE_GROUPS.USER_WRITE), importarUsuariosEmpresa);
