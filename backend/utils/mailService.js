@@ -350,6 +350,7 @@ const enviarNotificacionGestion = async ({
   tipo,
   nombreSolicitante,
   mesCierre,
+  detalleAusencia,
 }) => {
   const validos = [...new Set((destinatarios || []).map((e) => String(e).trim()).filter(isEmailValido))];
   if (!validos.length) {
@@ -381,6 +382,18 @@ const enviarNotificacionGestion = async ({
         La persona trabajadora <strong>${escapeHtml(nombreSolicitante || 'Un miembro del personal')}</strong>
         ha creado una petición de cierre de jornada mensual correspondiente al periodo
         <strong>${escapeHtml(mesFormateado)}</strong>.
+      </p>
+      <p style="margin:0; font-size:15px; line-height:1.6; color:#333;">
+        Por favor, revísela desde la aplicación, en la pestaña <strong>Notificaciones</strong>,
+        y gestione su aprobación o denegación.
+      </p>`;
+  } else if (tipo === 'solicitud_ausencia') {
+    subject = 'Solicitud de ausencia pendiente de aprobación';
+    cuerpo = `
+      <p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#333;">
+        La persona trabajadora <strong>${escapeHtml(nombreSolicitante || 'Un miembro del personal')}</strong>
+        ha solicitado una ausencia
+        ${detalleAusencia ? `(<strong>${escapeHtml(detalleAusencia)}</strong>)` : ''}.
       </p>
       <p style="margin:0; font-size:15px; line-height:1.6; color:#333;">
         Por favor, revísela desde la aplicación, en la pestaña <strong>Notificaciones</strong>,

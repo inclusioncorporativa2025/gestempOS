@@ -30,6 +30,12 @@ import {
 import { getTipoUsuario } from '../../utils/authSession';
 import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import NotificacionesEmpleado from './NotificacionesEmpleado';
+import { usePlan } from '../../hooks/usePlan';
+import {
+  getAusenciasPendientesEmpresa,
+  getHistorialAusenciasEmpresa,
+  responderAusencia,
+} from '../../features/ausencias/ausenciasService';
 import './Notificaciones.css';
 
 dayjs.locale('es');
@@ -117,16 +123,36 @@ const combinarCierres = (pendientes, historial) => {
   return merged;
 };
 
-const submenuItems = [
-  { key: 'horarios', label: 'Cambios de horarios' },
-  { key: 'cierres', label: 'Cierres mensuales' },
-];
+const combinarAusencias = (pendientes, historial) => {
+  const ids = new Set();
+  const merged = [];
+  [...(pendientes || []), ...(historial || [])].forEach((item) => {
+    const key = `${item.empresa_id}-${item.id_ausencia}`;
+    if (!ids.has(key)) {
+      ids.add(key);
+      merged.push(item);
+    }
+  });
+  return merged;
+};
+
+const formatFechaAusencia = (valor) => {
+  if (!valor) return '—';
+  const fecha = dayjs(valor, ['DD-MM-YYYY', 'YYYY-MM-DD'], true);
+  return fecha.isValid() ? fecha.format('DD/MM/YYYY') : valor;
+};
 
 const NotificacionesGestor = () => {
+  const { tieneFeature } = usePlan();
+  const puedeVerAusencias = tieneFeature('ausencias_basicas');
 const [peticiones, setPeticiones] = useState([]);
 const [historialEdiciones, setHistorialEdiciones] = useState([]);
 const [cierresMensuales, setCierresMensuales] = useState([]);
 const [historialCierres, setHistorialCierres] = useState([]);
+const [ausenciasPendientes, setAusenciasPendientes] = useState([]);
+const [historialAusencias, setHistorialAusencias] = useState([]);
+const [loadingAusencias, setLoadingAusencias] = useState(true);
+const [loadingHistorialAusencias, setLoadingHistorialAusencias] = useState(true);
 const [loading, setLoading] = useState(true);
 const [loadingHistorial, setLoadingHistorial] = useState(true);
 const [loadingHistorialCierres, setLoadingHistorialCierres] = useState(true);
@@ -148,7 +174,7 @@ const [estadoFiltroDraft, setEstadoFiltroDraft] = useState('todas');
 const [campoFechaRangoDraft, setCampoFechaRangoDraft] = useState('fecha_alta');
 const [activeTab, setActiveTab] = useState('horarios');
 const [rechazoModalAbierto, setRechazoModalAbierto] = useState(false);
-const [peticionARechazar, setPeticionARechazar] = useState(null);
+const [rechazoTarget, setRechazoTarget] = useState(null);
 const [rechazando, setRechazando] = useState(false);
 const [formRechazo] = Form.useForm();
 
@@ -162,8 +188,28 @@ const [formRechazo] = Form.useForm();
     [cierresMensuales, historialCierres],
   );
 
+  const todasAusencias = useMemo(
+    () => combinarAusencias(ausenciasPendientes, historialAusencias),
+    [ausenciasPendientes, historialAusencias],
+  );
+
+  const submenuItems = useMemo(() => {
+    const items = [
+      { key: 'horarios', label: 'Cambios de horarios' },
+      { key: 'cierres', label: 'Cierres mensuales' },
+    ];
+    if (puedeVerAusencias) {
+      items.push({ key: 'ausencias', label: 'Ausencias' });
+    }
+    return items;
+  }, [puedeVerAusencias]);
+
   const contadoresActivos = useMemo(() => {
-    const items = activeTab === 'horarios' ? todasCorrecciones : todosCierres;
+    const items = activeTab === 'horarios'
+      ? todasCorrecciones
+      : activeTab === 'cierres'
+        ? todosCierres
+        : todasAusencias;
     return {
       pendientes: items.filter(
         (item) => !item.fecha_aceptacion && !item.fecha_cancelacion,
@@ -171,7 +217,7 @@ const [formRechazo] = Form.useForm();
       aprobadas: items.filter((item) => item.fecha_aceptacion).length,
       rechazadas: items.filter((item) => item.fecha_cancelacion).length,
     };
-  }, [activeTab, todasCorrecciones, todosCierres]);
+  }, [activeTab, todasCorrecciones, todosCierres, todasAusencias]);
 
   const campoFechaActivo = campoFechaRango === 'fecha_resolucion'
     ? null
@@ -211,6 +257,23 @@ const [formRechazo] = Form.useForm();
       'fecha_alta',
     ),
     [todosCierres, rangoFechas, busquedaNombre, estadoFiltro],
+  );
+
+  const ausenciasFiltradas = useMemo(
+    () => ordenarPorReciente(
+      filtrarPorNombre(
+        filtrarPorRango(
+          filtrarPorEstado(todasAusencias, estadoFiltro),
+          campoFechaActivo,
+          rangoFechas,
+          obtenerFechaFiltro,
+        ),
+        (item) => item.nombre_usuario,
+        busquedaNombre,
+      ),
+      'fecha_alta',
+    ),
+    [todasAusencias, estadoFiltro, rangoFechas, busquedaNombre, campoFechaRango],
   );
 
   const sincronizarFiltrosDraft = () => {
@@ -368,7 +431,33 @@ const [formRechazo] = Form.useForm();
     fetchCierresMensuales();
     fetchHistorialEdiciones();
     fetchHistorialCierres();
-  }, []);
+    if (puedeVerAusencias) {
+      fetchAusenciasPendientes();
+      fetchHistorialAusencias();
+    }
+  }, [puedeVerAusencias]);
+
+  const fetchAusenciasPendientes = async () => {
+    try {
+      const response = await getAusenciasPendientesEmpresa();
+      setAusenciasPendientes(response.ausencias || []);
+    } catch (error) {
+      message.error('Error al obtener ausencias pendientes');
+    } finally {
+      setLoadingAusencias(false);
+    }
+  };
+
+  const fetchHistorialAusencias = async () => {
+    try {
+      const response = await getHistorialAusenciasEmpresa();
+      setHistorialAusencias(response.ausencias || []);
+    } catch (error) {
+      message.error('Error al obtener historial de ausencias');
+    } finally {
+      setLoadingHistorialAusencias(false);
+    }
+  };
 
   const fetchHistorialCierres = async () => {
     try {
@@ -531,15 +620,21 @@ const setVisibleModalDetalles = async (info) => {
     }
   };
 
-  const abrirModalRechazo = (peticion) => {
-    setPeticionARechazar(peticion);
+  const abrirModalRechazo = (target) => {
+    setRechazoTarget({ tipo: 'peticion', record: target });
+    formRechazo.resetFields();
+    setRechazoModalAbierto(true);
+  };
+
+  const abrirModalRechazoAusencia = (ausencia) => {
+    setRechazoTarget({ tipo: 'ausencia', record: ausencia });
     formRechazo.resetFields();
     setRechazoModalAbierto(true);
   };
 
   const cerrarModalRechazo = () => {
     setRechazoModalAbierto(false);
-    setPeticionARechazar(null);
+    setRechazoTarget(null);
     formRechazo.resetFields();
   };
 
@@ -547,17 +642,36 @@ const setVisibleModalDetalles = async (info) => {
     try {
       const values = await formRechazo.validateFields();
       setRechazando(true);
-      await responderPeticion(peticionARechazar, 3, values.motivoRechazo);
-      message.success('Petición rechazada correctamente');
+      if (rechazoTarget?.tipo === 'ausencia') {
+        await responderAusencia(rechazoTarget.record, 3, values.motivoRechazo);
+        message.success('Solicitud de ausencia rechazada');
+        fetchAusenciasPendientes();
+        fetchHistorialAusencias();
+      } else {
+        await responderPeticion(rechazoTarget.record, 3, values.motivoRechazo);
+        message.success('Petición rechazada correctamente');
+        fetchPeticiones();
+        fetchHistorialEdiciones();
+      }
       cerrarModalRechazo();
-      fetchPeticiones();
-      fetchHistorialEdiciones();
       notifyNotificacionesActualizadas();
     } catch (error) {
       if (error?.errorFields) return;
-      message.error(error.message || 'Error al rechazar la petición');
+      message.error(error.message || 'Error al rechazar la solicitud');
     } finally {
       setRechazando(false);
+    }
+  };
+
+  const handleRespuestaAusencia = async (ausencia, estado) => {
+    try {
+      await responderAusencia(ausencia, estado);
+      message.success(`Solicitud de ausencia ${estado === 2 ? 'aprobada' : 'rechazada'}`);
+      fetchAusenciasPendientes();
+      fetchHistorialAusencias();
+      notifyNotificacionesActualizadas();
+    } catch (error) {
+      message.error(error.message || 'Error al procesar la solicitud');
     }
   };
 
@@ -835,6 +949,114 @@ const setVisibleModalDetalles = async (info) => {
     return columnas;
   }, [estadoFiltro]);
 
+  const columnsAusencias = useMemo(() => {
+    const columnas = [
+      {
+        title: 'Empleado',
+        dataIndex: 'nombre_usuario',
+        key: 'nombre_usuario',
+        render: (nombre) => nombre || '—',
+      },
+      {
+        title: 'Tipo',
+        dataIndex: 'tipo',
+        key: 'tipo',
+      },
+      {
+        title: 'Desde',
+        dataIndex: 'fecha_desde',
+        key: 'fecha_desde',
+        render: formatFechaAusencia,
+      },
+      {
+        title: 'Hasta',
+        dataIndex: 'fecha_hasta',
+        key: 'fecha_hasta',
+        render: formatFechaAusencia,
+      },
+      {
+        title: 'Días',
+        dataIndex: 'dias',
+        key: 'dias',
+        width: 72,
+        align: 'center',
+      },
+      {
+        title: 'Comentario',
+        dataIndex: 'comentarios',
+        key: 'comentarios',
+        ellipsis: true,
+        render: (text) => text || '—',
+      },
+      {
+        title: 'Fecha solicitud',
+        dataIndex: 'fecha_alta',
+        key: 'fecha_alta',
+        render: (fecha) => formatearFecha(fecha),
+      },
+      {
+        title: 'Estado',
+        key: 'estado',
+        render: (_, record) => {
+          const estado = obtenerEstado(record);
+          return <Tag color={colorEstadoTag(estado)}>{estado}</Tag>;
+        },
+      },
+      {
+        title: 'Motivo rechazo',
+        key: 'motivo_rechazo',
+        render: (_, record) => record.motivo_rechazo || '—',
+      },
+      {
+        title: 'Fecha resolución',
+        key: 'fecha_resolucion',
+        render: (_, record) => formatearFecha(obtenerFechaResolucion(record)),
+      },
+      {
+        title: 'Acciones',
+        key: 'acciones',
+        fixed: 'right',
+        width: 190,
+        render: (_, record) => {
+          const estado = obtenerEstado(record);
+          return estado === 'Pendiente' ? (
+            <div className="notif-acciones">
+              <Popconfirm
+                title="¿Aprobar esta ausencia?"
+                onConfirm={() => handleRespuestaAusencia(record, 2)}
+                okText="Sí"
+                cancelText="No"
+              >
+                <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
+              </Popconfirm>
+              <Button
+                danger
+                size="small"
+                className="notif-btn-compact"
+                onClick={() => abrirModalRechazoAusencia(record)}
+              >
+                Rechazar
+              </Button>
+            </div>
+          ) : (
+            <span className="notif-procesada">—</span>
+          );
+        },
+      },
+    ];
+
+    const ocultarPorEstado = {
+      pendientes: ['fecha_resolucion', 'motivo_rechazo'],
+      aprobadas: ['acciones', 'motivo_rechazo'],
+      rechazadas: ['acciones'],
+    };
+    const ocultar = ocultarPorEstado[estadoFiltro];
+    if (ocultar?.length) {
+      return columnas.filter((col) => !ocultar.includes(col.key));
+    }
+    return columnas;
+  }, [estadoFiltro]);
+
   return (
     <div className="notif-layout">
       <Title level={3} className="notif-layout__title">
@@ -905,7 +1127,13 @@ const setVisibleModalDetalles = async (info) => {
         aria-label="Buscar por nombre"
       />
 
-      <Spin spinning={activeTab === 'horarios' ? (loading || loadingHistorial) : (loading || loadingHistorialCierres)}>
+      <Spin spinning={
+        activeTab === 'horarios'
+          ? (loading || loadingHistorial)
+          : activeTab === 'cierres'
+            ? (loading || loadingHistorialCierres)
+            : (loadingAusencias || loadingHistorialAusencias)
+      }>
         {activeTab === 'horarios' ? (
           <Table
             className="notif-table"
@@ -916,13 +1144,23 @@ const setVisibleModalDetalles = async (info) => {
             scroll={{ x: 1300 }}
             size="middle"
           />
-        ) : (
+        ) : activeTab === 'cierres' ? (
           <Table
             className="notif-table"
             columns={columnsCierreMensual}
             dataSource={cierresFiltrados}
             rowKey={(record) => `${record.empresa_id}-${record.id_mes_cierre}`}
             pagination={{ pageSize: 8, hideOnSinglePage: true }}
+            size="middle"
+          />
+        ) : (
+          <Table
+            className="notif-table"
+            columns={columnsAusencias}
+            dataSource={ausenciasFiltradas}
+            rowKey={(record) => `${record.empresa_id}-${record.id_ausencia}`}
+            pagination={{ pageSize: 8, hideOnSinglePage: true }}
+            scroll={{ x: 1200 }}
             size="middle"
           />
         )}

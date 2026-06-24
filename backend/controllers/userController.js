@@ -24,6 +24,7 @@ const {
   registrarAjusteManual,
 } = require('../services/bolsaHorasService');
 const { empresaTieneFeature } = require('../services/planService');
+const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/ausenciasCompat');
 const { normalizarTipoHoraInput } = require('../utils/tipoHora');
 const { Op } = require('sequelize');
 const dayjs = require('dayjs');
@@ -645,6 +646,9 @@ const exportarDatosExcel = async (req, res) => {
         }
 
         const incluirAusencias = await empresaTieneFeature(idEmpresa, 'ausencias_basicas');
+        const soportaAprobacionAusencias = incluirAusencias
+            ? await ausenciasSoportaAprobacion()
+            : false;
 
         const [fichajesData, ausenciasData, descansosData] = await Promise.all([
             fichajes.findAll({
@@ -664,6 +668,7 @@ const exportarDatosExcel = async (req, res) => {
                         empresa_id: idEmpresa,
                         id_usuario,
                         fecha_baja: null,
+                        ...whereSoloAprobadas(soportaAprobacionAusencias),
                         fecha_desde: {
                             [Op.lte]: end.toDate(),
                         },

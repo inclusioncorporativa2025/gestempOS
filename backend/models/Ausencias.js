@@ -52,6 +52,27 @@ const Ausencia = sequelize.define('ausencia', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  motivo_rechazo: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  fecha_aceptacion: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  fecha_cancelacion: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  id_usuario_gestor: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  notificacion_vista: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
   tipo: {
     type: DataTypes.STRING(100),
     allowNull: true,

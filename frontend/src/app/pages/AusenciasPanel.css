@@ -1,0 +1,67 @@
+.ausencias-panel {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ausencias-card {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.ausencias-card .ant-card-body {
+  padding: 0;
+}
+
+.ausencias-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.ausencias-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1;
+}
+
+.ausencias-search {
+  min-width: 220px;
+  max-width: 280px;
+}
+
+.ausencias-tipo-select {
+  min-width: 180px;
+}
+
+.ausencias-rango {
+  min-width: 240px;
+}
+
+.ausencias-reload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.ausencias-reload:hover {
+  border-color: rgba(var(--color-primary-rgb), 0.4);
+  color: var(--color-primary);
+}
+
+.ausencias-panel .ant-table {
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+}

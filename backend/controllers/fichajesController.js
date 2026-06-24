@@ -16,6 +16,7 @@ const { TIPO_REGISTRO_A_EVENTO } = require('../utils/registroHash');
 const { registrarEventoFichaje, verificarEventosMes } = require('../repositorios/fichajeRegistroEventosRepository');
 const {getTipoRegistro} = require('./companyController');
 const { empresaTieneFeature } = require('../services/planService');
+const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/ausenciasCompat');
 const moment = require('moment-timezone');
 const dayjs = require('dayjs');
 const timezone = require('dayjs/plugin/timezone');
@@ -25,6 +26,7 @@ const Usuario = require('../models/Usuario');
 const UsuariosEmpresas = require('../models/UsuarioEmpresa');
 const { ROLE_GROUPS, ROLES } = require('../middleware/authMiddleware');
 const { enviarNotificacionGestion } = require('../utils/mailService');
+const { obtenerEmailsGestoresEmpresa } = require('../utils/gestoresEmpresa');
 const {
   MESES_CIERRE_ATTRS,
   mesesCierreSoportaNotificacionVista,
@@ -47,50 +49,6 @@ const resolveIdEmpresa = (req) => {
 };
 
 const esRootPlataforma = (req) => Number(req.user?.tipo_usuario) === ROLES.ROOT;
-
-const isEmailValido = (email) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
-
-/** Gestores de la empresa + super-admins globales (tipo 1) con email válido. */
-const obtenerEmailsGestoresEmpresa = async (idEmpresa) => {
-  const usuariosEmpresa = await sequelize.query(
-    'SELECT id_usuario FROM m_usuarios_empresas WHERE id_empresa = :idEmpresa AND fecha_baja IS NULL',
-    {
-      type: QueryTypes.SELECT,
-      replacements: { idEmpresa },
-    },
-  );
-
-  const usuariosIds = usuariosEmpresa.map((u) => Number(u.id_usuario));
-
-  const [vinculados, rootsGlobales] = await Promise.all([
-    usuariosIds.length
-      ? Usuario.findAll({
-          where: {
-            id_usuario: { [Op.in]: usuariosIds },
-            tipo_usuario: { [Op.in]: ROLE_GROUPS.COMPANY_STAFF },
-            fecha_baja: null,
-          },
-          attributes: ['email'],
-          raw: true,
-        })
-      : [],
-    Usuario.findAll({
-      where: {
-        tipo_usuario: ROLES.ROOT,
-        fecha_baja: null,
-      },
-      attributes: ['email'],
-      raw: true,
-    }),
-  ]);
-
-  const emails = [...vinculados, ...rootsGlobales]
-    .map((u) => u.email)
-    .filter(isEmailValido);
-
-  return [...new Set(emails)];
-};
 
 const combinarFechaConHoraMadrid = (fechaBase, horaHHmm) => {
   const tz = 'Europe/Madrid';
@@ -193,6 +151,9 @@ const getDatosUsuarioById = async (req, res) => {
 
   try {
     const incluirAusencias = await empresaTieneFeature(idEmpresa, 'ausencias_basicas');
+    const soportaAprobacionAusencias = incluirAusencias
+      ? await ausenciasSoportaAprobacion()
+      : false;
 
     const [fichajes, ausencias, descansos] = await Promise.all([
       Fichajes.findAll({
@@ -201,7 +162,12 @@ const getDatosUsuarioById = async (req, res) => {
       }),
       incluirAusencias
         ? Ausencias.findAll({
-            where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
+            where: {
+              empresa_id: idEmpresa,
+              id_usuario: idUsuario,
+              fecha_baja: null,
+              ...whereSoloAprobadas(soportaAprobacionAusencias),
+            },
             order: [['fecha_alta', 'DESC']]
           })
         : Promise.resolve([]),
@@ -869,6 +835,8 @@ const countNotificacionesEmpleado = async (req, res) => {
 
   try {
     const soportaNotifVista = await mesesCierreSoportaNotificacionVista();
+    const soportaAprobacionAusencias = await ausenciasSoportaAprobacion();
+    const permiteAusencias = await empresaTieneFeature(idEmpresa, 'ausencias_basicas');
     const cierresWhere = {
       empresa_id: idEmpresa,
       usuario_alta: idUsuario,
@@ -882,7 +850,7 @@ const countNotificacionesEmpleado = async (req, res) => {
       cierresWhere.notificacion_vista = false;
     }
 
-    const [peticionesCount, cierresCount] = await Promise.all([
+    const [peticionesCount, cierresCount, ausenciasCount] = await Promise.all([
       Peticiones.count({
         where: {
           empresa_id: idEmpresa,
@@ -897,9 +865,23 @@ const countNotificacionesEmpleado = async (req, res) => {
       soportaNotifVista
         ? MesesCierre.count({ where: cierresWhere })
         : Promise.resolve(0),
+      soportaAprobacionAusencias && permiteAusencias
+        ? Ausencias.count({
+            where: {
+              empresa_id: idEmpresa,
+              id_usuario: idUsuario,
+              fecha_baja: null,
+              notificacion_vista: false,
+              [Op.or]: [
+                { fecha_aceptacion: { [Op.ne]: null } },
+                { fecha_cancelacion: { [Op.ne]: null } },
+              ],
+            },
+          })
+        : Promise.resolve(0),
     ]);
 
-    res.status(200).json({ total: peticionesCount + cierresCount });
+    res.status(200).json({ total: peticionesCount + cierresCount + ausenciasCount });
   } catch (error) {
     console.error('Error al contar notificaciones del empleado:', error);
     res.status(500).json({ error: 'Error al contar notificaciones' });
@@ -915,7 +897,8 @@ const marcarPeticionesVistas = async (req, res) => {
 
   try {
     const soportaNotifVista = await mesesCierreSoportaNotificacionVista();
-    const [actualizadasPeticiones, actualizadasCierres] = await Promise.all([
+    const soportaAprobacionAusencias = await ausenciasSoportaAprobacion();
+    const [actualizadasPeticiones, actualizadasCierres, actualizadasAusencias] = await Promise.all([
       Peticiones.update(
         { notificacion_vista: true },
         {
@@ -947,11 +930,28 @@ const marcarPeticionesVistas = async (req, res) => {
             },
           )
         : Promise.resolve([0]),
+      soportaAprobacionAusencias
+        ? Ausencias.update(
+            { notificacion_vista: true },
+            {
+              where: {
+                empresa_id: idEmpresa,
+                id_usuario: idUsuario,
+                fecha_baja: null,
+                notificacion_vista: false,
+                [Op.or]: [
+                  { fecha_aceptacion: { [Op.ne]: null } },
+                  { fecha_cancelacion: { [Op.ne]: null } },
+                ],
+              },
+            },
+          )
+        : Promise.resolve([0]),
     ]);
 
     res.status(200).json({
       message: 'Notificaciones marcadas como vistas',
-      actualizadas: actualizadasPeticiones[0] + actualizadasCierres[0],
+      actualizadas: actualizadasPeticiones[0] + actualizadasCierres[0] + actualizadasAusencias[0],
     });
   } catch (error) {
     console.error('Error al marcar peticiones vistas:', error);
@@ -1157,8 +1157,12 @@ const countNotificacionesPendientes = async (req, res) => {
 
   try {
     const filtroEmpresa = esRoot ? {} : { empresa_id: idEmpresa };
+    const soportaAprobacionAusencias = await ausenciasSoportaAprobacion();
+    const permiteAusencias = idEmpresa
+      ? await empresaTieneFeature(idEmpresa, 'ausencias_basicas')
+      : true;
 
-    const [correcciones, cierres] = await Promise.all([
+    const [correcciones, cierres, ausenciasPendientes] = await Promise.all([
       Peticiones.count({
         where: {
           ...filtroEmpresa,
@@ -1174,9 +1178,24 @@ const countNotificacionesPendientes = async (req, res) => {
           fecha_cancelacion: null,
         },
       }),
+      soportaAprobacionAusencias && permiteAusencias
+        ? Ausencias.count({
+            where: {
+              ...filtroEmpresa,
+              fecha_baja: null,
+              fecha_aceptacion: null,
+              fecha_cancelacion: null,
+            },
+          })
+        : Promise.resolve(0),
     ]);
 
-    res.status(200).json({ correcciones, cierres, total: correcciones + cierres });
+    res.status(200).json({
+      correcciones,
+      cierres,
+      ausencias: ausenciasPendientes,
+      total: correcciones + cierres + ausenciasPendientes,
+    });
   } catch (error) {
     console.error('Error al contar notificaciones pendientes:', error);
     res.status(500).json({ error: 'Error al contar notificaciones pendientes' });

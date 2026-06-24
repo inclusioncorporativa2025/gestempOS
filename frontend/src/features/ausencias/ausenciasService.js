@@ -19,6 +19,84 @@ export const getAusenciasCalendario = async () => {
   return response.json();
 };
 
+/** Listado de solicitudes de ausencia (rangos completos). */
+export const getAusenciasListado = async (mes) => {
+  const idEmpresa = getIdEmpresa();
+  const body = { idEmpresa };
+  if (mes) body.mes = mes;
+
+  const response = await fetch(`${API_BASE_URL}/getAusenciasListado`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Error al cargar ausencias');
+  }
+
+  return response.json();
+};
+
+export const getAusenciasPendientesEmpresa = async () => {
+  const response = await fetch(`${API_BASE_URL}/getAusenciasPendientesEmpresa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Error al cargar ausencias pendientes');
+  }
+  return response.json();
+};
+
+export const getHistorialAusenciasEmpresa = async () => {
+  const response = await fetch(`${API_BASE_URL}/getHistorialAusenciasEmpresa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Error al cargar historial de ausencias');
+  }
+  return response.json();
+};
+
+export const getAusenciasNotificacionesEmpleado = async () => {
+  const response = await fetch(`${API_BASE_URL}/getAusenciasNotificacionesEmpleado`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Error al cargar notificaciones de ausencias');
+  }
+  return response.json();
+};
+
+export const responderAusencia = async (ausencia, estado, motivoRechazo) => {
+  const idEmpresa = getIdEmpresa();
+  const response = await fetch(`${API_BASE_URL}/responderAusencia`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      idEmpresa,
+      idAusencia: ausencia.id_ausencia,
+      estado,
+      motivoRechazo,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || 'Error al procesar la solicitud');
+  }
+  return data;
+};
+
 // Servicio para crear una ausencia
 export const crearAusencia = async (
   idUsuario,

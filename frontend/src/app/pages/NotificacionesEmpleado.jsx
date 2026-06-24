@@ -17,6 +17,8 @@ import {
 } from '../../features/fichaje/fichajeService';
 import { getHorasTotalesMesByIdUsuario } from '../../features/user/usuarioService';
 import { notifyNotificacionesActualizadas } from '../../hooks/useNotificacionesPendientes';
+import { usePlan } from '../../hooks/usePlan';
+import { getAusenciasNotificacionesEmpleado } from '../../features/ausencias/ausenciasService';
 import { getIdUsuario, getNombreUsuario } from '../../utils/authSession';
 import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import { parseFechaFichaje } from '../../utils/fechaFichaje';
@@ -29,10 +31,16 @@ dayjs.extend(timezone);
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
 
-const submenuItems = [
+const submenuItemsBase = [
   { key: 'horarios', label: 'Cambios de horarios' },
   { key: 'cierres', label: 'Cierres mensuales' },
 ];
+
+const formatFechaAusencia = (valor) => {
+  if (!valor) return '—';
+  const fecha = dayjs(valor, ['DD-MM-YYYY', 'YYYY-MM-DD'], true);
+  return fecha.isValid() ? fecha.format('DD/MM/YYYY') : valor;
+};
 
 const filtrarPorRango = (items, campoFecha, rango, obtenerFecha) => {
   if (!rango?.[0] || !rango?.[1]) return items;
@@ -80,9 +88,12 @@ const filtrarPorEstado = (items, estado) => {
 };
 
 const NotificacionesEmpleado = () => {
+  const { tieneFeature } = usePlan();
+  const puedeVerAusencias = tieneFeature('ausencias_basicas');
   const [peticiones, setPeticiones] = useState([]);
   const [historialEdiciones, setHistorialEdiciones] = useState([]);
   const [cierresMensuales, setCierresMensuales] = useState([]);
+  const [ausenciasNotificaciones, setAusenciasNotificaciones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [visible, setVisible] = useState(false);
   const [registroHoras, setRegistroHoras] = useState([]);
@@ -106,8 +117,20 @@ const NotificacionesEmpleado = () => {
     [peticiones, historialEdiciones],
   );
 
+  const submenuItems = useMemo(() => {
+    const items = [...submenuItemsBase];
+    if (puedeVerAusencias) {
+      items.push({ key: 'ausencias', label: 'Ausencias' });
+    }
+    return items;
+  }, [puedeVerAusencias]);
+
   const contadoresActivos = useMemo(() => {
-    const items = activeTab === 'horarios' ? todasCorrecciones : (cierresMensuales || []);
+    const items = activeTab === 'horarios'
+      ? todasCorrecciones
+      : activeTab === 'cierres'
+        ? (cierresMensuales || [])
+        : ausenciasNotificaciones;
     return {
       pendientes: items.filter(
         (item) => !item.fecha_aceptacion && !item.fecha_cancelacion,
@@ -115,7 +138,7 @@ const NotificacionesEmpleado = () => {
       aprobadas: items.filter((item) => item.fecha_aceptacion).length,
       rechazadas: items.filter((item) => item.fecha_cancelacion).length,
     };
-  }, [activeTab, todasCorrecciones, cierresMensuales]);
+  }, [activeTab, todasCorrecciones, cierresMensuales, ausenciasNotificaciones]);
 
   const campoFechaActivo = campoFechaRango === 'fecha_resolucion' ? null : campoFechaRango;
   const obtenerFechaFiltro = campoFechaRango === 'fecha_resolucion'
@@ -145,6 +168,19 @@ const NotificacionesEmpleado = () => {
       'fecha_alta',
     ),
     [cierresMensuales, rangoFechas, estadoFiltro],
+  );
+
+  const ausenciasFiltradas = useMemo(
+    () => ordenarPorReciente(
+      filtrarPorRango(
+        filtrarPorEstado(ausenciasNotificaciones, estadoFiltro),
+        campoFechaActivo,
+        rangoFechas,
+        obtenerFechaFiltro,
+      ),
+      'fecha_alta',
+    ),
+    [ausenciasNotificaciones, estadoFiltro, rangoFechas, campoFechaRango],
   );
 
   const sincronizarFiltrosDraft = () => {
@@ -269,7 +305,7 @@ const NotificacionesEmpleado = () => {
               {textoBotonCalendario}
             </Button>
           </Popover>
-          {activeTab === 'horarios' && (
+          {activeTab !== 'cierres' && (
             <div className="notif-filter-radio-col">
               <span className="notif-filter-radio-label">Aplicar el rango a</span>
               <Radio.Group
@@ -303,6 +339,10 @@ const NotificacionesEmpleado = () => {
       setPeticiones(response?.peticiones || []);
       setHistorialEdiciones(response?.historialEdiciones || []);
       setCierresMensuales(response?.mesesCierre || []);
+      if (puedeVerAusencias) {
+        const ausenciasData = await getAusenciasNotificacionesEmpleado();
+        setAusenciasNotificaciones(ausenciasData?.ausencias || []);
+      }
       await marcarPeticionesVistas();
       notifyNotificacionesActualizadas();
     } catch (error) {
@@ -314,7 +354,7 @@ const NotificacionesEmpleado = () => {
 
   useEffect(() => {
     fetchDatos();
-  }, []);
+  }, [puedeVerAusencias]);
 
   const formatearFecha = (fecha) =>
     (fecha ? dayjs(fecha).tz('Europe/Madrid').format('DD/MM/YYYY HH:mm') : '-');
@@ -500,6 +540,70 @@ const NotificacionesEmpleado = () => {
     return columnas;
   }, [estadoFiltro]);
 
+  const columnsAusencias = useMemo(() => {
+    const columnas = [
+      {
+        title: 'Tipo',
+        dataIndex: 'tipo',
+        key: 'tipo',
+      },
+      {
+        title: 'Desde',
+        dataIndex: 'fecha_desde',
+        key: 'fecha_desde',
+        render: formatFechaAusencia,
+      },
+      {
+        title: 'Hasta',
+        dataIndex: 'fecha_hasta',
+        key: 'fecha_hasta',
+        render: formatFechaAusencia,
+      },
+      {
+        title: 'Días',
+        dataIndex: 'dias',
+        key: 'dias',
+        width: 72,
+        align: 'center',
+      },
+      {
+        title: 'Fecha solicitud',
+        dataIndex: 'fecha_alta',
+        key: 'fecha_alta',
+        render: (fecha) => formatearFecha(fecha),
+      },
+      {
+        title: 'Estado',
+        key: 'estado',
+        render: (_, record) => {
+          const estado = obtenerEstado(record);
+          return <Tag color={colorEstadoTag(estado)}>{estado}</Tag>;
+        },
+      },
+      {
+        title: 'Motivo rechazo',
+        key: 'motivo_rechazo',
+        render: (_, record) => record.motivo_rechazo || '—',
+      },
+      {
+        title: 'Fecha resolución',
+        key: 'fecha_resolucion',
+        render: (_, record) => formatearFecha(obtenerFechaResolucionItem(record)),
+      },
+    ];
+
+    const ocultarPorEstado = {
+      pendientes: ['fecha_resolucion', 'motivo_rechazo'],
+      aprobadas: ['motivo_rechazo'],
+      rechazadas: [],
+    };
+    const ocultar = ocultarPorEstado[estadoFiltro];
+    if (ocultar?.length) {
+      return columnas.filter((col) => !ocultar.includes(col.key));
+    }
+    return columnas;
+  }, [estadoFiltro]);
+
   const columnsCierreMensual = [
     {
       title: 'Mes',
@@ -619,13 +723,23 @@ const NotificacionesEmpleado = () => {
             scroll={{ x: 1100 }}
             size="middle"
           />
-        ) : (
+        ) : activeTab === 'cierres' ? (
           <Table
             className="notif-table"
             columns={columnsCierreMensual}
             dataSource={cierresFiltrados}
             rowKey={(record) => `${record.empresa_id}-${record.id_mes_cierre}`}
             pagination={{ pageSize: 8, hideOnSinglePage: true }}
+            size="middle"
+          />
+        ) : (
+          <Table
+            className="notif-table"
+            columns={columnsAusencias}
+            dataSource={ausenciasFiltradas}
+            rowKey={(record) => `${record.empresa_id}-${record.id_ausencia}`}
+            pagination={{ pageSize: 8, hideOnSinglePage: true }}
+            scroll={{ x: 900 }}
             size="middle"
           />
         )}

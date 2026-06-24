@@ -188,7 +188,11 @@ const anadirAusencia = async () => {
       selectedEntrada // tipo de ausencia
     );
 
-    message.success("Ausencia añadida correctamente");
+    message.success(
+      datos?.pendiente_aprobacion
+        ? 'Solicitud de ausencia enviada. Recibirás aviso cuando se resuelva.'
+        : 'Ausencia añadida correctamente',
+    );
     await fetchData();
 
     // Cerrar modal y limpiar

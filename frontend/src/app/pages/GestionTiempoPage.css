@@ -71,7 +71,8 @@
 }
 
 .gt-layout__content .presencia-panel,
-.gt-layout__content .tlp-layout {
+.gt-layout__content .tlp-layout,
+.gt-layout__content .ausencias-panel {
   padding: 0;
   min-height: auto;
 }
