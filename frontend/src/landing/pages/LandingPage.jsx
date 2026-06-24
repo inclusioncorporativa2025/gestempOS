@@ -11,6 +11,7 @@ import { getAppLoginHref, getAppRegisterHref } from '../../utils/appLinks';
 import { PLANS } from '../../constants/plans';
 import LandingFooter from '../components/LandingFooter';
 import { BRAND_NAME } from '../../constants/brand';
+import './LandingPage.css';
 
 const PlanCta = ({ href, external, featured, children }) => {
   const className = featured

@@ -5,6 +5,7 @@ import { LANDING_URL } from '../../constants/urls';
 import { SUPPORT_EMAIL, supportMailtoHref } from '../../constants/support';
 import { getAppLoginHref, getAppRegisterHref } from '../../utils/appLinks';
 import { BRAND_NAME } from '../../constants/brand';
+import './LandingFooter.css';
 
 const FooterLink = ({ href, external, children, title }) =>
   external ? (
