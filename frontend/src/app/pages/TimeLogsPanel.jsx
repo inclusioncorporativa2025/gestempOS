@@ -142,10 +142,15 @@ const [enviandoCierre, setEnviandoCierre] = useState(false);
     const esVacaciones = selectedEntrada === 'Vacaciones';
     const esUnSoloDia = Boolean(
       absenceFechaDesde
-      && absenceFechaHasta
-      && absenceFechaDesde.isSame(absenceFechaHasta, 'day'),
+      && (!absenceFechaHasta || absenceFechaDesde.isSame(absenceFechaHasta, 'day')),
     );
     const mostrarFraccionVacaciones = esVacaciones && esUnSoloDia;
+    const esRangoVariosDiasVacaciones = Boolean(
+      esVacaciones
+      && absenceFechaDesde
+      && absenceFechaHasta
+      && !absenceFechaDesde.isSame(absenceFechaHasta, 'day'),
+    );
 
     const { Text } = Typography;
 
@@ -177,15 +182,17 @@ const anadirAusencia = async () => {
       return message.error('Selecciona el tipo de ausencia');
     }
 
-    if (!absenceFechaDesde || !absenceFechaHasta) {
+    if (!absenceFechaDesde) {
       return message.error("Selecciona la fecha desde y la fecha hasta.");
     }
 
+    const fechaHastaEnvio = absenceFechaHasta || absenceFechaDesde;
+
     const fecha_desde = absenceFechaDesde.format("DD-MM-YYYY");
-    const fecha_hasta = absenceFechaHasta.format("DD-MM-YYYY");
+    const fecha_hasta = fechaHastaEnvio.format("DD-MM-YYYY");
 
     // Si "todo el día" o vacaciones de un solo día con fracción, sin horas concretas
-    const usarFraccionVacaciones = esVacaciones && esUnSoloDia;
+    const usarFraccionVacaciones = esVacaciones && absenceFechaDesde.isSame(fechaHastaEnvio, 'day');
     const hora_ausencia_desde = (todoElDia || usarFraccionVacaciones) ? null : horaDesde?.format("HH:mm:ss");
     const hora_ausencia_hasta = (todoElDia || usarFraccionVacaciones) ? null : horaHasta?.format("HH:mm:ss");
     const fraccion_dia = usarFraccionVacaciones ? fraccionDia : null;
@@ -965,9 +972,16 @@ const handleMonthChange = (date, dateString) => {
                         placeholder="Desde"
                         value={absenceFechaDesde}
                         onChange={(date) => {
+                            const eraUnSoloDia = Boolean(
+                              absenceFechaDesde
+                              && absenceFechaHasta
+                              && absenceFechaDesde.isSame(absenceFechaHasta, 'day'),
+                            );
                             setAbsenceFechaDesde(date);
                             if (date && absenceFechaHasta && absenceFechaHasta.isBefore(date, 'day')) {
                                 setAbsenceFechaHasta(null);
+                            } else if (selectedEntrada === 'Vacaciones' && date && (!absenceFechaHasta || eraUnSoloDia)) {
+                                setAbsenceFechaHasta(date);
                             }
                         }}
                         />
@@ -1000,6 +1014,14 @@ const handleMonthChange = (date, dateString) => {
                           <Radio.Button value="manana">Mañana</Radio.Button>
                           <Radio.Button value="tarde">Tarde</Radio.Button>
                         </Radio.Group>
+                    </Col>
+                    )}
+
+                    {esRangoVariosDiasVacaciones && (
+                    <Col span={24}>
+                        <Text type="secondary" className="tlp-fraccion-hint">
+                          Para medio día (mañana o tarde), indica la misma fecha en Desde y Hasta.
+                        </Text>
                     </Col>
                     )}
 
@@ -1056,6 +1078,10 @@ const handleMonthChange = (date, dateString) => {
                           setSelectedEntrada(value);
                           if (value !== 'Vacaciones') {
                             setFraccionDia('completo');
+                            return;
+                          }
+                          if (absenceFechaDesde && !absenceFechaHasta) {
+                            setAbsenceFechaHasta(absenceFechaDesde);
                           }
                         }}
                             dropdownStyle={{

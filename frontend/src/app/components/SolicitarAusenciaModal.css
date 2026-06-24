@@ -1,0 +1,37 @@
+.sol-ausencia-modal__select {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.sol-ausencia-modal__fechas {
+  margin-bottom: 8px;
+}
+
+.sol-ausencia-modal__full {
+  width: 100%;
+}
+
+.sol-ausencia-modal__fraccion {
+  margin: 12px 0;
+}
+
+.sol-ausencia-modal__fraccion .ant-radio-group {
+  display: flex;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.sol-ausencia-modal__fraccion .ant-radio-button-wrapper {
+  flex: 1;
+  text-align: center;
+}
+
+.sol-ausencia-modal__comentario {
+  margin-top: 12px;
+}
+
+.sol-ausencia-modal__hint {
+  display: block;
+  margin: 8px 0 4px;
+  font-size: 12px;
+}

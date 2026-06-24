@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, Table, Tag, Input, Select, DatePicker, Empty, Spin, message } from 'antd';
-import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Card, Table, Tag, Input, Select, DatePicker, Empty, Spin, message, Button } from 'antd';
+import { SearchOutlined, ReloadOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { getAusenciasListado } from '../../features/ausencias/ausenciasService';
+import { getTipoUsuario } from '../../utils/authSession';
+import SolicitarAusenciaModal from '../components/SolicitarAusenciaModal';
 import './AusenciasPanel.css';
 
 dayjs.extend(customParseFormat);
@@ -57,7 +59,24 @@ const renderEstadoAusencia = (record) => {
   return <Tag color={colors[estado]}>{estado}</Tag>;
 };
 
+const formatHorario = (record) => {
+  const fraccion = String(record.fraccion_dia || '').toLowerCase();
+  if (fraccion === 'manana') return 'Mañana';
+  if (fraccion === 'tarde') return 'Tarde';
+  if (fraccion === 'completo') return 'Día completo';
+
+  const desde = formatHora(record.hora_ausencia_desde);
+  const hasta = formatHora(record.hora_ausencia_hasta);
+  if (!desde && !hasta) return 'Día completo';
+  if (desde && hasta) return `${desde} – ${hasta}`;
+  return desde || hasta || '—';
+};
+
+const ROLES_SOLO_PROPIAS = [5];
+
 const AusenciasPanel = () => {
+  const [modalSolicitud, setModalSolicitud] = useState(false);
+  const puedeSolicitar = ROLES_SOLO_PROPIAS.includes(Number(getTipoUsuario()));
   const [ausencias, setAusencias] = useState([]);
   const [verTodaEmpresa, setVerTodaEmpresa] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -141,13 +160,7 @@ const AusenciasPanel = () => {
       title: 'Horario',
       key: 'horario',
       width: 130,
-      render: (_, record) => {
-        const desde = formatHora(record.hora_ausencia_desde);
-        const hasta = formatHora(record.hora_ausencia_hasta);
-        if (!desde && !hasta) return 'Día completo';
-        if (desde && hasta) return `${desde} – ${hasta}`;
-        return desde || hasta || '—';
-      },
+      render: (_, record) => formatHorario(record),
     },
     {
       title: 'Estado',
@@ -203,15 +216,32 @@ const AusenciasPanel = () => {
               className="ausencias-rango"
             />
           </div>
-          <button
-            type="button"
-            className="ausencias-reload"
-            onClick={() => cargar()}
-            aria-label="Actualizar listado"
-          >
-            <ReloadOutlined spin={loading} />
-          </button>
+          <div className="ausencias-acciones">
+            {puedeSolicitar && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setModalSolicitud(true)}
+              >
+                Solicitar
+              </Button>
+            )}
+            <button
+              type="button"
+              className="ausencias-reload"
+              onClick={() => cargar()}
+              aria-label="Actualizar listado"
+            >
+              <ReloadOutlined spin={loading} />
+            </button>
+          </div>
         </div>
+
+        <SolicitarAusenciaModal
+          open={modalSolicitud}
+          onClose={() => setModalSolicitud(false)}
+          onSuccess={() => cargar()}
+        />
 
         <Spin spinning={loading}>
           <Table

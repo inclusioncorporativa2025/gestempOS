@@ -78,6 +78,7 @@ const mapAusenciaListado = (a, idUsuarioToken) => ({
   fecha_hasta: a.fecha_hasta,
   hora_ausencia_desde: a.hora_ausencia_desde,
   hora_ausencia_hasta: a.hora_ausencia_hasta,
+  fraccion_dia: a.fraccion_dia,
   comentarios: a.comentarios,
   fecha_alta: a.fecha_alta,
   fecha_aceptacion: a.fecha_aceptacion,
