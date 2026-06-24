@@ -53,6 +53,20 @@ export const setAuthToken = (token) => {
 
 export const getAuthToken = () => localStorage.getItem(TOKEN_KEY);
 
+/**
+ * Tras redirección entre subdominios, el token viaja en el hash (#auth=…).
+ */
+export const consumeAuthTokenFromHash = () => {
+  if (typeof window === 'undefined') return null;
+
+  const raw = window.location.hash.replace(/^#/, '');
+  if (!raw.startsWith('auth=')) return null;
+
+  const token = decodeURIComponent(raw.slice('auth='.length));
+  window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+  return token || null;
+};
+
 export const clearAuthSession = () => {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(IMPERSONATOR_TOKEN_KEY);

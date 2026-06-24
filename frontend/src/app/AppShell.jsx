@@ -26,6 +26,9 @@ import SidebarEmpresaBrand from './components/SidebarEmpresaBrand';
 import SupportModal from './components/SupportModal';
 import { OPEN_SUPPORT_EVENT } from './components/Header';
 import { useAuth } from '../config/AuthContext';
+import { redirectToApp } from '../utils/appLinks';
+import { isLandingHost } from '../utils/host';
+import { getAuthToken } from '../utils/authSession';
 import GestionTiempoPage from './pages/GestionTiempoPage';
 import UserManagementForm from './pages/gestor/UserManagementForm';
 import ConfiguracionLayout, { ConfiguracionOrgGate } from './pages/gestor/ConfiguracionLayout';
@@ -112,8 +115,23 @@ const AppShell = () => {
   const [supportOpen, setSupportOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
   const tipousuario = user?.tipo_usuario ?? null;
+
+  const authShellPaths = [
+    APP_ROUTES.login,
+    APP_ROUTES.register,
+    APP_ROUTES.forgotPassword,
+    APP_ROUTES.resetPassword,
+  ];
+
+  useEffect(() => {
+    if (!ready || !user || !isLandingHost()) return;
+    if (authShellPaths.includes(location.pathname)) return;
+
+    const target = `${location.pathname}${location.search}`;
+    redirectToApp(target, getAuthToken());
+  }, [ready, user, location.pathname, location.search]);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -128,12 +146,7 @@ const AppShell = () => {
   }, []);
 
   const isMobile = windowWidth < 950;
-  const isAuthShellPage = [
-    APP_ROUTES.login,
-    APP_ROUTES.register,
-    APP_ROUTES.forgotPassword,
-    APP_ROUTES.resetPassword,
-  ].includes(location.pathname);
+  const isAuthShellPage = authShellPaths.includes(location.pathname);
 
   const showDrawer = () => setDrawerVisible(true);
   const closeDrawer = () => setDrawerVisible(false);

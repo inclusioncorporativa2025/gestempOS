@@ -6,6 +6,7 @@ import {
   claimsToUser,
   startImpersonation,
   exitImpersonation,
+  consumeAuthTokenFromHash,
 } from '../utils/authSession';
 
 const AuthContext = createContext();
@@ -15,6 +16,14 @@ export const AuthProvider = ({ children }) => {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    const hashToken = consumeAuthTokenFromHash();
+    if (hashToken) {
+      const claims = setAuthToken(hashToken);
+      setUser(claimsToUser(claims));
+      setReady(true);
+      return;
+    }
+
     const claims = loadSessionFromStorage();
     setUser(claimsToUser(claims));
     setReady(true);

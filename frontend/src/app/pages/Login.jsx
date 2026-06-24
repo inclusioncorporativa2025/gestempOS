@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { SUPPORT_EMAIL } from '../../constants/support';
 import { BRAND_NAME } from '../../constants/brand';
+import { redirectToApp } from '../../utils/appLinks';
+import { getAuthToken } from '../../utils/authSession';
 import SelectEmpresaModal from '../components/SelectEmpresaModal';
 import './Login.css';
 
@@ -27,6 +29,8 @@ const Login = () => {
 
   useEffect(() => {
     if (ready && user) {
+      const token = getAuthToken();
+      if (redirectToApp(APP_ROUTES.home, token)) return;
       navigate(APP_ROUTES.home, { replace: true });
     }
   }, [ready, user, navigate]);
@@ -42,6 +46,8 @@ const Login = () => {
       message: "Inicio de sesión exitoso",
       description: `Hola, ${data.usuario?.nombre || usuarioPendiente?.nombre || ''}`,
     });
+
+    if (redirectToApp(APP_ROUTES.home, data.token)) return;
 
     navigate(APP_ROUTES.home);
   };
