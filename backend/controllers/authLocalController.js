@@ -16,6 +16,8 @@ const {
   emitirPreAuthToken,
   verificarPreAuthToken,
 } = require('../services/usuarioEmpresaService');
+const { normalizePlanId, planIncluyeFeature } = require('../config/plans');
+const { assertEmpresaTieneFeature } = require('../services/planService');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const BCRYPT_ROUNDS = 10;
@@ -79,7 +81,14 @@ const completarLoginConEmpresa = async (req, res, usuario, membresia, empresa) =
     message: 'Login exitoso',
     token,
     usuario: sanitizeUsuario(usuario),
-    empresa: id_empresa ? { id_empresa, nombre: nombre_empresa, alias } : null,
+    empresa: id_empresa
+      ? {
+          id_empresa,
+          nombre: nombre_empresa,
+          alias,
+          plan: normalizePlanId(empresa?.plan),
+        }
+      : null,
   });
 };
 
@@ -208,6 +217,14 @@ const switchEmpresa = async (req, res) => {
   }
 
   try {
+    const empresaActual = req.user.id_empresa
+      ? await Empresa.findByPk(req.user.id_empresa)
+      : null;
+
+    if (empresaActual) {
+      await assertEmpresaTieneFeature(empresaActual.id_empresa, 'multiempresa');
+    }
+
     const usuario = await Usuario.findOne({
       where: { id_usuario: req.user.id_usuario, fecha_baja: null },
     });
@@ -239,9 +256,19 @@ const switchEmpresa = async (req, res) => {
         id_empresa: empresa.id_empresa,
         nombre: empresa.nombre,
         alias: empresa.alias,
+        plan: normalizePlanId(empresa.plan),
       },
     });
   } catch (error) {
+    if (error.code === 'PLAN_FEATURE_REQUIRED') {
+      return res.status(403).json({
+        code: error.code,
+        feature: error.feature,
+        plan: error.plan,
+        planLabel: error.planLabel,
+        message: 'El cambio de empresa requiere el plan RRHH o Completo',
+      });
+    }
     console.error('Error en switchEmpresa:', error.message);
     return res.status(500).json({ message: 'Error al cambiar de empresa' });
   }
@@ -257,11 +284,21 @@ const misEmpresas = async (req, res) => {
       return res.status(401).json({ message: 'Usuario no válido' });
     }
 
-    const empresas = await listarEmpresasParaSelector(usuario.id_usuario, usuario);
+    const idEmpresaActiva = req.user.id_empresa ? Number(req.user.id_empresa) : null;
+    const planActivo = idEmpresaActiva
+      ? normalizePlanId((await Empresa.findByPk(idEmpresaActiva))?.plan)
+      : null;
+
+    let empresas = await listarEmpresasParaSelector(usuario.id_usuario, usuario);
+
+    if (!planIncluyeFeature(planActivo, 'multiempresa')) {
+      empresas = empresas.filter((e) => e.id_empresa === idEmpresaActiva);
+    }
 
     return res.status(200).json({
       empresas,
-      empresa_activa: req.user.id_empresa ? Number(req.user.id_empresa) : null,
+      empresa_activa: idEmpresaActiva,
+      puede_cambiar_empresa: planIncluyeFeature(planActivo, 'multiempresa'),
     });
   } catch (error) {
     console.error('Error en misEmpresas:', error.message);

@@ -21,6 +21,8 @@ import { getIdUsuario, getIdEmpresa, getNombreUsuario } from '../../utils/authSe
 import { parseFechaFichaje } from '../../utils/fechaFichaje';
 import { parseUbicacionCoords } from '../../utils/ubicacion';
 import { notifyNotificacionesActualizadas } from '../../hooks/useNotificacionesPendientes';
+import usePlan from '../../hooks/usePlan';
+import { planIncluyeFeature } from '../../constants/plans';
 import { DECLARACION_CIERRE_MENSUAL, ETIQUETA_CONFIRMACION_CIERRE } from '../../utils/cierreMensualLegal';
 import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import UbicacionMapModal from '../components/UbicacionMapModal';
@@ -94,6 +96,14 @@ const mesTieneCierreActivo = (mesesCierre, mesFormateado) =>
   );
 
 const TimeLogsPanel = () => {
+    const { planId } = usePlan();
+    const entradasAusencia = useMemo(() => {
+      const tipos = ['Baja', 'Asuntos Propios', 'Otros'];
+      if (planIncluyeFeature(planId, 'vacaciones')) {
+        return ['Vacaciones', ...tipos];
+      }
+      return tipos;
+    }, [planId]);
     const [data, setData] = useState([]);
     const [filteredData, setFilteredData] = useState([]);
     const [selectedMonth, setSelectedMonth] = useState(null);
@@ -125,7 +135,6 @@ const [cierreModalOpen, setCierreModalOpen] = useState(false);
 const [firmaCierre, setFirmaCierre] = useState(null);
 const [confirmoRegistros, setConfirmoRegistros] = useState(false);
 const [enviandoCierre, setEnviandoCierre] = useState(false);
-const entradas = ['Vacaciones','Baja','Asuntos Propios','Otros']
 
     const verUbicacionEnMapa = (ubicacion) => {
       setMapUbicacion(ubicacion);
@@ -1003,7 +1012,7 @@ const handleMonthChange = (date, dateString) => {
                         
                         optionLabelProp="label"
                         >
-                             {entradas.map((entrada) => (
+                             {entradasAusencia.map((entrada) => (
                         <Select.Option key={entrada} value={entrada}>
                         {entrada}
                         </Select.Option>

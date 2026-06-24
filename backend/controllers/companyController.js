@@ -6,6 +6,14 @@ const ConfiguracionEsquemaModel = require('../models/ConfiguracionEsquemaModel')
 const { getNextGlobalId } = require('../utils/empresaScope');
 const { enviarBienvenidaEmpresa } = require('../utils/mailService');
 
+const {
+  normalizePlanId,
+  getPlanLabel,
+  planIncluyeFeature,
+  getPlanMinLicencias,
+  DEFAULT_PLAN,
+} = require('../config/plans');
+
 const trimOptional = (value) => {
   const text = String(value ?? '').trim();
   return text || null;
@@ -30,6 +38,8 @@ const pickMiEmpresaParaCliente = (empresa) => ({
   licencias: empresa.licencias,
   logo_url: empresa.logo_url,
   color_principal: empresa.color_principal,
+  plan: normalizePlanId(empresa.plan),
+  plan_label: getPlanLabel(empresa.plan),
 });
 
 const pickEmpresaBranding = (empresa) => ({
@@ -37,15 +47,27 @@ const pickEmpresaBranding = (empresa) => ({
   alias: empresa.alias,
   logo_url: empresa.logo_url,
   licencias: empresa.licencias,
+  plan: normalizePlanId(empresa.plan),
+  plan_label: getPlanLabel(empresa.plan),
 });
 
 const registerCompany = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
-        const { Administrador, CIF, email, nombre_empresa, dni, numLicencias, alias } = req.body.values;
+        const { Administrador, CIF, email, nombre_empresa, dni, numLicencias, alias, plan } = req.body.values;
         const idUsuarioAccion = req.body.idUsuario;
         const schemaName = `empresa_${nombre_empresa.toLowerCase().replace(/\s+/g, '_')}`;
         const fecha = new Date();
+        const planId = normalizePlanId(plan || DEFAULT_PLAN);
+        const minLicencias = getPlanMinLicencias(planId);
+        const licenciasSolicitadas = Number(numLicencias);
+
+        if (!Number.isFinite(licenciasSolicitadas) || licenciasSolicitadas < minLicencias) {
+            await transaction.rollback();
+            return res.status(400).json({
+                message: `El plan ${getPlanLabel(planId)} requiere al menos ${minLicencias} licencias`,
+            });
+        }
 
         const idEmpresa = await getNextGlobalId(Empresa, 'id_empresa', transaction);
         const empresa = await Empresa.create({
@@ -54,7 +76,8 @@ const registerCompany = async (req, res) => {
             identificador_fiscal: CIF,
             fecha_alta: fecha,
             usuario_alta: idUsuarioAccion,
-            licencias: numLicencias,
+            licencias: licenciasSolicitadas,
+            plan: planId,
             alias : alias
         }, { transaction });
 
@@ -209,7 +232,8 @@ const editEmpresa = async (req, res)=> {
             fecha_modificacion:fecha,
             usuario_modificacion : idUsuario,
             activo: datos.activo,
-            alias: datos.alias
+            alias: datos.alias,
+            ...(datos.plan ? { plan: normalizePlanId(datos.plan) } : {}),
         },
         {
             where: {

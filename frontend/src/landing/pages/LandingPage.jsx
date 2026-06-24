@@ -8,7 +8,7 @@ import {
   BarChartOutlined,
 } from '@ant-design/icons';
 import { getAppLoginHref, getAppRegisterHref } from '../../utils/appLinks';
-import { PLANS } from '../../constants/plans';
+import { PLANS, PLAN_COMPARISON_ROWS, ANNUAL_DISCOUNT_LABEL } from '../../constants/plans';
 import LandingFooter from '../components/LandingFooter';
 import BrandLogo from '../../components/BrandLogo';
 import './LandingPage.css';
@@ -81,6 +81,19 @@ const NavLink = ({ href, external, children }) =>
       {children}
     </Link>
   );
+
+const PlanUnavailableBadge = () => (
+  <span className="landing-plan-unavailable-badge">No disponible</span>
+);
+
+const PlanCompareCell = ({ included }) => {
+  if (!included) {
+    return <span className="landing-compare-dash" aria-hidden>—</span>;
+  }
+  return (
+    <span className="landing-compare-check" aria-hidden>✓</span>
+  );
+};
 
 const LandingPage = () => {
   const loginHref = getAppLoginHref();
@@ -161,15 +174,15 @@ const LandingPage = () => {
             {PLANS.map((plan) => (
               <li
                 key={plan.id}
-                className={`landing-plan-item${plan.bestseller ? ' landing-plan-item--bestseller' : ''}`}
+                className={`landing-plan-item${
+                  !plan.available ? ' landing-plan-item--unavailable' : ''
+                }`}
               >
-                {plan.bestseller && (
-                  <span className="landing-plan-bestseller">Más vendido</span>
-                )}
+                {!plan.available && <PlanUnavailableBadge />}
                 <article
                   className={`landing-plan-card landing-plan-card--${plan.variant}${
                     plan.featured ? ' landing-plan-card--featured' : ''
-                  }`}
+                  }${!plan.available ? ' landing-plan-card--unavailable' : ''}`}
                 >
                   <div className="landing-plan-card-top">
                     <div className="landing-plan-card-gradient" aria-hidden />
@@ -178,11 +191,21 @@ const LandingPage = () => {
                   <div className="landing-plan-card-body">
                     <p className="landing-plan-price">
                       <span className="landing-plan-price-from">desde</span>{' '}
-                      <strong>{plan.price} €</strong>
+                      <strong>{plan.priceMonthly} €</strong>
                       <span className="landing-plan-price-unit">/ licencia / mes</span>
                     </p>
+                    <p className="landing-plan-price-annual">
+                      <strong>{plan.priceAnnual} €</strong>
+                      <span className="landing-plan-price-unit">/ licencia / año</span>
+                      <span className="landing-plan-price-annual-note">
+                        ({ANNUAL_DISCOUNT_LABEL})
+                      </span>
+                    </p>
                     <p className="landing-plan-min">
-                      Mín. {plan.minLicenses} licencias
+                      Mín. {plan.minLicenses} licencias + administrador
+                    </p>
+                    <p className="landing-plan-min-total">
+                      Desde {plan.minMonthly} €/mes
                     </p>
                     <p className="landing-plan-desc">{plan.description}</p>
                     <ul className="landing-plan-features">
@@ -191,19 +214,68 @@ const LandingPage = () => {
                       ))}
                     </ul>
                     <div className="landing-plan-cta-wrap">
-                      <PlanCta
-                        href={registerHref}
-                        external={registerIsExternal}
-                        featured={plan.featured}
-                      >
-                        Empezar prueba gratuita
-                      </PlanCta>
+                      {plan.available ? (
+                        <PlanCta
+                          href={registerHref}
+                          external={registerIsExternal}
+                          featured={plan.featured}
+                        >
+                          Empezar prueba gratuita
+                        </PlanCta>
+                      ) : (
+                        <Button
+                          block
+                          disabled
+                          className="landing-plan-cta landing-plan-cta--disabled"
+                        >
+                          No disponible
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </article>
               </li>
             ))}
           </ul>
+
+          <div className="landing-plan-compare">
+            <h3 className="landing-plan-compare-title">Comparativa detallada</h3>
+            <p className="landing-plan-compare-lead">
+              Consulta qué incluye cada plan. El plan Completo estará disponible próximamente.
+            </p>
+            <div className="landing-plan-compare-scroll">
+              <table className="landing-plan-compare-table">
+                <caption className="landing-plan-compare-caption">
+                  Funcionalidades por plan
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Funcionalidad</th>
+                    {PLANS.map((plan) => (
+                      <th key={plan.id} scope="col" className="landing-plan-compare-th">
+                        <span className="landing-plan-compare-th-name">{plan.name}</span>
+                        {!plan.available && (
+                          <span className="landing-plan-compare-th-badge">No disponible</span>
+                        )}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {PLAN_COMPARISON_ROWS.map((row) => (
+                    <tr key={row.id}>
+                      <th scope="row">{row.label}</th>
+                      {PLANS.map((plan) => (
+                        <td key={plan.id}>
+                          <PlanCompareCell included={row.plans[plan.id]} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
 

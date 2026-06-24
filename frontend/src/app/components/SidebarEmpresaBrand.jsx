@@ -4,10 +4,11 @@ import { BankOutlined, CheckOutlined, DownOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { SUPPORT_EMAIL } from '../../constants/support';
-import { getIdEmpresa, getTipoUsuario, isImpersonating } from '../../utils/authSession';
+import { getIdEmpresa, getTipoUsuario, isImpersonating, getPlanId } from '../../utils/authSession';
 import { fetchMisEmpresas, doSwitchEmpresa } from '../../features/auth/authService';
 import { useAuth } from '../../config/AuthContext';
 import { useEmpresaBranding } from '../../hooks/useEmpresaBranding';
+import { planIncluyeFeature } from '../../constants/plans';
 import './SidebarEmpresaBrand.css';
 
 const { Text, Paragraph } = Typography;
@@ -22,6 +23,7 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
     label,
     nombreEmpresa,
     licencias,
+    planLabel,
     logoUrl,
     iniciales,
     mostrarLogo,
@@ -30,11 +32,14 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
 
   const [planAbierto, setPlanAbierto] = useState(false);
   const [empresas, setEmpresas] = useState([]);
+  const [puedeCambiarEmpresa, setPuedeCambiarEmpresa] = useState(false);
   const [cambiandoEmpresa, setCambiandoEmpresa] = useState(false);
   const tipoUsuario = getTipoUsuario();
   const empresaActiva = getIdEmpresa();
+  const planId = getPlanId();
   const puedeAnadirEmpresa = TIPOS_PLATAFORMA.includes(tipoUsuario);
-  const tieneVariasEmpresas = empresas.length > 1;
+  const tieneMultiempresa = planIncluyeFeature(planId, 'multiempresa');
+  const tieneVariasEmpresas = puedeCambiarEmpresa && empresas.length > 1 && tieneMultiempresa;
   const puedeVerMenu =
     TIPOS_MENU_EMPRESA.includes(tipoUsuario) || tieneVariasEmpresas;
 
@@ -45,6 +50,7 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
     try {
       const data = await fetchMisEmpresas();
       setEmpresas(data.empresas || []);
+      setPuedeCambiarEmpresa(Boolean(data.puede_cambiar_empresa));
     } catch {
       setEmpresas([]);
     }
@@ -231,6 +237,11 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
           <Text type="secondary">Empresa</Text>
           <Paragraph className="app-sider-plan-modal__empresa">
             {nombreEmpresa || label}
+          </Paragraph>
+
+          <Text type="secondary">Plan contratado</Text>
+          <Paragraph className="app-sider-plan-modal__plan">
+            {planLabel || 'Esencial'}
           </Paragraph>
 
           <Text type="secondary">Licencias contratadas</Text>

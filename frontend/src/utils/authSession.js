@@ -118,6 +118,7 @@ export const claimsToUser = (claims) => {
     impersonado_por: claims.impersonado_por ?? null,
     impersonado_por_email: claims.impersonado_por_email ?? null,
     impersonado_por_nombre: claims.impersonado_por_nombre ?? null,
+    plan_id: claims.plan_id ?? 'esencial',
   };
 };
 
@@ -143,5 +144,10 @@ export const getNombreUsuario = () => getSession()?.nombre ?? '';
 export const getNombreEmpresa = () => getSession()?.nombre_empresa ?? '';
 
 export const getAlias = () => getSession()?.alias ?? '';
+
+export const getPlanId = () => {
+  const plan = getSession()?.plan_id;
+  return plan ? String(plan).toLowerCase() : 'esencial';
+};
 
 export const isAuthenticated = () => Boolean(getSession());

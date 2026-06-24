@@ -183,11 +183,11 @@
   min-height: 100%;
 }
 
-.landing-plan-item--bestseller .landing-plan-card {
+.landing-plan-item--unavailable .landing-plan-card {
   margin-top: 0.65rem;
 }
 
-.landing-plan-bestseller {
+.landing-plan-unavailable-badge {
   position: absolute;
   top: 0;
   left: 50%;
@@ -196,14 +196,18 @@
   display: inline-block;
   padding: 0.35rem 1rem;
   border-radius: 999px;
-  background: var(--color-secondary);
-  color: #fff;
+  background: rgba(0, 21, 41, 0.12);
+  color: rgba(0, 21, 41, 0.65);
   font-size: 0.8125rem;
   font-weight: var(--font-weight-medium);
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  box-shadow: 0 4px 14px rgba(var(--color-secondary-rgb), 0.45);
+  border: 1px solid rgba(0, 21, 41, 0.14);
   white-space: nowrap;
+}
+
+.landing-plan-card--unavailable {
+  opacity: 0.88;
 }
 
 .landing-plan-card {
@@ -299,10 +303,42 @@
   font-size: 0.8125rem;
 }
 
+.landing-plan-price-annual {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: rgba(0, 21, 41, 0.72);
+}
+
+.landing-plan-price-annual strong {
+  font-size: 1.05rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-dark);
+}
+
+.landing-plan-price-annual-note {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
 .landing-plan-min {
-  margin: 0.25rem 0 0;
+  margin: 0.5rem 0 0;
   font-size: 0.8125rem;
-  color: rgba(0, 21, 41, 0.5);
+  color: rgba(0, 21, 41, 0.55);
+}
+
+.landing-plan-min-admin {
+  color: rgba(0, 21, 41, 0.45);
+}
+
+.landing-plan-min-total {
+  margin: 0.15rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-medium);
+  color: rgba(0, 21, 41, 0.62);
 }
 
 .landing-plan-desc {
@@ -323,6 +359,127 @@
 
 .landing-plan-features li {
   margin-bottom: 0.35rem;
+}
+
+.landing-plan-cta--disabled {
+  height: 44px !important;
+  border-radius: 999px !important;
+  font-weight: var(--font-weight-medium) !important;
+  cursor: not-allowed !important;
+}
+
+.landing-plan-compare-th {
+  vertical-align: bottom;
+}
+
+.landing-plan-compare-th-name {
+  display: block;
+}
+
+.landing-plan-compare-th-badge {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(0, 21, 41, 0.55);
+  background: rgba(0, 21, 41, 0.07);
+  border: 1px solid rgba(0, 21, 41, 0.1);
+}
+
+.landing-plan-compare {
+  margin-top: 3rem;
+}
+
+.landing-plan-compare-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-dark);
+}
+
+.landing-plan-compare-lead {
+  margin: 0 0 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: rgba(0, 21, 41, 0.65);
+}
+
+.landing-plan-compare-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 6px 28px rgba(0, 21, 41, 0.06);
+}
+
+.landing-plan-compare-caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.landing-plan-compare-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.landing-plan-compare-table th,
+.landing-plan-compare-table td {
+  padding: 0.75rem 1rem;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(0, 21, 41, 0.08);
+}
+
+.landing-plan-compare-table thead th {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-dark);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.landing-plan-compare-table tbody th {
+  text-align: left;
+  font-weight: 500;
+  color: rgba(0, 21, 41, 0.82);
+  min-width: 220px;
+}
+
+.landing-plan-compare-table tbody tr:last-child th,
+.landing-plan-compare-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.landing-compare-dash {
+  color: rgba(0, 21, 41, 0.28);
+  font-size: 1.1rem;
+}
+
+.landing-compare-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  background: rgba(var(--color-primary-rgb), 0.14);
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .landing-plan-cta-wrap {

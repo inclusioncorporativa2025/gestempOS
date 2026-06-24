@@ -15,6 +15,7 @@ const rangosSolapan = (desde, hasta, otroDesde, otroHasta) =>
   !desde.isAfter(otroHasta, 'day') && !hasta.isBefore(otroDesde, 'day');
 
 const Ausencias = require('../models/Ausencias');
+const { assertEmpresaTieneFeature, empresaTieneFeature } = require('../services/planService');
 const Usuario = require('../models/Usuario');
 const { createConId } = require('../utils/empresaScope');
 const { ROLE_GROUPS } = require('../middleware/authMiddleware');
@@ -96,6 +97,22 @@ const crearAusencia = async (req, res) => {
     const fechaDesdeGuardar = desde.format('DD-MM-YYYY');
     const fechaHastaGuardar = hasta.format('DD-MM-YYYY');
 
+    if (String(tipo).trim().toLowerCase() === 'vacaciones') {
+        try {
+            await assertEmpresaTieneFeature(idEmpresa, 'vacaciones');
+        } catch (error) {
+            if (error.code === 'PLAN_FEATURE_REQUIRED') {
+                return res.status(403).json({
+                    code: error.code,
+                    feature: error.feature,
+                    plan: error.plan,
+                    message: 'Las vacaciones requieren el plan RRHH o Completo',
+                });
+            }
+            throw error;
+        }
+    }
+
     try {
         const ausenciasActivas = await Ausencias.findAll({
             where: {
@@ -161,6 +178,8 @@ const getAusenciasCalendario = async (req, res) => {
   const verTodaLaEmpresa = ROLE_GROUPS.CALENDARIO_AUSENCIAS_EMPRESA.includes(tipo);
 
   try {
+    const permiteVacaciones = await empresaTieneFeature(idEmpresa, 'vacaciones');
+
     const where = {
       empresa_id: idEmpresa,
       fecha_baja: null,
@@ -191,6 +210,12 @@ const getAusenciasCalendario = async (req, res) => {
 
     const eventos = [];
     for (const a of ausencias) {
+      if (
+        !permiteVacaciones
+        && String(a.tipo || '').trim().toLowerCase() === 'vacaciones'
+      ) {
+        continue;
+      }
       const dias = expandirRangoDias(a.fecha_desde, a.fecha_hasta);
       for (const fecha of dias) {
         eventos.push({

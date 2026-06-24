@@ -12,6 +12,7 @@ export const useEmpresaBranding = () => {
   const [label, setLabel] = useState(fallbackLabel);
   const [nombreEmpresa, setNombreEmpresa] = useState(user?.nombre_empresa || '');
   const [licencias, setLicencias] = useState(null);
+  const [planLabel, setPlanLabel] = useState('Esencial');
   const [logoUrl, setLogoUrl] = useState(null);
   const [logoError, setLogoError] = useState(false);
 
@@ -20,6 +21,7 @@ export const useEmpresaBranding = () => {
       setLabel(fallbackLabel);
       setNombreEmpresa(user?.nombre_empresa || '');
       setLicencias(null);
+      setPlanLabel('Esencial');
       setLogoUrl(null);
       setLogoError(false);
       return;
@@ -32,12 +34,14 @@ export const useEmpresaBranding = () => {
       setLicencias(
         branding.licencias != null ? Number(branding.licencias) : null,
       );
+      setPlanLabel(branding.plan_label || 'Esencial');
       setLogoUrl(branding.logo_url || null);
       setLogoError(false);
     } catch {
       setLabel(fallbackLabel);
       setNombreEmpresa(user?.nombre_empresa || '');
       setLicencias(null);
+      setPlanLabel('Esencial');
       setLogoUrl(null);
       setLogoError(false);
     }
@@ -59,6 +63,7 @@ export const useEmpresaBranding = () => {
     label,
     nombreEmpresa,
     licencias,
+    planLabel,
     logoUrl,
     iniciales,
     mostrarLogo,

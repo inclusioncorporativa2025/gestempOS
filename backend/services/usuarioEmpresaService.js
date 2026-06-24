@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
 const UsuarioEmpresa = require('../models/UsuarioEmpresa');
 const Empresa = require('../models/Empresa');
+const { normalizePlanId } = require('../config/plans');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRATION;
@@ -98,6 +99,7 @@ const construirClaimsSesion = (usuario, empresa, membresia, extras = {}) => {
     nombre_empresa,
     alias,
     esquema: id_empresa,
+    plan_id: operativa ? normalizePlanId(empresa.plan) : null,
     ...extras,
   };
 };

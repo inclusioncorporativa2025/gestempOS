@@ -162,7 +162,12 @@ export const registrarEmpresaPublica = async (values) => {
   const response = await fetch(`${API_BASE_URL}/register-company`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ values }),
+    body: JSON.stringify({
+      values: {
+        ...values,
+        plan: 'esencial',
+      },
+    }),
   });
 
   const data = await response.json().catch(() => ({}));

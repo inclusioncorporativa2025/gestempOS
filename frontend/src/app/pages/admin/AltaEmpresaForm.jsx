@@ -1,6 +1,7 @@
 import React from 'react';
 import { Form, Input, Row, Col, Button, InputNumber } from 'antd';
 import GradientButton from '../../components/shared/GradientButton';
+import { getPlanMinLicencias } from '../../../constants/plans';
 import './AltaEmpresa.css';
 
 const AltaEmpresaForm = ({
@@ -10,7 +11,12 @@ const AltaEmpresaForm = ({
   onCancel,
   submitLabel = 'Continuar',
   className = '',
-}) => (
+  planId = 'esencial',
+  minLicencias: minLicenciasProp,
+}) => {
+  const minLicencias = minLicenciasProp ?? getPlanMinLicencias(planId);
+
+  return (
   <Form
     form={form}
     name="altaEmpresa"
@@ -58,10 +64,22 @@ const AltaEmpresaForm = ({
       <Col xs={24} sm={12}>
         <Form.Item
           name="numLicencias"
-          label="Numero de licencias"
-          rules={[{ required: true, message: 'Campo requerido!' }]}
+          label="Número de licencias"
+          extra={
+            minLicencias > 1
+              ? `Mínimo ${minLicencias} licencias (plan ${planId === 'esencial' ? 'Esencial' : planId})`
+              : undefined
+          }
+          rules={[
+            { required: true, message: 'Campo requerido!' },
+            {
+              type: 'number',
+              min: minLicencias,
+              message: `El mínimo es ${minLicencias} licencias`,
+            },
+          ]}
         >
-          <InputNumber min={1} className="alta-input-number" />
+          <InputNumber min={minLicencias} className="alta-input-number" />
         </Form.Item>
       </Col>
       <Col xs={24} sm={12}>
@@ -88,6 +106,7 @@ const AltaEmpresaForm = ({
       </Col>
     </Row>
   </Form>
-);
+  );
+};
 
 export default AltaEmpresaForm;

@@ -72,6 +72,11 @@ const Empresa = sequelize.define('Empresa', {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
+  plan: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'esencial',
+  },
   activo: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
