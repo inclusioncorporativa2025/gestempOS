@@ -11,6 +11,7 @@ import {
 } from '../../features/calendario/CalendarioService';
 import { getAusenciasCalendario } from '../../features/ausencias/ausenciasService';
 import { useAuth } from '../../config/AuthContext';
+import { usePlan } from '../../hooks/usePlan';
 import './Calendario.css';
 
 dayjs.locale('es');
@@ -23,6 +24,8 @@ const TIPOS_AUSENCIAS_EMPRESA = [1, 2, 3, 4];
 
 const Calendario = () => {
   const { user } = useAuth();
+  const { tieneFeature } = usePlan();
+  const puedeVerAusencias = tieneFeature('ausencias_basicas');
   const tipoUsuario = Number(user?.tipo_usuario);
   const puedeGestionarFestivos = TIPOS_GESTION_FESTIVOS.includes(tipoUsuario);
   const verAusenciasEmpresa = TIPOS_AUSENCIAS_EMPRESA.includes(tipoUsuario);
@@ -58,8 +61,10 @@ const Calendario = () => {
     };
 
     fetchFestivos();
-    fetchAusencias();
-  }, []);
+    if (puedeVerAusencias) {
+      fetchAusencias();
+    }
+  }, [puedeVerAusencias]);
 
   const ausenciasPorFecha = useMemo(() => {
     const map = new Map();
@@ -123,7 +128,7 @@ const Calendario = () => {
     const yaEsFestivo = festivos.find((f) => f.fecha === fechaIso);
     const ausenciasDia = getAusenciasDelDia(date);
 
-    if (ausenciasDia.length > 0) {
+    if (puedeVerAusencias && ausenciasDia.length > 0) {
       mostrarDetalleAusencias(date, ausenciasDia);
     }
 
@@ -147,7 +152,7 @@ const Calendario = () => {
           }
         },
       });
-    } else if (!ausenciasDia.length) {
+    } else if (!puedeVerAusencias || !ausenciasDia.length) {
       setIsModalVisible(true);
     }
   };
@@ -189,8 +194,8 @@ const Calendario = () => {
         {festivo && (
           <Badge status="error" text={festivo.descripcion} className="cal-badge" />
         )}
-        {ausenciasDia.slice(0, 3).map((ev) => renderAusenciaCelda(ev))}
-        {ausenciasDia.length > 3 && (
+        {puedeVerAusencias && ausenciasDia.slice(0, 3).map((ev) => renderAusenciaCelda(ev))}
+        {puedeVerAusencias && ausenciasDia.length > 3 && (
           <Text type="secondary" className="cal-mas-ausencias">
             +{ausenciasDia.length - 3} más
           </Text>
@@ -204,7 +209,9 @@ const Calendario = () => {
       <Layout className="calendario-layout">
         <div className="cal-leyenda">
           <Badge status="error" text="Festivo de empresa" />
-          <Badge status="processing" text={verAusenciasEmpresa ? 'Ausencia (equipo)' : 'Mi ausencia'} />
+          {puedeVerAusencias && (
+            <Badge status="processing" text={verAusenciasEmpresa ? 'Ausencia (equipo)' : 'Mi ausencia'} />
+          )}
           {puedeGestionarFestivos && (
             <Text type="secondary" className="cal-leyenda-hint">
               Pulsa un día vacío para añadir festivo

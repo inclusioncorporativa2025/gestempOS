@@ -15,6 +15,7 @@ const { getDireccionDesdeLatLng } = require('../utils/reverseGeocode');
 const { TIPO_REGISTRO_A_EVENTO } = require('../utils/registroHash');
 const { registrarEventoFichaje, verificarEventosMes } = require('../repositorios/fichajeRegistroEventosRepository');
 const {getTipoRegistro} = require('./companyController');
+const { empresaTieneFeature } = require('../services/planService');
 const moment = require('moment-timezone');
 const dayjs = require('dayjs');
 const timezone = require('dayjs/plugin/timezone');
@@ -191,15 +192,19 @@ const getDatosUsuarioById = async (req, res) => {
   }
 
   try {
+    const incluirAusencias = await empresaTieneFeature(idEmpresa, 'ausencias_basicas');
+
     const [fichajes, ausencias, descansos] = await Promise.all([
       Fichajes.findAll({
         where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
         order: [['fecha_alta', 'DESC']]
       }),
-      Ausencias.findAll({
-        where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
-        order: [['fecha_alta', 'DESC']]
-      }),
+      incluirAusencias
+        ? Ausencias.findAll({
+            where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
+            order: [['fecha_alta', 'DESC']]
+          })
+        : Promise.resolve([]),
       Descansos.findAll({
         where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
         order: [['fecha_alta', 'DESC']]

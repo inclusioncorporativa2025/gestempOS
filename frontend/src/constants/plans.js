@@ -14,7 +14,7 @@ export const PLAN_FEATURES = {
   bolsa_horas: PLAN_IDS,
   exportaciones: PLAN_IDS,
   inspector: PLAN_IDS,
-  ausencias_basicas: PLAN_IDS,
+  ausencias_basicas: ['rrhh', 'completo'],
   vacaciones: ['rrhh', 'completo'],
   nominas: ['rrhh', 'completo'],
   multiempresa: ['rrhh', 'completo'],
@@ -49,8 +49,8 @@ export const PLAN_COMPARISON_ROWS = [
   },
   {
     id: 'ausencias_basicas',
-    label: 'Ausencias básicas (baja, asuntos propios, otros)',
-    plans: { esencial: true, rrhh: true, completo: true },
+    label: 'Ausencias (baja, asuntos propios, otros)',
+    plans: { esencial: false, rrhh: true, completo: true },
   },
   {
     id: 'bolsa_horas',
@@ -110,7 +110,6 @@ export const PLANS = [
       'Fichaje, pausas y geolocalización',
       'Bolsa de horas y cierre mensual firmado',
       'Inspector y exportaciones PDF/Excel',
-      'Ausencias básicas (sin módulo vacaciones)',
     ],
   },
   {
@@ -126,6 +125,7 @@ export const PLANS = [
     available: true,
     features: [
       'Todo Esencial',
+      'Ausencias (baja, asuntos propios, otros)',
       'Vacaciones con saldo y aprobación',
       'Nóminas y prenómina',
       'Multiempresa (varias sociedades)',

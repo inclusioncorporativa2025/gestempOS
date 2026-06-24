@@ -23,6 +23,7 @@ const {
   listarMovimientosBolsa,
   registrarAjusteManual,
 } = require('../services/bolsaHorasService');
+const { empresaTieneFeature } = require('../services/planService');
 const { normalizarTipoHoraInput } = require('../utils/tipoHora');
 const { Op } = require('sequelize');
 const dayjs = require('dayjs');
@@ -643,6 +644,8 @@ const exportarDatosExcel = async (req, res) => {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
 
+        const incluirAusencias = await empresaTieneFeature(idEmpresa, 'ausencias_basicas');
+
         const [fichajesData, ausenciasData, descansosData] = await Promise.all([
             fichajes.findAll({
                 where: {
@@ -655,19 +658,21 @@ const exportarDatosExcel = async (req, res) => {
                     },
                 },
             }),
-            Ausencias.findAll({
-                where: {
-                    empresa_id: idEmpresa,
-                    id_usuario,
-                    fecha_baja: null,
-                    fecha_desde: {
-                        [Op.lte]: end.toDate(),
+            incluirAusencias
+                ? Ausencias.findAll({
+                    where: {
+                        empresa_id: idEmpresa,
+                        id_usuario,
+                        fecha_baja: null,
+                        fecha_desde: {
+                            [Op.lte]: end.toDate(),
+                        },
+                        fecha_hasta: {
+                            [Op.gte]: start.toDate(),
+                        },
                     },
-                    fecha_hasta: {
-                        [Op.gte]: start.toDate(),
-                    },
-                },
-            }),
+                })
+                : Promise.resolve([]),
             Descansos.findAll({
                 where: {
                     empresa_id: idEmpresa,

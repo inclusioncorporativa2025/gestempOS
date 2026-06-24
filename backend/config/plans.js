@@ -12,7 +12,7 @@ const PLAN_FEATURES = {
   bolsa_horas: PLAN_IDS,
   exportaciones: PLAN_IDS,
   inspector: PLAN_IDS,
-  ausencias_basicas: PLAN_IDS,
+  ausencias_basicas: ['rrhh', 'completo'],
   vacaciones: ['rrhh', 'completo'],
   nominas: ['rrhh', 'completo'],
   multiempresa: ['rrhh', 'completo'],

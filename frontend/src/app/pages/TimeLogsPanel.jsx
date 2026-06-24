@@ -96,7 +96,8 @@ const mesTieneCierreActivo = (mesesCierre, mesFormateado) =>
   );
 
 const TimeLogsPanel = () => {
-    const { planId } = usePlan();
+    const { planId, tieneFeature } = usePlan();
+    const puedeAusencias = tieneFeature('ausencias_basicas');
     const entradasAusencia = useMemo(() => {
       const tipos = ['Baja', 'Asuntos Propios', 'Otros'];
       if (planIncluyeFeature(planId, 'vacaciones')) {
@@ -756,11 +757,15 @@ const handleMonthChange = (date, dateString) => {
           label: 'Exportar registros',
           icon: <ExportOutlined />,
         },
-        {
-          key: 'ausencia',
-          label: 'Añadir ausencia',
-          icon: <PlusCircleOutlined />,
-        },
+        ...(puedeAusencias
+          ? [
+              {
+                key: 'ausencia',
+                label: 'Añadir ausencia',
+                icon: <PlusCircleOutlined />,
+              },
+            ]
+          : []),
       ],
       onClick: ({ key }) => {
         if (key === 'cierre') abrirModalCierre();
@@ -917,6 +922,7 @@ const handleMonthChange = (date, dateString) => {
                 </Modal>
 
                        {/* Modal de ausencia */}
+                {puedeAusencias && (
                 <Modal
                     title="Añadir ausencia"
                     open={absenceModalVisible}
@@ -1024,6 +1030,7 @@ const handleMonthChange = (date, dateString) => {
                         onChange={(e) => setComentario(e.target.value)}
                         />                    
                 </Modal>
+                )}
 
                 <Modal
                   title="Solicitar cierre mensual firmado"

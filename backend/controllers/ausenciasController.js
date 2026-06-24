@@ -36,6 +36,11 @@ const getAusenciasByIdUsuario = async (req, res) => {
     const { idUsuario, mes, idEmpresa } = req.body;
 
     try {
+        const permiteAusencias = await empresaTieneFeature(idEmpresa, 'ausencias_basicas');
+        if (!permiteAusencias) {
+            return res.status(200).json({ message: 'Datos recuperados correctamente', ausencias: [] });
+        }
+
         const whereCondition = {
             empresa_id: idEmpresa,
             fecha_baja: null,
@@ -96,6 +101,20 @@ const crearAusencia = async (req, res) => {
 
     const fechaDesdeGuardar = desde.format('DD-MM-YYYY');
     const fechaHastaGuardar = hasta.format('DD-MM-YYYY');
+
+    try {
+        await assertEmpresaTieneFeature(idEmpresa, 'ausencias_basicas');
+    } catch (error) {
+        if (error.code === 'PLAN_FEATURE_REQUIRED') {
+            return res.status(403).json({
+                code: error.code,
+                feature: error.feature,
+                plan: error.plan,
+                message: 'Las ausencias requieren el plan RRHH o Completo',
+            });
+        }
+        throw error;
+    }
 
     if (String(tipo).trim().toLowerCase() === 'vacaciones') {
         try {
@@ -178,6 +197,14 @@ const getAusenciasCalendario = async (req, res) => {
   const verTodaLaEmpresa = ROLE_GROUPS.CALENDARIO_AUSENCIAS_EMPRESA.includes(tipo);
 
   try {
+    const permiteAusencias = await empresaTieneFeature(idEmpresa, 'ausencias_basicas');
+    if (!permiteAusencias) {
+      return res.status(200).json({
+        eventos: [],
+        ver_toda_empresa: verTodaLaEmpresa,
+      });
+    }
+
     const permiteVacaciones = await empresaTieneFeature(idEmpresa, 'vacaciones');
 
     const where = {
