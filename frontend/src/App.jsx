@@ -6,7 +6,7 @@ import LandingPage from './landing/pages/LandingPage';
 import AppShell from './app/AppShell';
 
 /**
- * Raíz del SPA: landing pública (/) y aplicación (/login, /home, …).
+ * Raíz del SPA: landing pública (/) en timecor.es; login solo en app.timecor.es.
  * En subdominio `app.*` la raíz redirige al login.
  */
 function App() {

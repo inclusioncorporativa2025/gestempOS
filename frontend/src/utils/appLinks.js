@@ -21,37 +21,39 @@ export const redirectToApp = (path, token) => {
   return true;
 };
 
-/** URL o ruta al login según dominio (SPA local vs app en subdominio). */
+/**
+ * URL al login: en producción (timecor.es) siempre app.timecor.es/login.
+ * En localhost, ruta relativa /login (misma SPA de desarrollo).
+ */
 export const getAppLoginHref = () => {
   if (typeof window === 'undefined') {
     return `${APP_URL}${APP_ROUTES.login}`;
   }
-  if (isAppSubdomain()) {
-    return APP_ROUTES.login;
-  }
-  const host = window.location.hostname;
-  const sameSpa =
-    host === 'localhost' || host === '127.0.0.1' || host === 'timecor.es';
-  if (sameSpa) {
+  if (isAppSubdomain() || !isLandingHost()) {
     return APP_ROUTES.login;
   }
   return `${APP_URL}${APP_ROUTES.login}`;
 };
 
+/**
+ * Ruta o URL absoluta según dominio (register, etc.).
+ */
 const buildAppPath = (path) => {
   if (typeof window === 'undefined') {
     return `${APP_URL}${path}`;
   }
-  if (isAppSubdomain()) {
-    return path;
-  }
-  const host = window.location.hostname;
-  const sameSpa =
-    host === 'localhost' || host === '127.0.0.1' || host === 'timecor.es';
-  if (sameSpa) {
+  if (isAppSubdomain() || !isLandingHost()) {
     return path;
   }
   return `${APP_URL}${path}`;
 };
 
 export const getAppRegisterHref = () => buildAppPath(APP_ROUTES.register);
+
+export const isAuthAppPath = (pathname) =>
+  [
+    APP_ROUTES.login,
+    APP_ROUTES.register,
+    APP_ROUTES.forgotPassword,
+    APP_ROUTES.resetPassword,
+  ].includes(pathname);

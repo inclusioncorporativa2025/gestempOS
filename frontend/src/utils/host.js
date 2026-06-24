@@ -1,6 +1,7 @@
 /**
  * `app.*` → solo aplicación (login en /login).
- * Dominio raíz o localhost → landing en / y app en /login, /home, …
+ * `timecor.es` → landing en /; login y app en app.timecor.es.
+ * `localhost` → landing + app en el mismo origen (desarrollo).
  */
 export const isAppSubdomain = () => {
   const host = window.location.hostname;

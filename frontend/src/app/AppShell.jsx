@@ -26,7 +26,7 @@ import SidebarEmpresaBrand from './components/SidebarEmpresaBrand';
 import SupportModal from './components/SupportModal';
 import { OPEN_SUPPORT_EVENT } from './components/Header';
 import { useAuth } from '../config/AuthContext';
-import { redirectToApp } from '../utils/appLinks';
+import { redirectToApp, isAuthAppPath } from '../utils/appLinks';
 import { isLandingHost } from '../utils/host';
 import { getAuthToken } from '../utils/authSession';
 import GestionTiempoPage from './pages/GestionTiempoPage';
@@ -126,8 +126,14 @@ const AppShell = () => {
   ];
 
   useEffect(() => {
+    if (!isLandingHost()) return;
+    if (!isAuthAppPath(location.pathname)) return;
+    redirectToApp(`${location.pathname}${location.search}`, getAuthToken());
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
     if (!ready || !user || !isLandingHost()) return;
-    if (authShellPaths.includes(location.pathname)) return;
+    if (isAuthAppPath(location.pathname)) return;
 
     const target = `${location.pathname}${location.search}`;
     redirectToApp(target, getAuthToken());
