@@ -119,8 +119,8 @@ export const PLANS = [
     description: 'Esencial más vacaciones, nóminas y multiempresa para gestorías y pymes.',
     priceMonthly: '3,90',
     priceAnnual: '39',
-    minLicenses: 8,
-    minMonthly: '31,20',
+    minLicenses: 10,
+    minMonthly: '39,00',
     variant: 'purple',
     featured: true,
     available: true,
@@ -137,8 +137,8 @@ export const PLANS = [
     description: 'RRHH más fichaje por WhatsApp e informes de rendimiento y productividad.',
     priceMonthly: '5,90',
     priceAnnual: '59',
-    minLicenses: 12,
-    minMonthly: '70,80',
+    minLicenses: 15,
+    minMonthly: '88,50',
     variant: 'blue',
     featured: false,
     available: false,
@@ -155,3 +155,22 @@ export const getPlanMinLicencias = (planId = 'esencial') => {
   const plan = PLANS.find((p) => p.id === planId);
   return plan?.minLicenses ?? 5;
 };
+
+export const getPlanLabel = (planId = 'esencial') => {
+  const plan = PLANS.find((p) => p.id === normalizePlanId(planId));
+  return plan?.name ?? 'Esencial';
+};
+
+export const normalizePlanId = (planId) => {
+  const id = String(planId || 'esencial').toLowerCase().trim();
+  return PLAN_IDS.includes(id) ? id : 'esencial';
+};
+
+const PLAN_TAG_COLORS = {
+  esencial: 'cyan',
+  rrhh: 'purple',
+  completo: 'blue',
+};
+
+export const getPlanTagColor = (planId) =>
+  PLAN_TAG_COLORS[normalizePlanId(planId)] ?? 'default';

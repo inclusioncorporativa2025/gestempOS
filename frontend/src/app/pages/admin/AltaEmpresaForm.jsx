@@ -1,7 +1,7 @@
 import React from 'react';
-import { Form, Input, Row, Col, Button, InputNumber } from 'antd';
+import { Form, Input, Row, Col, Button, InputNumber, Select } from 'antd';
 import GradientButton from '../../components/shared/GradientButton';
-import { getPlanMinLicencias } from '../../../constants/plans';
+import { PLANS, getPlanMinLicencias, getPlanLabel } from '../../../constants/plans';
 import './AltaEmpresa.css';
 
 const AltaEmpresaForm = ({
@@ -13,8 +13,10 @@ const AltaEmpresaForm = ({
   className = '',
   planId = 'esencial',
   minLicencias: minLicenciasProp,
+  showPlanSelect = false,
 }) => {
-  const minLicencias = minLicenciasProp ?? getPlanMinLicencias(planId);
+  const planSeleccionado = Form.useWatch('plan', form) || planId;
+  const minLicencias = minLicenciasProp ?? getPlanMinLicencias(planSeleccionado);
 
   return (
   <Form
@@ -61,13 +63,38 @@ const AltaEmpresaForm = ({
           <Input placeholder="Nombre Completo" />
         </Form.Item>
       </Col>
+      {showPlanSelect ? (
+        <Col xs={24} sm={12}>
+          <Form.Item
+            name="plan"
+            label="Plan contratado"
+            initialValue="esencial"
+            rules={[{ required: true, message: 'Selecciona un plan' }]}
+          >
+            <Select
+              options={PLANS.map((plan) => ({
+                value: plan.id,
+                label: plan.name,
+                disabled: plan.available === false,
+              }))}
+              onChange={(nuevoPlan) => {
+                const min = getPlanMinLicencias(nuevoPlan);
+                const actuales = form.getFieldValue('numLicencias');
+                if (actuales == null || Number(actuales) < min) {
+                  form.setFieldsValue({ numLicencias: min });
+                }
+              }}
+            />
+          </Form.Item>
+        </Col>
+      ) : null}
       <Col xs={24} sm={12}>
         <Form.Item
           name="numLicencias"
           label="Número de licencias"
           extra={
             minLicencias > 1
-              ? `Mínimo ${minLicencias} licencias (plan ${planId === 'esencial' ? 'Esencial' : planId})`
+              ? `Mínimo ${minLicencias} licencias (plan ${getPlanLabel(planSeleccionado)})`
               : undefined
           }
           rules={[

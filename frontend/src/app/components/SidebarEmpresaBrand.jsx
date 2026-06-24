@@ -8,7 +8,7 @@ import { getIdEmpresa, getTipoUsuario, isImpersonating, getPlanId } from '../../
 import { fetchMisEmpresas, doSwitchEmpresa } from '../../features/auth/authService';
 import { useAuth } from '../../config/AuthContext';
 import { useEmpresaBranding } from '../../hooks/useEmpresaBranding';
-import { planIncluyeFeature } from '../../constants/plans';
+import { planIncluyeFeature, getPlanLabel } from '../../constants/plans';
 import './SidebarEmpresaBrand.css';
 
 const { Text, Paragraph } = Typography;
@@ -42,6 +42,8 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
   const tieneVariasEmpresas = puedeCambiarEmpresa && empresas.length > 1 && tieneMultiempresa;
   const puedeVerMenu =
     TIPOS_MENU_EMPRESA.includes(tipoUsuario) || tieneVariasEmpresas;
+  const esPlataforma = TIPOS_PLATAFORMA.includes(tipoUsuario);
+  const nombrePlan = planLabel || getPlanLabel(planId);
 
   const cargarEmpresas = useCallback(async () => {
     if (impersonating || isImpersonating()) {
@@ -241,7 +243,7 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
 
           <Text type="secondary">Plan contratado</Text>
           <Paragraph className="app-sider-plan-modal__plan">
-            {planLabel || 'Esencial'}
+            {nombrePlan}
           </Paragraph>
 
           <Text type="secondary">Licencias contratadas</Text>
@@ -250,8 +252,17 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
           </Paragraph>
 
           <Paragraph type="secondary" className="app-sider-plan-modal__hint">
-            Para ampliar el plan o cambiar de modalidad, contacta con{' '}
-            <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+            {esPlataforma ? (
+              <>
+                Para cambiar el plan de una empresa, ve a{' '}
+                <strong>Gestión interna → Empresas</strong> y edítala desde el listado.
+              </>
+            ) : (
+              <>
+                Para ampliar el plan o cambiar de modalidad, contacta con{' '}
+                <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+              </>
+            )}
           </Paragraph>
         </div>
       </Modal>

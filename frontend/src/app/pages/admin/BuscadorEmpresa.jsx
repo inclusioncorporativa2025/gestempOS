@@ -16,6 +16,8 @@ import {
   Checkbox,
   Tag,
   Tooltip,
+  Select,
+  InputNumber,
 } from 'antd';
 import GradientButton from '../../components/shared/GradientButton';
 import {
@@ -33,6 +35,13 @@ import {
   reactivarEmpresa,
 } from '../../../features/empresas/empresasService';
 import AltaEmpresaForm from './AltaEmpresaForm';
+import {
+  PLANS,
+  getPlanLabel,
+  getPlanMinLicencias,
+  getPlanTagColor,
+  normalizePlanId,
+} from '../../../constants/plans';
 import './BuscadorEmpresa.css';
 
 const { Title, Text } = Typography;
@@ -152,10 +161,14 @@ const BuscadorEmpresa = ({ embedded = false }) => {
     setEditingRecord(record);
     form.setFieldsValue({
       ...record,
+      plan: normalizePlanId(record.plan),
       activo: empresaEstaActiva(record),
     });
     setIsModalVisible(true);
   };
+
+  const planSeleccionado = Form.useWatch('plan', form);
+  const minLicenciasEdicion = getPlanMinLicencias(planSeleccionado || 'esencial');
 
   const handleSave = async () => {
     try {
@@ -286,6 +299,14 @@ const BuscadorEmpresa = ({ embedded = false }) => {
             { title: 'Nombre Empresa', dataIndex: 'nombre', key: 'nombre' },
             { title: 'Identificador Fiscal', dataIndex: 'identificador_fiscal', key: 'identificador_fiscal' },
             { title: 'Email Responsable', dataIndex: 'email', key: 'email', render: (email) => email || '—' },
+            {
+              title: 'Plan',
+              dataIndex: 'plan',
+              key: 'plan',
+              render: (plan) => (
+                <Tag color={getPlanTagColor(plan)}>{getPlanLabel(plan)}</Tag>
+              ),
+            },
             { title: 'Licencias', dataIndex: 'licencias', key: 'licencias' },
             {
               title: 'Fecha Alta',
@@ -386,6 +407,7 @@ const BuscadorEmpresa = ({ embedded = false }) => {
           loading={altaLoading}
           onFinish={handleAltaSubmit}
           onCancel={() => altaForm.resetFields()}
+          showPlanSelect
         />
       </Modal>
 
@@ -426,13 +448,43 @@ const BuscadorEmpresa = ({ embedded = false }) => {
             </Col>
           </Row>
           <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="plan"
+                label="Plan contratado"
+                rules={[{ required: true, message: 'Selecciona un plan' }]}
+              >
+                <Select
+                  options={PLANS.map((plan) => ({
+                    value: plan.id,
+                    label: plan.name,
+                    disabled: plan.available === false,
+                  }))}
+                  onChange={(planId) => {
+                    const min = getPlanMinLicencias(planId);
+                    const actuales = form.getFieldValue('licencias');
+                    if (actuales == null || Number(actuales) < min) {
+                      form.setFieldsValue({ licencias: min });
+                    }
+                  }}
+                />
+              </Form.Item>
+            </Col>
             <Col xs={12}>
               <Form.Item
                 name="licencias"
                 label="Licencias"
-                rules={[{ required: true, message: 'Campo requerido' }]}
+                extra={`Mínimo ${minLicenciasEdicion} para el plan seleccionado`}
+                rules={[
+                  { required: true, message: 'Campo requerido' },
+                  {
+                    type: 'number',
+                    min: minLicenciasEdicion,
+                    message: `Mínimo ${minLicenciasEdicion} licencias`,
+                  },
+                ]}
               >
-                <Input type="number" />
+                <InputNumber min={minLicenciasEdicion} className="be-full-width" />
               </Form.Item>
             </Col>
             <Col xs={12}>

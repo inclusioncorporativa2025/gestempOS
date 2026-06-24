@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../config/AuthContext';
 import { getEmpresaBranding } from '../features/empresas/empresasService';
+import { getPlanLabel } from '../constants/plans';
 import { getInicialesEmpresa } from '../utils/empresaBranding';
 
 export const EMPRESA_BRANDING_UPDATED = 'empresa-branding-updated';
@@ -21,7 +22,7 @@ export const useEmpresaBranding = () => {
       setLabel(fallbackLabel);
       setNombreEmpresa(user?.nombre_empresa || '');
       setLicencias(null);
-      setPlanLabel('Esencial');
+      setPlanLabel(getPlanLabel(user?.plan_id));
       setLogoUrl(null);
       setLogoError(false);
       return;
@@ -34,14 +35,14 @@ export const useEmpresaBranding = () => {
       setLicencias(
         branding.licencias != null ? Number(branding.licencias) : null,
       );
-      setPlanLabel(branding.plan_label || 'Esencial');
+      setPlanLabel(branding.plan_label || getPlanLabel(branding.plan));
       setLogoUrl(branding.logo_url || null);
       setLogoError(false);
     } catch {
       setLabel(fallbackLabel);
       setNombreEmpresa(user?.nombre_empresa || '');
       setLicencias(null);
-      setPlanLabel('Esencial');
+      setPlanLabel(getPlanLabel(user?.plan_id));
       setLogoUrl(null);
       setLogoError(false);
     }

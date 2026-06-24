@@ -121,6 +121,7 @@
 }
 
 .app-sider-plan-modal__empresa,
+.app-sider-plan-modal__plan,
 .app-sider-plan-modal__licencias {
   margin: 0 0 12px !important;
   font-size: 1.05rem;

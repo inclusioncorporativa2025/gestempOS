@@ -191,7 +191,7 @@ const getEmpresasUsuarios = async (req, res)=> {
 
          const result = await sequelize.query(
                 `SELECT e.id_empresa, e.nombre, e.identificador_fiscal, e.fecha_alta, e.licencias,
-                        e.activo, e.alias, e.fecha_baja,
+                        e.plan, e.activo, e.alias, e.fecha_baja,
                         (
                           SELECT u.email
                           FROM m_usuarios_empresas ue
@@ -223,32 +223,64 @@ const editEmpresa = async (req, res)=> {
 
     const { idEmpresa,datos ,idUsuario} = req.body;
     const fecha = new Date();
+    const idEmpresaNum = Number(idEmpresa);
 
-      var empresas = await Empresa.update(
+    const empresa = await Empresa.findByPk(idEmpresaNum);
+    if (!empresa) {
+      return res.status(404).json({ message: 'Empresa no encontrada' });
+    }
+
+    const planId = normalizePlanId(datos.plan ?? empresa.plan);
+    const licencias = Number(datos.licencias ?? empresa.licencias);
+    const minLicencias = getPlanMinLicencias(planId);
+
+    if (!Number.isFinite(licencias) || licencias < minLicencias) {
+      return res.status(400).json({
+        message: `El plan ${getPlanLabel(planId)} requiere al menos ${minLicencias} licencias`,
+      });
+    }
+
+      await Empresa.update(
         {
             identificador_fiscal: datos.identificador_fiscal,
-            licencias: datos.licencias,
+            licencias,
             nombre: datos.nombre,
             fecha_modificacion:fecha,
             usuario_modificacion : idUsuario,
             activo: datos.activo,
             alias: datos.alias,
-            ...(datos.plan ? { plan: normalizePlanId(datos.plan) } : {}),
+            plan: planId,
         },
         {
             where: {
-            id_empresa: idEmpresa,
+            id_empresa: idEmpresaNum,
           }
         });
+
+      await sequelize.query(
+        `UPDATE empresa_facturacion ef
+         INNER JOIN planes p ON p.codigo = :planCodigo AND p.activo = 1
+         SET ef.id_plan = p.id_plan,
+             ef.licencias_facturadas = :licencias
+         WHERE ef.id_empresa = :idEmpresa`,
+        {
+          replacements: {
+            planCodigo: planId,
+            licencias,
+            idEmpresa: idEmpresaNum,
+          },
+        },
+      );
+
         if(!res){
-          return empresas;
+          return true;
         }else{
-          res.status(200).json({ message: 'Datos recuperados correctamente',empresas });
+          res.status(200).json({ message: 'Empresa actualizada correctamente' });
         }
 
   } catch (error) {
-      console.error('Error al obtener tipos de acceso:', error);
-      res.status(500).json({ error: 'Error al obtener tipos de acceso' });
+      console.error('Error al editar empresa:', error);
+      res.status(500).json({ error: 'Error al actualizar la empresa' });
   }
 
 };

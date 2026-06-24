@@ -21,8 +21,8 @@ const PLAN_FEATURES = {
 
 const PLAN_MIN_LICENCIAS = {
   esencial: 5,
-  rrhh: 8,
-  completo: 12,
+  rrhh: 10,
+  completo: 15,
 };
 
 const PLAN_LABELS = {
