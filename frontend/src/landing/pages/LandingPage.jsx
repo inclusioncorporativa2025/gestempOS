@@ -10,7 +10,7 @@ import {
 import { getAppLoginHref, getAppRegisterHref } from '../../utils/appLinks';
 import { PLANS } from '../../constants/plans';
 import LandingFooter from '../components/LandingFooter';
-import { BRAND_NAME } from '../../constants/brand';
+import BrandLogo from '../../components/BrandLogo';
 import './LandingPage.css';
 
 const PlanCta = ({ href, external, featured, children }) => {
@@ -93,7 +93,7 @@ const LandingPage = () => {
       <div className="landing-header-shell">
         <header className="landing-header">
           <div className="landing-header-inner">
-            <span className="landing-logo">{BRAND_NAME}</span>
+            <BrandLogo className="landing-logo" variant="header" />
             <nav className="landing-header-nav" aria-label="Acciones">
               <NavLink href={loginHref} external={loginIsExternal}>
                 Acceder

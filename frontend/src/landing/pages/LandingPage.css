@@ -53,9 +53,7 @@
 }
 
 .landing-logo {
-  font-weight: var(--font-weight-medium);
-  font-size: 1.125rem;
-  color: var(--color-primary);
+  flex-shrink: 0;
 }
 
 .landing-header-nav {

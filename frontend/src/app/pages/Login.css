@@ -61,9 +61,8 @@
   color: #fff;
 }
 
-.login-visual-title {
-  color: #fff !important;
-  margin: 0 !important;
+.login-visual-logo {
+  margin-bottom: 12px;
 }
 
 .login-visual-text {

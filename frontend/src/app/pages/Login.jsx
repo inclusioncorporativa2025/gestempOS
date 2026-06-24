@@ -6,7 +6,7 @@ import { useAuth } from '../../config/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { SUPPORT_EMAIL } from '../../constants/support';
-import { BRAND_NAME } from '../../constants/brand';
+import BrandLogo from '../../components/BrandLogo';
 import { redirectToApp } from '../../utils/appLinks';
 import { getAuthToken } from '../../utils/authSession';
 import SelectEmpresaModal from '../components/SelectEmpresaModal';
@@ -163,9 +163,7 @@ const Login = () => {
         <div className="login-visual">
           <div className="login-visual-veil" />
           <div className="login-visual-content">
-            <Title level={2} className="login-visual-title">
-              {BRAND_NAME}
-            </Title>
+            <BrandLogo className="login-visual-logo" variant="login" />
             <Text className="login-visual-text">
               Gestiona tu jornada de forma sencilla y segura.
             </Text>

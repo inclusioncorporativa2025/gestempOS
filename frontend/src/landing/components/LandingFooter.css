@@ -25,16 +25,13 @@
 
 .landing-footer-logo {
   display: inline-block;
-  font-size: 1.25rem;
-  font-weight: var(--font-weight-medium);
-  color: #fff;
   text-decoration: none;
-  line-height: 1.3;
-  transition: color 0.15s ease;
+  line-height: 0;
+  transition: opacity 0.15s ease;
 }
 
 .landing-footer-logo:hover {
-  color: var(--color-primary);
+  opacity: 0.85;
 }
 
 .landing-footer-tagline {

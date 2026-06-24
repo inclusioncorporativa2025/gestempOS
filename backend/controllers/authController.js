@@ -7,7 +7,7 @@ const { sequelize } = require('../config/db');
 const Usuario = require('../models/Usuario');
 const UsuarioEmpresa = require('../models/UsuarioEmpresa');
 const { APP_URL } = require('../config/appUrls');
-const { BRAND_NAME } = require('../config/brand');
+const { BRAND_NAME, BRAND_BYLINE, LOGO_PATH } = require('../config/brand');
 
 if (!firebaseAdmin.apps.length) {
 
@@ -116,7 +116,7 @@ const crearUsuarioFirebase = async (req,res) => {
       <p>¡Te damos la bienvenida!</p>
     </div>
     <div style="text-align: center; margin-top: 20px;;">
-    <p>Felicidades, ya formas parte de <strong>InCor</strong>, tu herramienta para fichar en el trabajo.</p>
+    <p>Felicidades, ya formas parte de <strong>${BRAND_BYLINE}</strong>.</p>
     <p>Lo primero que debes hacer es configurar tu cuenta y dar de alta a todas las personas trabajadoras de tu empresa.</p>
       <div style="display: flex; justify-content: center; margin-top: 20px;">
           <table style="border-collapse: collapse; font-size: 18px; text-align: center; color: black;">
@@ -143,8 +143,8 @@ const crearUsuarioFirebase = async (req,res) => {
       <p style="margin-top: 20px;">Si el enlace anterior no funciona, copia y pega la siguiente URL en la barra de direcciones de tu navegador:</p>
       <p><a href="${APP_URL}" style="color: #007BFF;">${APP_URL}</a></p>
       <p>¡Gracias!</p>
-      <p>El equipo de Inclusión Corporativa</p>
-            <img src="cid:logo" alt="Logo de InCor" style="width: 150px;" />
+      <p>El equipo de ${BRAND_BYLINE}</p>
+            <img src="cid:logo" alt="${BRAND_NAME}" style="width: 180px;" />
 
     </div>
     <div style="text-align: center; font-size: 12px;  margin-top: 20px;  color: black;">
@@ -165,8 +165,8 @@ const crearUsuarioFirebase = async (req,res) => {
 
         attachments: [
           {
-            filename: 'Logo-Horizontal INCOR-RGB.png',
-            path: path.resolve(__dirname, './Logo-Horizontal INCOR-RGB.png'),
+            filename: 'timecor-logo.png',
+            path: LOGO_PATH,
             cid: 'logo'
           }
         ]
@@ -206,8 +206,8 @@ const crearUsuarioFirebase = async (req,res) => {
     <p style="margin-top: 20px; color: black;">Si el enlace anterior no funciona, copia y pega la siguiente URL en la barra de direcciones de tu navegador:</p>
     <p><a href="${APP_URL}" style="color: #007BFF;">${APP_URL}</a></p>
     <p>¡Gracias!</p>
-    <p>El equipo de Inclusión Corporativa</p>
-          <img src="cid:logo" alt="Logo de InCor" style="width: 150px;" />
+    <p>El equipo de ${BRAND_BYLINE}</p>
+          <img src="cid:logo" alt="${BRAND_NAME}" style="width: 180px;" />
 
 </div>
 <div style="text-align: center; font-size: 12px;  margin-top: 20px;">
@@ -226,8 +226,8 @@ const crearUsuarioFirebase = async (req,res) => {
         `,
         attachments: [
           {
-            filename: 'Logo-Horizontal INCOR-RGB.png',
-            path: path.resolve(__dirname, './Logo-Horizontal INCOR-RGB.png'),
+            filename: 'timecor-logo.png',
+            path: LOGO_PATH,
             cid: 'logo'
           }
         ]

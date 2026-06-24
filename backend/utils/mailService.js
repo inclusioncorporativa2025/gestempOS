@@ -1,14 +1,11 @@
 const crypto = require('crypto');
-const path = require('path');
 const nodemailer = require('nodemailer');
 
 const { APP_URL } = require('../config/appUrls');
-const { BRAND_NAME } = require('../config/brand');
+const { BRAND_NAME, BRAND_BYLINE, LOGO_PATH } = require('../config/brand');
 const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES) || 60;
 const WELCOME_TOKEN_TTL_DAYS = Number(process.env.WELCOME_TOKEN_TTL_DAYS) || 7;
 const WELCOME_TOKEN_TTL_MINUTES = WELCOME_TOKEN_TTL_DAYS * 24 * 60;
-
-const LOGO_PATH = path.resolve(__dirname, 'images/Logo-Horizontal INCOR-RGB.png');
 
 const hashToken = (rawToken) =>
   crypto.createHash('sha256').update(rawToken).digest('hex');
@@ -54,7 +51,7 @@ const emailLayout = (cuerpoHtml) => `
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
             <tr>
               <td style="background-color:#ffffff; padding:28px 0; text-align:center;">
-                <img src="cid:logo" alt="${BRAND_NAME}" width="160" style="display:inline-block; max-width:160px; height:auto;" />
+                <img src="cid:logo" alt="${BRAND_NAME}" width="200" style="display:inline-block; max-width:200px; height:auto;" />
               </td>
             </tr>
             <tr>
@@ -63,7 +60,7 @@ const emailLayout = (cuerpoHtml) => `
             ${cuerpoHtml}
             <tr>
               <td style="padding:24px 40px; background-color:#f9fafb; border-top:1px solid #eee; font-family:Arial,Helvetica,sans-serif;">
-                <p style="margin:0; font-size:12px; color:#999;">© ${new Date().getFullYear()} Inclusión Corporativa · ${BRAND_NAME}</p>
+                <p style="margin:0; font-size:12px; color:#999;">© ${new Date().getFullYear()} ${BRAND_BYLINE}</p>
               </td>
             </tr>
           </table>
