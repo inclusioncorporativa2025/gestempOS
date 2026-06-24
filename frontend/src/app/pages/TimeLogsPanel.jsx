@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Layout, Card, Table, Button, Row, Col, Modal, Form, Input, TimePicker, message, notification, Select, DatePicker, Checkbox, Collapse, Empty, Dropdown, Tooltip, Tag } from 'antd';
+import { Layout, Card, Table, Button, Row, Col, Modal, Form, Input, TimePicker, message, notification, Select, DatePicker, Checkbox, Collapse, Empty, Dropdown, Tooltip, Tag, Radio, Typography } from 'antd';
 import {
   MoreOutlined,
   ExportOutlined,
@@ -105,6 +105,7 @@ const TimeLogsPanel = () => {
       }
       return tipos;
     }, [planId]);
+
     const [data, setData] = useState([]);
     const [filteredData, setFilteredData] = useState([]);
     const [selectedMonth, setSelectedMonth] = useState(null);
@@ -126,6 +127,7 @@ const [id_usuario, setIdUsuario] = useState(null);
 const [comentario, setComentario] = useState("");
 
 const [selectedEntrada, setSelectedEntrada] = useState(null);
+  const [fraccionDia, setFraccionDia] = useState('completo');
   const [todoElDia, setTodoElDia] = useState(false);
   const [horaDesde, setHoraDesde] = useState(null);
   const [horaHasta, setHoraHasta] = useState(null);
@@ -136,6 +138,16 @@ const [cierreModalOpen, setCierreModalOpen] = useState(false);
 const [firmaCierre, setFirmaCierre] = useState(null);
 const [confirmoRegistros, setConfirmoRegistros] = useState(false);
 const [enviandoCierre, setEnviandoCierre] = useState(false);
+
+    const esVacaciones = selectedEntrada === 'Vacaciones';
+    const esUnSoloDia = Boolean(
+      absenceFechaDesde
+      && absenceFechaHasta
+      && absenceFechaDesde.isSame(absenceFechaHasta, 'day'),
+    );
+    const mostrarFraccionVacaciones = esVacaciones && esUnSoloDia;
+
+    const { Text } = Typography;
 
     const verUbicacionEnMapa = (ubicacion) => {
       setMapUbicacion(ubicacion);
@@ -172,9 +184,11 @@ const anadirAusencia = async () => {
     const fecha_desde = absenceFechaDesde.format("DD-MM-YYYY");
     const fecha_hasta = absenceFechaHasta.format("DD-MM-YYYY");
 
-    // Si "todo el día" está marcado, se envían null las horas
-    const hora_ausencia_desde = todoElDia ? null : horaDesde?.format("HH:mm:ss");
-    const hora_ausencia_hasta = todoElDia ? null : horaHasta?.format("HH:mm:ss");
+    // Si "todo el día" o vacaciones de un solo día con fracción, sin horas concretas
+    const usarFraccionVacaciones = esVacaciones && esUnSoloDia;
+    const hora_ausencia_desde = (todoElDia || usarFraccionVacaciones) ? null : horaDesde?.format("HH:mm:ss");
+    const hora_ausencia_hasta = (todoElDia || usarFraccionVacaciones) ? null : horaHasta?.format("HH:mm:ss");
+    const fraccion_dia = usarFraccionVacaciones ? fraccionDia : null;
 
     const datos = await crearAusencia(
       idUsuario,
@@ -185,7 +199,8 @@ const anadirAusencia = async () => {
       hora_ausencia_hasta,
       comentario,
       usuario_alta,
-      selectedEntrada // tipo de ausencia
+      selectedEntrada,
+      fraccion_dia,
     );
 
     message.success(
@@ -202,6 +217,7 @@ const anadirAusencia = async () => {
     setHoraDesde(null);
     setHoraHasta(null);
     setTodoElDia(false);
+    setFraccionDia('completo');
     setSelectedEntrada(null);
     setComentario("");
 
@@ -934,6 +950,8 @@ const handleMonthChange = (date, dateString) => {
                         setAbsenceModalVisible(false);
                         setAbsenceFechaDesde(null);
                         setAbsenceFechaHasta(null);
+                        setFraccionDia('completo');
+                        setSelectedEntrada(null);
                     }}
                     onOk={anadirAusencia}
                     okText="Añadir"
@@ -967,7 +985,26 @@ const handleMonthChange = (date, dateString) => {
                         onChange={setAbsenceFechaHasta}
                         />
                     </Col>
-                    
+
+                    {mostrarFraccionVacaciones && (
+                    <Col span={24}>
+                        <Text type="secondary" className="tlp-fraccion-label">Duración del día</Text>
+                        <Radio.Group
+                          className="tlp-fraccion-group"
+                          value={fraccionDia}
+                          onChange={(e) => setFraccionDia(e.target.value)}
+                          optionType="button"
+                          buttonStyle="solid"
+                        >
+                          <Radio.Button value="completo">Día completo</Radio.Button>
+                          <Radio.Button value="manana">Mañana</Radio.Button>
+                          <Radio.Button value="tarde">Tarde</Radio.Button>
+                        </Radio.Group>
+                    </Col>
+                    )}
+
+                    {!esVacaciones && (
+                    <>
                     <Col xs={12} sm={12} md={12} lg={12} xl={12}>
                         <TimePicker
                         disabled={todoElDia}
@@ -1004,6 +1041,8 @@ const handleMonthChange = (date, dateString) => {
                         </Checkbox>
 
                     </Col>
+                    </>
+                    )}
 
                     </Row>
                    
@@ -1013,7 +1052,12 @@ const handleMonthChange = (date, dateString) => {
                         placeholder="Selecciona el tipo de registro"
                         className="tlp-select"
                         value={selectedEntrada}
-                        onChange={(value) => setSelectedEntrada(value)}
+                        onChange={(value) => {
+                          setSelectedEntrada(value);
+                          if (value !== 'Vacaciones') {
+                            setFraccionDia('completo');
+                          }
+                        }}
                             dropdownStyle={{
                             maxHeight: '250px',
                             overflowY: 'auto',

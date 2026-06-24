@@ -1,0 +1,27 @@
+.vac-saldo-panel__card {
+  margin-top: 8px;
+}
+
+.vac-saldo-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.vac-saldo-panel__anio-row {
+  margin-bottom: 8px;
+}
+
+.vac-saldo-panel__saldo {
+  margin: 4px 0 8px !important;
+}
+
+.vac-saldo-panel__resumen {
+  max-width: 520px;
+}
+
+.vac-saldo-panel__full {
+  width: 100%;
+}

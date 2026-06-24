@@ -77,6 +77,10 @@ const Ausencia = sequelize.define('ausencia', {
     type: DataTypes.STRING(100),
     allowNull: true,
   },
+  fraccion_dia: {
+    type: DataTypes.STRING(10),
+    allowNull: true,
+  },
 }, {
   tableName: 'ausencias',
   timestamps: false,

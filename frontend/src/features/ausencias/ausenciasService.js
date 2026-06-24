@@ -92,7 +92,11 @@ export const responderAusencia = async (ausencia, estado, motivoRechazo) => {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error || 'Error al procesar la solicitud');
+    const err = new Error(data.error || 'Error al procesar la solicitud');
+    err.code = data.code;
+    err.disponibles = data.disponibles;
+    err.solicitados = data.solicitados;
+    throw err;
   }
   return data;
 };
@@ -107,7 +111,8 @@ export const crearAusencia = async (
       hora_ausencia_hasta,
       comentario,
       usuario_alta,
-      tipo
+      tipo,
+      fraccion_dia = null,
 ) => {
   try {
     const response = await fetch(API_BASE_URL + `/crearAusencia`, {
@@ -122,7 +127,8 @@ export const crearAusencia = async (
       hora_ausencia_hasta,
       comentario,
       usuario_alta,
-      tipo
+      tipo,
+      fraccion_dia,
       }),
     });
 

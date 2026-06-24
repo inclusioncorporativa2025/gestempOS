@@ -671,6 +671,14 @@ const setVisibleModalDetalles = async (info) => {
       fetchHistorialAusencias();
       notifyNotificacionesActualizadas();
     } catch (error) {
+      if (error?.code === 'SALDO_VACACIONES_INSUFICIENTE') {
+        message.error(
+          error.message
+          || `Saldo insuficiente (${error.disponibles ?? '?'} disponibles, ${error.solicitados ?? '?'} solicitados)`,
+          6,
+        );
+        return;
+      }
       message.error(error.message || 'Error al procesar la solicitud');
     }
   };

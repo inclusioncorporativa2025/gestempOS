@@ -21,6 +21,11 @@ const { ROLE_GROUPS } = require('../middleware/authMiddleware');
 const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/ausenciasCompat');
 const { enviarNotificacionGestion } = require('../utils/mailService');
 const { obtenerEmailsGestoresEmpresa } = require('../utils/gestoresEmpresa');
+const {
+  esAusenciaVacaciones,
+  registrarConsumoPorAusencia,
+} = require('../services/vacacionesService');
+const { vacacionesSoportaSaldo } = require('../utils/vacacionesCompat');
 
 const expandirRangoDias = (fechaDesde, fechaHasta) => {
   const dias = [];
@@ -133,6 +138,7 @@ const crearAusencia = async (req, res) => {
     hora_ausencia_hasta,
     comentario,
     tipo,
+    fraccion_dia,
   } = req.body;
 
   if (!idUsuario || !idEmpresa || !fecha_desde || !fecha_hasta || !tipo) {
@@ -218,6 +224,7 @@ const crearAusencia = async (req, res) => {
       hora_ausencia_desde: hora_ausencia_desde || null,
       hora_ausencia_hasta: hora_ausencia_hasta || null,
       tipo,
+      fraccion_dia: fraccion_dia ? String(fraccion_dia).trim().toLowerCase() : null,
       comentarios: comentario || null,
       usuario_alta: idUsuario,
       fecha_alta: ahora,
@@ -529,6 +536,28 @@ const responderAusencia = async (req, res) => {
 
     if (ausencia.fecha_aceptacion || ausencia.fecha_cancelacion) {
       return res.status(409).json({ error: 'La solicitud ya fue resuelta' });
+    }
+
+    const ausenciaJson = ausencia.toJSON ? ausencia.toJSON() : ausencia;
+
+    if (estado === 2 && esAusenciaVacaciones(ausenciaJson)) {
+      const permiteVacaciones = await empresaTieneFeature(idEmpresa, 'vacaciones');
+      const soportaSaldo = await vacacionesSoportaSaldo();
+      if (permiteVacaciones && soportaSaldo) {
+        try {
+          await registrarConsumoPorAusencia(idEmpresa, ausenciaJson, idUsuarioGestor);
+        } catch (error) {
+          if (error.code === 'SALDO_VACACIONES_INSUFICIENTE') {
+            return res.status(400).json({
+              error: error.message,
+              code: error.code,
+              disponibles: error.disponibles,
+              solicitados: error.solicitados,
+            });
+          }
+          throw error;
+        }
+      }
     }
 
     const fechaActual = dayjs().tz('Europe/Madrid').toDate();
