@@ -4,7 +4,7 @@ import { LANDING_ROUTES } from '../../constants/routes';
 import { LANDING_URL } from '../../constants/urls';
 import { SUPPORT_EMAIL, supportMailtoHref } from '../../constants/support';
 import { getAppLoginHref, getAppRegisterHref } from '../../utils/appLinks';
-import './LandingFooter.css';
+import { BRAND_NAME } from '../../constants/brand';
 
 const FooterLink = ({ href, external, children, title }) =>
   external ? (
@@ -35,7 +35,7 @@ const FooterColumn = ({ title, links, ariaLabel }) => (
 const ORGANIZATION_SCHEMA = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'Ficha en el trabajo',
+  name: BRAND_NAME,
   url: LANDING_URL,
   description:
     'Software de control horario y registro de jornada laboral para empresas en España.',
@@ -144,9 +144,9 @@ const LandingFooter = () => {
             <Link
               to={LANDING_ROUTES.home}
               className="landing-footer-logo"
-              title="Ficha en el trabajo — Software de control horario"
+              title={`${BRAND_NAME} — Software de control horario`}
             >
-              Ficha en el trabajo
+              {BRAND_NAME}
             </Link>
             <p className="landing-footer-tagline">
               Software de control horario y registro de jornada laboral para empresas.
@@ -175,7 +175,7 @@ const LandingFooter = () => {
 
         <div className="landing-footer-legal">
           <p className="landing-footer-copy">
-            © {year} Ficha en el trabajo. Todos los derechos reservados.
+            © {year} {BRAND_NAME}. Todos los derechos reservados.
           </p>
           <nav className="landing-footer-legal-nav" aria-label="Enlaces legales">
             {legalLinks.map(({ label, href }, index) => (

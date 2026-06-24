@@ -3,7 +3,7 @@ const Empresa = require('../models/Empresa');
 const UsuarioEmpresa = require('../models/UsuarioEmpresa');
 const { usuarioTieneAccesoEmpresa } = require('../services/usuarioEmpresaService');
 
-const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@fichaeneltrabajo.es';
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@timecor.es';
 
 const empresaEstaOperativa = (empresa) =>
   empresa &&

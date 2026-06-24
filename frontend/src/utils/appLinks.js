@@ -12,7 +12,7 @@ export const getAppLoginHref = () => {
   }
   const host = window.location.hostname;
   const sameSpa =
-    host === 'localhost' || host === '127.0.0.1' || host === 'fichaeneltrabajo.es';
+    host === 'localhost' || host === '127.0.0.1' || host === 'timecor.es';
   if (sameSpa) {
     return APP_ROUTES.login;
   }
@@ -28,7 +28,7 @@ const buildAppPath = (path) => {
   }
   const host = window.location.hostname;
   const sameSpa =
-    host === 'localhost' || host === '127.0.0.1' || host === 'fichaeneltrabajo.es';
+    host === 'localhost' || host === '127.0.0.1' || host === 'timecor.es';
   if (sameSpa) {
     return path;
   }

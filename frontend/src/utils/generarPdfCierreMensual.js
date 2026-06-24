@@ -68,7 +68,7 @@ const dibujarHeader = (doc, mesLabel) => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...BRAND.white);
-  doc.text('fichaeneltrabajo.es', PAGE_WIDTH - MARGIN, 12, { align: 'right' });
+  doc.text('timecor.es', PAGE_WIDTH - MARGIN, 12, { align: 'right' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);

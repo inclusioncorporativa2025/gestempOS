@@ -7,6 +7,7 @@ const { sequelize } = require('../config/db');
 const Usuario = require('../models/Usuario');
 const UsuarioEmpresa = require('../models/UsuarioEmpresa');
 const { APP_URL } = require('../config/appUrls');
+const { BRAND_NAME } = require('../config/brand');
 
 if (!firebaseAdmin.apps.length) {
 
@@ -107,7 +108,7 @@ const crearUsuarioFirebase = async (req,res) => {
     var mailOptions;
     if(admin){
        mailOptions = {
-        from: 'Noreply@fichaeneltrabajo.es',
+        from: 'Noreply@timecor.es',
         to: email,
         subject: 'Confirmación de registro',
         html: `
@@ -148,7 +149,7 @@ const crearUsuarioFirebase = async (req,res) => {
     </div>
     <div style="text-align: center; font-size: 12px;  margin-top: 20px;  color: black;">
         <p><em>No respondas a este correo electrónico. Este buzón no se supervisa. Si necesitas ayuda, envíanos un correo electrónico</em></p>
-        <p><em>a info@fichaeneltrabajo.es o puedes llamarnos al 886 137 361. Recuerda que nuestro horario comercial es de L-V de 09:00 a 13:00.</em></p>
+        <p><em>a info@timecor.es o puedes llamarnos al 886 137 361. Recuerda que nuestro horario comercial es de L-V de 09:00 a 13:00.</em></p>
         <p><em>Este mensaje y sus archivos adjuntos se dirige exclusivamente a su destinatario y puede contener información confidencial. Si no eres el</em></p>
         <p><em>destinatario indicado, te notificamos que la utilización, divulgación y/o copia sin autorización está prohibida en virtud de la legislación</em></p>
         <p><em>vigente. Si has recibido este mensaje por error, te rogamos que nos lo comuniques inmediatamente y procedas a su destrucción. Gracias.</em></p>
@@ -156,7 +157,7 @@ const crearUsuarioFirebase = async (req,res) => {
         <p><em>serán tratados bajo la responsabilidad de Inclusión Corporativa, S.L. para resolver tu consulta. Los datos serán conservados el tiempo</em></p>
         <p><em>necesario para resolver tu consulta. Tras esto, tus datos serán conservados y no serán cedidos a terceros, salvo obligación legal. Puedes</em></p>
         <p><em>ejercer los derechos de acceso, rectificación, portabilidad, supresión, limitación y oposición enviando un mensaje</em></p>
-        <p><em>a info@fichaeneltrabajo.es y si consideras que el tratamiento no se ajusta a la normativa vigente, podrás presentar una reclamación ante</em></p>
+        <p><em>a info@timecor.es y si consideras que el tratamiento no se ajusta a la normativa vigente, podrás presentar una reclamación ante</em></p>
         <p><em>la autoridad de control en www.agpd.es.</em></p>
     </div>
 
@@ -172,7 +173,7 @@ const crearUsuarioFirebase = async (req,res) => {
       };
     }else{
        mailOptions = {
-        from: 'Noreply@fichaeneltrabajo.es',
+        from: 'Noreply@timecor.es',
         to: email,
         subject: 'Confirmación de registro',
         html: `
@@ -180,7 +181,7 @@ const crearUsuarioFirebase = async (req,res) => {
   <p>¡Te damos la bienvenida!</p>
 </div>
 <div style="text-align: center; font-size: 18px; ">
-    <p>Se ha creado un nuevo usuario en su cuenta Ficha en el trabajo con los siguientes datos:</p>
+    <p>Se ha creado un nuevo usuario en su cuenta ${BRAND_NAME} con los siguientes datos:</p>
     <div style="display: flex; justify-content: center; margin-top: 20px;">
         <table style="border-collapse: collapse; font-size: 18px; text-align: center; color: black;">
             <thead>
@@ -211,7 +212,7 @@ const crearUsuarioFirebase = async (req,res) => {
 </div>
 <div style="text-align: center; font-size: 12px;  margin-top: 20px;">
     <p><em>No respondas a este correo electrónico. Este buzón no se supervisa. Si necesitas ayuda, envíanos un correo electrónico</em></p>
-    <p><em>a info@fichaeneltrabajo.es o puedes llamarnos al 886 137 361. Recuerda que nuestro horario comercial es de L-V de 09:00 a 13:00.</em></p>
+    <p><em>a info@timecor.es o puedes llamarnos al 886 137 361. Recuerda que nuestro horario comercial es de L-V de 09:00 a 13:00.</em></p>
     <p><em>Este mensaje y sus archivos adjuntos se dirige exclusivamente a su destinatario y puede contener información confidencial. Si no eres el</em></p>
     <p><em>destinatario indicado, te notificamos que la utilización, divulgación y/o copia sin autorización está prohibida en virtud de la legislación</em></p>
     <p><em>vigente. Si has recibido este mensaje por error, te rogamos que nos lo comuniques inmediatamente y procedas a su destrucción. Gracias.</em></p>
@@ -219,7 +220,7 @@ const crearUsuarioFirebase = async (req,res) => {
     <p><em>serán tratados bajo la responsabilidad de Inclusión Corporativa, S.L. para resolver tu consulta. Los datos serán conservados el tiempo</em></p>
     <p><em>necesario para resolver tu consulta. Tras esto, tus datos serán conservados y no serán cedidos a terceros, salvo obligación legal. Puedes</em></p>
     <p><em>ejercer los derechos de acceso, rectificación, portabilidad, supresión, limitación y oposición enviando un mensaje</em></p>
-    <p><em>a info@fichaeneltrabajo.es y si consideras que el tratamiento no se ajusta a la normativa vigente, podrás presentar una reclamación ante</em></p>
+    <p><em>a info@timecor.es y si consideras que el tratamiento no se ajusta a la normativa vigente, podrás presentar una reclamación ante</em></p>
     <p><em>la autoridad de control en www.agpd.es.</em></p>
 </div>
         `,

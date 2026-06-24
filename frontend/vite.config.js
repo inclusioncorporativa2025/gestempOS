@@ -13,8 +13,8 @@ export default defineConfig(({ mode }) => {
     (isProd ? '/api/' : 'http://127.0.0.1:5000/api/');
   const appUrl =
     env.VITE_APP_URL ||
-    (isProd ? 'https://app.fichaeneltrabajo.es' : 'http://localhost:3000');
-  const landingUrl = env.VITE_LANDING_URL || 'https://fichaeneltrabajo.es';
+    (isProd ? 'https://app.timecor.es' : 'http://localhost:3000');
+  const landingUrl = env.VITE_LANDING_URL || 'https://timecor.es';
 
   return {
     plugins: [react()],

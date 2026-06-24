@@ -3,6 +3,7 @@ const path = require('path');
 const nodemailer = require('nodemailer');
 
 const { APP_URL } = require('../config/appUrls');
+const { BRAND_NAME } = require('../config/brand');
 const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES) || 60;
 const WELCOME_TOKEN_TTL_DAYS = Number(process.env.WELCOME_TOKEN_TTL_DAYS) || 7;
 const WELCOME_TOKEN_TTL_MINUTES = WELCOME_TOKEN_TTL_DAYS * 24 * 60;
@@ -53,7 +54,7 @@ const emailLayout = (cuerpoHtml) => `
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%; background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
             <tr>
               <td style="background-color:#ffffff; padding:28px 0; text-align:center;">
-                <img src="cid:logo" alt="Ficha en el Trabajo" width="160" style="display:inline-block; max-width:160px; height:auto;" />
+                <img src="cid:logo" alt="${BRAND_NAME}" width="160" style="display:inline-block; max-width:160px; height:auto;" />
               </td>
             </tr>
             <tr>
@@ -62,7 +63,7 @@ const emailLayout = (cuerpoHtml) => `
             ${cuerpoHtml}
             <tr>
               <td style="padding:24px 40px; background-color:#f9fafb; border-top:1px solid #eee; font-family:Arial,Helvetica,sans-serif;">
-                <p style="margin:0; font-size:12px; color:#999;">© ${new Date().getFullYear()} Inclusión Corporativa · Ficha en el Trabajo</p>
+                <p style="margin:0; font-size:12px; color:#999;">© ${new Date().getFullYear()} Inclusión Corporativa · ${BRAND_NAME}</p>
               </td>
             </tr>
           </table>
@@ -111,7 +112,7 @@ const buildResetEmailHtml = ({ nombre, enlace, ttlTexto }) =>
         <h1 style="margin:0 0 16px 0; font-size:22px; color:#0f1020;">Restablecer contraseña</h1>
         <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">Hola <strong>${nombre}</strong>,</p>
         <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">
-          Hemos recibido una solicitud para establecer la contraseña de tu cuenta en <strong>Ficha en el Trabajo</strong>.
+          Hemos recibido una solicitud para establecer la contraseña de tu cuenta en <strong>${BRAND_NAME}</strong>.
         </p>
         <p style="margin:0 0 28px 0; font-size:15px; line-height:1.6; color:#444;">
           Pulsa el botón para continuar. Por seguridad, el enlace caduca en <strong>${ttlTexto}</strong>.
@@ -137,10 +138,10 @@ const buildInvitacionEmpleadoHtml = ({
   emailLayout(`
     <tr>
       <td style="padding:36px 40px 8px 40px; font-family:Arial,Helvetica,sans-serif;">
-        <h1 style="margin:0 0 16px 0; font-size:22px; color:#0f1020;">Invitación a Ficha en el Trabajo</h1>
+        <h1 style="margin:0 0 16px 0; font-size:22px; color:#0f1020;">Invitación a ${BRAND_NAME}</h1>
         <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">Hola <strong>${nombre}</strong>,</p>
         <p style="margin:0 0 20px 0; font-size:15px; line-height:1.6; color:#444;">
-          Has sido invitado a unirte a <strong>${nombreEmpresa}</strong> en la plataforma <strong>Ficha en el Trabajo</strong>.
+          Has sido invitado a unirte a <strong>${nombreEmpresa}</strong> en la plataforma <strong>${BRAND_NAME}</strong>.
         </p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px 0; background:#f9fafb; border-radius:8px; font-family:Arial,Helvetica,sans-serif;">
           <tr>
@@ -178,7 +179,7 @@ const buildWelcomeEmailHtml = ({
   emailLayout(`
     <tr>
       <td style="padding:36px 40px 8px 40px; font-family:Arial,Helvetica,sans-serif;">
-        <h1 style="margin:0 0 16px 0; font-size:22px; color:#0f1020;">Bienvenido a Ficha en el Trabajo</h1>
+        <h1 style="margin:0 0 16px 0; font-size:22px; color:#0f1020;">Bienvenido a ${BRAND_NAME}</h1>
         <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">Hola <strong>${nombre}</strong>,</p>
         <p style="margin:0 0 20px 0; font-size:15px; line-height:1.6; color:#444;">
           Tu empresa ha sido dada de alta en la plataforma. Estos son los datos de tu contratación:
@@ -225,7 +226,7 @@ const generarYEnviarReset = async (usuario, ttlMinutos = RESET_TOKEN_TTL_MINUTES
   try {
     await enviarCorreo({
       to: usuario.email,
-      subject: 'Ficha en el Trabajo - Restablece tu contraseña',
+      subject: `${BRAND_NAME} - Restablece tu contraseña`,
       html: buildResetEmailHtml({
         nombre: usuario.nombre,
         enlace,
@@ -258,7 +259,7 @@ const enviarBienvenidaEmpresa = async (usuario, datosEmpresa) => {
   try {
     await enviarCorreo({
       to: usuario.email,
-      subject: 'Ficha en el Trabajo - Bienvenida y acceso a tu empresa',
+      subject: `${BRAND_NAME} - Bienvenida y acceso a tu empresa`,
       html: buildWelcomeEmailHtml({
         nombre: usuario.nombre,
         nombreEmpresa,
@@ -291,7 +292,7 @@ const enviarInvitacionEmpleado = async (usuario, { nombreEmpresa }) => {
   try {
     await enviarCorreo({
       to: usuario.email,
-      subject: 'Ficha en el Trabajo - Invitación para crear tu contraseña',
+      subject: `${BRAND_NAME} - Invitación para crear tu contraseña`,
       html: buildInvitacionEmpleadoHtml({
         nombre: usuario.nombre,
         nombreEmpresa: nombreEmpresa || 'tu empresa',
@@ -309,7 +310,7 @@ const enviarInvitacionEmpleado = async (usuario, { nombreEmpresa }) => {
   return enlace;
 };
 
-const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@fichaeneltrabajo.es';
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@timecor.es';
 
 const escapeHtml = (value) =>
   String(value ?? '')
@@ -395,7 +396,7 @@ const buildSupportEmailHtml = ({
       <td style="padding:32px 40px 8px 40px; font-family:Arial,Helvetica,sans-serif;">
         <h2 style="margin:0 0 16px 0; font-size:20px; color:#001529;">Nueva consulta de soporte</h2>
         <p style="margin:0; font-size:14px; color:#444;">
-          Mensaje enviado desde la plataforma Ficha en el Trabajo.
+          Mensaje enviado desde la plataforma ${BRAND_NAME}.
         </p>
       </td>
     </tr>

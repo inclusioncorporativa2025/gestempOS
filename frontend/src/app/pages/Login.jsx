@@ -6,6 +6,7 @@ import { useAuth } from '../../config/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { SUPPORT_EMAIL } from '../../constants/support';
+import { BRAND_NAME } from '../../constants/brand';
 import SelectEmpresaModal from '../components/SelectEmpresaModal';
 import './Login.css';
 
@@ -157,7 +158,7 @@ const Login = () => {
           <div className="login-visual-veil" />
           <div className="login-visual-content">
             <Title level={2} className="login-visual-title">
-              Ficha en el Trabajo
+              {BRAND_NAME}
             </Title>
             <Text className="login-visual-text">
               Gestiona tu jornada de forma sencilla y segura.

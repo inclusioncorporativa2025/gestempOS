@@ -1,12 +1,12 @@
 /**
  * Dominios de producción:
- * - LANDING_URL → https://fichaeneltrabajo.es (web comercial)
- * - FRONTEND_URL / APP_URL → https://app.fichaeneltrabajo.es (aplicación React, rutas en /)
+ * - LANDING_URL → https://timecor.es (web comercial)
+ * - FRONTEND_URL / APP_URL → https://app.timecor.es (aplicación React, rutas en /)
  */
 const normalizeUrl = (url) => String(url || '').replace(/\/$/, '');
 
 const LANDING_URL = normalizeUrl(
-  process.env.LANDING_URL || 'https://fichaeneltrabajo.es',
+  process.env.LANDING_URL || 'https://timecor.es',
 );
 
 const APP_URL = normalizeUrl(

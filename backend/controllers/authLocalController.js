@@ -19,7 +19,7 @@ const {
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const BCRYPT_ROUNDS = 10;
-const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@fichaeneltrabajo.es';
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@timecor.es';
 
 const usuarioActivo = (usuario) =>
   usuario && usuario.activo !== false && usuario.activo !== 0;

@@ -16,7 +16,7 @@ app.get('/', (req, res) => {
   res.status(200).json({
     status: 'ok',
     service: 'gestemp-backend',
-    domain: 'app.fichaeneltrabajo.es',
+    domain: 'app.timecor.es',
     port: port
   });
 });
