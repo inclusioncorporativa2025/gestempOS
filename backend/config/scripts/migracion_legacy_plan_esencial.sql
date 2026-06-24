@@ -26,6 +26,7 @@ WHERE ef.id_plan IS NULL
   AND ef.modo_facturacion = 'legacy';
 
 -- PASO 3: licencias — ver script dedicado migracion_legacy_licencias.sql
+-- FK id_plan — ver script empresas_id_plan.sql
 --   B1) copia m_empresas.licencias → licencias_facturadas
 --   B2) estima m_empresas.licencias (vínculos - 1 admin, mínimo del plan)
 --   B3) sincroniza facturación

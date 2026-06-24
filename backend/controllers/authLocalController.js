@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
+const { sequelize } = require('../config/db');
 const Usuario = require('../models/Usuario');
 const Empresa = require('../models/Empresa');
 const { hashToken, generarYEnviarReset } = require('../utils/mailService');
@@ -17,7 +18,7 @@ const {
   verificarPreAuthToken,
 } = require('../services/usuarioEmpresaService');
 const { normalizePlanId, planIncluyeFeature } = require('../config/plans');
-const { assertEmpresaTieneFeature } = require('../services/planService');
+const { obtenerPlanEmpresa, assertEmpresaTieneFeature } = require('../services/planService');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const BCRYPT_ROUNDS = 10;
@@ -25,6 +26,45 @@ const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@timecor.es';
 
 const usuarioActivo = (usuario) =>
   usuario && usuario.activo !== false && usuario.activo !== 0;
+
+const buscarUsuarioPorEmail = async (email) => {
+  const emailNorm = String(email || '').trim().toLowerCase();
+  if (!emailNorm) {
+    return null;
+  }
+
+  return Usuario.findOne({
+    where: {
+      [Op.and]: [
+        sequelize.where(sequelize.fn('LOWER', sequelize.col('email')), emailNorm),
+        { fecha_baja: null },
+      ],
+    },
+  });
+};
+
+const responderErrorResetCorreo = (res, error, respuestaGenerica) => {
+  const payload = {
+    ...respuestaGenerica,
+    code: error.code || 'EMAIL_SEND_FAILED',
+  };
+
+  if (process.env.NODE_ENV !== 'production' && error.enlace) {
+    payload.devResetUrl = error.enlace;
+  }
+
+  if (error.code === 'SMTP_NO_CONFIGURADO') {
+    return res.status(503).json({
+      ...payload,
+      message: `El envío de correos no está configurado en el servidor. Contacta con ${SUPPORT_EMAIL}.`,
+    });
+  }
+
+  return res.status(503).json({
+    ...payload,
+    message: `No pudimos enviar el correo en este momento. Inténtalo más tarde o contacta con ${SUPPORT_EMAIL}.`,
+  });
+};
 
 const sanitizeUsuario = (usuario) => ({
   id_usuario: usuario.id_usuario,
@@ -100,7 +140,7 @@ const login = async (req, res) => {
   }
 
   try {
-    const usuario = await Usuario.findOne({ where: { email, fecha_baja: null } });
+    const usuario = await buscarUsuarioPorEmail(email);
 
     if (!usuarioActivo(usuario)) {
       return res.status(401).json({ message: 'Credenciales inválidas' });
@@ -117,7 +157,19 @@ const login = async (req, res) => {
     }
 
     if (!usuario.password_hash || usuario.requiere_reset_password) {
-      const enlace = await generarYEnviarReset(usuario);
+      let enlace;
+      try {
+        enlace = await generarYEnviarReset(usuario);
+      } catch (error) {
+        if (error.code === 'SMTP_NO_CONFIGURADO' || error.code === 'EMAIL_SEND_FAILED') {
+          return responderErrorResetCorreo(res, error, {
+            code: 'PASSWORD_RESET_REQUIRED',
+            message:
+              'Debes restablecer la contraseña, pero no pudimos enviar el correo. Inténtalo de nuevo o contacta con soporte.',
+          });
+        }
+        throw error;
+      }
 
       const respuesta = {
         code: 'PASSWORD_RESET_REQUIRED',
@@ -286,7 +338,7 @@ const misEmpresas = async (req, res) => {
 
     const idEmpresaActiva = req.user.id_empresa ? Number(req.user.id_empresa) : null;
     const planActivo = idEmpresaActiva
-      ? normalizePlanId((await Empresa.findByPk(idEmpresaActiva))?.plan)
+      ? await obtenerPlanEmpresa(idEmpresaActiva)
       : null;
 
     let empresas = await listarEmpresasParaSelector(usuario.id_usuario, usuario);
@@ -318,7 +370,7 @@ const forgotPassword = async (req, res) => {
   }
 
   try {
-    const usuario = await Usuario.findOne({ where: { email, fecha_baja: null } });
+    const usuario = await buscarUsuarioPorEmail(email);
 
     if (!usuarioActivo(usuario)) {
       return res.status(200).json(respuestaGenerica);
@@ -337,7 +389,12 @@ const forgotPassword = async (req, res) => {
 
     return res.status(200).json(respuestaGenerica);
   } catch (error) {
-    console.error('Error en forgotPassword:', error.message);
+    console.error('Error en forgotPassword:', error.message, error.stack);
+
+    if (error.code === 'SMTP_NO_CONFIGURADO' || error.code === 'EMAIL_SEND_FAILED') {
+      return responderErrorResetCorreo(res, error, respuestaGenerica);
+    }
+
     return res.status(500).json({ message: 'Error al procesar la solicitud' });
   }
 };
@@ -354,16 +411,14 @@ const resetPassword = async (req, res) => {
   }
 
   try {
-    const usuario = await Usuario.findOne({
-      where: {
-        email,
-        fecha_baja: null,
-        reset_token_hash: hashToken(token),
-        reset_token_expira: { [Op.gt]: new Date() },
-      },
-    });
+    const usuario = await buscarUsuarioPorEmail(email);
 
-    if (!usuario) {
+    if (
+      !usuario
+      || usuario.reset_token_hash !== hashToken(token)
+      || !usuario.reset_token_expira
+      || usuario.reset_token_expira <= new Date()
+    ) {
       return res.status(400).json({ message: 'El enlace no es válido o ha caducado' });
     }
 

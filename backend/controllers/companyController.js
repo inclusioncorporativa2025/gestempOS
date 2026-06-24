@@ -9,17 +9,32 @@ const { enviarBienvenidaEmpresa } = require('../utils/mailService');
 const {
   normalizePlanId,
   getPlanLabel,
-  planIncluyeFeature,
   getPlanMinLicencias,
   DEFAULT_PLAN,
 } = require('../config/plans');
+const {
+  resolverPlan,
+  camposPlanEmpresa,
+  obtenerCodigoPlanEmpresa,
+} = require('../services/planCatalogService');
 
 const trimOptional = (value) => {
   const text = String(value ?? '').trim();
   return text || null;
 };
 
-const pickMiEmpresaParaCliente = (empresa) => ({
+const buildPlanCliente = async (empresa) => {
+  const codigo = await obtenerCodigoPlanEmpresa(empresa);
+  return {
+    id_plan: empresa.id_plan ?? null,
+    plan: codigo,
+    plan_label: getPlanLabel(codigo),
+  };
+};
+
+const pickMiEmpresaParaCliente = async (empresa) => {
+  const planInfo = await buildPlanCliente(empresa);
+  return {
   nombre: empresa.nombre,
   alias: empresa.alias,
   identificador_fiscal: empresa.identificador_fiscal,
@@ -38,18 +53,20 @@ const pickMiEmpresaParaCliente = (empresa) => ({
   licencias: empresa.licencias,
   logo_url: empresa.logo_url,
   color_principal: empresa.color_principal,
-  plan: normalizePlanId(empresa.plan),
-  plan_label: getPlanLabel(empresa.plan),
-});
+  ...planInfo,
+};
+};
 
-const pickEmpresaBranding = (empresa) => ({
+const pickEmpresaBranding = async (empresa) => {
+  const planInfo = await buildPlanCliente(empresa);
+  return {
   nombre: empresa.nombre,
   alias: empresa.alias,
   logo_url: empresa.logo_url,
   licencias: empresa.licencias,
-  plan: normalizePlanId(empresa.plan),
-  plan_label: getPlanLabel(empresa.plan),
-});
+  ...planInfo,
+};
+};
 
 const registerCompany = async (req, res) => {
     const transaction = await sequelize.transaction();
@@ -58,7 +75,9 @@ const registerCompany = async (req, res) => {
         const idUsuarioAccion = req.body.idUsuario;
         const schemaName = `empresa_${nombre_empresa.toLowerCase().replace(/\s+/g, '_')}`;
         const fecha = new Date();
-        const planId = normalizePlanId(plan || DEFAULT_PLAN);
+        const planRow = await resolverPlan({ plan: plan || DEFAULT_PLAN });
+        const planFields = camposPlanEmpresa(planRow);
+        const planId = planFields.plan;
         const minLicencias = getPlanMinLicencias(planId);
         const licenciasSolicitadas = Number(numLicencias);
 
@@ -77,7 +96,8 @@ const registerCompany = async (req, res) => {
             fecha_alta: fecha,
             usuario_alta: idUsuarioAccion,
             licencias: licenciasSolicitadas,
-            plan: planId,
+            id_plan: planFields.id_plan,
+            plan: planFields.plan,
             alias : alias
         }, { transaction });
 
@@ -112,6 +132,22 @@ const registerCompany = async (req, res) => {
             fecha_alta: fecha,
             usuario_alta : idUsuarioAccion,
         }, { transaction });
+
+        await sequelize.query(
+          `INSERT INTO empresa_facturacion (id_empresa, modo_facturacion, id_plan, licencias_facturadas)
+           VALUES (:idEmpresa, 'legacy', :idPlan, :licencias)
+           ON DUPLICATE KEY UPDATE
+             id_plan = VALUES(id_plan),
+             licencias_facturadas = VALUES(licencias_facturadas)`,
+          {
+            replacements: {
+              idEmpresa: empresa.id_empresa,
+              idPlan: planFields.id_plan,
+              licencias: licenciasSolicitadas,
+            },
+            transaction,
+          },
+        );
 
         await transaction.commit();
 
@@ -191,7 +227,7 @@ const getEmpresasUsuarios = async (req, res)=> {
 
          const result = await sequelize.query(
                 `SELECT e.id_empresa, e.nombre, e.identificador_fiscal, e.fecha_alta, e.licencias,
-                        e.plan, e.activo, e.alias, e.fecha_baja,
+                        e.id_plan, e.plan, e.activo, e.alias, e.fecha_baja,
                         (
                           SELECT u.email
                           FROM m_usuarios_empresas ue
@@ -230,7 +266,12 @@ const editEmpresa = async (req, res)=> {
       return res.status(404).json({ message: 'Empresa no encontrada' });
     }
 
-    const planId = normalizePlanId(datos.plan ?? empresa.plan);
+    const planRow = await resolverPlan({
+      id_plan: datos.id_plan,
+      plan: datos.plan ?? empresa.plan,
+    });
+    const planFields = camposPlanEmpresa(planRow);
+    const planId = planFields.plan;
     const licencias = Number(datos.licencias ?? empresa.licencias);
     const minLicencias = getPlanMinLicencias(planId);
 
@@ -249,7 +290,8 @@ const editEmpresa = async (req, res)=> {
             usuario_modificacion : idUsuario,
             activo: datos.activo,
             alias: datos.alias,
-            plan: planId,
+            id_plan: planFields.id_plan,
+            plan: planFields.plan,
         },
         {
             where: {
@@ -259,13 +301,12 @@ const editEmpresa = async (req, res)=> {
 
       await sequelize.query(
         `UPDATE empresa_facturacion ef
-         INNER JOIN planes p ON p.codigo = :planCodigo AND p.activo = 1
-         SET ef.id_plan = p.id_plan,
+         SET ef.id_plan = :idPlan,
              ef.licencias_facturadas = :licencias
          WHERE ef.id_empresa = :idEmpresa`,
         {
           replacements: {
-            planCodigo: planId,
+            idPlan: planFields.id_plan,
             licencias,
             idEmpresa: idEmpresaNum,
           },
@@ -417,7 +458,7 @@ const getMiEmpresa = async (req, res) => {
 
     return res.status(200).json({
       message: 'Datos recuperados correctamente',
-      empresa: pickMiEmpresaParaCliente(empresa),
+      empresa: await pickMiEmpresaParaCliente(empresa),
     });
   } catch (error) {
     console.error('Error al obtener empresa del usuario:', error);
@@ -440,7 +481,7 @@ const getEmpresaBranding = async (req, res) => {
     }
 
     return res.status(200).json({
-      branding: pickEmpresaBranding(empresa),
+      branding: await pickEmpresaBranding(empresa),
     });
   } catch (error) {
     console.error('Error al obtener branding de empresa:', error);
@@ -494,7 +535,7 @@ const editMiEmpresa = async (req, res) => {
     const empresa = await Empresa.findByPk(idEmpresa);
     return res.status(200).json({
       message: 'Empresa actualizada correctamente',
-      empresa: pickMiEmpresaParaCliente(empresa),
+      empresa: await pickMiEmpresaParaCliente(empresa),
     });
   } catch (error) {
     console.error('Error al editar empresa del usuario:', error);

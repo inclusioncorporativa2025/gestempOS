@@ -72,6 +72,11 @@ const Empresa = sequelize.define('Empresa', {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
+  id_plan: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 1,
+  },
   plan: {
     type: DataTypes.STRING(20),
     allowNull: false,

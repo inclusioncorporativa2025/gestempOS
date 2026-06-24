@@ -89,6 +89,7 @@ const construirClaimsSesion = (usuario, empresa, membresia, extras = {}) => {
   const id_empresa = operativa ? empresa.id_empresa : null;
   const nombre_empresa = operativa ? empresa.nombre : null;
   const alias = operativa ? empresa.alias : null;
+  const planCodigo = normalizePlanId(empresa?.plan);
 
   return {
     id_usuario: usuario.id_usuario,
@@ -99,7 +100,8 @@ const construirClaimsSesion = (usuario, empresa, membresia, extras = {}) => {
     nombre_empresa,
     alias,
     esquema: id_empresa,
-    plan_id: operativa ? normalizePlanId(empresa.plan) : null,
+    plan_id: operativa ? planCodigo : null,
+    plan_row_id: operativa && empresa.id_plan ? Number(empresa.id_plan) : null,
     ...extras,
   };
 };

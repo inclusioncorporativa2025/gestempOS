@@ -128,7 +128,10 @@ export const doForgotPassword = async (email) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(data.message || 'Error al solicitar el restablecimiento');
+    const error = new Error(data.message || 'Error al solicitar el restablecimiento');
+    error.code = data.code;
+    error.devResetUrl = data.devResetUrl;
+    throw error;
   }
 
   return data;

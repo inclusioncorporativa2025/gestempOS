@@ -14,12 +14,16 @@ const ForgotPassword = () => {
     setLoading(true);
     try {
       const data = await doForgotPassword(values.email);
-      message.success('Si el email existe, recibirás un correo para restablecer tu contraseña.');
+      message.success(data.message || 'Si el email existe, recibirás un correo para restablecer tu contraseña.');
       if (data.devResetUrl) {
         console.info('[DEV] Enlace de restablecimiento:', data.devResetUrl);
+        message.info('Modo desarrollo: enlace disponible en la consola del navegador (F12).');
       }
     } catch (error) {
       message.error(error.message || 'Error al enviar el correo. Comprueba que el email es correcto.');
+      if (error.devResetUrl) {
+        console.info('[DEV] Enlace de restablecimiento (correo fallido):', error.devResetUrl);
+      }
     } finally {
       setLoading(false);
     }

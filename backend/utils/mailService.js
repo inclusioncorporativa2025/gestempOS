@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const fs = require('fs');
 const nodemailer = require('nodemailer');
 
 const { APP_URL } = require('../config/appUrls');
@@ -18,24 +19,39 @@ const formatTtlTexto = (ttlMinutos) => {
   return `${ttlMinutos} minutos`;
 };
 
-const buildTransporter = () =>
-  nodemailer.createTransport({
+const buildTransporter = () => {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    const error = new Error('Configuración SMTP incompleta en el servidor');
+    error.code = 'SMTP_NO_CONFIGURADO';
+    throw error;
+  }
+
+  const smtpPort = Number.parseInt(process.env.SMTP_PORT, 10) || 587;
+
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT, 10),
-    secure: parseInt(process.env.SMTP_PORT, 10) === 465,
+    port: smtpPort,
+    secure: smtpPort === 465,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
   });
+};
 
-const logoAttachment = () => [
-  {
-    filename: 'logo.png',
-    path: LOGO_PATH,
-    cid: 'logo',
-  },
-];
+const logoAttachment = () => {
+  if (!fs.existsSync(LOGO_PATH)) {
+    return [];
+  }
+
+  return [
+    {
+      filename: 'logo.png',
+      path: LOGO_PATH,
+      cid: 'logo',
+    },
+  ];
+};
 
 const emailLayout = (cuerpoHtml) => `
   <!DOCTYPE html>
@@ -203,13 +219,18 @@ const buildWelcomeEmailHtml = ({
 
 const enviarCorreo = async ({ to, subject, html, replyTo }) => {
   const transporter = buildTransporter();
+  const attachments = logoAttachment();
+  const htmlConLogo = attachments.length
+    ? html
+    : html.replace(/<img src="cid:logo"[^>]*>/g, '');
+
   await transporter.sendMail({
     from: process.env.SMTP_USER,
     to,
     subject,
-    html,
+    html: htmlConLogo,
     replyTo,
-    attachments: logoAttachment(),
+    attachments,
   });
 };
 
@@ -232,7 +253,12 @@ const generarYEnviarReset = async (usuario, ttlMinutos = RESET_TOKEN_TTL_MINUTES
     });
   } catch (mailError) {
     console.error('Error enviando email de reset:', mailError.message);
-    throw mailError;
+    const error = new Error(mailError.message || 'No se pudo enviar el correo');
+    error.code = mailError.code === 'SMTP_NO_CONFIGURADO'
+      ? 'SMTP_NO_CONFIGURADO'
+      : 'EMAIL_SEND_FAILED';
+    error.enlace = enlace;
+    throw error;
   }
 
   return enlace;

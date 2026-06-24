@@ -4,6 +4,7 @@ const {
   planIncluyeFeature,
   getPlanLabel,
 } = require('../config/plans');
+const { obtenerCodigoPlanEmpresa } = require('./planCatalogService');
 
 const obtenerPlanEmpresa = async (idEmpresa) => {
   if (!idEmpresa) {
@@ -11,10 +12,10 @@ const obtenerPlanEmpresa = async (idEmpresa) => {
   }
 
   const empresa = await Empresa.findByPk(idEmpresa, {
-    attributes: ['plan'],
+    attributes: ['id_plan', 'plan'],
   });
 
-  return normalizePlanId(empresa?.plan);
+  return obtenerCodigoPlanEmpresa(empresa);
 };
 
 const empresaTieneFeature = async (idEmpresa, featureKey) => {

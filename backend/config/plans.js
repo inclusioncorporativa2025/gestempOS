@@ -5,6 +5,7 @@
 const PLAN_IDS = ['esencial', 'rrhh', 'completo'];
 
 const DEFAULT_PLAN = 'esencial';
+const DEFAULT_PLAN_ID = 1;
 
 const PLAN_FEATURES = {
   fichaje: PLAN_IDS,
@@ -48,6 +49,7 @@ const getPlanLabel = (planId) =>
 module.exports = {
   PLAN_IDS,
   DEFAULT_PLAN,
+  DEFAULT_PLAN_ID,
   PLAN_FEATURES,
   PLAN_MIN_LICENCIAS,
   PLAN_LABELS,
