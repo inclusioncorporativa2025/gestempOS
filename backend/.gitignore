@@ -13,6 +13,9 @@ config/*.json
 *.log
 app.log
 
+# PDFs de nóminas subidos (datos sensibles)
+uploads/
+
 # Sistema operativo
 .DS_Store
 Thumbs.db

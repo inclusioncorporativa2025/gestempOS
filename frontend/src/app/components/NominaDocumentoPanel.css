@@ -1,0 +1,41 @@
+.nomina-doc-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nomina-doc-panel__card {
+  border-radius: 8px;
+}
+
+.nomina-doc-panel__title {
+  margin-top: 0 !important;
+}
+
+.nomina-doc-panel__hint {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.nomina-doc-panel__upload-row {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.nomina-doc-panel__periodo {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.nomina-doc-panel__dragger {
+  min-height: 140px;
+}
+
+@media (max-width: 768px) {
+  .nomina-doc-panel__upload-row {
+    grid-template-columns: 1fr;
+  }
+}

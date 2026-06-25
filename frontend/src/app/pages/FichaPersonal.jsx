@@ -37,6 +37,8 @@ import {
 import { etiquetaTipoHora, TIPO_HORA_BOLSA } from '../../utils/tipoHora';
 import BolsaHorasPanel from '../components/BolsaHorasPanel';
 import VacacionesSaldoPanel from '../components/VacacionesSaldoPanel';
+import RetribucionPanel from '../components/RetribucionPanel';
+import NominaDocumentoPanel from '../components/NominaDocumentoPanel';
 import { usePlan } from '../../hooks/usePlan';
 import { getTipoUsuario } from '../../utils/authSession';
 import { puedeVerFichaPersonal } from '../../utils/tipoUsuarioLabel';
@@ -61,6 +63,7 @@ const formatearFecha = (fecha) =>
 const FichaPersonal = () => {
   const { tieneFeature } = usePlan();
   const puedeVerVacaciones = tieneFeature('vacaciones');
+  const puedeVerNominas = tieneFeature('nominas');
   const { id } = useParams();
   const navigate = useNavigate();
   const idUsuario = Number(id);
@@ -354,6 +357,7 @@ const FichaPersonal = () => {
   const tipoUsuarioActual = getTipoUsuario();
   const puedeAjustarBolsa = puedeVerFichaPersonal(tipoUsuarioActual) && Number(tipoUsuarioActual) !== 6;
   const puedeGestionarVacaciones = puedeAjustarBolsa && puedeVerVacaciones;
+  const puedeGestionarNominas = puedeAjustarBolsa && puedeVerNominas;
   const tipoHoraEfectivo = usuario.tipo_hora ?? jornadaAsignada?.tipo_hora ?? resumenHoras?.tipo_hora;
   const esBolsa = Number(tipoHoraEfectivo) === TIPO_HORA_BOLSA;
 
@@ -431,6 +435,22 @@ const FichaPersonal = () => {
               mesSincronizar={selectedMonth.format('YYYY-MM')}
               puedeAjustar={puedeAjustarBolsa}
             />
+          ),
+        }]
+      : []),
+    ...(puedeGestionarNominas
+      ? [{
+          key: 'retribucion',
+          label: 'Retribución',
+          children: (
+            <RetribucionPanel idUsuario={idUsuario} />
+          ),
+        },
+        {
+          key: 'nominas',
+          label: 'Nóminas',
+          children: (
+            <NominaDocumentoPanel idUsuario={idUsuario} />
           ),
         }]
       : []),

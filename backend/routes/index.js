@@ -6,6 +6,7 @@ const jornadaRoutes = require('./jornadaRoutes');
 const calendarioRoutes = require('./calendarioRoutes');
 const ausenciasRoutes = require('./ausenciasRoutes');
 const vacacionesRoutes = require('./vacacionesRoutes');
+const nominasRoutes = require('./nominasRoutes');
 const supportRoutes = require('./supportRoutes');
 const platformRoutes = require('./platformRoutes');
 const { requireAuth, requireOwnEmpresa } = require('../middleware/authMiddleware');
@@ -22,6 +23,7 @@ const configureRoutes = (app) => {
   app.use('/api/calendario', ...empresaScope, calendarioRoutes);
   app.use('/api/ausencias', ...empresaScope, ausenciasRoutes);
   app.use('/api/vacaciones', ...empresaScope, vacacionesRoutes);
+  app.use('/api/nominas', ...empresaScope, nominasRoutes);
   app.use('/api/support', supportRoutes);
   app.use('/api/platform', requireAuth, platformRoutes);
 };

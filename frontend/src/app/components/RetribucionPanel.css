@@ -1,0 +1,42 @@
+.retribucion-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.retribucion-panel__card {
+  border-radius: 12px;
+}
+
+.retribucion-panel__title {
+  margin-top: 0 !important;
+}
+
+.retribucion-panel__hint {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.retribucion-panel__vigente {
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: rgba(var(--color-primary-rgb), 0.08);
+}
+
+.retribucion-panel__form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.retribucion-panel__input-number,
+.retribucion-panel__date {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .retribucion-panel__form-grid {
+    grid-template-columns: 1fr;
+  }
+}
