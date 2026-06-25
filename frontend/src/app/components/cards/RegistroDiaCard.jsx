@@ -4,7 +4,7 @@ import {
   formatearMinutosHoras,
   minutosSemanalesJornadaFija,
   minutosTramosDia,
-} from '../../utils/jornadaHoras';
+} from '../../../utils/jornadaHoras';
 import './RegistroDiaCard.css';
 
 const { Text } = Typography;
