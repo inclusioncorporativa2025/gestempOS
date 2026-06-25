@@ -62,28 +62,28 @@ const pages = [
     key: '1',
     icon: <LoginOutlined />,
     path: APP_ROUTES.home,
-    tipousuario: [1, 3, 4, 5],
+    tipousuario: [1, 2, 3, 4, 5],
   },
   {
     label: 'Gestión Tiempo',
     key: '2',
     icon: <FieldTimeOutlined />,
     path: APP_ROUTES.timeLogs,
-    tipousuario: [1, 3, 4, 5],
+    tipousuario: [1, 2, 3, 4, 5],
   },
   {
     label: 'Personal',
     key: '3',
     icon: <SearchOutlined />,
     path: APP_ROUTES.users,
-    tipousuario: [1, 3, 4, 6],
+    tipousuario: [1, 2, 3, 4, 6],
   },
   {
     label: 'Calendario',
     key: '9',
     icon: <CalendarOutlined />,
     path: APP_ROUTES.calendar,
-    tipousuario: [1, 3, 4, 5],
+    tipousuario: [1, 2, 3, 4, 5],
   },
   {
     label: 'Configuración',
@@ -104,7 +104,7 @@ const pages = [
     key: '10',
     icon: <MailOutlined />,
     path: APP_ROUTES.notifications,
-    tipousuario: [1, 3, 4, 5],
+    tipousuario: [1, 2, 3, 4, 5],
   },
 ];
 
@@ -342,7 +342,7 @@ const AppShell = () => {
                 <Route
                   path={APP_ROUTES.timeLogs}
                   element={
-                    <ProtectedRoute allowedTypes={[1, 3, 4, 5]}>
+                    <ProtectedRoute allowedTypes={[1, 2, 3, 4, 5]}>
                       <GestionTiempoPage />
                     </ProtectedRoute>
                   }
@@ -350,7 +350,7 @@ const AppShell = () => {
                 <Route
                   path={APP_ROUTES.home}
                   element={
-                    <ProtectedRoute allowedTypes={[1, 3, 4, 5]}>
+                    <ProtectedRoute allowedTypes={[1, 2, 3, 4, 5]}>
                       <Home />
                     </ProtectedRoute>
                   }
@@ -358,7 +358,7 @@ const AppShell = () => {
                 <Route
                   path={APP_ROUTES.usersAdd}
                   element={
-                    <ProtectedRoute allowedTypes={[1, 3, 4]}>
+                    <ProtectedRoute allowedTypes={[1, 2, 3, 4]}>
                       <UserManagementForm />
                     </ProtectedRoute>
                   }
@@ -366,7 +366,7 @@ const AppShell = () => {
                 <Route
                   path={APP_ROUTES.calendar}
                   element={
-                    <ProtectedRoute allowedTypes={[1, 3, 4, 5]}>
+                    <ProtectedRoute allowedTypes={[1, 2, 3, 4, 5]}>
                       <Calendario />
                     </ProtectedRoute>
                   }
@@ -426,7 +426,7 @@ const AppShell = () => {
                 <Route
                   path={APP_ROUTES.users}
                   element={
-                    <ProtectedRoute allowedTypes={[1, 3, 4, 6]}>
+                    <ProtectedRoute allowedTypes={[1, 2, 3, 4, 6]}>
                       <BuscadorUsuarios />
                     </ProtectedRoute>
                   }
@@ -434,7 +434,7 @@ const AppShell = () => {
                 <Route
                   path={APP_ROUTES.notifications}
                   element={
-                    <ProtectedRoute allowedTypes={[1, 3, 4, 5]}>
+                    <ProtectedRoute allowedTypes={[1, 2, 3, 4, 5]}>
                       <Notificaciones />
                     </ProtectedRoute>
                   }

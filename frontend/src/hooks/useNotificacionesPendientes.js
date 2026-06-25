@@ -11,7 +11,7 @@ export const notifyNotificacionesActualizadas = () => {
   window.dispatchEvent(new CustomEvent(NOTIFICACIONES_ACTUALIZADAS));
 };
 
-const TIPOS_GESTOR = [1, 3, 4];
+const TIPOS_GESTOR = [1, 2, 3, 4];
 const TIPOS_EMPLEADO = [5];
 
 export const useNotificacionesPendientes = () => {

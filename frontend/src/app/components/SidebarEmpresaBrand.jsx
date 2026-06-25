@@ -38,11 +38,12 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
   const empresaActiva = getIdEmpresa();
   const planId = getPlanId();
   const puedeAnadirEmpresa = TIPOS_PLATAFORMA.includes(tipoUsuario);
+  const esPlataforma = TIPOS_PLATAFORMA.includes(tipoUsuario);
   const tieneMultiempresa = planIncluyeFeature(planId, 'multiempresa');
-  const tieneVariasEmpresas = puedeCambiarEmpresa && empresas.length > 1 && tieneMultiempresa;
+  const tieneVariasEmpresas = puedeCambiarEmpresa && empresas.length > 1
+    && (esPlataforma || tieneMultiempresa);
   const puedeVerMenu =
     TIPOS_MENU_EMPRESA.includes(tipoUsuario) || tieneVariasEmpresas;
-  const esPlataforma = TIPOS_PLATAFORMA.includes(tipoUsuario);
   const nombrePlan = planLabel || getPlanLabel(planId);
 
   const cargarEmpresas = useCallback(async () => {

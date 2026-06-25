@@ -16,7 +16,7 @@ const { Title, Text } = Typography;
 
 
 
-const TIPOS_CONFIG_ORG = [1, 3, 4];
+const TIPOS_CONFIG_ORG = [1, 2, 3, 4];
 
 export const ConfiguracionOrgGate = ({ children }) => {
   const { user } = useAuth();

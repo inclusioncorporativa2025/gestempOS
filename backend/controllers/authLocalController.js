@@ -190,8 +190,9 @@ const login = async (req, res) => {
     }
 
     const tipo = Number(usuario.tipo_usuario);
+    // ROOT (1) entra directo; admin plataforma (2) elige empresa si tiene varias
     const requiereSeleccion =
-      !TIPOS_PLATAFORMA.includes(tipo) && membresiasActivas.length > 1;
+      tipo !== 1 && membresiasActivas.length > 1;
 
     if (requiereSeleccion) {
       const empresas = await listarEmpresasParaSelector(usuario.id_usuario, usuario);
@@ -273,16 +274,17 @@ const switchEmpresa = async (req, res) => {
       ? await Empresa.findByPk(req.user.id_empresa)
       : null;
 
-    if (empresaActual) {
-      await assertEmpresaTieneFeature(empresaActual.id_empresa, 'multiempresa');
-    }
-
     const usuario = await Usuario.findOne({
       where: { id_usuario: req.user.id_usuario, fecha_baja: null },
     });
 
     if (!usuarioActivo(usuario)) {
       return res.status(401).json({ message: 'Usuario no válido' });
+    }
+
+    const esPlataforma = TIPOS_PLATAFORMA.includes(Number(usuario.tipo_usuario));
+    if (empresaActual && !esPlataforma) {
+      await assertEmpresaTieneFeature(empresaActual.id_empresa, 'multiempresa');
     }
 
     const membresia = await obtenerMembresiaActiva(usuario.id_usuario, idEmpresa);
@@ -341,16 +343,18 @@ const misEmpresas = async (req, res) => {
       ? await obtenerPlanEmpresa(idEmpresaActiva)
       : null;
 
+    const esPlataforma = TIPOS_PLATAFORMA.includes(Number(usuario.tipo_usuario));
     let empresas = await listarEmpresasParaSelector(usuario.id_usuario, usuario);
+    const planTieneMultiempresa = planIncluyeFeature(planActivo, 'multiempresa');
 
-    if (!planIncluyeFeature(planActivo, 'multiempresa')) {
+    if (!esPlataforma && !planTieneMultiempresa) {
       empresas = empresas.filter((e) => e.id_empresa === idEmpresaActiva);
     }
 
     return res.status(200).json({
       empresas,
       empresa_activa: idEmpresaActiva,
-      puede_cambiar_empresa: planIncluyeFeature(planActivo, 'multiempresa'),
+      puede_cambiar_empresa: esPlataforma || planTieneMultiempresa,
     });
   } catch (error) {
     console.error('Error en misEmpresas:', error.message);

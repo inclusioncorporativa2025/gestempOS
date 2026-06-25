@@ -19,7 +19,7 @@ dayjs.locale('es');
 const { Text } = Typography;
 
 /** Tipos 1,3,4 gestionan festivos; 2,3,4 (+1) ven ausencias de toda la empresa */
-const TIPOS_GESTION_FESTIVOS = [1, 3, 4];
+const TIPOS_GESTION_FESTIVOS = [1, 2, 3, 4];
 const TIPOS_AUSENCIAS_EMPRESA = [1, 2, 3, 4];
 
 const Calendario = () => {
