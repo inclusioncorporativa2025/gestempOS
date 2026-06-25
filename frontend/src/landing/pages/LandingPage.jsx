@@ -18,11 +18,25 @@ import { PLANS, PLAN_COMPARISON_ROWS, ANNUAL_DISCOUNT_LABEL } from '../../consta
 import LandingFooter from '../components/LandingFooter';
 import LandingHeroVisual from '../components/LandingHeroVisual';
 import LandingPlexusBackground from '../components/LandingPlexusBackground';
+import LandingReveal from '../components/LandingReveal';
 import BrandLogo from '../../components/BrandLogo';
 import './LandingPage.css';
 
-/** Ruta de la imagen del hero (p. ej. '/landing/hero.png'). null = placeholder. */
-const LANDING_HERO_IMAGE = null;
+/** Capturas del producto en el hero (rotación automática). */
+const LANDING_HERO_IMAGES = [
+  {
+    src: '/landing/hero.png',
+    alt: 'Pantalla de fichaje en Timecor',
+  },
+  {
+    src: '/landing/hero-gestion-tiempo.png',
+    alt: 'Gestión de tiempo en tiempo real en Timecor',
+  },
+  {
+    src: '/landing/hero-personal.png',
+    alt: 'Listado de personal en Timecor',
+  },
+];
 
 const PlanCta = ({ href, external, featured, children }) => {
   const className = featured
@@ -168,15 +182,15 @@ const LandingPage = () => {
 
       <section className="landing-hero">
         <div className="landing-container landing-hero-inner">
-          <div className="landing-hero-copy">
-            <p className="landing-eyebrow">Control horario para empresas</p>
+          <LandingReveal className="landing-hero-copy">
+            <p className="landing-eyebrow">Fichaje digital para empresas y autónomos</p>
             <h1 className="landing-title">
-              Control horario digital para cumplir la normativa española, sin pagar una
+              Fichaje digital para cumplir la normativa española, sin pagar una
               suite RRHH completa.
             </h1>
             <p className="landing-lead">
-              El registro de jornada que tu equipo usa cada día. Centraliza fichajes,
-              permisos y configuración por empresa: simple para el personal, potente para el gestor.
+              El fichaje digital de tu equipo centraliza fichajes,
+              permisos y configuración por empresa: simple para el personal, potente para el negocio.
             </p>
             <div className="landing-hero-actions">
               <CtaButton
@@ -185,7 +199,7 @@ const LandingPage = () => {
                 className="landing-cta-start landing-hero-cta-primary"
                 size="large"
               >
-                Empieza gratis
+                Demo gratuita
               </CtaButton>
               {loginIsExternal ? (
                 <Button
@@ -208,13 +222,16 @@ const LandingPage = () => {
                 </Link>
               )}
             </div>
-          </div>
+          </LandingReveal>
 
-          <LandingHeroVisual imageSrc={LANDING_HERO_IMAGE} />
+          <LandingReveal className="landing-hero-visual" delay={160}>
+            <LandingHeroVisual images={LANDING_HERO_IMAGES} />
+          </LandingReveal>
         </div>
       </section>
 
-      <section
+      <LandingReveal
+        as="section"
         id="cumplimiento"
         className="landing-compliance"
         aria-labelledby="landing-compliance-title"
@@ -229,19 +246,25 @@ const LandingPage = () => {
             de la normativa de control horario:
           </p>
           <ul className="landing-compliance-points">
-            {complianceItems.map((item) => (
-              <li key={item.text} className="landing-compliance-point">
+            {complianceItems.map((item, index) => (
+              <LandingReveal
+                as="li"
+                key={item.text}
+                className="landing-compliance-point"
+                delay={index * 100}
+              >
                 <span className="landing-compliance-point-marker" aria-hidden>
                   {item.icon}
                 </span>
                 <p className="landing-compliance-point-text">{item.text}</p>
-              </li>
+              </LandingReveal>
             ))}
           </ul>
         </div>
-      </section>
+      </LandingReveal>
 
-      <section
+      <LandingReveal
+        as="section"
         id="planes"
         className="landing-plans"
         aria-labelledby="landing-plans-title"
@@ -255,9 +278,11 @@ const LandingPage = () => {
           </p>
 
           <ul className="landing-plans-grid">
-            {PLANS.map((plan) => (
-              <li
+            {PLANS.map((plan, index) => (
+              <LandingReveal
+                as="li"
                 key={plan.id}
+                delay={index * 120}
                 className={`landing-plan-item${
                   !plan.available ? ' landing-plan-item--unavailable' : ''
                 }`}
@@ -320,11 +345,11 @@ const LandingPage = () => {
                     </div>
                   </div>
                 </article>
-              </li>
+              </LandingReveal>
             ))}
           </ul>
 
-          <div className="landing-plan-compare">
+          <LandingReveal className="landing-plan-compare" delay={200}>
             <h3 className="landing-plan-compare-title">Comparativa detallada</h3>
             <p className="landing-plan-compare-lead">
               Consulta qué incluye cada plan. El plan Completo estará disponible próximamente.
@@ -398,11 +423,12 @@ const LandingPage = () => {
                 ))}
               </ul>
             </div>
-          </div>
+          </LandingReveal>
         </div>
-      </section>
+      </LandingReveal>
 
-      <section
+      <LandingReveal
+        as="section"
         id="ausencias"
         className="landing-absences"
         aria-labelledby="landing-absences-title"
@@ -418,19 +444,25 @@ const LandingPage = () => {
             y qué días computan según la jornada asignada.
           </p>
           <ul className="landing-absences-points">
-            {absenceItems.map((item) => (
-              <li key={item.text} className="landing-absences-point">
+            {absenceItems.map((item, index) => (
+              <LandingReveal
+                as="li"
+                key={item.text}
+                className="landing-absences-point"
+                delay={index * 100}
+              >
                 <span className="landing-absences-point-marker" aria-hidden>
                   {item.icon}
                 </span>
                 <p className="landing-absences-point-text">{item.text}</p>
-              </li>
+              </LandingReveal>
             ))}
           </ul>
         </div>
-      </section>
+      </LandingReveal>
 
-      <section
+      <LandingReveal
+        as="section"
         id="funcionalidades"
         className="landing-features"
         aria-labelledby="landing-features-title"
@@ -440,20 +472,27 @@ const LandingPage = () => {
             Todo lo que necesitas
           </h2>
           <ul className="landing-feature-grid">
-            {features.map((item) => (
-              <li key={item.title} className="landing-feature-card">
+            {features.map((item, index) => (
+              <LandingReveal
+                as="li"
+                key={item.title}
+                className="landing-feature-card"
+                delay={index * 90}
+              >
                 <span className="landing-feature-icon" aria-hidden>
                   {item.icon}
                 </span>
                 <h3>{item.title}</h3>
                 <p>{item.text}</p>
-              </li>
+              </LandingReveal>
             ))}
           </ul>
         </div>
-      </section>
+      </LandingReveal>
 
-      <LandingFooter />
+      <LandingReveal className="landing-footer-reveal">
+        <LandingFooter />
+      </LandingReveal>
       </div>
     </div>
   );
