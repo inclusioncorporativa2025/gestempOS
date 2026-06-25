@@ -146,3 +146,12 @@ export const crearAusencia = async (
     throw error;
   }
 };
+
+/** Muestra días de ausencia (enteros o 0,5 para medio día). */
+export const formatDiasAusencia = (dias) => {
+  if (dias == null || dias === '') return '—';
+  const n = Number(dias);
+  if (Number.isNaN(n)) return '—';
+  if (Number.isInteger(n)) return String(n);
+  return n.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+};

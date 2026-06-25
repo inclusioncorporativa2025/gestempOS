@@ -10,6 +10,7 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 0 1.5rem;
+  box-sizing: border-box;
 }
 
 .landing-footer-main {
@@ -131,6 +132,10 @@
 @media (max-width: 640px) {
   .landing-footer {
     padding: 2.5rem 0 1.5rem;
+  }
+
+  .landing-footer-inner {
+    padding: 0 1.25rem;
   }
 
   .landing-footer-columns {

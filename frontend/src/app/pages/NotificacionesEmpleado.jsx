@@ -18,7 +18,7 @@ import {
 import { getHorasTotalesMesByIdUsuario } from '../../features/user/usuarioService';
 import { notifyNotificacionesActualizadas } from '../../hooks/useNotificacionesPendientes';
 import { usePlan } from '../../hooks/usePlan';
-import { getAusenciasNotificacionesEmpleado } from '../../features/ausencias/ausenciasService';
+import { getAusenciasNotificacionesEmpleado, formatDiasAusencia } from '../../features/ausencias/ausenciasService';
 import { getIdUsuario, getNombreUsuario } from '../../utils/authSession';
 import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import { parseFechaFichaje } from '../../utils/fechaFichaje';
@@ -565,6 +565,7 @@ const NotificacionesEmpleado = () => {
         key: 'dias',
         width: 72,
         align: 'center',
+        render: formatDiasAusencia,
       },
       {
         title: 'Fecha solicitud',

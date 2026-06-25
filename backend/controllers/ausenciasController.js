@@ -24,6 +24,7 @@ const { obtenerEmailsGestoresEmpresa } = require('../utils/gestoresEmpresa');
 const {
   esAusenciaVacaciones,
   registrarConsumoPorAusencia,
+  calcularDiasConsumoAusencia,
 } = require('../services/vacacionesService');
 const { vacacionesSoportaSaldo } = require('../utils/vacacionesCompat');
 
@@ -63,7 +64,7 @@ const enriquecerAusenciasConUsuarios = async (ausencias) => {
     ...a,
     nombre_usuario: nombrePorId[a.id_usuario] || '',
     nombre_gestor: a.id_usuario_gestor ? (nombrePorId[a.id_usuario_gestor] || '') : '',
-    dias: expandirRangoDias(a.fecha_desde, a.fecha_hasta).length,
+    dias: calcularDiasConsumoAusencia(a),
   }));
 };
 

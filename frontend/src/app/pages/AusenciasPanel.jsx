@@ -3,7 +3,7 @@ import { Card, Table, Tag, Input, Select, DatePicker, Empty, Spin, message, Butt
 import { SearchOutlined, ReloadOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import { getAusenciasListado } from '../../features/ausencias/ausenciasService';
+import { getAusenciasListado, formatDiasAusencia } from '../../features/ausencias/ausenciasService';
 import { getTipoUsuario } from '../../utils/authSession';
 import SolicitarAusenciaModal from '../components/SolicitarAusenciaModal';
 import './AusenciasPanel.css';
@@ -154,7 +154,7 @@ const AusenciasPanel = () => {
       key: 'dias',
       width: 72,
       align: 'center',
-      render: (dias) => dias ?? '—',
+      render: formatDiasAusencia,
     },
     {
       title: 'Horario',

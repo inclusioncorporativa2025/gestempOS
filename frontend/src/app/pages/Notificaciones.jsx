@@ -35,6 +35,7 @@ import {
   getAusenciasPendientesEmpresa,
   getHistorialAusenciasEmpresa,
   responderAusencia,
+  formatDiasAusencia,
 } from '../../features/ausencias/ausenciasService';
 import './Notificaciones.css';
 
@@ -988,6 +989,7 @@ const setVisibleModalDetalles = async (info) => {
         key: 'dias',
         width: 72,
         align: 'center',
+        render: formatDiasAusencia,
       },
       {
         title: 'Comentario',

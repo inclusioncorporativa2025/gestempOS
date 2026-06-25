@@ -6,12 +6,23 @@ import {
   TeamOutlined,
   SafetyCertificateOutlined,
   BarChartOutlined,
+  FileProtectOutlined,
+  HistoryOutlined,
+  SolutionOutlined,
+  CalendarOutlined,
+  SyncOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons';
 import { getAppLoginHref, getAppRegisterHref } from '../../utils/appLinks';
 import { PLANS, PLAN_COMPARISON_ROWS, ANNUAL_DISCOUNT_LABEL } from '../../constants/plans';
 import LandingFooter from '../components/LandingFooter';
+import LandingHeroVisual from '../components/LandingHeroVisual';
+import LandingPlexusBackground from '../components/LandingPlexusBackground';
 import BrandLogo from '../../components/BrandLogo';
 import './LandingPage.css';
+
+/** Ruta de la imagen del hero (p. ej. '/landing/hero.png'). null = placeholder. */
+const LANDING_HERO_IMAGE = null;
 
 const PlanCta = ({ href, external, featured, children }) => {
   const className = featured
@@ -34,6 +45,36 @@ const PlanCta = ({ href, external, featured, children }) => {
     </Link>
   );
 };
+
+const complianceItems = [
+  {
+    icon: <FileProtectOutlined />,
+    text: 'Informes y listados oficiales para la Inspección de Trabajo',
+  },
+  {
+    icon: <HistoryOutlined />,
+    text: 'Resúmenes mensuales requeridos por ley durante 4 años',
+  },
+  {
+    icon: <SolutionOutlined />,
+    text: 'Informe mensual de horas extraordinarias disponible para los representantes de los trabajadores',
+  },
+];
+
+const absenceItems = [
+  {
+    icon: <CalendarOutlined />,
+    text: 'Vacaciones, permisos y bajas en el mismo calendario que la jornada de cada empleado',
+  },
+  {
+    icon: <SyncOutlined />,
+    text: 'Festivos, ausencias aprobadas y fichajes en una sola vista, sin hojas de cálculo aparte',
+  },
+  {
+    icon: <CheckCircleOutlined />,
+    text: 'Solicitud, aprobación del gestor y saldo de vacaciones siempre alineados con el registro horario',
+  },
+];
 
 const features = [
   {
@@ -103,6 +144,8 @@ const LandingPage = () => {
 
   return (
     <div className="landing gradient-bg">
+      <LandingPlexusBackground />
+      <div className="landing-surface">
       <div className="landing-header-shell">
         <header className="landing-header">
           <div className="landing-header-inner">
@@ -125,35 +168,76 @@ const LandingPage = () => {
 
       <section className="landing-hero">
         <div className="landing-container landing-hero-inner">
-          <p className="landing-eyebrow">Control horario para empresas</p>
-          <h1 className="landing-title">
-            El registro de jornada que tu equipo usa cada día
-          </h1>
-          <p className="landing-lead">
-            Centraliza fichajes, permisos y configuración por empresa. Simple para el
-            personal, potente para el gestor.
-          </p>
-          <div className="landing-hero-actions">
-            <CtaButton
-              href={registerHref}
-              external={registerIsExternal}
-              className="landing-cta-start"
-              size="large"
-            >
-              Empieza gratis
-            </CtaButton>
-            {loginIsExternal ? (
-              <Button type="default" size="large" href={loginHref} className="landing-hero-login">
-                Acceder
-              </Button>
-            ) : (
-              <Link to={loginHref}>
-                <Button type="default" size="large" className="landing-hero-login">
+          <div className="landing-hero-copy">
+            <p className="landing-eyebrow">Control horario para empresas</p>
+            <h1 className="landing-title">
+              Control horario digital para cumplir la normativa española, sin pagar una
+              suite RRHH completa.
+            </h1>
+            <p className="landing-lead">
+              El registro de jornada que tu equipo usa cada día. Centraliza fichajes,
+              permisos y configuración por empresa: simple para el personal, potente para el gestor.
+            </p>
+            <div className="landing-hero-actions">
+              <CtaButton
+                href={registerHref}
+                external={registerIsExternal}
+                className="landing-cta-start landing-hero-cta-primary"
+                size="large"
+              >
+                Empieza gratis
+              </CtaButton>
+              {loginIsExternal ? (
+                <Button
+                  type="default"
+                  size="large"
+                  href={loginHref}
+                  className="landing-hero-login landing-hero-cta-secondary"
+                >
                   Acceder
                 </Button>
-              </Link>
-            )}
+              ) : (
+                <Link to={loginHref}>
+                  <Button
+                    type="default"
+                    size="large"
+                    className="landing-hero-login landing-hero-cta-secondary"
+                  >
+                    Acceder
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
+
+          <LandingHeroVisual imageSrc={LANDING_HERO_IMAGE} />
+        </div>
+      </section>
+
+      <section
+        id="cumplimiento"
+        className="landing-compliance"
+        aria-labelledby="landing-compliance-title"
+      >
+        <div className="landing-container landing-compliance-inner">
+          <p className="landing-compliance-kicker">Evita inspecciones y multas</p>
+          <h2 id="landing-compliance-title" className="landing-compliance-title">
+            Cumple la ley de control horario
+          </h2>
+          <p className="landing-compliance-intro">
+            Todo lo que necesitas para evitar sanciones y asegurar el cumplimiento
+            de la normativa de control horario:
+          </p>
+          <ul className="landing-compliance-points">
+            {complianceItems.map((item) => (
+              <li key={item.text} className="landing-compliance-point">
+                <span className="landing-compliance-point-marker" aria-hidden>
+                  {item.icon}
+                </span>
+                <p className="landing-compliance-point-text">{item.text}</p>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
@@ -192,7 +276,9 @@ const LandingPage = () => {
                     <p className="landing-plan-price">
                       <span className="landing-plan-price-from">desde</span>{' '}
                       <strong>{plan.priceMonthly} €</strong>
-                      <span className="landing-plan-price-unit">/ licencia / mes</span>
+                      <span className="landing-plan-price-unit landing-plan-price-unit--block-sm">
+                        / licencia / mes
+                      </span>
                     </p>
                     <p className="landing-plan-price-annual">
                       <strong>{plan.priceAnnual} €</strong>
@@ -243,7 +329,8 @@ const LandingPage = () => {
             <p className="landing-plan-compare-lead">
               Consulta qué incluye cada plan. El plan Completo estará disponible próximamente.
             </p>
-            <div className="landing-plan-compare-scroll">
+
+            <div className="landing-plan-compare-scroll landing-plan-compare-scroll--desktop">
               <table className="landing-plan-compare-table">
                 <caption className="landing-plan-compare-caption">
                   Funcionalidades por plan
@@ -275,7 +362,71 @@ const LandingPage = () => {
                 </tbody>
               </table>
             </div>
+
+            <div className="landing-plan-compare-mobile" aria-label="Comparativa de planes en móvil">
+              <div className="landing-plan-compare-mobile-header" role="row">
+                {PLANS.map((plan) => (
+                  <div
+                    key={plan.id}
+                    className={`landing-plan-compare-mobile-plan landing-plan-compare-mobile-plan--${plan.variant}`}
+                    role="columnheader"
+                  >
+                    <span className="landing-plan-compare-mobile-plan-name">{plan.name}</span>
+                    {!plan.available && (
+                      <span className="landing-plan-compare-mobile-plan-badge">Próximamente</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <ul className="landing-plan-compare-mobile-list">
+                {PLAN_COMPARISON_ROWS.map((row) => (
+                  <li key={row.id} className="landing-plan-compare-mobile-row">
+                    <p className="landing-plan-compare-mobile-label">{row.label}</p>
+                    <div className="landing-plan-compare-mobile-cells" role="row">
+                      {PLANS.map((plan) => (
+                        <div
+                          key={plan.id}
+                          className="landing-plan-compare-mobile-cell"
+                          role="cell"
+                          aria-label={`${plan.name}: ${row.plans[plan.id] ? 'incluido' : 'no incluido'}`}
+                        >
+                          <PlanCompareCell included={row.plans[plan.id]} />
+                        </div>
+                      ))}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
+        </div>
+      </section>
+
+      <section
+        id="ausencias"
+        className="landing-absences"
+        aria-labelledby="landing-absences-title"
+      >
+        <div className="landing-container landing-absences-inner">
+          <p className="landing-absences-kicker">Ausencias y calendario</p>
+          <h2 id="landing-absences-title" className="landing-absences-title">
+            Días libres, permisos y bajas sincronizadas con la jornada laboral
+          </h2>
+          <p className="landing-absences-intro">
+            Gestiona vacaciones, asuntos propios y bajas junto al registro horario:
+            el calendario de la empresa refleja quién trabaja, quién está de permiso
+            y qué días computan según la jornada asignada.
+          </p>
+          <ul className="landing-absences-points">
+            {absenceItems.map((item) => (
+              <li key={item.text} className="landing-absences-point">
+                <span className="landing-absences-point-marker" aria-hidden>
+                  {item.icon}
+                </span>
+                <p className="landing-absences-point-text">{item.text}</p>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
@@ -303,6 +454,7 @@ const LandingPage = () => {
       </section>
 
       <LandingFooter />
+      </div>
     </div>
   );
 };
