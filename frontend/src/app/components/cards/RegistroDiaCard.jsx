@@ -1,5 +1,10 @@
 import React, { useMemo } from 'react';
 import { Card, Typography, Table, Descriptions, Tag } from 'antd';
+import {
+  formatearMinutosHoras,
+  minutosSemanalesJornadaFija,
+  minutosTramosDia,
+} from '../../utils/jornadaHoras';
 import './RegistroDiaCard.css';
 
 const { Text } = Typography;
@@ -43,6 +48,10 @@ const RegistroDiaCard = ({ tipo }) => {
   const esFlexible = Number(tipo.tipo) === 2;
   const dias = Array.isArray(config.dias) ? config.dias : [];
   const horasMensuales = config.horasMensuales ?? tipo.horasMensuales ?? '';
+  const minutosSemanales = useMemo(
+    () => (esFlexible ? 0 : minutosSemanalesJornadaFija(dias)),
+    [dias, esFlexible],
+  );
 
   const columns = [
     { title: 'Hora entrada', dataIndex: 'hora_entrada', key: 'hora_entrada' },
@@ -78,9 +87,18 @@ const RegistroDiaCard = ({ tipo }) => {
               )}
             </Descriptions.Item>
           ) : (
-            <Descriptions.Item label="Días configurados">
-              {dias.length > 0 ? dias.length : 'Ninguno'}
-            </Descriptions.Item>
+            <>
+              <Descriptions.Item label="Días configurados">
+                {dias.length > 0 ? dias.length : 'Ninguno'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Horas semanales">
+                {minutosSemanales > 0 ? (
+                  <Text strong>{formatearMinutosHoras(minutosSemanales)}</Text>
+                ) : (
+                  <Text type="secondary">—</Text>
+                )}
+              </Descriptions.Item>
+            </>
           )}
         </Descriptions>
 
@@ -91,9 +109,16 @@ const RegistroDiaCard = ({ tipo }) => {
           ) : (
             dias.map((dia, index) => (
               <Card key={`${dia.dia}-${index}`} className="registro-card" size="small">
-                <Text strong className="registro-dia-nombre">
-                  {dia.dia}
-                </Text>
+                <div className="registro-dia-nombre-row">
+                  <Text strong className="registro-dia-nombre">
+                    {dia.dia}
+                  </Text>
+                  {minutosTramosDia(dia) > 0 && (
+                    <Text type="secondary" className="registro-dia-horas">
+                      {formatearMinutosHoras(minutosTramosDia(dia))}
+                    </Text>
+                  )}
+                </div>
                 {Array.isArray(dia.horario) && dia.horario.length > 0 ? (
                   <Table
                     className="registro-dia-tabla"

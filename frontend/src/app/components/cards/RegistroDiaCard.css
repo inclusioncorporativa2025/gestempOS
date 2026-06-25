@@ -26,10 +26,22 @@
   background: rgba(255, 255, 255, 0.6) !important;
 }
 
+.registro-dia-nombre-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
 .registro-dia-nombre {
   display: block;
-  margin-bottom: 10px;
   font-size: 0.95rem;
+}
+
+.registro-dia-horas {
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 .registro-dia-tabla .ant-table {

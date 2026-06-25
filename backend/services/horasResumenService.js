@@ -12,16 +12,10 @@ const {
   TIPOS_HORA,
 } = require('../utils/tipoHora');
 const { enriquecerResumenBolsa, obtenerSaldoBolsa } = require('./bolsaHorasService');
-
-const DIAS_SEMANA_MAP = {
-  Lunes: 1,
-  Martes: 2,
-  Miércoles: 3,
-  Jueves: 4,
-  Viernes: 5,
-  Sábado: 6,
-  Domingo: 0,
-};
+const {
+  esJornadaFija,
+  minutosOrdinariosMesJornadaFija,
+} = require('../utils/jornadaHoras');
 
 const resolverTipoHora = async (idEmpresa, idUsuario) => {
   const membresia = await UsuarioEmpresa.findOne({
@@ -107,32 +101,13 @@ const calcularHorasOrdinariasMes = async (idEmpresa, idUsuario, mes) => {
 
   let totalMinutos = 0;
 
-  if (Number(jornada.tipo) === 1) {
+  if (esJornadaFija(jornada)) {
     const diasJornada = jornada.column1?.dias || [];
-
-    const fechaMes = dayjs(`${mesNormalizado}-01`);
-    const daysInMonth = fechaMes.daysInMonth();
-
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      const fecha = fechaMes.date(day);
-      if (festivosSet.has(fecha.format('YYYY-MM-DD'))) {
-        continue;
-      }
-
-      const diaSemana = fecha.day();
-      diasJornada.forEach((dia) => {
-        const diaConfig = DIAS_SEMANA_MAP[dia.dia];
-        if (diaConfig === diaSemana) {
-          (dia.horario || []).forEach(({ horaEntrada, horaSalida }) => {
-            const entrada = dayjs(`2020-01-01T${horaEntrada}`);
-            const salida = dayjs(`2020-01-01T${horaSalida}`);
-            if (entrada.isValid() && salida.isValid()) {
-              totalMinutos += salida.diff(entrada, 'minute');
-            }
-          });
-        }
-      });
-    }
+    totalMinutos = minutosOrdinariosMesJornadaFija(
+      diasJornada,
+      mesNormalizado,
+      festivosSet,
+    );
   } else {
     const horasMensuales = Number(jornada.column1?.horasMensuales) || 0;
     totalMinutos = horasMensuales * 60;
