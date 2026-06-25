@@ -33,6 +33,7 @@
 
 .landing-footer-logo:hover {
   opacity: 0.85;
+  text-decoration: none;
 }
 
 .landing-footer-tagline {
@@ -77,6 +78,7 @@
 
 .landing-footer-link:hover {
   color: var(--color-primary);
+  text-decoration: none;
 }
 
 .landing-footer-legal {
@@ -111,6 +113,7 @@
 
 .landing-footer-legal-link:hover {
   color: var(--color-primary);
+  text-decoration: none;
 }
 
 .landing-footer-legal-sep {
