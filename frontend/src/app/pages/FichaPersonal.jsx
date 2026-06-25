@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   Card,
   Tabs,
@@ -25,7 +25,7 @@ import esES from 'antd/es/locale/es_ES';
 import { ConfigProvider } from 'antd';
 
 import { APP_ROUTES } from '../../constants/routes';
-import { getUsuariosEmpresa, getHorasTotalesMesByIdUsuario } from '../../features/user/usuarioService';
+import { getUsuariosEmpresa, getHorasTotalesMesByIdUsuario, getMiPerfil } from '../../features/user/usuarioService';
 import { obtenerJornadas } from '../../features/jornada/jornadaService';
 import {
   getDatosUsuarioById,
@@ -33,6 +33,7 @@ import {
   getCierresMensualesByIdEmpresa,
   getHistorialCierresMensuales,
   getFirmaCierreMensual,
+  getPeticionesByIdUsuario,
 } from '../../features/fichaje/fichajeService';
 import { etiquetaTipoHora, TIPO_HORA_BOLSA } from '../../utils/tipoHora';
 import BolsaHorasPanel from '../components/BolsaHorasPanel';
@@ -40,7 +41,7 @@ import VacacionesSaldoPanel from '../components/VacacionesSaldoPanel';
 import RetribucionPanel from '../components/RetribucionPanel';
 import NominaDocumentoPanel from '../components/NominaDocumentoPanel';
 import { usePlan } from '../../hooks/usePlan';
-import { getTipoUsuario } from '../../utils/authSession';
+import { getTipoUsuario, getIdUsuario } from '../../utils/authSession';
 import { puedeVerFichaPersonal } from '../../utils/tipoUsuarioLabel';
 import { etiquetaTipoUsuario } from '../../utils/tipoUsuarioLabel';
 import {
@@ -65,8 +66,11 @@ const FichaPersonal = () => {
   const puedeVerVacaciones = tieneFeature('vacaciones');
   const puedeVerNominas = tieneFeature('nominas');
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const idUsuario = Number(id);
+  const esMiPerfil = location.pathname === APP_ROUTES.miPerfil;
+  const idSesion = getIdUsuario();
+  const idUsuario = esMiPerfil ? idSesion : Number(id);
 
   const [loading, setLoading] = useState(true);
   const [usuario, setUsuario] = useState(null);
@@ -91,26 +95,57 @@ const FichaPersonal = () => {
   const cargarFicha = useCallback(async () => {
     if (!Number.isInteger(idUsuario) || idUsuario <= 0) {
       message.error('Identificador de personal no válido');
-      navigate(APP_ROUTES.users);
+      navigate(esMiPerfil ? APP_ROUTES.home : APP_ROUTES.users);
+      return;
+    }
+
+    const tipoActual = Number(getTipoUsuario());
+    const esPropio = esMiPerfil || idUsuario === idSesion;
+    if (!esPropio && !puedeVerFichaPersonal(tipoActual)) {
+      message.error('No tienes permiso para ver esta ficha');
+      navigate(APP_ROUTES.home);
       return;
     }
 
     setLoading(true);
     try {
-      const [usuarios, jornadas, pendientes, historial] = await Promise.all([
-        getUsuariosEmpresa(),
-        obtenerJornadas(),
-        getCierresMensualesByIdEmpresa(),
-        getHistorialCierresMensuales(),
-      ]);
+      const jornadas = await obtenerJornadas();
+      let encontrado = null;
+      let todosCierres = [];
 
-      const encontrado = (usuarios || []).find(
-        (u) => Number(u.id_usuario) === idUsuario,
-      );
+      if (esPropio) {
+        const [perfil, peticiones] = await Promise.all([
+          getMiPerfil(),
+          getPeticionesByIdUsuario(),
+        ]);
+        encontrado = perfil;
+        todosCierres = peticiones?.mesesCierre || [];
+      } else {
+        const [usuarios, pendientes, historial] = await Promise.all([
+          getUsuariosEmpresa(),
+          getCierresMensualesByIdEmpresa(),
+          getHistorialCierresMensuales(),
+        ]);
+
+        encontrado = (usuarios || []).find(
+          (u) => Number(u.id_usuario) === idUsuario,
+        );
+
+        if (!encontrado) {
+          message.error('No se encontró el personal indicado');
+          navigate(APP_ROUTES.users);
+          return;
+        }
+
+        todosCierres = combinarCierres(
+          pendientes?.info || [],
+          historial?.info || [],
+        ).filter((item) => Number(item.usuario_alta) === idUsuario);
+      }
 
       if (!encontrado) {
         message.error('No se encontró el personal indicado');
-        navigate(APP_ROUTES.users);
+        navigate(esMiPerfil ? APP_ROUTES.home : APP_ROUTES.users);
         return;
       }
 
@@ -121,19 +156,14 @@ const FichaPersonal = () => {
         (j) => Number(j.id_jornada) === Number(idJornada),
       );
       setJornadaAsignada(jornada || null);
-
-      const todosCierres = combinarCierres(
-        pendientes?.info || [],
-        historial?.info || [],
-      ).filter((item) => Number(item.usuario_alta) === idUsuario);
       setCierres(todosCierres);
     } catch {
       message.error('Error al cargar la ficha de personal');
-      navigate(APP_ROUTES.users);
+      navigate(esMiPerfil ? APP_ROUTES.home : APP_ROUTES.users);
     } finally {
       setLoading(false);
     }
-  }, [idUsuario, navigate]);
+  }, [esMiPerfil, idSesion, idUsuario, navigate]);
 
   useEffect(() => {
     cargarFicha();
@@ -355,9 +385,10 @@ const FichaPersonal = () => {
   if (!usuario) return null;
 
   const tipoUsuarioActual = getTipoUsuario();
+  const esPropio = esMiPerfil || idUsuario === idSesion;
   const puedeAjustarBolsa = puedeVerFichaPersonal(tipoUsuarioActual) && Number(tipoUsuarioActual) !== 6;
-  const puedeGestionarVacaciones = puedeAjustarBolsa && puedeVerVacaciones;
-  const puedeGestionarNominas = puedeAjustarBolsa && puedeVerNominas;
+  const puedeGestionarVacaciones = puedeAjustarBolsa && puedeVerVacaciones && !esPropio;
+  const puedeGestionarNominas = puedeAjustarBolsa && puedeVerNominas && !esPropio;
   const tipoHoraEfectivo = usuario.tipo_hora ?? jornadaAsignada?.tipo_hora ?? resumenHoras?.tipo_hora;
   const esBolsa = Number(tipoHoraEfectivo) === TIPO_HORA_BOLSA;
 
@@ -454,7 +485,7 @@ const FichaPersonal = () => {
           ),
         }]
       : []),
-    ...(puedeVerVacaciones
+    ...(puedeVerVacaciones && (puedeGestionarVacaciones || esPropio)
       ? [{
           key: 'vacaciones',
           label: 'Vacaciones',
@@ -511,16 +542,18 @@ const FichaPersonal = () => {
       <div className="fp-page">
         <div className="fp-header">
           <div className="fp-header-main">
-            <Button
-              type="link"
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate(APP_ROUTES.users)}
-              className="fp-back-btn"
-            >
-              Volver al listado
-            </Button>
+            {!esMiPerfil && (
+              <Button
+                type="link"
+                icon={<ArrowLeftOutlined />}
+                onClick={() => navigate(APP_ROUTES.users)}
+                className="fp-back-btn"
+              >
+                Volver al listado
+              </Button>
+            )}
             <Title level={2} className="fp-title">
-              Ficha de personal
+              {esMiPerfil ? 'Mi perfil' : 'Ficha de personal'}
             </Title>
             <Text className="fp-subtitle">
               {usuario.nombre} · {usuario.dni}

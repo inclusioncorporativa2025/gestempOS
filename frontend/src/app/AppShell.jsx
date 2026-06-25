@@ -13,6 +13,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   AppstoreOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import Login from './pages/Login';
 import Home from './pages/Home';
@@ -106,6 +107,13 @@ const pages = [
     path: APP_ROUTES.notifications,
     tipousuario: [1, 2, 3, 4, 5],
   },
+  {
+    label: 'Mi perfil',
+    key: '12',
+    icon: <UserOutlined />,
+    path: APP_ROUTES.miPerfil,
+    tipousuario: [1, 2, 3, 4, 5],
+  },
 ];
 
 const AppShell = () => {
@@ -168,6 +176,9 @@ const AppShell = () => {
         location.pathname === page.path ||
         location.pathname.startsWith(`${page.path}/`)
       );
+    }
+    if (page.path === APP_ROUTES.miPerfil) {
+      return location.pathname === APP_ROUTES.miPerfil;
     }
     return page.path.toLowerCase() === location.pathname.toLowerCase();
   });
@@ -414,6 +425,14 @@ const AppShell = () => {
                 <Route
                   path="/companies"
                   element={<Navigate to={APP_ROUTES.platformEmpresas} replace />}
+                />
+                <Route
+                  path={APP_ROUTES.miPerfil}
+                  element={
+                    <ProtectedRoute allowedTypes={[1, 2, 3, 4, 5]}>
+                      <FichaPersonal />
+                    </ProtectedRoute>
+                  }
                 />
                 <Route
                   path={`${APP_ROUTES.users}/:id`}

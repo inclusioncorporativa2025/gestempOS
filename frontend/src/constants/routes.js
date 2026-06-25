@@ -33,6 +33,7 @@ export const APP_ROUTES = {
   platformAcceder: '/platform/acceder',
   platformEmpresas: '/platform/empresas',
   notifications: '/notifications',
+  miPerfil: '/mi-perfil',
 };
 
 /** @deprecated Prefer APP_ROUTES or LANDING_ROUTES */

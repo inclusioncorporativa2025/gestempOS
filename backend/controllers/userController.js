@@ -71,13 +71,35 @@ const getMiPerfil = async (req, res) => {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
 
-        const perfil = sanitizePerfil(usuario);
+        const perfil = {
+            ...sanitizePerfil(usuario),
+            fecha_alta: usuario.fecha_alta,
+            activo: usuario.activo,
+            tipo_hora: null,
+            jornadas: [],
+        };
+
         const idEmpresa = Number(req.user.id_empresa);
         if (idEmpresa) {
             const membresia = await obtenerMembresiaActiva(idUsuario, idEmpresa);
             if (membresia) {
                 perfil.tipo_usuario = resolverTipoSesion(usuario, membresia);
+                perfil.tipo_hora = membresia.tipo_hora ?? null;
             }
+
+            const usuarioJornadas = await UsuarioJornada.findAll({
+                where: {
+                    empresa_id: idEmpresa,
+                    id_usuario: idUsuario,
+                    fecha_baja: null,
+                },
+            });
+
+            perfil.jornadas = usuarioJornadas.map((jornadaUsuario) => ({
+                id_jornada: jornadaUsuario.id_jornada,
+                empresa_id: jornadaUsuario.empresa_id,
+                id_usuario: jornadaUsuario.id_usuario,
+            }));
         }
 
         return res.status(200).json({ perfil });
