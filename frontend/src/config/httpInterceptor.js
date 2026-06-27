@@ -8,6 +8,7 @@
 
 import { getAppLoginHref } from '../utils/appLinks';
 import { getAuthToken, clearAuthSession } from '../utils/authSession';
+import { TRIAL_EXPIRED_EVENT } from '../hooks/useTrialStatus';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
 const originalFetch = window.fetch.bind(window);
@@ -38,6 +39,17 @@ window.fetch = async (input, init = {}) => {
   }
 
   const response = await originalFetch(input, init);
+
+  if (response.status === 403 && esLlamadaApi(url) && !esLlamadaAuth(url)) {
+    try {
+      const data = await response.clone().json();
+      if (data.code === 'TRIAL_EXPIRED') {
+        window.dispatchEvent(new CustomEvent(TRIAL_EXPIRED_EVENT, { detail: data }));
+      }
+    } catch {
+      // respuesta no JSON
+    }
+  }
 
   // Sesión inválida/expirada: no aplica a los endpoints públicos de auth.
   if (response.status === 401 && esLlamadaApi(url) && !esLlamadaAuth(url)) {

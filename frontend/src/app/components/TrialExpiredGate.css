@@ -1,0 +1,11 @@
+.trial-expired-gate {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.trial-expired-gate .ant-result {
+  max-width: 520px;
+}

@@ -334,7 +334,10 @@ export const getEmpresaBranding = async () => {
     }
 
     const data = await response.json();
-    return data.branding;
+    return {
+      branding: data.branding,
+      trial: data.trial ?? null,
+    };
   } catch (error) {
     console.error('Error recuperando branding:', error);
     throw error;

@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const Empresa = require('../models/Empresa');
 const UsuarioEmpresa = require('../models/UsuarioEmpresa');
 const { usuarioTieneAccesoEmpresa } = require('../services/usuarioEmpresaService');
+const { assertEmpresaTrialActiva } = require('../services/trialService');
 
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@timecor.es';
 
@@ -130,6 +131,20 @@ const requireOwnEmpresa = async (req, res, next) => {
           'El acceso de su empresa no está disponible en este momento. Si necesita ayuda, contacte con soporte.',
         supportEmail: SUPPORT_EMAIL,
       });
+    }
+
+    try {
+      await assertEmpresaTrialActiva(empresaToken);
+    } catch (error) {
+      if (error.code === 'TRIAL_EXPIRED') {
+        return res.status(403).json({
+          code: error.code,
+          message: error.message,
+          trial: error.trial,
+          supportEmail: SUPPORT_EMAIL,
+        });
+      }
+      throw error;
     }
 
     const tieneAcceso = await usuarioTieneAccesoEmpresa(

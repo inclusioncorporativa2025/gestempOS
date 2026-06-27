@@ -19,6 +19,11 @@ const {
 } = require('../services/usuarioEmpresaService');
 const { normalizePlanId, planIncluyeFeature } = require('../config/plans');
 const { obtenerPlanEmpresa, assertEmpresaTieneFeature } = require('../services/planService');
+const {
+  assertEmpresaTrialActiva,
+  buildTrialExpiredPayload,
+  obtenerEstadoTrialEmpresa,
+} = require('../services/trialService');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const BCRYPT_ROUNDS = 10;
@@ -97,7 +102,33 @@ const validarAccesoEmpresa = (usuario, membresiasActivas) => {
   return null;
 };
 
+const validarTrialParaAcceso = async (usuario, empresa) => {
+  const tipo = Number(usuario.tipo_usuario);
+  if (TIPOS_PLATAFORMA.includes(tipo) || !empresa?.id_empresa) {
+    return null;
+  }
+
+  try {
+    await assertEmpresaTrialActiva(empresa.id_empresa);
+    return null;
+  } catch (error) {
+    if (error.code === 'TRIAL_EXPIRED') {
+      return {
+        status: 403,
+        supportEmail: SUPPORT_EMAIL,
+        ...buildTrialExpiredPayload(error.trial),
+      };
+    }
+    throw error;
+  }
+};
+
 const completarLoginConEmpresa = async (req, res, usuario, membresia, empresa) => {
+  const bloqueoTrial = await validarTrialParaAcceso(usuario, empresa);
+  if (bloqueoTrial) {
+    return res.status(bloqueoTrial.status).json(bloqueoTrial);
+  }
+
   usuario.ultimo_login = new Date();
   await usuario.save();
 
@@ -117,6 +148,11 @@ const completarLoginConEmpresa = async (req, res, usuario, membresia, empresa) =
 
   const token = emitirJwtSesion(usuario, empresa, membresia);
 
+  const trial =
+    id_empresa && !TIPOS_PLATAFORMA.includes(Number(usuario.tipo_usuario))
+      ? await obtenerEstadoTrialEmpresa(id_empresa)
+      : null;
+
   return res.status(200).json({
     message: 'Login exitoso',
     token,
@@ -129,6 +165,7 @@ const completarLoginConEmpresa = async (req, res, usuario, membresia, empresa) =
           plan: normalizePlanId(empresa?.plan),
         }
       : null,
+    trial,
   });
 };
 

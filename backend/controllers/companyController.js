@@ -17,6 +17,7 @@ const {
   camposPlanEmpresa,
   obtenerCodigoPlanEmpresa,
 } = require('../services/planCatalogService');
+const { calcularFechaFinPrueba } = require('../services/trialService');
 
 const trimOptional = (value) => {
   const text = String(value ?? '').trim();
@@ -133,17 +134,31 @@ const registerCompany = async (req, res) => {
             usuario_alta : idUsuarioAccion,
         }, { transaction });
 
+        const esRegistroPublico = idUsuarioAccion == null;
+        const modoFacturacion = esRegistroPublico ? 'trial' : 'legacy';
+        const trialEndsAt = esRegistroPublico ? calcularFechaFinPrueba(fecha) : null;
+        const estadoSuscripcion = esRegistroPublico ? 'trialing' : null;
+
         await sequelize.query(
-          `INSERT INTO empresa_facturacion (id_empresa, modo_facturacion, id_plan, licencias_facturadas)
-           VALUES (:idEmpresa, 'legacy', :idPlan, :licencias)
+          `INSERT INTO empresa_facturacion (
+             id_empresa, modo_facturacion, id_plan, licencias_facturadas,
+             trial_ends_at, estado_suscripcion
+           )
+           VALUES (:idEmpresa, :modo, :idPlan, :licencias, :trialEndsAt, :estadoSuscripcion)
            ON DUPLICATE KEY UPDATE
              id_plan = VALUES(id_plan),
-             licencias_facturadas = VALUES(licencias_facturadas)`,
+             licencias_facturadas = VALUES(licencias_facturadas),
+             modo_facturacion = VALUES(modo_facturacion),
+             trial_ends_at = VALUES(trial_ends_at),
+             estado_suscripcion = VALUES(estado_suscripcion)`,
           {
             replacements: {
               idEmpresa: empresa.id_empresa,
+              modo: modoFacturacion,
               idPlan: planFields.id_plan,
               licencias: licenciasSolicitadas,
+              trialEndsAt,
+              estadoSuscripcion,
             },
             transaction,
           },
@@ -313,6 +328,29 @@ const editEmpresa = async (req, res)=> {
         },
       );
 
+      const activarSuscripcion =
+        datos.suscripcion_activa === true ||
+        datos.suscripcion_activa === 1 ||
+        datos.estado_suscripcion === 'active';
+
+      if (activarSuscripcion || datos.estado_suscripcion != null) {
+        await sequelize.query(
+          `UPDATE empresa_facturacion
+           SET estado_suscripcion = :estadoSuscripcion,
+               modo_facturacion = CASE
+                 WHEN :estadoSuscripcion = 'active' THEN 'stripe'
+                 ELSE modo_facturacion
+               END
+           WHERE id_empresa = :idEmpresa`,
+          {
+            replacements: {
+              estadoSuscripcion: activarSuscripcion ? 'active' : datos.estado_suscripcion,
+              idEmpresa: idEmpresaNum,
+            },
+          },
+        );
+      }
+
         if(!res){
           return true;
         }else{
@@ -472,6 +510,7 @@ const getEmpresaBranding = async (req, res) => {
     if (!idEmpresa) {
       return res.status(200).json({
         branding: { nombre: null, alias: null, logo_url: null },
+        trial: null,
       });
     }
 
@@ -480,8 +519,12 @@ const getEmpresaBranding = async (req, res) => {
       return res.status(404).json({ error: 'Empresa no encontrada' });
     }
 
+    const { obtenerEstadoTrialEmpresa } = require('../services/trialService');
+    const trial = await obtenerEstadoTrialEmpresa(idEmpresa);
+
     return res.status(200).json({
       branding: await pickEmpresaBranding(empresa),
+      trial,
     });
   } catch (error) {
     console.error('Error al obtener branding de empresa:', error);

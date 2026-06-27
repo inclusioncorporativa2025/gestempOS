@@ -1,0 +1,7 @@
+.trial-status-banner {
+  padding: 0 16px 12px;
+}
+
+.trial-status-banner .ant-alert {
+  border-radius: 10px;
+}

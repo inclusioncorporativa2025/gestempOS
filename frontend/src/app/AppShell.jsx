@@ -47,6 +47,9 @@ import PlatformLayout from './pages/platform/PlatformLayout';
 import PlatformAccesos from './pages/platform/PlatformAccesos';
 import PlatformAcceder from './pages/platform/PlatformAcceder';
 import ImpersonationBanner from './components/ImpersonationBanner';
+import TrialStatusBanner from './components/TrialStatusBanner';
+import TrialExpiredGate from './components/TrialExpiredGate';
+import { useTrialStatus } from '../hooks/useTrialStatus';
 
 import './App.css';
 import './styles/sidebar.css';
@@ -125,6 +128,7 @@ const AppShell = () => {
   const navigate = useNavigate();
   const { user, ready } = useAuth();
   const tipousuario = user?.tipo_usuario ?? null;
+  const { trial, bloqueado, mostrarAviso } = useTrialStatus();
 
   const authShellPaths = [
     APP_ROUTES.login,
@@ -345,6 +349,11 @@ const AppShell = () => {
                 className={!isAuthShellPage ? 'app-main-content' : undefined}
                 style={isAuthShellPage ? { background: 'transparent' } : undefined}
               >
+              {!isAuthShellPage && bloqueado ? (
+                <TrialExpiredGate />
+              ) : (
+                <>
+                  {!isAuthShellPage && mostrarAviso && <TrialStatusBanner trial={trial} />}
               <Routes>
                 <Route path={APP_ROUTES.login} element={<Login />} />
                 <Route path={APP_ROUTES.register} element={<Register />} />
@@ -493,6 +502,8 @@ const AppShell = () => {
                   element={<Navigate to={APP_ROUTES.notifications} replace />}
                 />
               </Routes>
+                </>
+              )}
             </Content>
             </Layout>
           </Layout>

@@ -6,6 +6,8 @@ import { useAuth } from '../../config/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { SUPPORT_EMAIL } from '../../constants/support';
+import { LANDING_URL } from '../../constants/urls';
+import { LANDING_ROUTES } from '../../constants/routes';
 import BrandLogo from '../../components/BrandLogo';
 import { redirectToApp } from '../../utils/appLinks';
 import { getAuthToken } from '../../utils/authSession';
@@ -61,10 +63,26 @@ const Login = () => {
       setEmpresasPendientes([]);
       completarAcceso(data);
     } catch (error) {
-      notification.error({
-        message: 'Error',
-        description: error.message || 'No se pudo acceder a la empresa seleccionada',
-      });
+      if (error.code === 'TRIAL_EXPIRED') {
+        const planesHref = `${LANDING_URL}${LANDING_ROUTES.plans}`;
+        notification.warning({
+          message: 'Periodo de prueba finalizado',
+          description: (
+            <>
+              {error.message || 'Tu periodo de prueba ha finalizado.'}{' '}
+              <a href={planesHref} target="_blank" rel="noopener noreferrer">
+                Ver planes
+              </a>
+            </>
+          ),
+          duration: 12,
+        });
+      } else {
+        notification.error({
+          message: 'Error',
+          description: error.message || 'No se pudo acceder a la empresa seleccionada',
+        });
+      }
     } finally {
       setSeleccionEmpresaLoading(false);
     }
@@ -91,6 +109,20 @@ const Login = () => {
           message: "Restablecimiento de contraseña requerido",
           description: error.message || "Tras mejoras en el sistema, por motivos de seguridad debes restablecer la contraseña. Se te ha enviado un correo con los pasos a seguir.",
           duration: 8,
+        });
+      } else if (error.code === 'TRIAL_EXPIRED') {
+        const planesHref = `${LANDING_URL}${LANDING_ROUTES.plans}`;
+        notification.warning({
+          message: 'Periodo de prueba finalizado',
+          description: (
+            <>
+              {error.message || 'Tu periodo de prueba ha finalizado.'}{' '}
+              <a href={planesHref} target="_blank" rel="noopener noreferrer">
+                Ver planes
+              </a>
+            </>
+          ),
+          duration: 12,
         });
       } else if (error.code === 'EMPRESA_INACTIVA' || error.code === 'EMPRESA_NO_VINCULADA') {
         const emailSoporte = error.supportEmail || SUPPORT_EMAIL;

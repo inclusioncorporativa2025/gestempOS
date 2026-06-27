@@ -29,7 +29,7 @@ export const useEmpresaBranding = () => {
     }
 
     try {
-      const branding = await getEmpresaBranding();
+      const { branding } = await getEmpresaBranding();
       setLabel(branding.alias || branding.nombre || fallbackLabel);
       setNombreEmpresa(branding.nombre || user?.nombre_empresa || '');
       setLicencias(
