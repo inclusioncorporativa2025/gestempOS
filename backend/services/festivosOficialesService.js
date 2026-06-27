@@ -3,7 +3,7 @@ const dayjs = require('dayjs');
 const Empresa = require('../models/Empresa');
 const FestivoEmpresa = require('../models/FestivoEmpresa');
 const { createConId } = require('../utils/empresaScope');
-const { resolveRegionCode } = require('../config/spanishRegions');
+const { isValidRegionCode } = require('../config/spanishRegions');
 const { getPublicHolidays } = require('./publicHolidaysService');
 
 const FESTIVO_FIELDS = [
@@ -25,16 +25,14 @@ const resolverRegionEmpresa = async (idEmpresa) => {
     throw new Error('Empresa no encontrada');
   }
 
-  const regionCode = resolveRegionCode({
-    codigoRegionFestivos: empresa.codigo_region_festivos,
-    codigoPostal: empresa.codigo_postal,
-    provincia: empresa.provincia,
-  });
+  const regionCode = empresa.codigo_region_festivos?.trim();
 
-  if (!regionCode) {
-    throw new Error(
-      'Configure la comunidad autónoma o el código postal en los datos de la empresa antes de importar festivos.',
+  if (!regionCode || !isValidRegionCode(regionCode)) {
+    const error = new Error(
+      'No has configurado la comunidad autónoma en los datos de la empresa.',
     );
+    error.code = 'EMPRESA_FESTIVOS_SIN_CONFIGURAR';
+    throw error;
   }
 
   return { empresa, regionCode };

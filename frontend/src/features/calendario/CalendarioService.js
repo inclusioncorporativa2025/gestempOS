@@ -85,7 +85,9 @@ export const sincronizarFestivosOficiales = async (year) => {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'Error al sincronizar festivos oficiales');
+      const err = new Error(data.error || 'Error al sincronizar festivos oficiales');
+      err.code = data.code;
+      throw err;
     }
 
     return data;

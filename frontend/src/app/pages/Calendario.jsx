@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Layout, Calendar, Modal, Input, Form, message, Badge, Typography, Button, Space } from 'antd';
-import { SyncOutlined } from '@ant-design/icons';
+import { SyncOutlined, SettingOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import locale from 'antd/locale/es_ES';
@@ -12,6 +13,8 @@ import {
   sincronizarFestivosOficiales,
 } from '../../features/calendario/CalendarioService';
 import { getAusenciasCalendario } from '../../features/ausencias/ausenciasService';
+import { getMiEmpresa } from '../../features/empresas/empresasService';
+import { APP_ROUTES } from '../../constants/routes';
 import { useAuth } from '../../config/AuthContext';
 import { usePlan } from '../../hooks/usePlan';
 import './Calendario.css';
@@ -25,6 +28,7 @@ const TIPOS_GESTION_FESTIVOS = [1, 2, 3, 4];
 const TIPOS_AUSENCIAS_EMPRESA = [1, 2, 3, 4];
 
 const Calendario = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { tieneFeature } = usePlan();
   const puedeVerAusencias = tieneFeature('ausencias_basicas');
@@ -198,7 +202,40 @@ const Calendario = () => {
     form.resetFields();
   };
 
+  const mostrarModalConfigEmpresa = useCallback(() => {
+    Modal.confirm({
+      title: 'Datos de empresa sin configurar',
+      icon: <SettingOutlined />,
+      content: (
+        <p>
+          Para importar los festivos oficiales debes guardar la{' '}
+          <strong>comunidad autónoma</strong> en la configuración de la empresa.
+        </p>
+      ),
+      okText: 'Ir a configuración',
+      cancelText: 'Cerrar',
+      onOk: () => {
+        navigate(APP_ROUTES.settingsEmpresa);
+      },
+    });
+  }, [navigate]);
+
+  const empresaTieneRegionFestivos = async () => {
+    try {
+      const empresa = await getMiEmpresa();
+      return Boolean(empresa?.codigo_region_festivos?.trim());
+    } catch {
+      return false;
+    }
+  };
+
   const handleSincronizarOficiales = async () => {
+    const tieneRegion = await empresaTieneRegionFestivos();
+    if (!tieneRegion) {
+      mostrarModalConfigEmpresa();
+      return;
+    }
+
     setSyncing(true);
     try {
       const data = await sincronizarFestivosOficiales(añoActual);
@@ -210,7 +247,11 @@ const Calendario = () => {
         `Festivos ${añoActual} importados: ${creados} nuevos, ${actualizados} actualizados`,
       );
     } catch (error) {
-      message.error(error.message || 'No se pudieron importar los festivos oficiales');
+      if (error.code === 'EMPRESA_FESTIVOS_SIN_CONFIGURAR') {
+        mostrarModalConfigEmpresa();
+      } else {
+        message.error(error.message || 'No se pudieron importar los festivos oficiales');
+      }
     } finally {
       setSyncing(false);
     }

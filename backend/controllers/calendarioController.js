@@ -123,9 +123,10 @@ const sincronizarFestivosOficialesHandler = async (req, res) => {
       festivos,
     });
   } catch (error) {
-    const esConfig = error.message?.includes('Configure la comunidad');
-    return res.status(esConfig ? 400 : 500).json({
+    const sinConfigurar = error.code === 'EMPRESA_FESTIVOS_SIN_CONFIGURAR';
+    return res.status(sinConfigurar ? 400 : 500).json({
       error: error.message || 'Error al sincronizar festivos oficiales',
+      code: error.code,
     });
   }
 };
