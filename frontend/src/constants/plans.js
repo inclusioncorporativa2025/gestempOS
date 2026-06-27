@@ -6,7 +6,14 @@
 export const PLAN_IDS = ['esencial', 'rrhh', 'completo'];
 
 /** Descuento anual: pago de 10 meses (2 meses gratis, ~17 %). */
-export const ANNUAL_DISCOUNT_LABEL = '2 meses gratis';
+export const ANNUAL_DISCOUNT_LABEL = 'te regalamos 2 meses';
+
+/** En facturación, cada licencia = un usuario activo en la plataforma. */
+export const LICENSE_IS_USER_NOTE = 'Cada licencia equivale a un usuario.';
+export const PRICE_UNIT_MONTHLY = '/ usuario / mes';
+export const PRICE_UNIT_ANNUAL = '/ usuario / año';
+export const MIN_USERS_LABEL = (count) =>
+  `Mín. ${count} usuarios + administrador`;
 
 /** Qué planes incluyen cada feature (para middleware/UI futuro). */
 export const PLAN_FEATURES = {
@@ -154,6 +161,16 @@ export const PLANS = [
 export const getPlanMinLicencias = (planId = 'esencial') => {
   const plan = PLANS.find((p) => p.id === planId);
   return plan?.minLicenses ?? 5;
+};
+
+/** Importe mínimo anual (licencias mínimas × precio anual por licencia). */
+export const getPlanMinAnnual = (plan) => {
+  const annual = parseFloat(String(plan.priceAnnual).replace(',', '.'));
+  const total = plan.minLicenses * annual;
+  return total.toLocaleString('es-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 };
 
 export const getPlanLabel = (planId = 'esencial') => {

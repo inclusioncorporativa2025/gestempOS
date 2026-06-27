@@ -20,6 +20,12 @@
   flex-direction: row;
 }
 
+.app-shell-body--auth.ant-layout {
+  overflow-x: clip;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Contenedor sidebar + botón en el borde */
 .app-sider-wrap {
   position: relative;

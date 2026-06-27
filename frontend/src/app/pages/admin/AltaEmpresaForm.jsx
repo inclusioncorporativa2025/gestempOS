@@ -1,8 +1,72 @@
 import React from 'react';
-import { Form, Input, Row, Col, Button, InputNumber, Select } from 'antd';
+import { Form, Input, Row, Col, Button, InputNumber, Select, Tooltip } from 'antd';
 import GradientButton from '../../components/shared/GradientButton';
-import { PLANS, getPlanMinLicencias, getPlanLabel } from '../../../constants/plans';
+import {
+  PLANS,
+  getPlanMinLicencias,
+  getPlanLabel,
+  PRICE_UNIT_MONTHLY,
+  LICENSE_IS_USER_NOTE,
+} from '../../../constants/plans';
 import './AltaEmpresa.css';
+
+const PLAN_UNAVAILABLE_TOOLTIP =
+  'No disponible por el momento, disculpen las molestias';
+
+const PlanCardPicker = ({ value, onChange, onPlanChange }) => (
+  <div className="alta-plan-picker" role="radiogroup" aria-label="Elige tu plan">
+    {PLANS.map((plan) => {
+      const selected = value === plan.id;
+      const selectPlan = () => {
+        if (!plan.available) return;
+        onChange?.(plan.id);
+        onPlanChange?.(plan.id);
+      };
+      const card = (
+        <button
+          type="button"
+          role="radio"
+          aria-checked={selected}
+          disabled={!plan.available}
+          className={[
+            'alta-plan-option',
+            `alta-plan-option--${plan.variant}`,
+            selected ? 'alta-plan-option--selected' : '',
+            plan.featured ? 'alta-plan-option--featured' : '',
+            !plan.available ? 'alta-plan-option--disabled' : '',
+          ].filter(Boolean).join(' ')}
+          onClick={selectPlan}
+        >
+          <span className="alta-plan-option-name">{plan.name}</span>
+          <span className="alta-plan-option-price">
+            desde <strong>{plan.priceMonthly} €</strong>
+            <span className="alta-plan-option-unit">{PRICE_UNIT_MONTHLY}</span>
+          </span>
+          <span className="alta-plan-option-min">
+            Mín. {plan.minLicenses} usuarios
+          </span>
+          {!plan.available && (
+            <span className="alta-plan-option-unavailable">No disponible</span>
+          )}
+        </button>
+      );
+
+      if (!plan.available) {
+        return (
+          <Tooltip key={plan.id} title={PLAN_UNAVAILABLE_TOOLTIP}>
+            <span className="alta-plan-option-wrap">{card}</span>
+          </Tooltip>
+        );
+      }
+
+      return (
+        <span key={plan.id} className="alta-plan-option-wrap">
+          {card}
+        </span>
+      );
+    })}
+  </div>
+);
 
 const AltaEmpresaForm = ({
   form,
@@ -14,9 +78,23 @@ const AltaEmpresaForm = ({
   planId = 'esencial',
   minLicencias: minLicenciasProp,
   showPlanSelect = false,
+  planSelectVariant = 'select',
 }) => {
   const planSeleccionado = Form.useWatch('plan', form) || planId;
   const minLicencias = minLicenciasProp ?? getPlanMinLicencias(planSeleccionado);
+  const isCompact = planSelectVariant === 'cards';
+  const rowGutter = isCompact ? [12, 0] : [16, 16];
+  const usuariosExtra = isCompact
+    ? `Mínimo ${minLicencias} usuarios (plan ${getPlanLabel(planSeleccionado)})`
+    : `Mínimo ${minLicencias} usuarios (plan ${getPlanLabel(planSeleccionado)}). ${LICENSE_IS_USER_NOTE}`;
+
+  const handlePlanChange = (nuevoPlan) => {
+    const min = getPlanMinLicencias(nuevoPlan);
+    const actuales = form.getFieldValue('numLicencias');
+    if (actuales == null || Number(actuales) < min) {
+      form.setFieldsValue({ numLicencias: min });
+    }
+  };
 
   return (
   <Form
@@ -25,8 +103,21 @@ const AltaEmpresaForm = ({
     onFinish={onFinish}
     layout="vertical"
     className={className}
+    initialValues={{ plan: planId, numLicencias: getPlanMinLicencias(planId) }}
   >
-    <Row gutter={[16, 16]}>
+    {showPlanSelect && planSelectVariant === 'cards' ? (
+      <Form.Item
+        name="plan"
+        label="Elige tu plan"
+        rules={[{ required: true, message: 'Selecciona un plan' }]}
+        className="alta-plan-form-item"
+        extra={LICENSE_IS_USER_NOTE}
+      >
+        <PlanCardPicker onPlanChange={handlePlanChange} />
+      </Form.Item>
+    ) : null}
+
+    <Row gutter={rowGutter}>
       <Col xs={24} sm={12}>
         <Form.Item
           name="nombre_empresa"
@@ -63,12 +154,11 @@ const AltaEmpresaForm = ({
           <Input placeholder="Nombre Completo" />
         </Form.Item>
       </Col>
-      {showPlanSelect ? (
+      {showPlanSelect && planSelectVariant === 'select' ? (
         <Col xs={24} sm={12}>
           <Form.Item
             name="plan"
             label="Plan contratado"
-            initialValue="esencial"
             rules={[{ required: true, message: 'Selecciona un plan' }]}
           >
             <Select
@@ -77,13 +167,7 @@ const AltaEmpresaForm = ({
                 label: plan.name,
                 disabled: plan.available === false,
               }))}
-              onChange={(nuevoPlan) => {
-                const min = getPlanMinLicencias(nuevoPlan);
-                const actuales = form.getFieldValue('numLicencias');
-                if (actuales == null || Number(actuales) < min) {
-                  form.setFieldsValue({ numLicencias: min });
-                }
-              }}
+              onChange={handlePlanChange}
             />
           </Form.Item>
         </Col>
@@ -91,18 +175,14 @@ const AltaEmpresaForm = ({
       <Col xs={24} sm={12}>
         <Form.Item
           name="numLicencias"
-          label="Número de licencias"
-          extra={
-            minLicencias > 1
-              ? `Mínimo ${minLicencias} licencias (plan ${getPlanLabel(planSeleccionado)})`
-              : undefined
-          }
+          label="Número de usuarios"
+          extra={usuariosExtra}
           rules={[
             { required: true, message: 'Campo requerido!' },
             {
               type: 'number',
               min: minLicencias,
-              message: `El mínimo es ${minLicencias} licencias`,
+              message: `El mínimo es ${minLicencias} usuarios`,
             },
           ]}
         >
@@ -127,7 +207,7 @@ const AltaEmpresaForm = ({
           <Input placeholder="Ej. 12345678A" />
         </Form.Item>
       </Col>
-      <Col xs={24}>
+      <Col xs={24} className="alta-form-actions">
         <GradientButton type="submit" text={submitLabel} loading={loading} className="alta-btn-mr" />
         <Button onClick={onCancel}>Limpiar</Button>
       </Col>

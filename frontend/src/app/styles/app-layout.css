@@ -18,6 +18,11 @@
 
 .app-main-column--auth {
   width: 100%;
+  height: auto;
+  min-height: 100%;
+  overflow-x: clip;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .app-shell-body {

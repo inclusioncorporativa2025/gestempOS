@@ -20,3 +20,104 @@
 .alta-btn-mr {
   margin-right: 15px;
 }
+
+.alta-plan-form-item {
+  margin-bottom: 1rem;
+}
+
+.alta-plan-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.alta-plan-option-wrap {
+  display: block;
+  min-width: 0;
+}
+
+.alta-plan-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 100%;
+  padding: 1rem 1.1rem;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 4px 16px rgba(0, 21, 41, 0.06);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+  font-family: inherit;
+}
+
+.alta-plan-option:hover:not(:disabled) {
+  border-color: rgba(var(--color-primary-rgb), 0.45);
+  box-shadow: 0 6px 20px rgba(var(--color-primary-rgb), 0.12);
+}
+
+.alta-plan-option--selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 8px 24px rgba(var(--color-primary-rgb), 0.18);
+}
+
+.alta-plan-option--featured.alta-plan-option--selected {
+  border-color: var(--color-secondary);
+  box-shadow: 0 8px 24px rgba(var(--color-secondary-rgb), 0.2);
+}
+
+.alta-plan-option--disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.alta-plan-option-name {
+  font-size: 1rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-dark);
+}
+
+.alta-plan-option-price {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: rgba(0, 21, 41, 0.72);
+}
+
+.alta-plan-option-price strong {
+  font-size: 1.125rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-dark);
+}
+
+.alta-plan-option-unit {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.75rem;
+}
+
+.alta-plan-option-min {
+  font-size: 0.75rem;
+  color: rgba(0, 21, 41, 0.55);
+}
+
+.alta-plan-option-unavailable {
+  margin-top: 0.15rem;
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(0, 21, 41, 0.45);
+}
+
+@media (max-width: 768px) {
+  .alta-plan-picker {
+    grid-template-columns: 1fr;
+  }
+}

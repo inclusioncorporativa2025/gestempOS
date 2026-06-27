@@ -261,7 +261,11 @@ const AppShell = () => {
     >
       <Layout className="app-shell">
         <NavigationTracker />
-        <Layout className="app-shell-body">
+        <Layout
+          className={['app-shell-body', isAuthShellPage && 'app-shell-body--auth']
+            .filter(Boolean)
+            .join(' ')}
+        >
           {!isAuthShellPage && !isMobile && (
             <div className="app-sider-wrap">
             <Sider

@@ -70,8 +70,8 @@ const Register = () => {
           onCancel={() => form.resetFields()}
           submitLabel="Registrar empresa"
           className="register-form-glass"
-          planId="esencial"
-          minLicencias={5}
+          showPlanSelect
+          planSelectVariant="cards"
         />
 
         <p className="register-footer">
