@@ -18,6 +18,14 @@
   font-size: 13px;
 }
 
+.cal-leyenda-actions {
+  margin-left: auto;
+}
+
+.cal-badge--oficial :global(.ant-badge-status-text) {
+  font-style: italic;
+}
+
 /* Fecha arriba, ausencias/festivos abajo en la celda */
 .calendario-layout :global(.ant-picker-calendar-date) {
   display: flex;

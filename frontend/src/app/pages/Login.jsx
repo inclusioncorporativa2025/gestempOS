@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Checkbox, Typography, notification, Modal } from 'antd';
+import { Form, Input, Button, Typography, notification, Modal } from 'antd';
 import GradientButton from '../components/shared/GradientButton';
 import { doLogin, doForgotPassword, doSelectEmpresa } from "../../features/auth/authService";
 import { useAuth } from '../../config/AuthContext';
@@ -212,7 +212,6 @@ const Login = () => {
             <Form
               className="login-form"
               name="login"
-              initialValues={{ remember: true }}
               onFinish={handleSubmit}
               layout="vertical"
               size="large"
@@ -231,10 +230,6 @@ const Login = () => {
                 rules={[{ required: true, message: 'Por favor ingrese su contraseña!' }]}
               >
                 <Input.Password placeholder="Contraseña" />
-              </Form.Item>
-
-              <Form.Item name="remember" valuePropName="checked" className="login-remember">
-                <Checkbox>Recordarme</Checkbox>
               </Form.Item>
 
               <Form.Item className="login-submit">

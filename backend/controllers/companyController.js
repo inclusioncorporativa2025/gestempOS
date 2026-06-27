@@ -17,7 +17,7 @@ const {
   camposPlanEmpresa,
   obtenerCodigoPlanEmpresa,
 } = require('../services/planCatalogService');
-const { calcularFechaFinPrueba } = require('../services/trialService');
+const { isValidRegionCode } = require('../config/spanishRegions');
 
 const trimOptional = (value) => {
   const text = String(value ?? '').trim();
@@ -48,6 +48,7 @@ const pickMiEmpresaParaCliente = async (empresa) => {
   codigo_postal: empresa.codigo_postal,
   ciudad: empresa.ciudad,
   provincia: empresa.provincia,
+  codigo_region_festivos: empresa.codigo_region_festivos,
   pais: empresa.pais,
   sector: empresa.sector,
   actividad: empresa.actividad,
@@ -546,6 +547,11 @@ const editMiEmpresa = async (req, res) => {
       return res.status(400).json({ error: 'El nombre y el alias de la empresa son obligatorios' });
     }
 
+    const codigoRegion = trimOptional(datos.codigo_region_festivos);
+    if (codigoRegion && !isValidRegionCode(codigoRegion)) {
+      return res.status(400).json({ error: 'Comunidad autónoma para festivos no válida' });
+    }
+
     const [filas] = await Empresa.update(
       {
         nombre: datos.nombre.trim(),
@@ -560,6 +566,7 @@ const editMiEmpresa = async (req, res) => {
         codigo_postal: trimOptional(datos.codigo_postal),
         ciudad: trimOptional(datos.ciudad),
         provincia: trimOptional(datos.provincia),
+        codigo_region_festivos: codigoRegion,
         pais: trimOptional(datos.pais) || 'España',
         sector: trimOptional(datos.sector),
         actividad: trimOptional(datos.actividad),

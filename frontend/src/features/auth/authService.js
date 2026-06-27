@@ -1,4 +1,5 @@
 import { setAuthToken, clearAuthSession, getAuthToken } from '../../utils/authSession';
+import { redirectAfterLogout } from '../../utils/appLinks';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL + 'auth';
 
@@ -109,6 +110,7 @@ export const fetchMisEmpresas = async () => {
  */
 export const doLogout = () => {
   clearAuthSession();
+  redirectAfterLogout();
 };
 
 export const getStoredToken = () => getAuthToken();

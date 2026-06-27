@@ -1,13 +1,13 @@
 import { getIdUsuario, getIdEmpresa } from '../../utils/authSession';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL+'calendario';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL + 'calendario';
 
 export const getFestivosByIdEmpresa = async () => {
   try {
     const idUsuario = getIdUsuario();
     const idEmpresa = getIdEmpresa();
 
-    const response = await fetch(API_BASE_URL+`/getFestivosByIdEmpresa`, {
+    const response = await fetch(API_BASE_URL + `/getFestivosByIdEmpresa`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idUsuario, idEmpresa }),
@@ -15,37 +15,33 @@ export const getFestivosByIdEmpresa = async () => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || 'Error getFestivosByIdEmpresa');
+      throw new Error(errorData.error || errorData.message || 'Error getFestivosByIdEmpresa');
     }
 
-    const data = await response.json();
-
-    return data;
+    return response.json();
   } catch (error) {
     console.error('Error en getFestivosByIdEmpresa:', error);
     throw error;
   }
 };
 
-export const guardarFestivoEmpresa = async (values) => {
+export const guardarFestivoEmpresa = async (fecha) => {
   try {
     const idUsuario = getIdUsuario();
     const idEmpresa = getIdEmpresa();
 
-    const response = await fetch(API_BASE_URL+`/guardarFestivoEmpresa`, {
+    const response = await fetch(API_BASE_URL + `/guardarFestivoEmpresa`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idUsuario, idEmpresa, values }),
+      body: JSON.stringify({ idUsuario, idEmpresa, fecha }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || 'Error guardarFestivoEmpresa');
+      throw new Error(errorData.error || errorData.message || 'Error guardarFestivoEmpresa');
     }
 
-    const data = await response.json();
-
-    return data;
+    return response.json();
   } catch (error) {
     console.error('Error en guardarFestivoEmpresa:', error);
     throw error;
@@ -57,7 +53,7 @@ export const eliminarFestivoEmpresa = async (idFestivo) => {
     const idUsuario = getIdUsuario();
     const idEmpresa = getIdEmpresa();
 
-    const response = await fetch(API_BASE_URL+`/eliminarFestivoEmpresa`, {
+    const response = await fetch(API_BASE_URL + `/eliminarFestivoEmpresa`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idUsuario, idEmpresa, idFestivo }),
@@ -65,14 +61,36 @@ export const eliminarFestivoEmpresa = async (idFestivo) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || 'Error eliminarFestivoEmpresa');
+      throw new Error(errorData.error || errorData.message || 'Error eliminarFestivoEmpresa');
     }
+
+    return response.json();
+  } catch (error) {
+    console.error('Error en eliminarFestivoEmpresa:', error);
+    throw error;
+  }
+};
+
+export const sincronizarFestivosOficiales = async (year) => {
+  try {
+    const idUsuario = getIdUsuario();
+    const idEmpresa = getIdEmpresa();
+
+    const response = await fetch(API_BASE_URL + `/sincronizarFestivosOficiales`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idUsuario, idEmpresa, year }),
+    });
 
     const data = await response.json();
 
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al sincronizar festivos oficiales');
+    }
+
     return data;
   } catch (error) {
-    console.error('Error en eliminarFestivoEmpresa:', error);
+    console.error('Error en sincronizarFestivosOficiales:', error);
     throw error;
   }
 };

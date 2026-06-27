@@ -5,11 +5,18 @@ import {
   Input,
   InputNumber,
   Row,
+  Select,
   Spin,
   message,
 } from 'antd';
 import { editMiEmpresa, getMiEmpresa } from '../../../features/empresas/empresasService';
 import { EMPRESA_BRANDING_UPDATED } from '../../../hooks/useEmpresaBranding';
+import {
+  COMUNIDADES_AUTONOMAS,
+  PROVINCIAS,
+  regionDesdeCodigoPostal,
+  regionDesdeProvincia,
+} from '../../../constants/spanishRegions';
 import GradientButton from '../../components/shared/GradientButton';
 import './Configuracion.css';
 
@@ -27,6 +34,7 @@ const CAMPOS_EMPRESA = [
   'codigo_postal',
   'ciudad',
   'provincia',
+  'codigo_region_festivos',
   'pais',
   'sector',
   'actividad',
@@ -67,7 +75,14 @@ const ConfiguracionEmpresa = () => {
       setLoading(true);
       try {
         const empresa = await getMiEmpresa();
-        form.setFieldsValue(normalizarEmpresa(empresa));
+        const datos = normalizarEmpresa(empresa);
+        if (!datos.codigo_region_festivos) {
+          datos.codigo_region_festivos =
+            regionDesdeCodigoPostal(datos.codigo_postal) ||
+            regionDesdeProvincia(datos.provincia) ||
+            undefined;
+        }
+        form.setFieldsValue(datos);
       } catch (error) {
         form.setFieldsValue(valoresVacios());
         message.error(error.message || 'No se pudieron cargar los datos de la empresa');
@@ -78,6 +93,23 @@ const ConfiguracionEmpresa = () => {
 
     cargarEmpresa();
   }, [form]);
+
+  const sugerirRegionFestivos = () => {
+    const cp = form.getFieldValue('codigo_postal');
+    const provincia = form.getFieldValue('provincia');
+    const region =
+      regionDesdeCodigoPostal(cp) || regionDesdeProvincia(provincia);
+    if (region) {
+      form.setFieldValue('codigo_region_festivos', region);
+    }
+  };
+
+  const handleProvinciaChange = (nombreProvincia) => {
+    const prov = PROVINCIAS.find((p) => p.name === nombreProvincia);
+    if (prov) {
+      form.setFieldValue('codigo_region_festivos', prov.regionCode);
+    }
+  };
 
   const handleSave = async (values) => {
     setSaving(true);
@@ -179,17 +211,49 @@ const ConfiguracionEmpresa = () => {
             </Col>
             <Col xs={24} sm={8}>
               <Form.Item name="codigo_postal" label="Código postal">
-                <Input placeholder="28001" />
+                <Input
+                  placeholder="28001"
+                  maxLength={5}
+                  onBlur={sugerirRegionFestivos}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item name="ciudad" label="Ciudad">
+              <Form.Item name="ciudad" label="Ciudad / municipio">
                 <Input placeholder="Madrid" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
               <Form.Item name="provincia" label="Provincia">
-                <Input placeholder="Madrid" />
+                <Select
+                  showSearch
+                  allowClear
+                  placeholder="Selecciona provincia"
+                  optionFilterProp="label"
+                  onChange={handleProvinciaChange}
+                  options={PROVINCIAS.map((p) => ({
+                    value: p.name,
+                    label: p.name,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Form.Item
+                name="codigo_region_festivos"
+                label="Comunidad autónoma (festivos oficiales)"
+                extra="Se usa para importar festivos nacionales y autonómicos en el calendario"
+              >
+                <Select
+                  showSearch
+                  allowClear
+                  placeholder="Selecciona comunidad autónoma"
+                  optionFilterProp="label"
+                  options={COMUNIDADES_AUTONOMAS.map((r) => ({
+                    value: r.code,
+                    label: r.label,
+                  }))}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} lg={12}>
@@ -233,7 +297,7 @@ const ConfiguracionEmpresa = () => {
         </section>
 
         <div className="config-empresa-actions">
-        <GradientButton type="submit" text="Guardar cambios" loading={saving} />
+          <GradientButton type="submit" text="Guardar cambios" loading={saving} />
         </div>
       </Form>
     </div>

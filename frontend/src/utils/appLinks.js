@@ -1,4 +1,4 @@
-import { APP_URL } from '../constants/urls';
+import { APP_URL, LANDING_URL } from '../constants/urls';
 import { APP_ROUTES } from '../constants/routes';
 import { isAppSubdomain, isLandingHost } from './host';
 
@@ -57,3 +57,17 @@ export const isAuthAppPath = (pathname) =>
     APP_ROUTES.forgotPassword,
     APP_ROUTES.resetPassword,
   ].includes(pathname);
+
+/**
+ * Tras cerrar sesión: en app.* → landing (timecor.es); en local, /.
+ */
+export const redirectAfterLogout = () => {
+  if (typeof window === 'undefined') return;
+
+  if (isAppSubdomain()) {
+    window.location.replace(LANDING_URL);
+    return;
+  }
+
+  window.location.replace('/');
+};

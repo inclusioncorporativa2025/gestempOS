@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Layout, Calendar, Modal, Input, Form, message, Badge, Typography } from 'antd';
+import { Layout, Calendar, Modal, Input, Form, message, Badge, Typography, Button, Space } from 'antd';
+import { SyncOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import locale from 'antd/locale/es_ES';
@@ -7,7 +8,8 @@ import { ConfigProvider } from 'antd';
 import {
   getFestivosByIdEmpresa,
   guardarFestivoEmpresa,
-  eliminarFestivoEmpresa
+  eliminarFestivoEmpresa,
+  sincronizarFestivosOficiales,
 } from '../../features/calendario/CalendarioService';
 import { getAusenciasCalendario } from '../../features/ausencias/ausenciasService';
 import { useAuth } from '../../config/AuthContext';
@@ -34,7 +36,9 @@ const Calendario = () => {
   const [eventosAusencia, setEventosAusencia] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [syncing, setSyncing] = useState(false);
   const [form] = Form.useForm();
+  const añoActual = dayjs().year();
 
   useEffect(() => {
     const fetchFestivos = async () => {
@@ -137,9 +141,19 @@ const Calendario = () => {
     }
 
     if (yaEsFestivo) {
+      const esOficial = yaEsFestivo.origen === 'oficial';
       Modal.confirm({
         title: '¿Deseas eliminar este festivo?',
-        content: `Festivo: ${yaEsFestivo.descripcion}`,
+        content: (
+          <>
+            <div>{yaEsFestivo.descripcion}</div>
+            {esOficial && (
+              <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+                Festivo oficial importado. Puedes volver a importarlo desde el calendario.
+              </Text>
+            )}
+          </>
+        ),
         okText: 'Eliminar',
         cancelText: 'Cancelar',
         onOk: async () => {
@@ -184,6 +198,24 @@ const Calendario = () => {
     form.resetFields();
   };
 
+  const handleSincronizarOficiales = async () => {
+    setSyncing(true);
+    try {
+      const data = await sincronizarFestivosOficiales(añoActual);
+      if (Array.isArray(data.festivos)) {
+        setFestivos(data.festivos.filter((f) => f.fecha_baja === null));
+      }
+      const { creados = 0, actualizados = 0 } = data.resultado || {};
+      message.success(
+        `Festivos ${añoActual} importados: ${creados} nuevos, ${actualizados} actualizados`,
+      );
+    } catch (error) {
+      message.error(error.message || 'No se pudieron importar los festivos oficiales');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const dateCellRender = (value) => {
     const fechaIso = value.format('YYYY-MM-DD');
     const festivo = festivos.find((f) => f.fecha === fechaIso);
@@ -192,7 +224,11 @@ const Calendario = () => {
     return (
       <div className="cal-cell-content">
         {festivo && (
-          <Badge status="error" text={festivo.descripcion} className="cal-badge" />
+          <Badge
+            status={festivo.origen === 'oficial' ? 'warning' : 'error'}
+            text={festivo.descripcion}
+            className={`cal-badge${festivo.origen === 'oficial' ? ' cal-badge--oficial' : ''}`}
+          />
         )}
         {puedeVerAusencias && ausenciasDia.slice(0, 3).map((ev) => renderAusenciaCelda(ev))}
         {puedeVerAusencias && ausenciasDia.length > 3 && (
@@ -208,14 +244,27 @@ const Calendario = () => {
     <ConfigProvider locale={locale}>
       <Layout className="calendario-layout">
         <div className="cal-leyenda">
-          <Badge status="error" text="Festivo de empresa" />
+          <Badge status="warning" text="Festivo oficial" />
+          <Badge status="error" text="Festivo local" />
           {puedeVerAusencias && (
             <Badge status="processing" text={verAusenciasEmpresa ? 'Ausencia (equipo)' : 'Mi ausencia'} />
           )}
           {puedeGestionarFestivos && (
-            <Text type="secondary" className="cal-leyenda-hint">
-              Pulsa un día vacío para añadir festivo
-            </Text>
+            <>
+              <Text type="secondary" className="cal-leyenda-hint">
+                Pulsa un día vacío para añadir festivo local
+              </Text>
+              <Space className="cal-leyenda-actions">
+                <Button
+                  type="default"
+                  icon={<SyncOutlined />}
+                  loading={syncing}
+                  onClick={handleSincronizarOficiales}
+                >
+                  Importar festivos oficiales {añoActual}
+                </Button>
+              </Space>
+            </>
           )}
         </div>
 
@@ -227,7 +276,7 @@ const Calendario = () => {
 
         {puedeGestionarFestivos && (
           <Modal
-            title={`Agregar festivo para ${selectedDate?.format('D [de] MMMM [de] YYYY')}`}
+            title={`Agregar festivo local para ${selectedDate?.format('D [de] MMMM [de] YYYY')}`}
             open={isModalVisible}
             onOk={handleOk}
             onCancel={handleCancel}
@@ -237,10 +286,10 @@ const Calendario = () => {
             <Form form={form} layout="vertical">
               <Form.Item
                 name="descripcion"
-                label="Descripción del festivo"
+                label="Descripción del festivo local"
                 rules={[{ required: true, message: 'Por favor, ingrese una descripción' }]}
               >
-                <Input placeholder="Ej. Día de la Constitución" />
+                <Input placeholder="Ej. Festivo municipal, puente de empresa…" />
               </Form.Item>
             </Form>
           </Modal>

@@ -20,6 +20,15 @@ const FestivoEmpresa = sequelize.define('festivos_empresa', {
     type: DataTypes.STRING(255),
     allowNull: true,
   },
+  origen: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'local',
+  },
+  external_key: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+  },
   fecha_alta: {
     type: DataTypes.DATE,
     allowNull: true,

@@ -54,9 +54,8 @@ const SidebarFooter = ({ collapsed = false, onOpenSupport }) => {
 
   const ejecutarLogout = () => {
     setLogoutOpen(false);
-    doLogout();
     clearAuth();
-    window.location.href = '/';
+    doLogout();
   };
 
   const abrirSoporte = () => {

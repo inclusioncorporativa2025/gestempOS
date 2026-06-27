@@ -55,6 +55,10 @@ const Empresa = sequelize.define('Empresa', {
     type: DataTypes.STRING(100),
     allowNull: true,
   },
+  codigo_region_festivos: {
+    type: DataTypes.STRING(10),
+    allowNull: true,
+  },
   pais: {
     type: DataTypes.STRING(100),
     allowNull: true,
