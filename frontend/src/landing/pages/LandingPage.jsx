@@ -149,6 +149,36 @@ const PlanCompareCell = ({ included }) => {
   );
 };
 
+const PlanBillingToggle = ({ billingPeriod, onChange }) => (
+  <div
+    className="landing-plans-billing landing-plans-billing--in-card"
+    role="group"
+    aria-label="Periodo de facturación"
+  >
+    <button
+      type="button"
+      className={`landing-plans-billing-option${
+        billingPeriod === 'monthly' ? ' landing-plans-billing-option--active' : ''
+      }`}
+      aria-pressed={billingPeriod === 'monthly'}
+      onClick={() => onChange('monthly')}
+    >
+      Mensual
+    </button>
+    <button
+      type="button"
+      className={`landing-plans-billing-option${
+        billingPeriod === 'annual' ? ' landing-plans-billing-option--active' : ''
+      }`}
+      aria-pressed={billingPeriod === 'annual'}
+      onClick={() => onChange('annual')}
+    >
+      Anual
+      <span className="landing-plans-billing-note">({ANNUAL_DISCOUNT_LABEL})</span>
+    </button>
+  </div>
+);
+
 const LandingPage = () => {
   const [billingPeriod, setBillingPeriod] = useState('monthly');
   const loginHref = getAppLoginHref();
@@ -278,36 +308,6 @@ const LandingPage = () => {
             <span className="landing-plans-license-note">{LICENSE_IS_USER_NOTE}</span>
           </p>
 
-          <div
-            className="landing-plans-billing"
-            role="group"
-            aria-label="Periodo de facturación"
-          >
-            <button
-              type="button"
-              className={`landing-plans-billing-option${
-                billingPeriod === 'monthly' ? ' landing-plans-billing-option--active' : ''
-              }`}
-              aria-pressed={billingPeriod === 'monthly'}
-              onClick={() => setBillingPeriod('monthly')}
-            >
-              Pago por mes
-            </button>
-            <button
-              type="button"
-              className={`landing-plans-billing-option${
-                billingPeriod === 'annual' ? ' landing-plans-billing-option--active' : ''
-              }`}
-              aria-pressed={billingPeriod === 'annual'}
-              onClick={() => setBillingPeriod('annual')}
-            >
-              Anual
-              <span className="landing-plans-billing-note">
-                ({ANNUAL_DISCOUNT_LABEL})
-              </span>
-            </button>
-          </div>
-
           <ul className="landing-plans-grid">
             {PLANS.map((plan, index) => (
               <LandingReveal
@@ -316,7 +316,7 @@ const LandingPage = () => {
                 delay={index * 120}
                 className={`landing-plan-item${
                   !plan.available ? ' landing-plan-item--unavailable' : ''
-                }`}
+                }${plan.featured ? ' landing-plan-item--featured' : ''}`}
               >
                 <article
                   className={`landing-plan-card landing-plan-card--${plan.variant}${
@@ -325,14 +325,26 @@ const LandingPage = () => {
                 >
                   <div className="landing-plan-card-top">
                     <div className="landing-plan-card-gradient" aria-hidden />
-                    <span className="landing-plan-badge">{plan.name}</span>
+                    <div
+                      className={`landing-plan-card-top-row${
+                        plan.featured ? '' : ' landing-plan-card-top-row--centered'
+                      }`}
+                    >
+                      <span className="landing-plan-badge">{plan.name}</span>
+                      {plan.featured && (
+                        <PlanBillingToggle
+                          billingPeriod={billingPeriod}
+                          onChange={setBillingPeriod}
+                        />
+                      )}
+                    </div>
                   </div>
                   <div className="landing-plan-card-body">
                     {billingPeriod === 'monthly' ? (
                       <p className="landing-plan-price">
                         <span className="landing-plan-price-from">desde</span>{' '}
                         <strong>{plan.priceMonthly} €</strong>
-                        <span className="landing-plan-price-unit landing-plan-price-unit--block-sm">
+                        <span className="landing-plan-price-unit">
                           {PRICE_UNIT_MONTHLY}
                         </span>
                       </p>
@@ -340,7 +352,7 @@ const LandingPage = () => {
                       <p className="landing-plan-price landing-plan-price--annual">
                         <span className="landing-plan-price-from">desde</span>{' '}
                         <strong>{plan.priceAnnual} €</strong>
-                        <span className="landing-plan-price-unit landing-plan-price-unit--block-sm">
+                        <span className="landing-plan-price-unit">
                           {PRICE_UNIT_ANNUAL}
                         </span>
                         <span className="landing-plan-price-annual-note landing-plan-price-annual-note--inline">
