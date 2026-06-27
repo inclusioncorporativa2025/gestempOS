@@ -18,6 +18,12 @@ const {
   obtenerCodigoPlanEmpresa,
 } = require('../services/planCatalogService');
 const { isValidRegionCode } = require('../config/spanishRegions');
+const { calcularFechaFinPrueba } = require('../services/trialService');
+const {
+  findEmpresaActivaPorCif,
+  normalizeEmail,
+  resolverUsuarioIdentidad,
+} = require('../utils/identityChecks');
 
 const trimOptional = (value) => {
   const text = String(value ?? '').trim();
@@ -90,11 +96,41 @@ const registerCompany = async (req, res) => {
             });
         }
 
+        const cifNormalizado = String(CIF ?? '').trim();
+        if (!cifNormalizado) {
+            await transaction.rollback();
+            return res.status(400).json({ message: 'El CIF es obligatorio' });
+        }
+
+        const empresaCifExistente = await findEmpresaActivaPorCif(cifNormalizado, { transaction });
+        if (empresaCifExistente) {
+            await transaction.rollback();
+            return res.status(409).json({
+                message: 'Ya existe una empresa registrada con este CIF',
+                codigo: 'CIF_EN_USO',
+            });
+        }
+
+        const emailNormalizado = normalizeEmail(email);
+        if (!emailNormalizado) {
+            await transaction.rollback();
+            return res.status(400).json({ message: 'El email de contacto es obligatorio' });
+        }
+
+        const identidadAdmin = await resolverUsuarioIdentidad(
+            { email: emailNormalizado, dni },
+            { transaction },
+        );
+        if (identidadAdmin.conflict) {
+            await transaction.rollback();
+            return res.status(409).json(identidadAdmin.conflict);
+        }
+
         const idEmpresa = await getNextGlobalId(Empresa, 'id_empresa', transaction);
         const empresa = await Empresa.create({
             id_empresa: idEmpresa,
             nombre: nombre_empresa,
-            identificador_fiscal: CIF,
+            identificador_fiscal: cifNormalizado,
             fecha_alta: fecha,
             usuario_alta: idUsuarioAccion,
             licencias: licenciasSolicitadas,
@@ -112,18 +148,23 @@ const registerCompany = async (req, res) => {
             usuario_alta: idUsuarioAccion,
         }, { transaction });
 
-        const idUsuarioNuevo = await getNextGlobalId(Usuario, 'id_usuario', transaction);
-        const usuarioAdmin = await Usuario.create({
-            id_usuario: idUsuarioNuevo,
-            nombre: Administrador,
-            email: email,
-            fecha_alta: fecha,
-            usuario_alta : idUsuarioAccion,
-            tipo_usuario : 3,
-            dni: dni,
-            activo: true,
-            requiere_reset_password: true,
-        }, { transaction });
+        let usuarioAdmin = identidadAdmin.usuario;
+        const adminExistente = !identidadAdmin.esNuevo;
+
+        if (!adminExistente) {
+            const idUsuarioNuevo = await getNextGlobalId(Usuario, 'id_usuario', transaction);
+            usuarioAdmin = await Usuario.create({
+                id_usuario: idUsuarioNuevo,
+                nombre: Administrador,
+                email: emailNormalizado,
+                fecha_alta: fecha,
+                usuario_alta : idUsuarioAccion,
+                tipo_usuario : 3,
+                dni: dni,
+                activo: true,
+                requiere_reset_password: true,
+            }, { transaction });
+        }
 
         const idUsuarioEmpresa = await getNextGlobalId(UsuarioEmpresa, 'id_usuario_empresa', transaction);
         await UsuarioEmpresa.create({
@@ -183,10 +224,15 @@ const registerCompany = async (req, res) => {
         }
 
         const respuesta = {
-          message: emailBienvenidaEnviado
-            ? 'Empresa registrada con éxito. Se ha enviado un correo de bienvenida al administrador.'
-            : 'Empresa registrada con éxito, pero no se pudo enviar el correo de bienvenida. Use "Olvidé mi contraseña" con el email del administrador.',
+          message: adminExistente
+            ? (emailBienvenidaEnviado
+                ? 'Empresa registrada con éxito. Se ha vinculado su cuenta como administrador y se ha enviado un correo de confirmación.'
+                : 'Empresa registrada con éxito y cuenta vinculada como administrador, pero no se pudo enviar el correo de confirmación.')
+            : (emailBienvenidaEnviado
+                ? 'Empresa registrada con éxito. Se ha enviado un correo de bienvenida al administrador.'
+                : 'Empresa registrada con éxito, pero no se pudo enviar el correo de bienvenida. Use "Olvidé mi contraseña" con el email del administrador.'),
           emailBienvenidaEnviado,
+          adminExistente,
         };
 
         if (process.env.NODE_ENV !== 'production' && devWelcomeUrl) {
@@ -198,6 +244,23 @@ const registerCompany = async (req, res) => {
 
         await transaction.rollback();
         console.error(`Error proceso creación empresa: ${error.message}`);
+
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            const campo = error.errors?.[0]?.path;
+            if (campo === 'email') {
+                return res.status(409).json({
+                    message: 'Este email ya está registrado en la plataforma',
+                    codigo: 'EMAIL_EN_USO',
+                });
+            }
+            if (campo === 'identificador_fiscal') {
+                return res.status(409).json({
+                    message: 'Ya existe una empresa registrada con este CIF',
+                    codigo: 'CIF_EN_USO',
+                });
+            }
+        }
+
         res.status(500).json({ error: 'Error al registrar la empresa' });
     }
 };

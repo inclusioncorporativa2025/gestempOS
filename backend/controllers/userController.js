@@ -26,6 +26,11 @@ const {
 const { empresaTieneFeature } = require('../services/planService');
 const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/ausenciasCompat');
 const { normalizarTipoHoraInput } = require('../utils/tipoHora');
+const {
+  findMembresiaActivaEnEmpresa,
+  normalizeEmail,
+  resolverUsuarioIdentidad,
+} = require('../utils/identityChecks');
 const { Op } = require('sequelize');
 const dayjs = require('dayjs');
 const isoWeek = require('dayjs/plugin/isoWeek');
@@ -265,23 +270,35 @@ const crearUsuario= async (req, res) => {
     try{
         const date = new Date()
         const {email,nombreUsuario,dni, idEmpresa, idUsuarioAccion, tipoUsuario, horario, tipoHora} = req.body;
+        const emailNormalizado = normalizeEmail(email);
+        if (!emailNormalizado) {
+            return res.status(400).json({
+                message: 'El email es obligatorio',
+                codigo: 'EMAIL_REQUERIDO',
+            });
+        }
+
         const tipoHoraNormalizado = normalizarTipoHoraInput(tipoHora);
         const disponibilidad = await obtenerDisponibilidadLicencias(idEmpresa);
 
         if(disponibilidad.disponible){
-            let usuario = await Usuario.findOne({
-                where: { email, fecha_baja: null },
+            const identidad = await resolverUsuarioIdentidad({
+                email: emailNormalizado,
+                dni,
             });
-            let usuarioNuevo = false;
+
+            if (identidad.conflict) {
+                return res.status(409).json(identidad.conflict);
+            }
+
+            let usuario = identidad.usuario;
+            let usuarioNuevo = identidad.esNuevo;
 
             if (usuario) {
-                const vinculoActivo = await UsuarioEmpresa.findOne({
-                    where: {
-                        id_usuario: usuario.id_usuario,
-                        id_empresa: idEmpresa,
-                        fecha_baja: null,
-                    },
-                });
+                const vinculoActivo = await findMembresiaActivaEnEmpresa(
+                    usuario.id_usuario,
+                    idEmpresa,
+                );
 
                 if (vinculoActivo) {
                     return res.status(409).json({
@@ -291,14 +308,48 @@ const crearUsuario= async (req, res) => {
                     });
                 }
             } else {
-                usuario = await crearUsuarioRepo(nombreUsuario, email, date, idUsuarioAccion, dni, tipoUsuario);
-                if (usuario.name === 'SequelizeUniqueConstraintError') {
-                    return res.status(500).json({
-                        message: 'Correo en uso',
-                        error: 'Correo en uso',
+                usuario = await crearUsuarioRepo(
+                    nombreUsuario,
+                    emailNormalizado,
+                    date,
+                    idUsuarioAccion,
+                    dni,
+                    tipoUsuario,
+                );
+
+                if (usuario?.name === 'SequelizeUniqueConstraintError') {
+                    const reintento = await resolverUsuarioIdentidad({
+                        email: emailNormalizado,
+                        dni,
                     });
+
+                    if (reintento.conflict) {
+                        return res.status(409).json(reintento.conflict);
+                    }
+
+                    if (!reintento.usuario) {
+                        return res.status(409).json({
+                            message: 'Este email ya está registrado en la plataforma',
+                            codigo: 'EMAIL_EN_USO',
+                        });
+                    }
+
+                    usuario = reintento.usuario;
+                    usuarioNuevo = false;
+
+                    const vinculoActivo = await findMembresiaActivaEnEmpresa(
+                        usuario.id_usuario,
+                        idEmpresa,
+                    );
+                    if (vinculoActivo) {
+                        return res.status(409).json({
+                            message: 'El usuario ya pertenece a esta empresa',
+                            codigo: 'YA_EN_EMPRESA',
+                        });
+                    }
+                } else if (usuario instanceof Error || !usuario?.id_usuario) {
+                    throw usuario instanceof Error ? usuario : new Error('No se pudo crear el usuario');
                 }
-                usuarioNuevo = true;
             }
 
             await crearUsuarioEmpresa(
@@ -366,6 +417,21 @@ const crearUsuario= async (req, res) => {
           message: 'El usuario ya pertenece a esta empresa',
           codigo: 'YA_EN_EMPRESA',
         });
+      }
+      if (error.name === 'SequelizeUniqueConstraintError') {
+        const campo = error.errors?.[0]?.path;
+        if (campo === 'email') {
+          return res.status(409).json({
+            message: 'Este email ya está registrado en la plataforma',
+            codigo: 'EMAIL_EN_USO',
+          });
+        }
+        if (campo === 'dni') {
+          return res.status(409).json({
+            message: 'El DNI no coincide con la cuenta existente para este email',
+            codigo: 'DNI_NO_COINCIDE',
+          });
+        }
       }
       console.error(error);
       res.status(500).json({
