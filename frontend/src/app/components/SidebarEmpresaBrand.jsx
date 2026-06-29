@@ -244,8 +244,8 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
         <Modal
           title={
             tieneVariasEmpresas
-              ? `Suscripción — ${nombreEmpresa || label}`
-              : 'Suscripción'
+              ? `Facturación — ${nombreEmpresa || label}`
+              : 'Facturación'
           }
           open={facturacionAbierta}
           onCancel={cerrarFacturacion}

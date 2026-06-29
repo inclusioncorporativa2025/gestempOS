@@ -735,6 +735,48 @@ const verificarSesionCheckout = async (sessionId) => {
   };
 };
 
+const toDateFromUnix = (unix) => (unix ? new Date(unix * 1000) : null);
+
+const mapFacturaStripe = (invoice) => ({
+  id: invoice.id,
+  numero: invoice.number || invoice.id,
+  fecha: toDateFromUnix(invoice.created),
+  importe: (invoice.total ?? 0) / 100,
+  importe_pagado: (invoice.amount_paid ?? 0) / 100,
+  moneda: String(invoice.currency || 'eur').toUpperCase(),
+  estado: invoice.status,
+  pdf_url: invoice.invoice_pdf || null,
+  ver_url: invoice.hosted_invoice_url || null,
+  periodo_desde: toDateFromUnix(invoice.period_start),
+  periodo_hasta: toDateFromUnix(invoice.period_end),
+});
+
+const listarFacturasEmitidas = async (idEmpresa, { limit = 5 } = {}) => {
+  const facturacion = await obtenerFacturacionCompleta(idEmpresa);
+  if (!facturacion?.stripe_customer_id) {
+    return { facturas: [], tiene_cliente_stripe: false };
+  }
+
+  const max = Math.min(Math.max(1, Number(limit) || 5), 100);
+
+  const list = await getStripe().invoices.list({
+    customer: facturacion.stripe_customer_id,
+    limit: max,
+  });
+
+  const facturas = list.data
+    .filter((inv) => inv.status !== 'draft')
+    .slice(0, max)
+    .map(mapFacturaStripe);
+
+  return {
+    facturas,
+    tiene_cliente_stripe: true,
+  };
+};
+
+const listarFacturasPagadas = listarFacturasEmitidas;
+
 const crearCheckoutTrialPendiente = async (idEmpresa, { email, nombre } = {}) => {
   const facturacion = await obtenerFacturacionCompleta(idEmpresa);
   if (!facturacion) {
@@ -782,5 +824,7 @@ module.exports = {
   reactivarSuscripcion,
   obtenerEstadoFacturacion,
   verificarSesionCheckout,
+  listarFacturasPagadas,
+  listarFacturasEmitidas,
   obtenerFacturacionCompleta,
 };

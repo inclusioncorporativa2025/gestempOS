@@ -7,6 +7,8 @@ const {
   reactivarSuscripcion,
   obtenerEstadoFacturacion,
   verificarSesionCheckout,
+  listarFacturasPagadas,
+  listarFacturasEmitidas,
   getStripe,
 } = require('../services/billingService');
 
@@ -136,6 +138,25 @@ const getSession = async (req, res) => {
   }
 };
 
+const getFacturas = async (req, res) => {
+  try {
+    const idEmpresa = getIdEmpresaSesion(req);
+    if (!idEmpresa) {
+      return res.status(400).json({ message: 'No hay empresa en la sesión' });
+    }
+
+    const limit = Number(req.query?.limit) || 5;
+    const resultado = await listarFacturasEmitidas(idEmpresa, { limit });
+    return res.status(200).json(resultado);
+  } catch (error) {
+    console.error('billing getFacturas:', error);
+    return res.status(error.status || 500).json({
+      message: error.message || 'Error al obtener las facturas',
+      code: error.code,
+    });
+  }
+};
+
 const handleStripeWebhook = async (req, res) => {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -172,5 +193,6 @@ module.exports = {
   postCancelar,
   postReactivar,
   getSession,
+  getFacturas,
   handleStripeWebhook,
 };

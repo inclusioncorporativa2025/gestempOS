@@ -10,12 +10,15 @@ import {
   message,
   Tooltip,
   Modal,
+  Tabs,
 } from 'antd';
 import {
   CreditCardOutlined,
   SettingOutlined,
   CheckCircleFilled,
   StopOutlined,
+  DownloadOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import {
   PLANS,
@@ -28,6 +31,7 @@ import {
 } from '../../constants/plans';
 import {
   getEstadoFacturacion,
+  listarFacturasEmitidas,
   crearCheckout,
   crearPortal,
   cancelarSuscripcion,
@@ -52,6 +56,20 @@ const MODO_LABELS = {
   trial: 'Periodo de prueba',
   stripe: 'Stripe',
   legacy: 'Manual',
+};
+
+const ESTADO_FACTURA_LABELS = {
+  paid: 'Pagada',
+  open: 'Pendiente',
+  void: 'Anulada',
+  uncollectible: 'Impagada',
+};
+
+const ESTADO_FACTURA_COLORS = {
+  paid: 'green',
+  open: 'orange',
+  void: 'default',
+  uncollectible: 'red',
 };
 
 const parsePrecio = (value) =>
@@ -81,6 +99,10 @@ const FacturacionPanel = ({ activo = true }) => {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelConfirmText, setCancelConfirmText] = useState('');
   const [estado, setEstado] = useState(null);
+  const [vista, setVista] = useState('suscripcion');
+  const [facturas, setFacturas] = useState([]);
+  const [facturasLoading, setFacturasLoading] = useState(false);
+  const [tieneClienteStripe, setTieneClienteStripe] = useState(false);
   const [plan, setPlan] = useState('esencial');
   const [ciclo, setCiclo] = useState('mensual');
   const [licencias, setLicencias] = useState(5);
@@ -112,9 +134,31 @@ const FacturacionPanel = ({ activo = true }) => {
     }
   }, [activo]);
 
+  const cargarFacturas = useCallback(async () => {
+    if (!activo) return;
+    setFacturasLoading(true);
+    try {
+      const data = await listarFacturasEmitidas(5);
+      setFacturas(data.facturas || []);
+      setTieneClienteStripe(Boolean(data.tiene_cliente_stripe));
+    } catch (error) {
+      message.error(error.message || 'No se pudieron cargar las facturas');
+      setFacturas([]);
+    } finally {
+      setFacturasLoading(false);
+    }
+  }, [activo]);
+
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  const handleCambioVista = (key) => {
+    setVista(key);
+    if (key === 'facturas') {
+      cargarFacturas();
+    }
+  };
 
   const minLicencias = getPlanMinLicencias(plan);
   const planInfo = PLANS.find((p) => p.id === plan) || PLANS[0];
@@ -231,7 +275,7 @@ const FacturacionPanel = ({ activo = true }) => {
     }
   };
 
-  if (loading) {
+  if (loading && !estado) {
     return (
       <div className="facturacion-panel facturacion-panel--loading">
         <Spin />
@@ -251,8 +295,91 @@ const FacturacionPanel = ({ activo = true }) => {
     ? 'Prueba gratuita'
     : MODO_LABELS[estado?.modo_facturacion] || estado?.modo_facturacion || '—';
 
-  return (
-    <div className="facturacion-panel">
+  const contenidoFacturas = (
+    <section className="facturacion-panel__card facturacion-panel__card--invoices">
+      <div className="facturacion-panel__card-head">
+        <Text className="facturacion-panel__section-title">Últimas facturas emitidas</Text>
+        {facturas.length > 0 ? (
+          <Tag color="blue">{facturas.length}</Tag>
+        ) : null}
+      </div>
+
+      {!tieneClienteStripe ? (
+        <Text type="secondary" className="facturacion-invoices__empty">
+          Las facturas estarán disponibles cuando actives la suscripción con Stripe.
+        </Text>
+      ) : facturasLoading ? (
+        <div className="facturacion-invoices__loading">
+          <Spin size="small" />
+        </div>
+      ) : facturas.length === 0 ? (
+        <Text type="secondary" className="facturacion-invoices__empty">
+          Aún no hay facturas emitidas.
+        </Text>
+      ) : (
+        <ul className="facturacion-invoices__list">
+          {facturas.map((factura) => (
+            <li key={factura.id} className="facturacion-invoices__item">
+              <div className="facturacion-invoices__info">
+                <span className="facturacion-invoices__numero">
+                  <FileTextOutlined aria-hidden />
+                  {factura.numero}
+                </span>
+                <span className="facturacion-invoices__fecha">
+                  {formatFecha(factura.fecha)}
+                </span>
+                {factura.estado ? (
+                  <Tag
+                    color={ESTADO_FACTURA_COLORS[factura.estado] || 'default'}
+                    className="facturacion-invoices__estado"
+                  >
+                    {ESTADO_FACTURA_LABELS[factura.estado] || factura.estado}
+                  </Tag>
+                ) : null}
+                {factura.periodo_desde && factura.periodo_hasta ? (
+                  <span className="facturacion-invoices__periodo">
+                    Periodo: {formatFecha(factura.periodo_desde)} –{' '}
+                    {formatFecha(factura.periodo_hasta)}
+                  </span>
+                ) : null}
+              </div>
+              <div className="facturacion-invoices__actions">
+                <strong className="facturacion-invoices__importe">
+                  {formatEuro(factura.importe)} {factura.moneda}
+                </strong>
+                {factura.pdf_url ? (
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<DownloadOutlined />}
+                    href={factura.pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    PDF
+                  </Button>
+                ) : factura.ver_url ? (
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<DownloadOutlined />}
+                    href={factura.ver_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Ver
+                  </Button>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+
+  const contenidoSuscripcion = (
+    <>
       {enPruebaStripe && !estado?.cancel_at_period_end && (
         <Alert
           type="info"
@@ -262,8 +389,6 @@ const FacturacionPanel = ({ activo = true }) => {
           description={
             <>
               Tienes acceso gratuito hasta el <strong>{formatFecha(fechaFinAcceso)}</strong>.
-              Puedes cancelar en cualquier momento antes sin compromiso: no se te cobrará nada,
-              pero perderás el acceso de forma inmediata.
             </>
           }
         />
@@ -538,6 +663,20 @@ const FacturacionPanel = ({ activo = true }) => {
           </Button>
         </section>
       </div>
+    </>
+  );
+
+  return (
+    <div className="facturacion-panel">
+      <Tabs
+        activeKey={vista}
+        onChange={handleCambioVista}
+        className="facturacion-panel__tabs"
+        items={[
+          { key: 'suscripcion', label: 'Suscripción', children: contenidoSuscripcion },
+          { key: 'facturas', label: 'Facturas', children: contenidoFacturas },
+        ]}
+      />
 
       <Modal
         title={enPruebaStripe ? '¿Cancelar la prueba gratuita?' : '¿Cancelar la suscripción?'}

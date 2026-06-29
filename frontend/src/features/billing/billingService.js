@@ -31,6 +31,17 @@ export const getEstadoFacturacion = async () => {
   return data.estado;
 };
 
+export const listarFacturasEmitidas = async (limit = 5) => {
+  const response = await fetch(`${API_BASE_URL}/facturas?limit=${limit}`, {
+    method: 'GET',
+    headers: authHeaders(),
+  });
+  return parseJsonError(response, 'Error al cargar las facturas');
+};
+
+/** @deprecated usar listarFacturasEmitidas */
+export const listarFacturasPagadas = listarFacturasEmitidas;
+
 export const crearCheckout = async ({ plan, ciclo, licencias }) => {
   const response = await fetch(`${API_BASE_URL}/checkout`, {
     method: 'POST',
