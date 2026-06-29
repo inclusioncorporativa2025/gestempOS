@@ -14,11 +14,12 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons';
 import { getAppLoginHref, getAppRegisterHref } from '../../utils/appLinks';
-import { PLANS, PLAN_COMPARISON_ROWS, ANNUAL_DISCOUNT_LABEL, getPlanMinAnnual, LICENSE_IS_USER_NOTE, PRICE_UNIT_MONTHLY, PRICE_UNIT_ANNUAL, MIN_USERS_LABEL } from '../../constants/plans';
+import { PLANS, PLAN_COMPARISON_ROWS, ANNUAL_DISCOUNT_LABEL, getPlanMinAnnual, LICENSE_IS_USER_NOTE, PRICES_EXCLUDE_TAX_NOTE, PRICE_UNIT_MONTHLY, PRICE_UNIT_ANNUAL, MIN_USERS_LABEL } from '../../constants/plans';
 import LandingFooter from '../components/LandingFooter';
 import LandingHeroVisual from '../components/LandingHeroVisual';
 import LandingPlexusBackground from '../components/LandingPlexusBackground';
 import LandingReveal from '../components/LandingReveal';
+import LandingStats from '../components/LandingStats';
 import BrandLogo from '../../components/BrandLogo';
 import './LandingPage.css';
 
@@ -149,35 +150,40 @@ const PlanCompareCell = ({ included }) => {
   );
 };
 
-const PlanBillingToggle = ({ billingPeriod, onChange }) => (
-  <div
-    className="landing-plans-billing landing-plans-billing--in-card"
-    role="group"
-    aria-label="Periodo de facturación"
-  >
-    <button
-      type="button"
-      className={`landing-plans-billing-option${
-        billingPeriod === 'monthly' ? ' landing-plans-billing-option--active' : ''
-      }`}
-      aria-pressed={billingPeriod === 'monthly'}
-      onClick={() => onChange('monthly')}
+const PlanBillingToggle = ({ billingPeriod, onChange, variant = 'standalone' }) => {
+  const isInCard = variant === 'in-card';
+  const monthlyLabel = isInCard ? 'Mensual' : 'Pago por mes';
+
+  return (
+    <div
+      className={`landing-plans-billing landing-plans-billing--${variant}`}
+      role="group"
+      aria-label="Periodo de facturación"
     >
-      Mensual
-    </button>
-    <button
-      type="button"
-      className={`landing-plans-billing-option${
-        billingPeriod === 'annual' ? ' landing-plans-billing-option--active' : ''
-      }`}
-      aria-pressed={billingPeriod === 'annual'}
-      onClick={() => onChange('annual')}
-    >
-      Anual
-      <span className="landing-plans-billing-note">({ANNUAL_DISCOUNT_LABEL})</span>
-    </button>
-  </div>
-);
+      <button
+        type="button"
+        className={`landing-plans-billing-option${
+          billingPeriod === 'monthly' ? ' landing-plans-billing-option--active' : ''
+        }`}
+        aria-pressed={billingPeriod === 'monthly'}
+        onClick={() => onChange('monthly')}
+      >
+        {monthlyLabel}
+      </button>
+      <button
+        type="button"
+        className={`landing-plans-billing-option${
+          billingPeriod === 'annual' ? ' landing-plans-billing-option--active' : ''
+        }`}
+        aria-pressed={billingPeriod === 'annual'}
+        onClick={() => onChange('annual')}
+      >
+        Anual
+        <span className="landing-plans-billing-note">({ANNUAL_DISCOUNT_LABEL})</span>
+      </button>
+    </div>
+  );
+};
 
 const LandingPage = () => {
   const [billingPeriod, setBillingPeriod] = useState('monthly');
@@ -308,6 +314,14 @@ const LandingPage = () => {
             <span className="landing-plans-license-note">{LICENSE_IS_USER_NOTE}</span>
           </p>
 
+          <PlanBillingToggle
+            billingPeriod={billingPeriod}
+            onChange={setBillingPeriod}
+            variant="standalone"
+          />
+
+          <p className="landing-plans-tax-note">{PRICES_EXCLUDE_TAX_NOTE}</p>
+
           <ul className="landing-plans-grid">
             {PLANS.map((plan, index) => (
               <LandingReveal
@@ -335,6 +349,7 @@ const LandingPage = () => {
                         <PlanBillingToggle
                           billingPeriod={billingPeriod}
                           onChange={setBillingPeriod}
+                          variant="in-card"
                         />
                       )}
                     </div>
@@ -542,6 +557,10 @@ const LandingPage = () => {
             ))}
           </ul>
         </div>
+      </LandingReveal>
+
+      <LandingReveal as="div" delay={80}>
+        <LandingStats />
       </LandingReveal>
 
       <LandingReveal className="landing-footer-reveal">

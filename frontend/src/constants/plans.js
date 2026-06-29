@@ -10,6 +10,9 @@ export const ANNUAL_DISCOUNT_LABEL = 'te regalamos 2 meses';
 
 /** En facturación, cada licencia = un usuario activo en la plataforma. */
 export const LICENSE_IS_USER_NOTE = 'Cada licencia equivale a un usuario.';
+export const PRICES_EXCLUDE_TAX_NOTE = 'Precios sin impuestos (IVA no incluido).';
+export const PLAN_UNAVAILABLE_TOOLTIP =
+  'No disponible por el momento, disculpen las molestias';
 export const PRICE_UNIT_MONTHLY = '/ usuario / mes';
 export const PRICE_UNIT_ANNUAL = '/ usuario / año';
 export const MIN_USERS_LABEL = (count) =>
