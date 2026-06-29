@@ -482,7 +482,7 @@ const AppShell = () => {
                 <Route
                   path={APP_ROUTES.facturacion}
                   element={
-                    <ProtectedRoute allowedTypes={[3]}>
+                    <ProtectedRoute allowedTypes={[1, 2, 3]}>
                       <FacturacionPage />
                     </ProtectedRoute>
                   }

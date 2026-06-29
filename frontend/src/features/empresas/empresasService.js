@@ -258,6 +258,26 @@ export const eliminarEmpresa = async (idEmpresa) => {
     }   
 };
 
+/** Borrado permanente (solo ROOT): empresa + datos + usuarios exclusivos. */
+export const purgarEmpresaPermanente = async (idEmpresa, identificador_fiscal) => {
+  const response = await fetch(`${API_BASE_URL}/purge`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      idEmpresa,
+      identificador_fiscal,
+      confirmacion: 'ELIMINAR',
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || data.message || 'Error al purgar la empresa');
+  }
+
+  return data;
+};
+
 export const reactivarEmpresa = async (idEmpresa) => {
   try {
     const idUsuario = getIdUsuario();

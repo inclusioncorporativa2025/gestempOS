@@ -26,14 +26,17 @@ import {
   EditOutlined,
   StopOutlined,
   RedoOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import {
   crearEmpresa,
   editEmpresa,
   eliminarEmpresa,
   getEmpresasUsuarios,
+  purgarEmpresaPermanente,
   reactivarEmpresa,
 } from '../../../features/empresas/empresasService';
+import { getTipoUsuario } from '../../../utils/authSession';
 import AltaEmpresaForm from './AltaEmpresaForm';
 import {
   PLANS,
@@ -131,6 +134,10 @@ const BuscadorEmpresa = ({ embedded = false }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isAltaModalVisible, setIsAltaModalVisible] = useState(false);
   const [altaLoading, setAltaLoading] = useState(false);
+  const [purgeTarget, setPurgeTarget] = useState(null);
+  const [purgeCif, setPurgeCif] = useState('');
+  const [purgeLoading, setPurgeLoading] = useState(false);
+  const esRoot = Number(getTipoUsuario()) === 1;
 
   useEffect(() => {
     fetchEmpresas();
@@ -252,6 +259,35 @@ const BuscadorEmpresa = ({ embedded = false }) => {
       message.success('Empresa reactivada correctamente');
     } catch (error) {
       message.error(error.message || 'Error al reactivar la empresa');
+    }
+  };
+
+  const abrirPurga = (record) => {
+    setPurgeTarget(record);
+    setPurgeCif('');
+  };
+
+  const cerrarPurga = () => {
+    if (purgeLoading) return;
+    setPurgeTarget(null);
+    setPurgeCif('');
+  };
+
+  const confirmarPurga = async () => {
+    if (!purgeTarget) return;
+    setPurgeLoading(true);
+    try {
+      const resultado = await purgarEmpresaPermanente(
+        purgeTarget.id_empresa,
+        purgeCif.trim(),
+      );
+      message.success(resultado.message || 'Empresa eliminada permanentemente');
+      cerrarPurga();
+      await fetchEmpresas();
+    } catch (error) {
+      message.error(error.message || 'Error al purgar la empresa');
+    } finally {
+      setPurgeLoading(false);
     }
   };
 
@@ -425,6 +461,18 @@ const BuscadorEmpresa = ({ embedded = false }) => {
                         </Tooltip>
                       </Popconfirm>
                     ) : null}
+                    {esRoot && (
+                      <Tooltip title="Borrar permanentemente (pruebas)">
+                        <Button
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          className="be-accion-btn"
+                          onClick={() => abrirPurga(record)}
+                          aria-label="Borrar permanentemente"
+                        />
+                      </Tooltip>
+                    )}
                   </div>
                 );
               },
@@ -563,6 +611,37 @@ const BuscadorEmpresa = ({ embedded = false }) => {
             </Col>
           </Row>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Borrar empresa permanentemente"
+        open={Boolean(purgeTarget)}
+        onCancel={cerrarPurga}
+        onOk={confirmarPurga}
+        okText="Eliminar para siempre"
+        okButtonProps={{
+          danger: true,
+          loading: purgeLoading,
+          disabled:
+            !purgeCif.trim()
+            || purgeCif.trim().toUpperCase()
+              !== String(purgeTarget?.identificador_fiscal || '').trim().toUpperCase(),
+        }}
+        cancelButtonProps={{ disabled: purgeLoading }}
+        destroyOnClose
+      >
+        <p>
+          Se eliminarán <strong>todos los datos</strong> de{' '}
+          <strong>{purgeTarget?.nombre}</strong>: fichajes, usuarios exclusivos,
+          facturación y registros asociados. <strong>No se puede deshacer.</strong>
+        </p>
+        <p>Escribe el CIF de la empresa para confirmar:</p>
+        <Input
+          value={purgeCif}
+          onChange={(e) => setPurgeCif(e.target.value)}
+          placeholder={purgeTarget?.identificador_fiscal || 'B12345678'}
+          autoComplete="off"
+        />
       </Modal>
     </Layout>
   );

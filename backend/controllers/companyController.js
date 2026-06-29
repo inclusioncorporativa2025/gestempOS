@@ -20,6 +20,7 @@ const {
 const { isValidRegionCode } = require('../config/spanishRegions');
 const { calcularFechaFinPrueba } = require('../services/trialService');
 const { crearCheckoutSession } = require('../services/billingService');
+const { purgarEmpresaCompleta } = require('../services/empresaPurgeService');
 const {
   findEmpresaActivaPorCif,
   normalizeEmail,
@@ -697,6 +698,46 @@ const registerCompanyPublic = async (req, res) => {
   return registerCompany(req, res);
 };
 
+const purgaEmpresaPermanente = async (req, res) => {
+  try {
+    const idEmpresa = Number(req.body?.idEmpresa);
+    const confirmacion = String(req.body?.confirmacion || '').trim().toUpperCase();
+    const cifConfirmacion = String(req.body?.identificador_fiscal || '')
+      .trim()
+      .toUpperCase();
+
+    if (!idEmpresa) {
+      return res.status(400).json({ error: 'idEmpresa es obligatorio' });
+    }
+
+    if (confirmacion !== 'ELIMINAR') {
+      return res.status(400).json({
+        error: 'Debes enviar confirmacion: "ELIMINAR" para borrar permanentemente',
+      });
+    }
+
+    const empresa = await Empresa.findByPk(idEmpresa);
+    if (!empresa) {
+      return res.status(404).json({ error: 'Empresa no encontrada' });
+    }
+
+    const cifEmpresa = String(empresa.identificador_fiscal || '').trim().toUpperCase();
+    if (!cifConfirmacion || cifConfirmacion !== cifEmpresa) {
+      return res.status(400).json({
+        error: 'El identificador fiscal no coincide con la empresa a eliminar',
+      });
+    }
+
+    const resultado = await purgarEmpresaCompleta(idEmpresa);
+    return res.status(200).json(resultado);
+  } catch (error) {
+    console.error('Error en purga permanente de empresa:', error);
+    return res.status(error.status || 500).json({
+      error: error.message || 'Error al eliminar la empresa permanentemente',
+    });
+  }
+};
+
 module.exports = {
   registerCompany,
   registerCompanyPublic,
@@ -712,4 +753,5 @@ module.exports = {
   getMiEmpresa,
   editMiEmpresa,
   getEmpresaBranding,
+  purgaEmpresaPermanente,
 };

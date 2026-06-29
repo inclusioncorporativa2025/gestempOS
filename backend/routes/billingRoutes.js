@@ -11,14 +11,17 @@ const { requireAuth, requireRole, ROLES } = require('../middleware/authMiddlewar
 
 const router = express.Router();
 
-const requireAdminEmpresa = [requireAuth, requireRole(ROLES.ADMIN_EMPRESA)];
+const requireBillingAccess = [
+  requireAuth,
+  requireRole(ROLES.ROOT, ROLES.PLATFORM_ADMIN, ROLES.ADMIN_EMPRESA),
+];
 
 router.get('/session/:sessionId/verify', getSession);
-router.get('/estado', ...requireAdminEmpresa, getEstado);
-router.post('/checkout', ...requireAdminEmpresa, postCheckout);
-router.post('/portal', ...requireAdminEmpresa, postPortal);
-router.post('/cancelar', ...requireAdminEmpresa, postCancelar);
-router.post('/reactivar', ...requireAdminEmpresa, postReactivar);
-router.get('/session/:sessionId', ...requireAdminEmpresa, getSession);
+router.get('/estado', ...requireBillingAccess, getEstado);
+router.post('/checkout', ...requireBillingAccess, postCheckout);
+router.post('/portal', ...requireBillingAccess, postPortal);
+router.post('/cancelar', ...requireBillingAccess, postCancelar);
+router.post('/reactivar', ...requireBillingAccess, postReactivar);
+router.get('/session/:sessionId', ...requireBillingAccess, getSession);
 
 module.exports = router;

@@ -38,6 +38,8 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
   const puedeAnadirEmpresa = TIPOS_PLATAFORMA.includes(tipoUsuario);
   const esPlataforma = TIPOS_PLATAFORMA.includes(tipoUsuario);
   const esAdminEmpresa = Number(tipoUsuario) === TIPO_ADMIN_EMPRESA;
+  const puedeGestionarSuscripcion =
+    Boolean(empresaActiva) && (esAdminEmpresa || esPlataforma);
   const tieneMultiempresa = planIncluyeFeature(planId, 'multiempresa');
   const tieneVariasEmpresas = puedeCambiarEmpresa && empresas.length > 1
     && (esPlataforma || tieneMultiempresa);
@@ -65,13 +67,13 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
 
   useEffect(() => {
     const abrir = () => {
-      if (esAdminEmpresa) {
+      if (puedeGestionarSuscripcion) {
         setFacturacionAbierta(true);
       }
     };
     window.addEventListener(OPEN_FACTURACION_EVENT, abrir);
     return () => window.removeEventListener(OPEN_FACTURACION_EVENT, abrir);
-  }, [esAdminEmpresa]);
+  }, [puedeGestionarSuscripcion]);
 
   const abrirFacturacion = () => setFacturacionAbierta(true);
   const cerrarFacturacion = () => setFacturacionAbierta(false);
@@ -124,11 +126,13 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
           { type: 'divider' },
         ]
       : []),
-    ...(esAdminEmpresa
+    ...(puedeGestionarSuscripcion
       ? [
           {
             key: 'facturacion',
-            label: 'Suscripción',
+            label: tieneVariasEmpresas
+              ? `Suscripción (${nombreEmpresa || label})`
+              : 'Suscripción',
             onClick: abrirFacturacion,
           },
         ]
@@ -236,9 +240,13 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
     <>
       {menu}
 
-      {esAdminEmpresa ? (
+      {puedeGestionarSuscripcion ? (
         <Modal
-          title="Suscripción"
+          title={
+            tieneVariasEmpresas
+              ? `Suscripción — ${nombreEmpresa || label}`
+              : 'Suscripción'
+          }
           open={facturacionAbierta}
           onCancel={cerrarFacturacion}
           footer={null}

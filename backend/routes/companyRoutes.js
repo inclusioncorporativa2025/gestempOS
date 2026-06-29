@@ -11,8 +11,9 @@ const {
   getMiEmpresa,
   editMiEmpresa,
   getEmpresaBranding,
+  purgaEmpresaPermanente,
 } = require('../controllers/companyController');
-const { requireRole, ROLE_GROUPS } = require('../middleware/authMiddleware');
+const { requireRole, ROLE_GROUPS, ROLES } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
@@ -22,6 +23,7 @@ router.get('/getEmpresasUsuarios', requireRole(ROLE_GROUPS.PLATFORM), getEmpresa
 router.post('/edit', requireRole(ROLE_GROUPS.PLATFORM), editEmpresa);
 router.post('/delete', requireRole(ROLE_GROUPS.PLATFORM), eliminarEmpresa);
 router.post('/reactivar', requireRole(ROLE_GROUPS.PLATFORM), reactivarEmpresa);
+router.post('/purge', requireRole(ROLES.ROOT), purgaEmpresaPermanente);
 
 router.post('/getTipoRegistro', requireRole(ROLE_GROUPS.CONFIG), getTipoRegistro);
 router.post('/updateTipoRegistro', requireRole(ROLE_GROUPS.CONFIG), updateTipoRegistro);
