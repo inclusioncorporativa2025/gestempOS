@@ -18,7 +18,24 @@ const Register = () => {
     try {
       const data = await registrarEmpresaPublica(values);
 
-      if (data?.emailBienvenidaEnviado === false) {
+      if (data?.checkoutUrl) {
+        notification.info({
+          message: 'Empresa registrada',
+          description:
+            'A continuación añade tu tarjeta en Stripe para activar los 15 días de prueba.',
+          duration: 6,
+        });
+        window.location.href = data.checkoutUrl;
+        return;
+      }
+
+      if (data?.checkoutError) {
+        notification.warning({
+          message: 'Empresa registrada',
+          description: `${data.message || 'Registro completado.'} No se pudo abrir el pago: ${data.checkoutError}`,
+          duration: 12,
+        });
+      } else if (data?.emailBienvenidaEnviado === false) {
         notification.warning({
           message: 'Empresa registrada',
           description:
@@ -59,8 +76,10 @@ const Register = () => {
           Empieza gratis
         </Title>
         <Text className="register-lead">
-          <strong className="register-trial">15 días sin compromiso.</strong>{' '}
-          Registra tu empresa y recibirás un correo para activar la cuenta de administrador.
+          <strong className="register-trial">15 días de prueba gratis.</strong>{' '}
+          Tras registrar tu empresa, añade tu tarjeta en Stripe. No se cobrará nada hasta
+          que termine la prueba y puedes cancelar en cualquier momento antes, sin compromiso.
+          Después recibirás un correo para activar tu cuenta.
         </Text>
 
         <AltaEmpresaForm

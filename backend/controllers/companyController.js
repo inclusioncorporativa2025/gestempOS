@@ -19,6 +19,7 @@ const {
 } = require('../services/planCatalogService');
 const { isValidRegionCode } = require('../config/spanishRegions');
 const { calcularFechaFinPrueba } = require('../services/trialService');
+const { crearCheckoutSession } = require('../services/billingService');
 const {
   findEmpresaActivaPorCif,
   normalizeEmail,
@@ -126,13 +127,33 @@ const registerCompany = async (req, res) => {
             return res.status(409).json(identidadAdmin.conflict);
         }
 
+        let usuarioAdmin = identidadAdmin.usuario;
+        const adminExistente = !identidadAdmin.esNuevo;
+
+        if (!adminExistente) {
+            const idUsuarioNuevo = await getNextGlobalId(Usuario, 'id_usuario', transaction);
+            usuarioAdmin = await Usuario.create({
+                id_usuario: idUsuarioNuevo,
+                nombre: Administrador,
+                email: emailNormalizado,
+                fecha_alta: fecha,
+                usuario_alta: idUsuarioAccion ?? idUsuarioNuevo,
+                tipo_usuario: 3,
+                dni: dni,
+                activo: true,
+                requiere_reset_password: true,
+            }, { transaction });
+        }
+
+        const usuarioAlta = idUsuarioAccion ?? usuarioAdmin.id_usuario;
+
         const idEmpresa = await getNextGlobalId(Empresa, 'id_empresa', transaction);
         const empresa = await Empresa.create({
             id_empresa: idEmpresa,
             nombre: nombre_empresa,
             identificador_fiscal: cifNormalizado,
             fecha_alta: fecha,
-            usuario_alta: idUsuarioAccion,
+            usuario_alta: usuarioAlta,
             licencias: licenciasSolicitadas,
             id_plan: planFields.id_plan,
             plan: planFields.plan,
@@ -145,26 +166,8 @@ const registerCompany = async (req, res) => {
             nombre_esquema: schemaName,
             id_empresa: empresa.id_empresa,
             fecha_alta: fecha,
-            usuario_alta: idUsuarioAccion,
+            usuario_alta: usuarioAlta,
         }, { transaction });
-
-        let usuarioAdmin = identidadAdmin.usuario;
-        const adminExistente = !identidadAdmin.esNuevo;
-
-        if (!adminExistente) {
-            const idUsuarioNuevo = await getNextGlobalId(Usuario, 'id_usuario', transaction);
-            usuarioAdmin = await Usuario.create({
-                id_usuario: idUsuarioNuevo,
-                nombre: Administrador,
-                email: emailNormalizado,
-                fecha_alta: fecha,
-                usuario_alta : idUsuarioAccion,
-                tipo_usuario : 3,
-                dni: dni,
-                activo: true,
-                requiere_reset_password: true,
-            }, { transaction });
-        }
 
         const idUsuarioEmpresa = await getNextGlobalId(UsuarioEmpresa, 'id_usuario_empresa', transaction);
         await UsuarioEmpresa.create({
@@ -173,7 +176,7 @@ const registerCompany = async (req, res) => {
             id_empresa: empresa.id_empresa,
             tipo_usuario: 3,
             fecha_alta: fecha,
-            usuario_alta : idUsuarioAccion,
+            usuario_alta: usuarioAlta,
         }, { transaction });
 
         const esRegistroPublico = idUsuarioAccion == null;
@@ -210,6 +213,24 @@ const registerCompany = async (req, res) => {
 
         let emailBienvenidaEnviado = true;
         let devWelcomeUrl = null;
+        let checkoutUrl = null;
+
+        if (esRegistroPublico) {
+          try {
+            const checkout = await crearCheckoutSession({
+              idEmpresa: empresa.id_empresa,
+              email: emailNormalizado,
+              nombre: Administrador,
+              planCodigo: planId,
+              ciclo: 'mensual',
+              licencias: licenciasSolicitadas,
+              aplicarTrial: true,
+            });
+            checkoutUrl = checkout.url;
+          } catch (checkoutError) {
+            console.error('Empresa creada pero falló el checkout Stripe:', checkoutError.message);
+          }
+        }
 
         try {
           devWelcomeUrl = await enviarBienvenidaEmpresa(usuarioAdmin, {
@@ -217,6 +238,7 @@ const registerCompany = async (req, res) => {
             licencias: numLicencias,
             alias,
             identificadorFiscal: CIF,
+            enlacePago: checkoutUrl,
           });
         } catch (mailError) {
           emailBienvenidaEnviado = false;
@@ -237,6 +259,13 @@ const registerCompany = async (req, res) => {
 
         if (process.env.NODE_ENV !== 'production' && devWelcomeUrl) {
           respuesta.devWelcomeUrl = devWelcomeUrl;
+        }
+
+        if (checkoutUrl) {
+          respuesta.checkoutUrl = checkoutUrl;
+        } else if (esRegistroPublico) {
+          respuesta.checkoutError =
+            'No se pudo iniciar el pago con tarjeta. Inicia sesión más tarde para reintentarlo.';
         }
 
         res.status(201).json(respuesta);
@@ -307,6 +336,11 @@ const getEmpresasUsuarios = async (req, res)=> {
          const result = await sequelize.query(
                 `SELECT e.id_empresa, e.nombre, e.identificador_fiscal, e.fecha_alta, e.licencias,
                         e.id_plan, e.plan, e.activo, e.alias, e.fecha_baja,
+                        ef.modo_facturacion,
+                        ef.estado_suscripcion,
+                        ef.trial_ends_at,
+                        ef.stripe_subscription_id,
+                        ef.cancel_at_period_end,
                         (
                           SELECT u.email
                           FROM m_usuarios_empresas ue
@@ -316,6 +350,7 @@ const getEmpresasUsuarios = async (req, res)=> {
                           LIMIT 1
                         ) AS email
                 FROM m_empresas e
+                LEFT JOIN empresa_facturacion ef ON ef.id_empresa = e.id_empresa
                 ORDER BY e.fecha_alta DESC`,
                 { type: sequelize.QueryTypes.SELECT }
               );

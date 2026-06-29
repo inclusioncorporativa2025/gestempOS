@@ -1,10 +1,7 @@
 import React from 'react';
 import { Alert, Button } from 'antd';
-import { LANDING_URL } from '../../constants/urls';
-import { LANDING_ROUTES } from '../../constants/routes';
+import { dispatchOpenFacturacion } from '../../constants/facturacion';
 import './TrialStatusBanner.css';
-
-const planesHref = `${LANDING_URL}${LANDING_ROUTES.plans}`;
 
 const TrialStatusBanner = ({ trial }) => {
   if (!trial?.advertir || trial?.expirada) {
@@ -21,9 +18,13 @@ const TrialStatusBanner = ({ trial }) => {
         type="warning"
         showIcon
         message={`Periodo de prueba: ${textoDias}`}
-        description="Cuando finalice deberás elegir un plan para seguir usando Timecor."
+        description="Cuando finalice deberás activar un plan para seguir usando Timecor."
         action={
-          <Button type="primary" size="small" href={planesHref} target="_blank" rel="noopener noreferrer">
+          <Button
+            type="primary"
+            size="small"
+            onClick={dispatchOpenFacturacion}
+          >
             Ver planes
           </Button>
         }

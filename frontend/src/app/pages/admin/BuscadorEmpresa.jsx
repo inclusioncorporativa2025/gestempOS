@@ -50,8 +50,60 @@ const FILTRO_TODAS = 'todas';
 const FILTRO_ACTIVAS = 'activas';
 const FILTRO_DESACTIVADAS = 'desactivadas';
 
+const empresaDadaDeBaja = (record) =>
+  Boolean(record.fecha_baja) || record.activo === 0 || record.activo === false;
+
+const empresaFacturacionBloquea = (record) => {
+  const estado = String(record.estado_suscripcion || '').toLowerCase();
+  const modo = String(record.modo_facturacion || '').toLowerCase();
+
+  if (estado === 'canceled') return true;
+  if (modo === 'trial' && !record.stripe_subscription_id) return true;
+
+  if (estado === 'trialing' && record.trial_ends_at) {
+    if (new Date(record.trial_ends_at) <= new Date()) return true;
+  }
+
+  if (
+    modo === 'stripe' &&
+    estado &&
+    !['active', 'trialing', 'past_due'].includes(estado)
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
 const empresaEstaActiva = (record) =>
-  !record.fecha_baja && record.activo !== 0 && record.activo !== false;
+  !empresaDadaDeBaja(record) && !empresaFacturacionBloquea(record);
+
+const renderEstadoEmpresa = (record) => {
+  if (empresaDadaDeBaja(record)) {
+    return <Tag color="default">De baja</Tag>;
+  }
+
+  const estado = String(record.estado_suscripcion || '').toLowerCase();
+  const modo = String(record.modo_facturacion || '').toLowerCase();
+
+  if (estado === 'canceled') {
+    return <Tag color="red">Suscripción cancelada</Tag>;
+  }
+  if (modo === 'trial' && !record.stripe_subscription_id) {
+    return <Tag color="orange">Pendiente de pago</Tag>;
+  }
+  if (estado === 'trialing') {
+    return <Tag color="blue">En prueba</Tag>;
+  }
+  if (estado === 'past_due') {
+    return <Tag color="orange">Pago pendiente</Tag>;
+  }
+  if (record.cancel_at_period_end) {
+    return <Tag color="gold">Cancelación programada</Tag>;
+  }
+
+  return <Tag color="green">Activa</Tag>;
+};
 
 const sumarLicencias = (empresas) =>
   empresas.reduce((acc, empresa) => acc + (Number(empresa.licencias) || 0), 0);
@@ -317,21 +369,17 @@ const BuscadorEmpresa = ({ embedded = false }) => {
             {
               title: 'Estado',
               key: 'estado',
-              render: (_, record) =>
-                empresaEstaActiva(record) ? (
-                  <Tag color="green">Activa</Tag>
-                ) : (
-                  <Tag color="default">De baja</Tag>
-                ),
+              render: (_, record) => renderEstadoEmpresa(record),
             },
             {
               title: 'Acciones',
               key: 'acciones',
               render: (_, record) => {
                 const activa = empresaEstaActiva(record);
+                const dadaDeBaja = empresaDadaDeBaja(record);
                 return (
                   <div className="be-acciones">
-                    {activa && (
+                    {!dadaDeBaja && (
                       <Tooltip title="Editar">
                         <Button
                           type="text"
@@ -342,24 +390,7 @@ const BuscadorEmpresa = ({ embedded = false }) => {
                         />
                       </Tooltip>
                     )}
-                    {activa ? (
-                      <Popconfirm
-                        title="¿Estás seguro de dar de baja esta empresa?"
-                        onConfirm={() => handleDelete(record.id_empresa)}
-                        okText="Sí"
-                        cancelText="No"
-                      >
-                        <Tooltip title="Dar de baja">
-                          <Button
-                            type="text"
-                            danger
-                            icon={<StopOutlined />}
-                            className="be-accion-btn"
-                            aria-label="Dar de baja"
-                          />
-                        </Tooltip>
-                      </Popconfirm>
-                    ) : (
+                    {dadaDeBaja ? (
                       <Popconfirm
                         title="¿Reactivar esta empresa?"
                         description="Se restaurará el acceso y los vínculos con el administrador."
@@ -376,7 +407,24 @@ const BuscadorEmpresa = ({ embedded = false }) => {
                           />
                         </Tooltip>
                       </Popconfirm>
-                    )}
+                    ) : activa ? (
+                      <Popconfirm
+                        title="¿Estás seguro de dar de baja esta empresa?"
+                        onConfirm={() => handleDelete(record.id_empresa)}
+                        okText="Sí"
+                        cancelText="No"
+                      >
+                        <Tooltip title="Dar de baja">
+                          <Button
+                            type="text"
+                            danger
+                            icon={<StopOutlined />}
+                            className="be-accion-btn"
+                            aria-label="Dar de baja"
+                          />
+                        </Tooltip>
+                      </Popconfirm>
+                    ) : null}
                   </div>
                 );
               },

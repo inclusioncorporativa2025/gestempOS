@@ -34,11 +34,17 @@ export const useTrialStatus = () => {
 
   useEffect(() => {
     const onTrialExpired = (event) => {
-      setTrial(event.detail?.trial ?? { expirada: true, activa: false });
+      const detail = event.detail?.trial;
+      if (detail?.activa && !detail?.expirada) {
+        setTrial(detail);
+        cargarTrial();
+        return;
+      }
+      setTrial(detail ?? { expirada: true, activa: false });
     };
     window.addEventListener(TRIAL_EXPIRED_EVENT, onTrialExpired);
     return () => window.removeEventListener(TRIAL_EXPIRED_EVENT, onTrialExpired);
-  }, []);
+  }, [cargarTrial]);
 
   const bloqueado = Boolean(trial?.expirada || trial?.requierePlan);
   const mostrarAviso = Boolean(trial?.advertir && !bloqueado);

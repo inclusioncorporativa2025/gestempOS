@@ -34,7 +34,17 @@ export const APP_ROUTES = {
   platformEmpresas: '/platform/empresas',
   notifications: '/notifications',
   miPerfil: '/mi-perfil',
+  facturacion: '/facturacion',
+  facturacionExito: '/facturacion/exito',
+  facturacionCancelado: '/facturacion/cancelado',
 };
+
+/** Rutas de facturación accesibles aunque el trial haya expirado */
+export const FACTURACION_ROUTES = [
+  APP_ROUTES.facturacion,
+  APP_ROUTES.facturacionExito,
+  APP_ROUTES.facturacionCancelado,
+];
 
 /** @deprecated Prefer APP_ROUTES or LANDING_ROUTES */
 export const ROUTES = APP_ROUTES;

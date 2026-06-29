@@ -7,9 +7,18 @@ const configureMiddleware = require('./config/middleware');
 const configureRoutes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
 const { connectToDatabase } = require('./config/db');
+const { handleStripeWebhook } = require('./controllers/billingController');
 // const firebaseAdmin = require('./config/firebase');
 
-const app = express();const port = process.env.PORT || 5001;
+const app = express();
+const port = process.env.PORT || 5001;
+
+// Webhook Stripe: body raw antes de express.json()
+app.post(
+  '/api/billing/webhook',
+  express.raw({ type: 'application/json' }),
+  handleStripeWebhook,
+);
 
 // Ruta básica para comprobar que el backend está vivo
 app.get('/', (req, res) => {

@@ -186,6 +186,7 @@ const buildWelcomeEmailHtml = ({
   identificadorFiscal,
   emailLogin,
   enlace,
+  enlacePago,
   ttlTexto,
   urlApp,
 }) =>
@@ -209,11 +210,19 @@ const buildWelcomeEmailHtml = ({
             </td>
           </tr>
         </table>
+        ${
+          enlacePago
+            ? `<p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#444;">
+          <strong>Prueba gratuita de 15 días:</strong> añade tu tarjeta para activarla. No se realizará ningún cargo hasta que finalice la prueba y puedes cancelar en cualquier momento antes, sin compromiso.
+        </p>`
+            : ''
+        }
         <p style="margin:0 0 28px 0; font-size:15px; line-height:1.6; color:#444;">
           Para empezar, crea tu contraseña con el botón siguiente. El enlace es válido durante <strong>${ttlTexto}</strong>.
         </p>
       </td>
     </tr>
+    ${enlacePago ? bloqueBotonEnlace(enlacePago, 'Activar 15 días gratis') : ''}
     ${bloqueBotonEnlace(enlace, 'Crear mi contraseña')}
   `);
 
@@ -277,6 +286,7 @@ const enviarBienvenidaEmpresa = async (usuario, datosEmpresa) => {
     licencias,
     alias,
     identificadorFiscal,
+    enlacePago,
   } = datosEmpresa;
 
   try {
@@ -291,6 +301,7 @@ const enviarBienvenidaEmpresa = async (usuario, datosEmpresa) => {
         identificadorFiscal: identificadorFiscal || '',
         emailLogin: usuario.email,
         enlace,
+        enlacePago: enlacePago || '',
         ttlTexto,
         urlApp: APP_URL,
       }),

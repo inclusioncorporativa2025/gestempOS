@@ -1,5 +1,10 @@
 const { sequelize } = require('../config/db');
-const { TRIAL_DAYS, TRIAL_WARN_DAYS } = require('../config/trial');
+const {
+  TRIAL_DAYS,
+  TRIAL_WARN_DAYS,
+  TRIAL_PAYMENT_HEADLINE,
+  TRIAL_PAYMENT_DETAIL,
+} = require('../config/trial');
 
 const MS_DIA = 24 * 60 * 60 * 1000;
 
@@ -52,6 +57,35 @@ const evaluarEstadoTrial = (facturacion) => {
       legacy: true,
       diasRestantes: null,
       fechaFin: null,
+      advertir: false,
+    };
+  }
+
+  if (
+    facturacion.modo_facturacion === 'trial' &&
+    !facturacion.stripe_subscription_id
+  ) {
+    return {
+      enPrueba: true,
+      activa: false,
+      expirada: false,
+      requierePago: true,
+      diasRestantes: TRIAL_DAYS,
+      fechaFin: facturacion.trial_ends_at,
+      advertir: false,
+    };
+  }
+
+  const estadoSuscripcion = String(facturacion?.estado_suscripcion || '').toLowerCase();
+  if (estadoSuscripcion === 'canceled') {
+    return {
+      enPrueba: false,
+      activa: false,
+      expirada: true,
+      requierePlan: true,
+      cancelada: true,
+      diasRestantes: 0,
+      fechaFin: facturacion.trial_ends_at,
       advertir: false,
     };
   }
@@ -119,18 +153,35 @@ const empresaTieneAccesoSuscripcion = async (idEmpresa) => {
 
 const buildTrialExpiredPayload = (estado) => ({
   code: 'TRIAL_EXPIRED',
-  message:
-    'Tu periodo de prueba de 15 días ha finalizado. Elige un plan para seguir usando Timecor.',
+  message: estado?.cancelada
+    ? 'Has cancelado la prueba gratuita. Activa una suscripción para volver a usar Timecor.'
+    : 'Tu periodo de prueba de 15 días ha finalizado. Elige un plan para seguir usando Timecor.',
   trial: {
     expirada: true,
+    cancelada: Boolean(estado?.cancelada),
     fechaFin: estado.fechaFin,
     diasRestantes: 0,
   },
 });
 
+const buildPaymentRequiredPayload = (estado) => ({
+  code: 'PAYMENT_REQUIRED',
+  message: TRIAL_PAYMENT_HEADLINE,
+  detail: TRIAL_PAYMENT_DETAIL,
+  trial: estado,
+});
+
 const assertEmpresaTrialActiva = async (idEmpresa) => {
   const estado = await obtenerEstadoTrialEmpresa(idEmpresa);
   if (!estado.activa) {
+    if (estado.requierePago) {
+      const error = new Error(buildPaymentRequiredPayload(estado).message);
+      error.code = 'PAYMENT_REQUIRED';
+      error.status = 403;
+      error.trial = estado;
+      throw error;
+    }
+
     const error = new Error(buildTrialExpiredPayload(estado).message);
     error.code = 'TRIAL_EXPIRED';
     error.status = 403;
@@ -145,6 +196,8 @@ const calcularFechaFinPrueba = (desde = new Date()) => addDays(desde, TRIAL_DAYS
 module.exports = {
   TRIAL_DAYS,
   TRIAL_WARN_DAYS,
+  TRIAL_PAYMENT_HEADLINE,
+  TRIAL_PAYMENT_DETAIL,
   ESTADOS_SUSCRIPCION_ACTIVA,
   obtenerFacturacionEmpresa,
   evaluarEstadoTrial,
@@ -152,5 +205,6 @@ module.exports = {
   empresaTieneAccesoSuscripcion,
   assertEmpresaTrialActiva,
   buildTrialExpiredPayload,
+  buildPaymentRequiredPayload,
   calcularFechaFinPrueba,
 };

@@ -1,0 +1,14 @@
+-- Cupón primer año: 16,67 % (2 meses gratis de 12). ID: timecor_anual_2meses_gratis_v2
+-- Variable entorno: STRIPE_COUPON_ANUAL=timecor_anual_2meses_gratis_v2
+-- El checkout usa mode=subscription y falla si stripe_price_id_anual es pago único.
+--
+-- Tras crear los precios en Stripe Dashboard o API, actualiza esta tabla:
+--
+-- UPDATE planes SET stripe_price_id_anual = 'price_...' WHERE codigo = 'esencial';
+-- UPDATE planes SET stripe_price_id_anual = 'price_...' WHERE codigo = 'rrhh';
+-- UPDATE planes SET stripe_price_id_anual = 'price_...' WHERE codigo = 'completo';
+--
+-- Importes por licencia/año (antes del cupón anual):
+--   esencial: 30,00 €
+--   rrhh:     46,80 €
+--   completo: 70,80 €

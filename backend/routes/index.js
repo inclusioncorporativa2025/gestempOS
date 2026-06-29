@@ -9,6 +9,7 @@ const vacacionesRoutes = require('./vacacionesRoutes');
 const nominasRoutes = require('./nominasRoutes');
 const supportRoutes = require('./supportRoutes');
 const platformRoutes = require('./platformRoutes');
+const billingRoutes = require('./billingRoutes');
 const { requireAuth, requireOwnEmpresa } = require('../middleware/authMiddleware');
 
 /** Rutas con ámbito de empresa: el JWT debe coincidir con idEmpresa del body (tipos 3–6) */
@@ -26,6 +27,7 @@ const configureRoutes = (app) => {
   app.use('/api/nominas', ...empresaScope, nominasRoutes);
   app.use('/api/support', supportRoutes);
   app.use('/api/platform', requireAuth, platformRoutes);
+  app.use('/api/billing', billingRoutes);
 };
 
 module.exports = configureRoutes;

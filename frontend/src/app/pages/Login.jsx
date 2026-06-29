@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Typography, notification, Modal } from 'antd';
 import GradientButton from '../components/shared/GradientButton';
-import { doLogin, doForgotPassword, doSelectEmpresa } from "../../features/auth/authService";
+import { doLogin, doForgotPassword, doSelectEmpresa, reanudarCheckout } from "../../features/auth/authService";
 import { useAuth } from '../../config/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
@@ -12,6 +12,7 @@ import BrandLogo from '../../components/BrandLogo';
 import { redirectToApp } from '../../utils/appLinks';
 import { getAuthToken } from '../../utils/authSession';
 import SelectEmpresaModal from '../components/SelectEmpresaModal';
+import { TRIAL_PAYMENT_DETAIL, TRIAL_PAYMENT_HEADLINE } from '../../constants/trial';
 import './Login.css';
 
 const { Title, Text } = Typography;
@@ -26,6 +27,10 @@ const Login = () => {
   const [usuarioPendiente, setUsuarioPendiente] = useState(null);
   const [seleccionEmpresaLoading, setSeleccionEmpresaLoading] = useState(false);
   const [email, setEmail] = useState("");
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentCheckoutUrl, setPaymentCheckoutUrl] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [loginCredentials, setLoginCredentials] = useState(null);
   const navigate = useNavigate();
   const { user, login, ready } = useAuth();
 
@@ -77,6 +82,9 @@ const Login = () => {
           ),
           duration: 12,
         });
+      } else if (error.code === 'PAYMENT_REQUIRED') {
+        setPaymentCheckoutUrl(error.checkoutUrl || null);
+        setPaymentModalOpen(true);
       } else {
         notification.error({
           message: 'Error',
@@ -95,6 +103,7 @@ const Login = () => {
       const data = await doLogin(values.email, values.password);
 
       if (data.code === 'EMPRESA_SELECTION_REQUIRED') {
+        setLoginCredentials(values);
         setPreAuthToken(data.preAuthToken);
         setEmpresasPendientes(data.empresas || []);
         setUsuarioPendiente(data.usuario || null);
@@ -110,6 +119,10 @@ const Login = () => {
           description: error.message || "Tras mejoras en el sistema, por motivos de seguridad debes restablecer la contraseña. Se te ha enviado un correo con los pasos a seguir.",
           duration: 8,
         });
+      } else if (error.code === 'PAYMENT_REQUIRED') {
+        setLoginCredentials(values);
+        setPaymentCheckoutUrl(error.checkoutUrl || null);
+        setPaymentModalOpen(true);
       } else if (error.code === 'TRIAL_EXPIRED') {
         const planesHref = `${LANDING_URL}${LANDING_ROUTES.plans}`;
         notification.warning({
@@ -150,6 +163,45 @@ const Login = () => {
 
   const openPasswordResetModal = () => setModalVisible(true);
   const closePasswordResetModal = () => setModalVisible(false);
+
+  const handleActivarPrueba = async () => {
+    if (paymentCheckoutUrl) {
+      window.location.href = paymentCheckoutUrl;
+      return;
+    }
+
+    if (!loginCredentials?.email || !loginCredentials?.password) {
+      notification.warning({
+        message: 'Inicia sesión de nuevo',
+        description: 'Vuelve a introducir tu email y contraseña para generar el enlace de pago.',
+      });
+      setPaymentModalOpen(false);
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      const data = await reanudarCheckout(
+        loginCredentials.email,
+        loginCredentials.password,
+      );
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+        return;
+      }
+      notification.error({
+        message: 'No se pudo abrir el pago',
+        description: 'Inténtalo de nuevo o contacta con soporte.',
+      });
+    } catch (error) {
+      notification.error({
+        message: 'No se pudo abrir el pago',
+        description: error.message || 'Inténtalo de nuevo más tarde.',
+      });
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
 
   const handlePasswordReset = async (values) => {
     const correo = values?.email || email;
@@ -288,6 +340,28 @@ const Login = () => {
           setEmpresasPendientes([]);
         }}
       />
+
+      <Modal
+        open={paymentModalOpen}
+        title="Activa tu prueba gratuita"
+        onCancel={() => setPaymentModalOpen(false)}
+        footer={[
+          <Button key="cerrar" onClick={() => setPaymentModalOpen(false)}>
+            Más tarde
+          </Button>,
+          <Button
+            key="activar"
+            type="primary"
+            loading={paymentLoading}
+            onClick={handleActivarPrueba}
+          >
+            Activar 15 días gratis
+          </Button>,
+        ]}
+      >
+        <p style={{ marginBottom: 12 }}>{TRIAL_PAYMENT_HEADLINE}</p>
+        <p style={{ marginBottom: 0, color: '#555' }}>{TRIAL_PAYMENT_DETAIL}</p>
+      </Modal>
     </div>
   );
 };

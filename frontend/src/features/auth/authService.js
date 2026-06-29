@@ -14,6 +14,8 @@ const buildAuthError = (response, data, fallback) => {
   error.code = data.code;
   error.status = response.status;
   error.supportEmail = data.supportEmail;
+  error.checkoutUrl = data.checkoutUrl;
+  error.detail = data.detail;
   return error;
 };
 
@@ -38,6 +40,21 @@ export const doLogin = async (email, password) => {
 
   if (data.token) {
     setAuthToken(data.token);
+  }
+
+  return data;
+};
+
+/** Reanuda el Checkout de Stripe para empresas con prueba pendiente de tarjeta. */
+export const reanudarCheckout = async (email, password) => {
+  const { response, data } = await authFetch('/reanudar-checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!response.ok) {
+    throw buildAuthError(response, data, 'No se pudo reanudar el pago');
   }
 
   return data;

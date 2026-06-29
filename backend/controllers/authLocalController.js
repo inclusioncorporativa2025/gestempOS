@@ -22,8 +22,10 @@ const { obtenerPlanEmpresa, assertEmpresaTieneFeature } = require('../services/p
 const {
   assertEmpresaTrialActiva,
   buildTrialExpiredPayload,
+  buildPaymentRequiredPayload,
   obtenerEstadoTrialEmpresa,
 } = require('../services/trialService');
+const { crearCheckoutTrialPendiente } = require('../services/billingService');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const BCRYPT_ROUNDS = 10;
@@ -102,6 +104,23 @@ const validarAccesoEmpresa = (usuario, membresiasActivas) => {
   return null;
 };
 
+const adjuntarCheckoutTrialSiAplica = async (payload, usuario, empresa) => {
+  if (payload.code !== 'PAYMENT_REQUIRED' || !empresa?.id_empresa) {
+    return payload;
+  }
+
+  try {
+    const checkout = await crearCheckoutTrialPendiente(empresa.id_empresa, {
+      email: usuario.email,
+      nombre: usuario.nombre,
+    });
+    return { ...payload, checkoutUrl: checkout.url };
+  } catch (checkoutError) {
+    console.error('No se pudo generar checkout de prueba:', checkoutError.message);
+    return payload;
+  }
+};
+
 const validarTrialParaAcceso = async (usuario, empresa) => {
   const tipo = Number(usuario.tipo_usuario);
   if (TIPOS_PLATAFORMA.includes(tipo) || !empresa?.id_empresa) {
@@ -119,6 +138,16 @@ const validarTrialParaAcceso = async (usuario, empresa) => {
         ...buildTrialExpiredPayload(error.trial),
       };
     }
+
+    if (error.code === 'PAYMENT_REQUIRED') {
+      const base = {
+        status: 403,
+        supportEmail: SUPPORT_EMAIL,
+        ...buildPaymentRequiredPayload(error.trial),
+      };
+      return adjuntarCheckoutTrialSiAplica(base, usuario, empresa);
+    }
+
     throw error;
   }
 };
@@ -338,7 +367,17 @@ const switchEmpresa = async (req, res) => {
       });
     }
 
+    const bloqueoTrial = await validarTrialParaAcceso(usuario, empresa);
+    if (bloqueoTrial) {
+      return res.status(bloqueoTrial.status).json(bloqueoTrial);
+    }
+
     const token = emitirJwtSesion(usuario, empresa, membresia);
+
+    const trial =
+      !esPlataforma
+        ? await obtenerEstadoTrialEmpresa(empresa.id_empresa)
+        : null;
 
     return res.status(200).json({
       message: 'Empresa cambiada',
@@ -349,6 +388,7 @@ const switchEmpresa = async (req, res) => {
         alias: empresa.alias,
         plan: normalizePlanId(empresa.plan),
       },
+      trial,
     });
   } catch (error) {
     if (error.code === 'PLAN_FEATURE_REQUIRED') {
@@ -477,6 +517,76 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const reanudarCheckout = async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email y contraseña son obligatorios' });
+  }
+
+  try {
+    const usuario = await buscarUsuarioPorEmail(email);
+
+    if (!usuarioActivo(usuario)) {
+      return res.status(401).json({ message: 'Credenciales inválidas' });
+    }
+
+    if (!usuario.password_hash || usuario.requiere_reset_password) {
+      return res.status(403).json({
+        code: 'PASSWORD_RESET_REQUIRED',
+        message: 'Debes crear tu contraseña antes de activar la prueba. Revisa el correo de bienvenida.',
+      });
+    }
+
+    const passwordValido = await bcrypt.compare(password, usuario.password_hash);
+    if (!passwordValido) {
+      return res.status(401).json({ message: 'Credenciales inválidas' });
+    }
+
+    const membresiasActivas = await listarMembresiasActivas(usuario.id_usuario);
+    const bloqueoEmpresa = validarAccesoEmpresa(usuario, membresiasActivas);
+    if (bloqueoEmpresa) {
+      return res.status(bloqueoEmpresa.status).json({
+        code: bloqueoEmpresa.code,
+        message: bloqueoEmpresa.message,
+        supportEmail: bloqueoEmpresa.supportEmail,
+      });
+    }
+
+    const empresaPendiente = await Promise.all(
+      membresiasActivas.map(async ({ empresa }) => {
+        const estado = await obtenerEstadoTrialEmpresa(empresa.id_empresa);
+        return estado.requierePago ? empresa : null;
+      }),
+    ).then((rows) => rows.find(Boolean));
+
+    if (!empresaPendiente) {
+      return res.status(400).json({
+        code: 'CHECKOUT_NOT_AVAILABLE',
+        message: 'No hay ningún pago de prueba pendiente para tu cuenta.',
+      });
+    }
+
+    const checkout = await crearCheckoutTrialPendiente(empresaPendiente.id_empresa, {
+      email: usuario.email,
+      nombre: usuario.nombre,
+    });
+
+    return res.status(200).json({
+      ...buildPaymentRequiredPayload(
+        await obtenerEstadoTrialEmpresa(empresaPendiente.id_empresa),
+      ),
+      checkoutUrl: checkout.url,
+    });
+  } catch (error) {
+    console.error('Error en reanudarCheckout:', error.message);
+    return res.status(error.status || 500).json({
+      message: error.message || 'Error al reanudar el pago',
+      code: error.code,
+    });
+  }
+};
+
 module.exports = {
   login,
   selectEmpresa,
@@ -484,4 +594,5 @@ module.exports = {
   misEmpresas,
   forgotPassword,
   resetPassword,
+  reanudarCheckout,
 };

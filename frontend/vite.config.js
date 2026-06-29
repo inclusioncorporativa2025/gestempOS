@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
-      port: 3000,
+      port: Number(env.VITE_DEV_PORT) || 3001,
       open: true,
     },
     esbuild: {

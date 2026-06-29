@@ -7,11 +7,14 @@ const {
   misEmpresas,
   forgotPassword,
   resetPassword,
+  reanudarCheckout,
 } = require('../controllers/authLocalController');
 const { registerCompanyPublic } = require('../controllers/companyController');
 const { requireAuth } = require('../middleware/authMiddleware');
 
 router.post('/login', login);
+
+router.post('/reanudar-checkout', reanudarCheckout);
 
 router.post('/select-empresa', selectEmpresa);
 

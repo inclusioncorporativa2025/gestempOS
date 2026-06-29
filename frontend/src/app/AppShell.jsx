@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { APP_ROUTES } from '../constants/routes';
+import { APP_ROUTES, FACTURACION_ROUTES } from '../constants/routes';
 import { Layout, Menu, Drawer, Button, ConfigProvider } from 'antd';
 import {
   MenuOutlined,
@@ -49,6 +49,9 @@ import PlatformAcceder from './pages/platform/PlatformAcceder';
 import ImpersonationBanner from './components/ImpersonationBanner';
 import TrialStatusBanner from './components/TrialStatusBanner';
 import TrialExpiredGate from './components/TrialExpiredGate';
+import FacturacionPage from './pages/facturacion/FacturacionPage';
+import FacturacionExito from './pages/facturacion/FacturacionExito';
+import FacturacionCancelado from './pages/facturacion/FacturacionCancelado';
 import { useTrialStatus } from '../hooks/useTrialStatus';
 
 import './App.css';
@@ -135,6 +138,8 @@ const AppShell = () => {
     APP_ROUTES.register,
     APP_ROUTES.forgotPassword,
     APP_ROUTES.resetPassword,
+    APP_ROUTES.facturacionExito,
+    APP_ROUTES.facturacionCancelado,
   ];
 
   useEffect(() => {
@@ -165,6 +170,7 @@ const AppShell = () => {
 
   const isMobile = windowWidth < 950;
   const isAuthShellPage = authShellPaths.includes(location.pathname);
+  const esRutaFacturacion = FACTURACION_ROUTES.includes(location.pathname);
 
   const showDrawer = () => setDrawerVisible(true);
   const closeDrawer = () => setDrawerVisible(false);
@@ -353,7 +359,7 @@ const AppShell = () => {
                 className={!isAuthShellPage ? 'app-main-content' : undefined}
                 style={isAuthShellPage ? { background: 'transparent' } : undefined}
               >
-              {!isAuthShellPage && bloqueado ? (
+              {!isAuthShellPage && bloqueado && !esRutaFacturacion ? (
                 <TrialExpiredGate />
               ) : (
                 <>
@@ -363,6 +369,8 @@ const AppShell = () => {
                 <Route path={APP_ROUTES.register} element={<Register />} />
                 <Route path={APP_ROUTES.forgotPassword} element={<ForgotPassword />} />
                 <Route path={APP_ROUTES.resetPassword} element={<ResetPassword />} />
+                <Route path={APP_ROUTES.facturacionExito} element={<FacturacionExito />} />
+                <Route path={APP_ROUTES.facturacionCancelado} element={<FacturacionCancelado />} />
                 <Route
                   path={APP_ROUTES.timeLogs}
                   element={
@@ -468,6 +476,14 @@ const AppShell = () => {
                   element={
                     <ProtectedRoute allowedTypes={[1, 2, 3, 4, 5]}>
                       <Notificaciones />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path={APP_ROUTES.facturacion}
+                  element={
+                    <ProtectedRoute allowedTypes={[3]}>
+                      <FacturacionPage />
                     </ProtectedRoute>
                   }
                 />
