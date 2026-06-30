@@ -110,7 +110,7 @@ const FichaPersonal = () => {
 
     setLoading(true);
     try {
-      const jornadas = await obtenerJornadas();
+      let jornadasLista = [];
       let encontrado = null;
       let todosCierres = [];
 
@@ -122,11 +122,13 @@ const FichaPersonal = () => {
         encontrado = perfil;
         todosCierres = peticiones?.mesesCierre || [];
       } else {
-        const [usuarios, pendientes, historial] = await Promise.all([
+        const [usuarios, pendientes, historial, jornadas] = await Promise.all([
           getUsuariosEmpresa(),
           getCierresMensualesByIdEmpresa(),
           getHistorialCierresMensuales(),
+          obtenerJornadas(),
         ]);
+        jornadasLista = jornadas || [];
 
         encontrado = (usuarios || []).find(
           (u) => Number(u.id_usuario) === idUsuario,
@@ -153,10 +155,11 @@ const FichaPersonal = () => {
       setUsuario(encontrado);
 
       const idJornada = encontrado.jornadas?.[0]?.id_jornada;
-      const jornada = (jornadas || []).find(
-        (j) => Number(j.id_jornada) === Number(idJornada),
-      );
-      setJornadaAsignada(jornada || null);
+      const jornada =
+        encontrado.jornada_asignada ||
+        jornadasLista.find((j) => Number(j.id_jornada) === Number(idJornada)) ||
+        null;
+      setJornadaAsignada(jornada);
       setCierres(todosCierres);
     } catch {
       message.error('Error al cargar la ficha de personal');

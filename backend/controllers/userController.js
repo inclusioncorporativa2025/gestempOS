@@ -105,6 +105,24 @@ const getMiPerfil = async (req, res) => {
                 empresa_id: jornadaUsuario.empresa_id,
                 id_usuario: jornadaUsuario.id_usuario,
             }));
+
+            const idJornadaAsignada = usuarioJornadas[0]?.id_jornada;
+            if (idJornadaAsignada != null) {
+                const jornadaDb = await Jornada.findOne({
+                    where: {
+                        empresa_id: idEmpresa,
+                        id_jornada: idJornadaAsignada,
+                        fecha_baja: null,
+                    },
+                });
+                if (jornadaDb) {
+                    perfil.jornada_asignada = jornadaDb.toJSON();
+                }
+            }
+        }
+
+        if (!perfil.jornada_asignada) {
+            perfil.jornada_asignada = null;
         }
 
         return res.status(200).json({ perfil });

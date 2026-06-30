@@ -43,14 +43,33 @@ const labelTipoHorarioDia = (value) => {
   return '—';
 };
 
+const ORDEN_DIAS_SEMANA = [
+  'Lunes',
+  'Martes',
+  'Miércoles',
+  'Jueves',
+  'Viernes',
+  'Sábado',
+  'Domingo',
+];
+
+const ordenarDiasSemana = (dias) =>
+  [...dias].sort(
+    (a, b) => ORDEN_DIAS_SEMANA.indexOf(a.dia) - ORDEN_DIAS_SEMANA.indexOf(b.dia),
+  );
+
 const RegistroDiaCard = ({ tipo }) => {
   const config = useMemo(() => parseColumn1(tipo), [tipo]);
   const esFlexible = Number(tipo.tipo) === 2;
   const dias = Array.isArray(config.dias) ? config.dias : [];
+  const diasLaborables = useMemo(
+    () => ordenarDiasSemana(dias.filter((dia) => minutosTramosDia(dia) > 0)),
+    [dias],
+  );
   const horasMensuales = config.horasMensuales ?? tipo.horasMensuales ?? '';
   const minutosSemanales = useMemo(
-    () => (esFlexible ? 0 : minutosSemanalesJornadaFija(dias)),
-    [dias, esFlexible],
+    () => (esFlexible ? 0 : minutosSemanalesJornadaFija(diasLaborables)),
+    [diasLaborables, esFlexible],
   );
 
   const columns = [
@@ -88,8 +107,8 @@ const RegistroDiaCard = ({ tipo }) => {
             </Descriptions.Item>
           ) : (
             <>
-              <Descriptions.Item label="Días configurados">
-                {dias.length > 0 ? dias.length : 'Ninguno'}
+              <Descriptions.Item label="Días laborables">
+                {diasLaborables.length > 0 ? diasLaborables.length : 'Ninguno'}
               </Descriptions.Item>
               <Descriptions.Item label="Horas semanales">
                 {minutosSemanales > 0 ? (
@@ -104,10 +123,10 @@ const RegistroDiaCard = ({ tipo }) => {
 
       {!esFlexible && (
         <div className="registro-dia-dias">
-          {dias.length === 0 ? (
+          {diasLaborables.length === 0 ? (
             <Text type="secondary">No hay días ni horarios configurados.</Text>
           ) : (
-            dias.map((dia, index) => (
+            diasLaborables.map((dia, index) => (
               <Card key={`${dia.dia}-${index}`} className="registro-card" size="small">
                 <div className="registro-dia-nombre-row">
                   <Text strong className="registro-dia-nombre">
