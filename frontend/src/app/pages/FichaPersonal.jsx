@@ -51,6 +51,7 @@ import {
   obtenerFechaResolucionCierre,
 } from '../../utils/cierreMensualEstado';
 import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
+import { parseFechaFichaje } from '../../utils/fechaFichaje';
 import RegistroDiaCard from '../components/cards/RegistroDiaCard';
 import './FichaPersonal.css';
 
@@ -226,8 +227,8 @@ const FichaPersonal = () => {
       setTotalHoras(calcularTotalHoras(registros));
       setTotalHorasEsperadas(jornadaMes?.horasMensuales || 'No configurada');
       setResumenHoras(jornadaMes?.resumen || null);
-    } catch {
-      message.error('Error al cargar el registro del mes');
+    } catch (error) {
+      message.error(error?.message || 'Error al cargar el registro del mes');
       setRegistroHoras([]);
     } finally {
       setLoadingRegistro(false);

@@ -483,24 +483,24 @@ export const getPeticionesByIdUsuario = async () => {
 
 export const getDatosUsuarioById = async (idUsuario) => {
   try {
-    const idEmpresa = getIdEmpresa(); 
+    const idEmpresa = getIdEmpresa();
 
-    const response = await fetch(API_BASE_URL+`/getDataById`, {
+    const response = await fetch(API_BASE_URL + '/getDataById', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idUsuario, idEmpresa }),
     });
 
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-       await response.json();
+      throw new Error(data.error || data.message || 'Error al obtener los registros');
     }
 
-    const data = await response.json();
-
-    return data; 
+    return data;
   } catch (error) {
     console.error('Error obteniendo datos:', error);
-  }   
+    throw error;
+  }
 };
 
 export const crearRegistro = async (tipoRegistro, idUsuario, guardarUbicacion) => {
