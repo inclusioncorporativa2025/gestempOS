@@ -131,12 +131,37 @@ const sincronizarFestivosOficialesHandler = async (req, res) => {
   }
 };
 
+const getFestivosCalendario = async (req, res) => {
+  const idEmpresa = Number(req.user.id_empresa);
+
+  if (!idEmpresa) {
+    return res.status(403).json({ error: 'Usuario sin empresa asignada' });
+  }
+
+  try {
+    const festivos = await FestivoEmpresa.findAll({
+      where: {
+        empresa_id: idEmpresa,
+        fecha_baja: null,
+      },
+      attributes: ['fecha', 'descripcion', 'origen'],
+      order: [['fecha', 'ASC']],
+      raw: true,
+    });
+
+    return res.status(200).json({ festivos });
+  } catch (error) {
+    return res.status(500).json({ error: 'Error al obtener festivos', detalle: error.message });
+  }
+};
+
 const getRegionesFestivos = async (_req, res) => {
   return res.status(200).json({ regiones: COMUNIDADES_AUTONOMAS });
 };
 
 module.exports = {
   getFestivosByIdEmpresa,
+  getFestivosCalendario,
   guardarFestivoEmpresa,
   eliminarFestivoEmpresa,
   sincronizarFestivosOficialesHandler,

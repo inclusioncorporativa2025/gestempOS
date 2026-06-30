@@ -8,6 +8,7 @@ import locale from 'antd/locale/es_ES';
 import { ConfigProvider } from 'antd';
 import {
   getFestivosByIdEmpresa,
+  getFestivosCalendario,
   guardarFestivoEmpresa,
   eliminarFestivoEmpresa,
   sincronizarFestivosOficiales,
@@ -47,9 +48,13 @@ const Calendario = () => {
   useEffect(() => {
     const fetchFestivos = async () => {
       try {
-        const data = await getFestivosByIdEmpresa();
-        if (Array.isArray(data)) {
-          setFestivos(data.filter((f) => f.fecha_baja === null));
+        const fetcher = puedeGestionarFestivos
+          ? getFestivosByIdEmpresa
+          : getFestivosCalendario;
+        const data = await fetcher();
+        const lista = Array.isArray(data) ? data : data?.festivos;
+        if (Array.isArray(lista)) {
+          setFestivos(lista.filter((f) => f.fecha_baja === null));
         } else {
           message.error('Error al cargar los festivos');
         }
@@ -72,7 +77,7 @@ const Calendario = () => {
     if (puedeVerAusencias) {
       fetchAusencias();
     }
-  }, [puedeVerAusencias]);
+  }, [puedeVerAusencias, puedeGestionarFestivos]);
 
   const ausenciasPorFecha = useMemo(() => {
     const map = new Map();

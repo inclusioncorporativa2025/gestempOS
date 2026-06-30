@@ -27,6 +27,9 @@ import { ConfigProvider } from 'antd';
 import { APP_ROUTES } from '../../constants/routes';
 import { getUsuariosEmpresa, getHorasTotalesMesByIdUsuario, getMiPerfil } from '../../features/user/usuarioService';
 import { obtenerJornadas } from '../../features/jornada/jornadaService';
+import { getAusenciasCalendario } from '../../features/ausencias/ausenciasService';
+import { getFestivosCalendario } from '../../features/calendario/CalendarioService';
+import { construirContextoCalendario } from '../../utils/jornadaHoras';
 import {
   getDatosUsuarioById,
   getDatosUsuarioMes,
@@ -65,6 +68,7 @@ const formatearFecha = (fecha) =>
 const FichaPersonal = () => {
   const { tieneFeature } = usePlan();
   const puedeVerVacaciones = tieneFeature('vacaciones');
+  const puedeVerAusencias = tieneFeature('ausencias_basicas');
   const puedeVerNominas = tieneFeature('nominas');
   const { id } = useParams();
   const location = useLocation();
@@ -76,6 +80,7 @@ const FichaPersonal = () => {
   const [loading, setLoading] = useState(true);
   const [usuario, setUsuario] = useState(null);
   const [jornadaAsignada, setJornadaAsignada] = useState(null);
+  const [contextoCalendario, setContextoCalendario] = useState(null);
   const [cierres, setCierres] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(dayjs().startOf('month'));
   const [registroHoras, setRegistroHoras] = useState([]);
@@ -121,7 +126,25 @@ const FichaPersonal = () => {
         ]);
         encontrado = perfil;
         todosCierres = peticiones?.mesesCierre || [];
+
+        try {
+          const festivosData = await getFestivosCalendario();
+          let ausencias = [];
+          if (puedeVerAusencias) {
+            const ausenciasData = await getAusenciasCalendario();
+            ausencias = ausenciasData?.eventos || [];
+          }
+          setContextoCalendario(
+            construirContextoCalendario({
+              ausencias,
+              festivos: festivosData?.festivos || [],
+            }),
+          );
+        } catch {
+          setContextoCalendario(null);
+        }
       } else {
+        setContextoCalendario(null);
         const [usuarios, pendientes, historial, jornadas] = await Promise.all([
           getUsuariosEmpresa(),
           getCierresMensualesByIdEmpresa(),
@@ -167,7 +190,7 @@ const FichaPersonal = () => {
     } finally {
       setLoading(false);
     }
-  }, [esMiPerfil, idSesion, idUsuario, navigate]);
+  }, [esMiPerfil, idSesion, idUsuario, navigate, puedeVerAusencias]);
 
   useEffect(() => {
     cargarFicha();
@@ -437,7 +460,11 @@ const FichaPersonal = () => {
           <Title level={5} style={{ marginTop: 0 }}>
             {jornadaAsignada.nombre}
           </Title>
-          <RegistroDiaCard tipo={jornadaAsignada} />
+          <RegistroDiaCard
+            tipo={jornadaAsignada}
+            variant={esPropio ? 'resumen' : 'detalle'}
+            contextoCalendario={esPropio ? contextoCalendario : null}
+          />
         </div>
       ) : (
         <Empty

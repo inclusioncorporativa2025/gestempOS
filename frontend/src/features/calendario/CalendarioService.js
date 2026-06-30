@@ -2,6 +2,21 @@ import { getIdUsuario, getIdEmpresa } from '../../utils/authSession';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL + 'calendario';
 
+export const getFestivosCalendario = async () => {
+  const response = await fetch(`${API_BASE_URL}/getFestivosCalendario`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Error al cargar festivos del calendario');
+  }
+
+  return response.json();
+};
+
 export const getFestivosByIdEmpresa = async () => {
   try {
     const idUsuario = getIdUsuario();

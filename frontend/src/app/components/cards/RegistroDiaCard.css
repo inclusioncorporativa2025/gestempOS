@@ -47,3 +47,41 @@
 .registro-dia-tabla .ant-table {
   background: transparent;
 }
+
+.registro-dia--resumen {
+  gap: 12px;
+}
+
+.registro-dia-resumen-destacado {
+  margin-bottom: 0 !important;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.registro-dia-resumen-semana {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.registro-dia-resumen-titulo {
+  display: block;
+  font-size: 0.8rem;
+  margin-bottom: 2px;
+}
+
+.registro-dia-resumen-linea {
+  display: block;
+  font-size: 0.95rem;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.registro-dia-resumen-linea--festivo {
+  color: #ad6800;
+}
+
+.registro-dia-resumen-linea--ausencia {
+  color: #1677ff;
+}

@@ -4,10 +4,14 @@ import {
   formatearMinutosHoras,
   minutosSemanalesJornadaFija,
   minutosTramosDia,
+  construirContextoCalendario,
+  mensajeDestacadoHorario,
+  obtenerAgendaProximosDias,
+  textoAgendaDia,
 } from '../../../utils/jornadaHoras';
 import './RegistroDiaCard.css';
 
-const { Text } = Typography;
+const { Text, Paragraph } = Typography;
 
 const parseColumn1 = (tipo) => {
   if (!tipo?.column1) return {};
@@ -58,7 +62,7 @@ const ordenarDiasSemana = (dias) =>
     (a, b) => ORDEN_DIAS_SEMANA.indexOf(a.dia) - ORDEN_DIAS_SEMANA.indexOf(b.dia),
   );
 
-const RegistroDiaCard = ({ tipo }) => {
+const RegistroDiaCard = ({ tipo, variant = 'detalle', contextoCalendario = null }) => {
   const config = useMemo(() => parseColumn1(tipo), [tipo]);
   const esFlexible = Number(tipo.tipo) === 2;
   const dias = Array.isArray(config.dias) ? config.dias : [];
@@ -71,6 +75,79 @@ const RegistroDiaCard = ({ tipo }) => {
     () => (esFlexible ? 0 : minutosSemanalesJornadaFija(diasLaborables)),
     [diasLaborables, esFlexible],
   );
+  const contextoHorario = useMemo(
+    () => contextoCalendario || construirContextoCalendario(),
+    [contextoCalendario],
+  );
+  const mensajeDestacado = useMemo(
+    () => mensajeDestacadoHorario(diasLaborables, contextoHorario),
+    [diasLaborables, contextoHorario],
+  );
+  const agendaProximos = useMemo(
+    () => obtenerAgendaProximosDias(diasLaborables, contextoHorario, 14)
+      .filter((item) => item.offset >= 0),
+    [diasLaborables, contextoHorario],
+  );
+
+  if (variant === 'resumen') {
+    if (esFlexible) {
+      return (
+        <div className="registro-dia registro-dia--resumen">
+          <Paragraph className="registro-dia-resumen-destacado">
+            Jornada flexible
+            {horasMensuales !== '' && horasMensuales != null
+              ? ` de ${horasMensuales} h al mes`
+              : ''}
+            .
+          </Paragraph>
+        </div>
+      );
+    }
+
+    if (diasLaborables.length === 0) {
+      return (
+        <Text type="secondary">No hay horario configurado.</Text>
+      );
+    }
+
+    const agendaVisible = agendaProximos.filter(
+      (item) => item.tipo === 'laborable' || item.tipo === 'ausencia' || item.tipo === 'festivo',
+    );
+
+    return (
+      <div className="registro-dia registro-dia--resumen">
+        {mensajeDestacado && (
+          <Paragraph className="registro-dia-resumen-destacado">
+            {mensajeDestacado}
+          </Paragraph>
+        )}
+
+        {agendaVisible.length > 0 && (
+          <div className="registro-dia-resumen-semana">
+            <Text type="secondary" className="registro-dia-resumen-titulo">
+              Próximos días
+            </Text>
+            {agendaVisible.map((item) => (
+              <Text
+                key={item.fechaIso}
+                className={`registro-dia-resumen-linea registro-dia-resumen-linea--${item.tipo}`}
+              >
+                <Text strong>
+                  {item.offset === 0
+                    ? 'Hoy'
+                    : item.offset === 1
+                      ? 'Mañana'
+                      : item.fecha.format('dddd D/M')}
+                  :
+                </Text>{' '}
+                {textoAgendaDia(item)}
+              </Text>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const columns = [
     { title: 'Hora entrada', dataIndex: 'hora_entrada', key: 'hora_entrada' },
