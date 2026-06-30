@@ -211,10 +211,11 @@ const GestionTipoUsuariosCard = () => {
     
                         for (let i = 0; i < newTipo.registros.length; i++) {
                             const prevRegistro = newTipo.registros[i];
+                            if (prevRegistro.dia !== dia) continue;
+
                             const prevHoraSalida = dayjs(prevRegistro.hora_salida, 'HH:mm:ss');
-                            const currHoraEntrada = horaEntrada;
-    
-                            if (prevHoraSalida?.isValid() && currHoraEntrada.isBefore(prevHoraSalida)) {
+
+                            if (prevHoraSalida.isValid() && horaEntrada.isBefore(prevHoraSalida)) {
                                 message.error(`Los horarios de los registros en el día ${dia} se solapan.`);
                                 valid = false;
                                 return;
