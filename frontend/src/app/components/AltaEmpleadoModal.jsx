@@ -92,8 +92,10 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
       onClose();
     } catch (error) {
       notification.error({
-        message: error.message,
-        description: `Error enviando invitación a ${values.email}.`,
+        message: error.message || 'No se pudo dar de alta al empleado',
+        description: error.codigo
+          ? undefined
+          : `No se pudo completar el alta para ${values.email}.`,
       });
     } finally {
       setSubmitting(false);

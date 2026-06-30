@@ -130,7 +130,9 @@ export const crearUsuario = async (email, nombreUsuario, dni, tipoUsuario, horar
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || 'Error crearUsuario');
+      const error = new Error(errorData.message || 'Error crearUsuario');
+      error.codigo = errorData.codigo;
+      throw error;
     }
 
     const data = await response.json();

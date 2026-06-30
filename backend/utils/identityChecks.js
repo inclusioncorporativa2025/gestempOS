@@ -63,9 +63,9 @@ const findUsuarioActivoPorEmail = async (email, options = {}) => {
   });
 };
 
-const findUsuarioActivoPorDni = async (dni, options = {}) => {
+const findUsuariosActivosPorDni = async (dni, options = {}) => {
   const normalized = normalizeDni(dni);
-  if (!normalized) return null;
+  if (!normalized) return [];
 
   const { excludeUserId, ...queryOptions } = options;
   const whereClause = {
@@ -78,10 +78,26 @@ const findUsuarioActivoPorDni = async (dni, options = {}) => {
     whereClause.id_usuario = { [Op.ne]: excludeUserId };
   }
 
-  return Usuario.findOne({
+  return Usuario.findAll({
     where: whereClause,
     ...queryOptions,
   });
+};
+
+const findUsuarioActivoPorDni = async (dni, options = {}) => {
+  const usuarios = await findUsuariosActivosPorDni(dni, options);
+  if (usuarios.length === 0) return null;
+  if (usuarios.length === 1) return usuarios[0];
+
+  const emailNorm = normalizeEmail(options.email);
+  if (emailNorm) {
+    const porEmail = usuarios.find(
+      (usuario) => normalizeEmail(usuario.email) === emailNorm,
+    );
+    if (porEmail) return porEmail;
+  }
+
+  return usuarios[0];
 };
 
 const findMembresiaActivaEnEmpresa = async (idUsuario, idEmpresa, options = {}) => {
@@ -108,7 +124,7 @@ const resolverUsuarioIdentidad = async ({ email, dni } = {}, options = {}) => {
 
   const [byEmail, byDni] = await Promise.all([
     emailNorm ? findUsuarioActivoPorEmail(emailNorm, options) : null,
-    dniNorm ? findUsuarioActivoPorDni(dniNorm, options) : null,
+    dniNorm ? findUsuarioActivoPorDni(dniNorm, { ...options, email: emailNorm }) : null,
   ]);
 
   if (byEmail && byDni && byEmail.id_usuario !== byDni.id_usuario) {
@@ -129,8 +145,9 @@ const resolverUsuarioIdentidad = async ({ email, dni } = {}, options = {}) => {
       usuario: null,
       esNuevo: false,
       conflict: {
-        message: 'Este DNI ya está asociado a otra cuenta. Utilice el email registrado para esa persona.',
+        message: `Este DNI ya está registrado con el email ${usuario.email}. Utilice ese correo para añadir a esta persona a la empresa.`,
         codigo: 'DNI_VINCULADO_OTRO_EMAIL',
+        emailRegistrado: usuario.email,
       },
     };
   }
@@ -163,6 +180,7 @@ module.exports = {
   findEmpresaActivaPorCif,
   findUsuarioActivoPorEmail,
   findUsuarioActivoPorDni,
+  findUsuariosActivosPorDni,
   findMembresiaActivaEnEmpresa,
   resolverUsuarioIdentidad,
 };
