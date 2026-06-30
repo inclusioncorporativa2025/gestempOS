@@ -34,6 +34,7 @@ export const APP_ROUTES = {
   platformEmpresas: '/platform/empresas',
   notifications: '/notifications',
   miPerfil: '/mi-perfil',
+  nominas: '/nominas',
   facturacion: '/facturacion',
   facturacionExito: '/facturacion/exito',
   facturacionCancelado: '/facturacion/cancelado',

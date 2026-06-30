@@ -1,0 +1,36 @@
+.prenominas-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.prenominas-panel__card {
+  border-radius: 12px;
+}
+
+.prenominas-panel__hint {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.prenominas-panel__generar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.prenominas-panel__periodo {
+  display: block;
+  margin-top: 8px;
+  width: 100%;
+  max-width: 220px;
+}
+
+.prenominas-panel__resumen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: center;
+}

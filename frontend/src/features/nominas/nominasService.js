@@ -99,3 +99,43 @@ export const descargarNomina = async (idDocumento, nombreArchivo = 'nomina.pdf')
   link.remove();
   window.URL.revokeObjectURL(url);
 };
+
+export const listarPrenominas = async () => {
+  const idEmpresa = getIdEmpresa();
+  const response = await fetch(`${API_BASE_URL}/listarPrenominas`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idEmpresa }),
+  });
+  return parseJsonError(response, 'Error al cargar las prenóminas');
+};
+
+export const generarPrenomina = async (periodoMes, periodoAnio) => {
+  const idEmpresa = getIdEmpresa();
+  const response = await fetch(`${API_BASE_URL}/generarPrenomina`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idEmpresa, periodoMes, periodoAnio }),
+  });
+  return parseJsonError(response, 'Error al generar la prenómina');
+};
+
+export const detallePrenomina = async (idPrenomina) => {
+  const idEmpresa = getIdEmpresa();
+  const response = await fetch(`${API_BASE_URL}/detallePrenomina`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idEmpresa, idPrenomina }),
+  });
+  return parseJsonError(response, 'Error al cargar el detalle de la prenómina');
+};
+
+export const cerrarPrenomina = async (idPrenomina) => {
+  const idEmpresa = getIdEmpresa();
+  const response = await fetch(`${API_BASE_URL}/cerrarPrenomina`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idEmpresa, idPrenomina }),
+  });
+  return parseJsonError(response, 'Error al cerrar la prenómina');
+};

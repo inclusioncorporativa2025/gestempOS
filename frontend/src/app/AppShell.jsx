@@ -14,6 +14,7 @@ import {
   MenuUnfoldOutlined,
   AppstoreOutlined,
   UserOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import Login from './pages/Login';
 import Home from './pages/Home';
@@ -52,7 +53,9 @@ import TrialExpiredGate from './components/TrialExpiredGate';
 import FacturacionPage from './pages/facturacion/FacturacionPage';
 import FacturacionExito from './pages/facturacion/FacturacionExito';
 import FacturacionCancelado from './pages/facturacion/FacturacionCancelado';
+import NominasPage from './pages/NominasPage';
 import { useTrialStatus } from '../hooks/useTrialStatus';
+import { usePlan } from '../hooks/usePlan';
 
 import './App.css';
 import './styles/sidebar.css';
@@ -114,6 +117,14 @@ const pages = [
     tipousuario: [1, 2, 3, 4, 5],
   },
   {
+    label: 'Nóminas',
+    key: '13',
+    icon: <FileTextOutlined />,
+    path: APP_ROUTES.nominas,
+    tipousuario: [1, 2, 3, 4],
+    planFeature: 'nominas',
+  },
+  {
     label: 'Mi perfil',
     key: '12',
     icon: <UserOutlined />,
@@ -132,6 +143,7 @@ const AppShell = () => {
   const { user, ready } = useAuth();
   const tipousuario = user?.tipo_usuario ?? null;
   const { trial, bloqueado, mostrarAviso } = useTrialStatus();
+  const { tieneFeature } = usePlan();
 
   const authShellPaths = [
     APP_ROUTES.login,
@@ -177,7 +189,10 @@ const AppShell = () => {
 
   const filteredPages =
     tipousuario != null
-      ? pages.filter((page) => page.tipousuario.includes(tipousuario))
+      ? pages.filter(
+        (page) => page.tipousuario.includes(tipousuario)
+          && (!page.planFeature || tieneFeature(page.planFeature)),
+      )
       : [];
 
   const paginaActual = pages.find((page) => {
@@ -446,6 +461,14 @@ const AppShell = () => {
                 <Route
                   path="/companies"
                   element={<Navigate to={APP_ROUTES.platformEmpresas} replace />}
+                />
+                <Route
+                  path={APP_ROUTES.nominas}
+                  element={
+                    <ProtectedRoute allowedTypes={[1, 2, 3, 4]}>
+                      <NominasPage />
+                    </ProtectedRoute>
+                  }
                 />
                 <Route
                   path={APP_ROUTES.miPerfil}

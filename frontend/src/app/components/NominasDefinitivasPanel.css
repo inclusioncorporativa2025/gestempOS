@@ -1,0 +1,40 @@
+.nominas-def-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nominas-def-panel__card {
+  border-radius: 12px;
+}
+
+.nominas-def-panel__title {
+  margin-top: 0 !important;
+}
+
+.nominas-def-panel__hint {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.nominas-def-panel__upload-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.nominas-def-panel__select,
+.nominas-def-panel__periodo {
+  display: block;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.nominas-def-panel__dragger {
+  margin-bottom: 16px;
+}
+
+.nominas-def-panel__submit {
+  margin-top: 4px;
+}
