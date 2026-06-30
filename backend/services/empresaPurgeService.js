@@ -22,6 +22,7 @@ const TABLAS_EMPRESA_ID = [
 
 /** Tablas maestras con columna id_empresa */
 const TABLAS_ID_EMPRESA = [
+  'empresa_facturas',
   'stripe_webhook_events',
   'empresa_plan_historial',
   'empresa_facturacion',

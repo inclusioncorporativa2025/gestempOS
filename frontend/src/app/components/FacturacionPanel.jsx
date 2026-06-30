@@ -32,6 +32,7 @@ import {
 import {
   getEstadoFacturacion,
   listarFacturasEmitidas,
+  abrirDocumentoFactura,
   crearCheckout,
   crearPortal,
   cancelarSuscripcion,
@@ -157,6 +158,14 @@ const FacturacionPanel = ({ activo = true }) => {
     setVista(key);
     if (key === 'facturas') {
       cargarFacturas();
+    }
+  };
+
+  const handleAbrirFactura = async (idFactura) => {
+    try {
+      await abrirDocumentoFactura(idFactura);
+    } catch (error) {
+      message.error(error.message || 'No se pudo abrir la factura');
     }
   };
 
@@ -314,7 +323,7 @@ const FacturacionPanel = ({ activo = true }) => {
         </div>
       ) : facturas.length === 0 ? (
         <Text type="secondary" className="facturacion-invoices__empty">
-          Aún no hay facturas emitidas.
+          Aún no hay facturas emitidas. Se generan automáticamente al activar la suscripción.
         </Text>
       ) : (
         <ul className="facturacion-invoices__list">
@@ -325,6 +334,12 @@ const FacturacionPanel = ({ activo = true }) => {
                   <FileTextOutlined aria-hidden />
                   {factura.numero}
                 </span>
+                {factura.serie_label ? (
+                  <Tag className="facturacion-invoices__serie">
+                    {factura.serie_label}
+                    {factura.ejercicio ? ` ${factura.ejercicio}` : ''}
+                  </Tag>
+                ) : null}
                 <span className="facturacion-invoices__fecha">
                   {formatFecha(factura.fecha)}
                 </span>
@@ -347,29 +362,14 @@ const FacturacionPanel = ({ activo = true }) => {
                 <strong className="facturacion-invoices__importe">
                   {formatEuro(factura.importe)} {factura.moneda}
                 </strong>
-                {factura.pdf_url ? (
                   <Button
                     type="link"
                     size="small"
                     icon={<DownloadOutlined />}
-                    href={factura.pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    onClick={() => handleAbrirFactura(factura.id)}
                   >
-                    PDF
+                    Ver factura
                   </Button>
-                ) : factura.ver_url ? (
-                  <Button
-                    type="link"
-                    size="small"
-                    icon={<DownloadOutlined />}
-                    href={factura.ver_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Ver
-                  </Button>
-                ) : null}
               </div>
             </li>
           ))}

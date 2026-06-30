@@ -42,6 +42,32 @@ export const listarFacturasEmitidas = async (limit = 5) => {
 /** @deprecated usar listarFacturasEmitidas */
 export const listarFacturasPagadas = listarFacturasEmitidas;
 
+export const abrirDocumentoFactura = async (idFactura) => {
+  const token = getAuthToken();
+  const response = await fetch(
+    `${API_BASE_URL}/facturas/${encodeURIComponent(idFactura)}/documento`,
+    {
+      method: 'GET',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    },
+  );
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || 'No se pudo abrir la factura');
+  }
+
+  const html = await response.text();
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const ventana = window.open(url, '_blank', 'noopener,noreferrer');
+  if (!ventana) {
+    URL.revokeObjectURL(url);
+    throw new Error('Permite las ventanas emergentes para ver la factura');
+  }
+  ventana.addEventListener('load', () => URL.revokeObjectURL(url));
+};
+
 export const crearCheckout = async ({ plan, ciclo, licencias }) => {
   const response = await fetch(`${API_BASE_URL}/checkout`, {
     method: 'POST',

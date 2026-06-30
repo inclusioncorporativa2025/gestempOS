@@ -186,6 +186,33 @@ const handleStripeWebhook = async (req, res) => {
   }
 };
 
+const getFacturaDocumento = async (req, res) => {
+  try {
+    const idEmpresa = getIdEmpresaSesion(req);
+    const idFactura = Number(req.params.idFactura);
+
+    if (!idEmpresa || !idFactura) {
+      return res.status(400).json({ message: 'Parámetros inválidos' });
+    }
+
+    const { obtenerFactura, renderFacturaHtml } = require('../services/facturaService');
+    const factura = await obtenerFactura(idEmpresa, idFactura);
+
+    if (!factura) {
+      return res.status(404).json({ message: 'Factura no encontrada' });
+    }
+
+    const html = renderFacturaHtml(factura);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.status(200).send(html);
+  } catch (error) {
+    console.error('billing getFacturaDocumento:', error);
+    return res.status(error.status || 500).json({
+      message: error.message || 'Error al generar el documento',
+    });
+  }
+};
+
 module.exports = {
   getEstado,
   postCheckout,
@@ -194,5 +221,6 @@ module.exports = {
   postReactivar,
   getSession,
   getFacturas,
+  getFacturaDocumento,
   handleStripeWebhook,
 };

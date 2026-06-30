@@ -342,14 +342,26 @@ const procesarWebhookEvent = async (event) => {
         break;
       }
 
+      case 'invoice.finalized':
       case 'invoice.paid': {
         const invoice = event.data.object;
-        if (invoice.subscription) {
+        const {
+          registrarDesdeStripeInvoice,
+          resolverEmpresaDesdeInvoice,
+        } = require('./facturaService');
+
+        const empresaFactura = await resolverEmpresaDesdeInvoice(invoice);
+        if (empresaFactura) {
+          await registrarDesdeStripeInvoice(empresaFactura, invoice);
+          idEmpresa = empresaFactura;
+        }
+
+        if (event.type === 'invoice.paid' && invoice.subscription) {
           const result = await sincronizarSuscripcion(invoice.subscription, {
             motivo: 'invoice.paid',
             stripeEventId: event.id,
           });
-          idEmpresa = result?.idEmpresa ?? null;
+          idEmpresa = result?.idEmpresa ?? idEmpresa;
         }
         break;
       }
@@ -735,43 +747,23 @@ const verificarSesionCheckout = async (sessionId) => {
   };
 };
 
-const toDateFromUnix = (unix) => (unix ? new Date(unix * 1000) : null);
-
-const mapFacturaStripe = (invoice) => ({
-  id: invoice.id,
-  numero: invoice.number || invoice.id,
-  fecha: toDateFromUnix(invoice.created),
-  importe: (invoice.total ?? 0) / 100,
-  importe_pagado: (invoice.amount_paid ?? 0) / 100,
-  moneda: String(invoice.currency || 'eur').toUpperCase(),
-  estado: invoice.status,
-  pdf_url: invoice.invoice_pdf || null,
-  ver_url: invoice.hosted_invoice_url || null,
-  periodo_desde: toDateFromUnix(invoice.period_start),
-  periodo_hasta: toDateFromUnix(invoice.period_end),
-});
-
 const listarFacturasEmitidas = async (idEmpresa, { limit = 5 } = {}) => {
+  const { listarFacturas, sincronizarFacturasStripe } = require('./facturaService');
   const facturacion = await obtenerFacturacionCompleta(idEmpresa);
-  if (!facturacion?.stripe_customer_id) {
-    return { facturas: [], tiene_cliente_stripe: false };
+
+  if (facturacion?.stripe_customer_id) {
+    try {
+      await sincronizarFacturasStripe(idEmpresa, facturacion.stripe_customer_id);
+    } catch (error) {
+      console.warn('facturaService: error sincronizando facturas', error.message);
+    }
   }
 
-  const max = Math.min(Math.max(1, Number(limit) || 5), 100);
-
-  const list = await getStripe().invoices.list({
-    customer: facturacion.stripe_customer_id,
-    limit: max,
-  });
-
-  const facturas = list.data
-    .filter((inv) => inv.status !== 'draft')
-    .slice(0, max)
-    .map(mapFacturaStripe);
+  const resultado = await listarFacturas(idEmpresa, { limit });
 
   return {
-    facturas,
-    tiene_cliente_stripe: true,
+    ...resultado,
+    tiene_cliente_stripe: Boolean(facturacion?.stripe_customer_id),
   };
 };
 

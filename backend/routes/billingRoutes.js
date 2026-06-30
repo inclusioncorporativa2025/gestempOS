@@ -7,6 +7,7 @@ const {
   postReactivar,
   getSession,
   getFacturas,
+  getFacturaDocumento,
 } = require('../controllers/billingController');
 const { requireAuth, requireRole, ROLES } = require('../middleware/authMiddleware');
 
@@ -20,6 +21,7 @@ const requireBillingAccess = [
 router.get('/session/:sessionId/verify', getSession);
 router.get('/estado', ...requireBillingAccess, getEstado);
 router.get('/facturas', ...requireBillingAccess, getFacturas);
+router.get('/facturas/:idFactura/documento', ...requireBillingAccess, getFacturaDocumento);
 router.post('/checkout', ...requireBillingAccess, postCheckout);
 router.post('/portal', ...requireBillingAccess, postPortal);
 router.post('/cancelar', ...requireBillingAccess, postCancelar);
