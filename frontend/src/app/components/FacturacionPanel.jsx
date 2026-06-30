@@ -18,7 +18,6 @@ import {
   CheckCircleFilled,
   StopOutlined,
   DownloadOutlined,
-  FileTextOutlined,
 } from '@ant-design/icons';
 import {
   PLANS,
@@ -57,20 +56,6 @@ const MODO_LABELS = {
   trial: 'Periodo de prueba',
   stripe: 'Stripe',
   legacy: 'Manual',
-};
-
-const ESTADO_FACTURA_LABELS = {
-  paid: 'Pagada',
-  open: 'Pendiente',
-  void: 'Anulada',
-  uncollectible: 'Impagada',
-};
-
-const ESTADO_FACTURA_COLORS = {
-  paid: 'green',
-  open: 'orange',
-  void: 'default',
-  uncollectible: 'red',
 };
 
 const parsePrecio = (value) =>
@@ -327,50 +312,30 @@ const FacturacionPanel = ({ activo = true }) => {
         </Text>
       ) : (
         <ul className="facturacion-invoices__list">
+          <li className="facturacion-invoices__header" aria-hidden>
+            <span>Nº serie</span>
+            <span>Fecha emisión</span>
+            <span>Total</span>
+            <span />
+          </li>
           {facturas.map((factura) => (
             <li key={factura.id} className="facturacion-invoices__item">
-              <div className="facturacion-invoices__info">
-                <span className="facturacion-invoices__numero">
-                  <FileTextOutlined aria-hidden />
-                  {factura.numero}
-                </span>
-                {factura.serie_label ? (
-                  <Tag className="facturacion-invoices__serie">
-                    {factura.serie_label}
-                    {factura.ejercicio ? ` ${factura.ejercicio}` : ''}
-                  </Tag>
-                ) : null}
-                <span className="facturacion-invoices__fecha">
-                  {formatFecha(factura.fecha)}
-                </span>
-                {factura.estado ? (
-                  <Tag
-                    color={ESTADO_FACTURA_COLORS[factura.estado] || 'default'}
-                    className="facturacion-invoices__estado"
-                  >
-                    {ESTADO_FACTURA_LABELS[factura.estado] || factura.estado}
-                  </Tag>
-                ) : null}
-                {factura.periodo_desde && factura.periodo_hasta ? (
-                  <span className="facturacion-invoices__periodo">
-                    Periodo: {formatFecha(factura.periodo_desde)} –{' '}
-                    {formatFecha(factura.periodo_hasta)}
-                  </span>
-                ) : null}
-              </div>
-              <div className="facturacion-invoices__actions">
-                <strong className="facturacion-invoices__importe">
-                  {formatEuro(factura.importe)} {factura.moneda}
-                </strong>
-                  <Button
-                    type="link"
-                    size="small"
-                    icon={<DownloadOutlined />}
-                    onClick={() => handleAbrirFactura(factura.id)}
-                  >
-                    Ver factura
-                  </Button>
-              </div>
+              <span className="facturacion-invoices__numero">{factura.numero}</span>
+              <span className="facturacion-invoices__fecha">
+                {formatFecha(factura.fecha)}
+              </span>
+              <strong className="facturacion-invoices__importe">
+                {formatEuro(factura.importe)} {factura.moneda}
+              </strong>
+              <Button
+                type="link"
+                size="small"
+                icon={<DownloadOutlined />}
+                className="facturacion-invoices__download"
+                onClick={() => handleAbrirFactura(factura.id)}
+              >
+                Ver factura
+              </Button>
             </li>
           ))}
         </ul>
