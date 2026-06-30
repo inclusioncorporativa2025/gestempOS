@@ -1,5 +1,5 @@
 import { APP_URL, LANDING_URL } from '../constants/urls';
-import { APP_ROUTES } from '../constants/routes';
+import { APP_ROUTES, LANDING_ROUTES } from '../constants/routes';
 import { isAppSubdomain, isLandingHost } from './host';
 
 const AUTH_HASH_KEY = 'auth';
@@ -56,6 +56,14 @@ export const isAuthAppPath = (pathname) =>
     APP_ROUTES.register,
     APP_ROUTES.forgotPassword,
     APP_ROUTES.resetPassword,
+  ].includes(pathname);
+
+export const isLegalPath = (pathname) =>
+  [
+    LANDING_ROUTES.legalNotice,
+    LANDING_ROUTES.privacy,
+    LANDING_ROUTES.cookies,
+    LANDING_ROUTES.terms,
   ].includes(pathname);
 
 /**

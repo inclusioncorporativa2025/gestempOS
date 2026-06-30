@@ -1,6 +1,8 @@
-import React from 'react';
-import { Form, Input, Row, Col, Button, InputNumber, Select, Tooltip } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Form, Input, Row, Col, Button, InputNumber, Select, Tooltip, Checkbox } from 'antd';
+import { Link } from 'react-router-dom';
 import GradientButton from '../../components/shared/GradientButton';
+import { LANDING_ROUTES } from '../../../constants/routes';
 import {
   PLANS,
   getPlanMinLicencias,
@@ -79,6 +81,7 @@ const AltaEmpresaForm = ({
   minLicencias: minLicenciasProp,
   showPlanSelect = false,
   planSelectVariant = 'select',
+  requireTermsAcceptance = false,
 }) => {
   const planSeleccionado = Form.useWatch('plan', form) || planId;
   const minLicencias = minLicenciasProp ?? getPlanMinLicencias(planSeleccionado);
@@ -96,6 +99,21 @@ const AltaEmpresaForm = ({
     }
   };
 
+  const watchedValues = Form.useWatch([], form);
+  const [canSubmit, setCanSubmit] = useState(!requireTermsAcceptance);
+
+  useEffect(() => {
+    if (!requireTermsAcceptance) {
+      setCanSubmit(true);
+      return;
+    }
+
+    form
+      .validateFields({ validateOnly: true })
+      .then(() => setCanSubmit(true))
+      .catch(() => setCanSubmit(false));
+  }, [form, watchedValues, requireTermsAcceptance, minLicencias]);
+
   return (
   <Form
     form={form}
@@ -103,7 +121,11 @@ const AltaEmpresaForm = ({
     onFinish={onFinish}
     layout="vertical"
     className={className}
-    initialValues={{ plan: planId, numLicencias: getPlanMinLicencias(planId) }}
+    initialValues={{
+      plan: planId,
+      numLicencias: getPlanMinLicencias(planId),
+      ...(requireTermsAcceptance ? { acceptTerms: false } : {}),
+    }}
   >
     {showPlanSelect && planSelectVariant === 'cards' ? (
       <Form.Item
@@ -193,7 +215,10 @@ const AltaEmpresaForm = ({
         <Form.Item
           name="email"
           label="Email contacto"
-          rules={[{ required: true, message: 'Campo requerido!' }]}
+          rules={[
+            { required: true, message: 'Campo requerido!' },
+            { type: 'email', message: 'Introduce un correo electrónico válido' },
+          ]}
         >
           <Input placeholder="Ej. ejemplo@ejemplo.com" />
         </Form.Item>
@@ -207,8 +232,57 @@ const AltaEmpresaForm = ({
           <Input placeholder="Ej. 12345678A" />
         </Form.Item>
       </Col>
+      {requireTermsAcceptance ? (
+        <Col xs={24}>
+          <Form.Item
+            name="acceptTerms"
+            valuePropName="checked"
+            className="alta-terms-item"
+            rules={[
+              {
+                validator: (_, value) =>
+                  value
+                    ? Promise.resolve()
+                    : Promise.reject(
+                        new Error('Debes aceptar los términos y condiciones para continuar'),
+                      ),
+              },
+            ]}
+          >
+            <Checkbox>
+              <span className="alta-terms-label">
+                He leído y acepto los{' '}
+                <Link
+                  to={LANDING_ROUTES.terms}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  términos y condiciones
+                </Link>{' '}
+                y la{' '}
+                <Link
+                  to={LANDING_ROUTES.privacy}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  política de privacidad
+                </Link>
+                .
+              </span>
+            </Checkbox>
+          </Form.Item>
+        </Col>
+      ) : null}
       <Col xs={24} className="alta-form-actions">
-        <GradientButton type="submit" text={submitLabel} loading={loading} className="alta-btn-mr" />
+        <GradientButton
+          type="submit"
+          text={submitLabel}
+          loading={loading}
+          disabled={requireTermsAcceptance && !canSubmit}
+          className="alta-btn-mr"
+        />
         <Button onClick={onCancel}>Limpiar</Button>
       </Col>
     </Row>

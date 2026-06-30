@@ -14,15 +14,16 @@ const Register = () => {
   const navigate = useNavigate();
 
   const handleFinish = async (values) => {
+    const { acceptTerms: _acceptTerms, ...payload } = values;
     setLoading(true);
     try {
-      const data = await registrarEmpresaPublica(values);
+      const data = await registrarEmpresaPublica(payload);
 
       if (data?.checkoutUrl) {
         notification.info({
           message: 'Empresa registrada',
           description:
-            'A continuación añade tu tarjeta en Stripe para activar los 15 días de prueba.',
+            'Un último paso para activar tus 15 días de prueba gratuita.',
           duration: 6,
         });
         window.location.href = data.checkoutUrl;
@@ -77,10 +78,14 @@ const Register = () => {
         </Title>
         <Text className="register-lead">
           <strong className="register-trial">15 días de prueba gratis.</strong>{' '}
-          Tras registrar tu empresa, añade tu tarjeta en Stripe. No se cobrará nada hasta
-          que termine la prueba y puedes cancelar en cualquier momento antes, sin compromiso.
-          Después recibirás un correo para activar tu cuenta.
+          Crea tu empresa en minutos y empieza a registrar la jornada de tu equipo sin coste
+          durante la prueba. Recibirás un correo para activar tu cuenta y acceder al panel.
         </Text>
+        <ul className="register-trust" aria-label="Ventajas del registro">
+          <li>Sin permanencia</li>
+          <li>Control horario conforme a la normativa</li>
+          <li>Soporte en español</li>
+        </ul>
 
         <AltaEmpresaForm
           form={form}
@@ -91,6 +96,7 @@ const Register = () => {
           className="register-form-glass"
           showPlanSelect
           planSelectVariant="cards"
+          requireTermsAcceptance
         />
 
         <p className="register-footer">

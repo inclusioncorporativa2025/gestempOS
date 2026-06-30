@@ -51,6 +51,33 @@
   font-weight: var(--font-weight-medium);
 }
 
+.register-trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1rem;
+  margin: 0 0 1.15rem;
+  padding: 0;
+  list-style: none;
+}
+
+.register-trust li {
+  position: relative;
+  padding-left: 1.15rem;
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-medium);
+  color: rgba(0, 21, 41, 0.72);
+  line-height: 1.4;
+}
+
+.register-trust li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--color-secondary);
+  font-weight: 700;
+}
+
 .register-footer {
   margin: 1.25rem 0 0;
   padding: 1rem 0 1rem;
@@ -157,4 +184,22 @@
   margin-top: 0.35rem;
   padding-top: 0.25rem;
   padding-bottom: 0.75rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.register-form-glass .alta-form-actions .alta-btn-mr {
+  margin-right: 0;
+}
+
+.register-form-glass .alta-terms-item {
+  margin-top: 0.15rem;
+  margin-bottom: 0.5rem;
+}
+
+.register-form-glass .alta-terms-label {
+  color: rgba(0, 21, 41, 0.72);
 }

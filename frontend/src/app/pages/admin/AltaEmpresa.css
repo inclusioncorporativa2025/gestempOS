@@ -121,3 +121,28 @@
     grid-template-columns: 1fr;
   }
 }
+
+.alta-terms-item {
+  margin-bottom: 0.25rem;
+}
+
+.alta-terms-item .ant-form-item-control-input {
+  min-height: auto;
+}
+
+.alta-terms-label {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: rgba(0, 21, 41, 0.78);
+}
+
+.alta-terms-label a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.alta-terms-label a:hover {
+  color: var(--color-secondary);
+}
