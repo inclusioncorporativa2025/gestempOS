@@ -12,7 +12,17 @@ const {
   marcarDocumentoVisto,
   usuarioPuedeAccederDocumento,
 } = require('../services/documentosNominaService');
-const { nominasSoportaRetribucion, nominasSoportaDocumentos } = require('../utils/nominasCompat');
+const {
+  generarPrenomina,
+  listarPrenominas,
+  obtenerDetallePrenomina,
+  cerrarPrenomina,
+} = require('../services/prenominaService');
+const {
+  nominasSoportaRetribucion,
+  nominasSoportaDocumentos,
+  nominasSoportaPrenomina,
+} = require('../utils/nominasCompat');
 const { usuarioTieneAccesoEmpresa } = require('../services/usuarioEmpresaService');
 const { ROLES } = require('../middleware/authMiddleware');
 
@@ -52,6 +62,9 @@ const mapError = (res, error, fallback) => {
     'DOCUMENTO_NO_ENCONTRADO',
     'ARCHIVO_NO_ENCONTRADO',
     'ACCESO_DENEGADO',
+    'PRENOMINA_CERRADA',
+    'PRENOMINA_NO_ENCONTRADA',
+    'MODULO_NO_DISPONIBLE',
   ].includes(error.code)) {
     return res.status(400).json({ message: error.message, code: error.code });
   }
@@ -284,6 +297,127 @@ const eliminarNomina = async (req, res) => {
   }
 };
 
+const generarPrenominaMes = async (req, res) => {
+  const idEmpresa = Number(req.body?.idEmpresa || req.user.id_empresa);
+  const periodoMes = Number(req.body?.periodoMes);
+  const periodoAnio = Number(req.body?.periodoAnio);
+  const idUsuarioAccion = req.user?.id_usuario;
+
+  if (!idEmpresa || !periodoMes || !periodoAnio) {
+    return res.status(400).json({ message: 'Datos incompletos' });
+  }
+
+  try {
+    await asegurarFeatureNominas(idEmpresa);
+
+    const soporta = await nominasSoportaPrenomina();
+    if (!soporta) {
+      return res.status(503).json({
+        message: 'El módulo de prenómina no está disponible en el servidor',
+        soportado: false,
+      });
+    }
+
+    const resultado = await generarPrenomina(
+      idEmpresa,
+      periodoMes,
+      periodoAnio,
+      idUsuarioAccion,
+    );
+
+    return res.status(200).json({
+      message: 'Prenómina generada',
+      ...resultado,
+    });
+  } catch (error) {
+    return mapError(res, error, 'Error al generar la prenómina');
+  }
+};
+
+const listarPrenominasEmpresa = async (req, res) => {
+  const idEmpresa = Number(req.body?.idEmpresa || req.user.id_empresa);
+
+  if (!idEmpresa) {
+    return res.status(400).json({ message: 'Datos incompletos' });
+  }
+
+  try {
+    await asegurarFeatureNominas(idEmpresa);
+
+    const soporta = await nominasSoportaPrenomina();
+    if (!soporta) {
+      return res.status(503).json({
+        message: 'El módulo de prenómina no está disponible en el servidor',
+        soportado: false,
+      });
+    }
+
+    const resultado = await listarPrenominas(idEmpresa);
+    return res.status(200).json(resultado);
+  } catch (error) {
+    return mapError(res, error, 'Error al listar las prenóminas');
+  }
+};
+
+const detallePrenomina = async (req, res) => {
+  const idEmpresa = Number(req.body?.idEmpresa || req.user.id_empresa);
+  const idPrenomina = Number(req.body?.idPrenomina);
+
+  if (!idEmpresa || !idPrenomina) {
+    return res.status(400).json({ message: 'Datos incompletos' });
+  }
+
+  try {
+    await asegurarFeatureNominas(idEmpresa);
+
+    const soporta = await nominasSoportaPrenomina();
+    if (!soporta) {
+      return res.status(503).json({
+        message: 'El módulo de prenómina no está disponible en el servidor',
+        soportado: false,
+      });
+    }
+
+    const resultado = await obtenerDetallePrenomina(idEmpresa, idPrenomina);
+    return res.status(200).json(resultado);
+  } catch (error) {
+    if (error.code === 'PRENOMINA_NO_ENCONTRADA') {
+      return res.status(404).json({ message: error.message, code: error.code });
+    }
+    return mapError(res, error, 'Error al obtener el detalle de la prenómina');
+  }
+};
+
+const cerrarPrenominaMes = async (req, res) => {
+  const idEmpresa = Number(req.body?.idEmpresa || req.user.id_empresa);
+  const idPrenomina = Number(req.body?.idPrenomina);
+  const idUsuarioAccion = req.user?.id_usuario;
+
+  if (!idEmpresa || !idPrenomina) {
+    return res.status(400).json({ message: 'Datos incompletos' });
+  }
+
+  try {
+    await asegurarFeatureNominas(idEmpresa);
+
+    const soporta = await nominasSoportaPrenomina();
+    if (!soporta) {
+      return res.status(503).json({
+        message: 'El módulo de prenómina no está disponible en el servidor',
+        soportado: false,
+      });
+    }
+
+    const resultado = await cerrarPrenomina(idEmpresa, idPrenomina, idUsuarioAccion);
+    return res.status(200).json({
+      message: 'Prenómina cerrada',
+      ...resultado,
+    });
+  } catch (error) {
+    return mapError(res, error, 'Error al cerrar la prenómina');
+  }
+};
+
 module.exports = {
   getRetribucion,
   guardarRetribucionUsuario,
@@ -292,4 +426,8 @@ module.exports = {
   subirNomina,
   descargarNomina,
   eliminarNomina,
+  generarPrenominaMes,
+  listarPrenominasEmpresa,
+  detallePrenomina,
+  cerrarPrenominaMes,
 };

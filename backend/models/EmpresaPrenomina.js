@@ -1,19 +1,15 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
 
-const DocumentoNomina = sequelize.define('DocumentoNomina', {
+const EmpresaPrenomina = sequelize.define('EmpresaPrenomina', {
   empresa_id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     allowNull: false,
   },
-  id_documento: {
+  id_prenomina: {
     type: DataTypes.INTEGER,
     primaryKey: true,
-    allowNull: false,
-  },
-  id_usuario: {
-    type: DataTypes.INTEGER,
     allowNull: false,
   },
   periodo_mes: {
@@ -24,43 +20,47 @@ const DocumentoNomina = sequelize.define('DocumentoNomina', {
     type: DataTypes.SMALLINT.UNSIGNED,
     allowNull: false,
   },
-  nombre_archivo: {
-    type: DataTypes.STRING(255),
+  estado: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'borrador',
+  },
+  fecha_generacion: {
+    type: DataTypes.DATE,
     allowNull: false,
   },
-  ruta_archivo: {
+  usuario_generacion: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  fecha_cierre: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  usuario_cierre: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  observaciones: {
     type: DataTypes.STRING(500),
-    allowNull: false,
-  },
-  mime_type: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
-    defaultValue: 'application/pdf',
-  },
-  tamano_bytes: {
-    type: DataTypes.INTEGER.UNSIGNED,
-    allowNull: true,
-  },
-  hash_sha256: {
-    type: DataTypes.CHAR(64),
-    allowNull: true,
-  },
-  fecha_publicacion: {
-    type: DataTypes.DATE,
-    allowNull: false,
-  },
-  visto_en: {
-    type: DataTypes.DATE,
     allowNull: true,
   },
   usuario_alta: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
   },
   fecha_alta: {
     type: DataTypes.DATE,
     allowNull: false,
     defaultValue: DataTypes.NOW,
+  },
+  usuario_modificacion: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  fecha_modificacion: {
+    type: DataTypes.DATE,
+    allowNull: true,
   },
   fecha_baja: {
     type: DataTypes.DATE,
@@ -71,8 +71,8 @@ const DocumentoNomina = sequelize.define('DocumentoNomina', {
     allowNull: true,
   },
 }, {
-  tableName: 'usuarios_documentos_nomina',
+  tableName: 'empresa_prenominas',
   timestamps: false,
 });
 
-module.exports = DocumentoNomina;
+module.exports = EmpresaPrenomina;

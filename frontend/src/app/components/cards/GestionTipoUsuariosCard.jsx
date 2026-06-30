@@ -85,11 +85,38 @@ const GestionTipoUsuariosCard = () => {
         obtenerJornadasEmpresa();
     };
       
+    const resetAddModal = () => {
+        addForm.resetFields();
+        setDiasSeleccionados([]);
+        setTipoJornada('');
+    };
+
     const handleCancel = () => {
         setIsAddModalVisible(false);
+        resetAddModal();
     };
+
+    const openAddModal = () => {
+        resetAddModal();
+        setIsAddModalVisible(true);
+    };
+
+    const parseHora = (value) => {
+        if (!value) return null;
+        if (dayjs.isDayjs(value)) return value;
+        return dayjs(value);
+    };
+
+    const buildAddValidationFields = () => {
+        const fields = ['nombre', 'tipo_jornada', 'legal', 'dias'];
+        diasSeleccionados.forEach((dia) => {
+            fields.push([dia, 'tipo_horario'], [dia, 'horarios']);
+        });
+        return fields;
+    };
+
     const handleAdd = () => {
-        addForm.validateFields().then((values) => {
+        addForm.validateFields(buildAddValidationFields()).then((values) => {
 
             let valid = true; // Flag para validar
             var newTipo;
@@ -97,15 +124,19 @@ const GestionTipoUsuariosCard = () => {
                 newTipo = {
                     id: tiposJornada.length + 1, // ID generado dinámicamente
                     nombre: values.nombre,
-                    tipo_jornada: tipoJornada, // Asignar tipo de jornada aquí
+                    tipo_jornada: values.tipo_jornada,
                     tipo_hora: values.legal ,
-                    horasMensuales: values.horasMensuales ,  // Aquí se van a almacenar los registros de la jornada
+                    horasMensuales: values.horasMensuales ,
                 };
         
             }else{
 
             // Verificar si al menos uno de los días de la semana tiene registros
-            const tieneDiasSeleccionados = diasSemana.some(dia => values[dia] && (Array.isArray(values[dia]) ? values[dia].length > 0 : true));
+            const tieneDiasSeleccionados = diasSeleccionados.some(
+                (dia) => values[dia]?.horarios?.some(
+                    (horario) => horario?.hora_entrada && horario?.hora_salida,
+                ),
+            );
     
             // Si no hay días seleccionados con registros, no mostrar error
             if (!tieneDiasSeleccionados) {
@@ -117,83 +148,73 @@ const GestionTipoUsuariosCard = () => {
             newTipo = {
                 id: tiposJornada.length + 1, // ID generado dinámicamente
                 nombre: values.nombre,
-                tipo_jornada: tipoJornada, // Asignar tipo de jornada aquí
+                tipo_jornada: values.tipo_jornada,
                 tipo_hora: values.legal ,
-                registros: [],  // Aquí se van a almacenar los registros de la jornada
+                registros: [],
             };
-    
-    
-            // Recorremos los días seleccionados
-            diasSemana.forEach((dia) => {
-                let registrosDia = values[dia];
-    
-                if (registrosDia) {
-                    // Si no es un array, conviértelo en uno
-                    if (!Array.isArray(registrosDia)) {
-                        registrosDia = [registrosDia];
-                    }
-    
-                    // Ordenar los registros para que la validación sea coherente
-                    registrosDia = registrosDia.sort((a, b) => moment(a.entrada).isBefore(b.entrada) ? -1 : 1);
-    
-                    registrosDia.forEach((registro, index) => {
-                        const horaEntrada = moment(new Date(registro.horarios[0].hora_entrada));
-                        const horaSalida = moment(new Date(registro.horarios[0].hora_salida));
-                        var horaEntrada2;
-                        var horaSalida2;
-                            if(registro.tipo_horario === '2'){
-                                horaEntrada2 = moment(new Date(registro.horarios[0].hora_entrada2));
-                                horaSalida2 = moment(new Date(registro.horarios[0].hora_salida2));
 
-                                // Verificar que las horas de entrada y salida estén presentes
-                            if (!horaEntrada2.isValid() || !horaSalida2.isValid()) {
+
+            diasSeleccionados.forEach((dia) => {
+                const registroDia = values[dia];
+
+                if (!registroDia?.horarios?.length) {
+                    return;
+                }
+
+                const registrosDia = [{
+                    tipo_horario: registroDia.tipo_horario || '1',
+                    horarios: registroDia.horarios,
+                }];
+                registrosDia.forEach((registro, index) => {
+                        const horaEntrada = parseHora(registro.horarios[0].hora_entrada);
+                        const horaSalida = parseHora(registro.horarios[0].hora_salida);
+                        let horaEntrada2;
+                        let horaSalida2;
+                            if(registro.tipo_horario === '2'){
+                                horaEntrada2 = parseHora(registro.horarios[0].hora_entrada2);
+                                horaSalida2 = parseHora(registro.horarios[0].hora_salida2);
+
+                            if (!horaEntrada2?.isValid() || !horaSalida2?.isValid()) {
                                 message.error(`Por favor ingresa tanto la hora de entrada 2 como la hora de salida 2 para el día ${dia}, registro 2`);
                                 valid = false;
                                 return;
                             }
-                            // Validar que la hora de salida sea posterior a la hora de entrada
-                            if (horaEntrada2.isSameOrAfter(horaSalida2)) {
+                            if (!horaSalida2.isAfter(horaEntrada2)) {
                                 message.error(`La hora de salida 2 debe ser posterior a la hora de entrada 2 en el día ${dia}, registro 2`);
                                 valid = false;
                                 return;
                             }
                         }
-                      
 
-                        // Verificar que las horas de entrada y salida estén presentes
-                        if (!horaEntrada.isValid() || !horaSalida.isValid()) {
+                        if (!horaEntrada?.isValid() || !horaSalida?.isValid()) {
                             message.error(`Por favor ingresa tanto la hora de entrada como la hora de salida para el día ${dia}, registro ${index + 1}`);
                             valid = false;
                             return;
                         }
     
-                        // Validar que la hora de salida sea posterior a la hora de entrada
-                        if (horaEntrada.isSameOrAfter(horaSalida)) {
+                        if (!horaSalida.isAfter(horaEntrada)) {
                             message.error(`La hora de salida debe ser posterior a la hora de entrada en el día ${dia}, registro ${index + 1}`);
                             valid = false;
                             return;
                         }
     
-                      
-                        // Validar que la hora de entrada no sea anterior a la hora de salida del registro anterior
                         if (index > 0) {
                             const prevRegistro = registrosDia[index - 1];
-                            const prevHoraSalida = moment(new Date(prevRegistro.salida));
+                            const prevHoraSalida = parseHora(prevRegistro?.horarios?.[0]?.hora_salida);
     
-                            if (horaEntrada.isBefore(prevHoraSalida)) {
+                            if (prevHoraSalida?.isValid() && horaEntrada.isBefore(prevHoraSalida)) {
                                 message.error(`La hora de entrada del registro ${index + 1} debe ser posterior a la hora de salida del registro anterior en el día ${dia}`);
                                 valid = false;
                                 return;
                             }
                         }
     
-                        // Validar que no se solapen los horarios con los registros anteriores en `newTipo.registros`
                         for (let i = 0; i < newTipo.registros.length; i++) {
                             const prevRegistro = newTipo.registros[i];
-                            const prevHoraSalida = moment(prevRegistro.hora_salida);
-                            const currHoraEntrada = moment(new Date(registro.entrada));
+                            const prevHoraSalida = dayjs(prevRegistro.hora_salida, 'HH:mm:ss');
+                            const currHoraEntrada = horaEntrada;
     
-                            if (currHoraEntrada.isBefore(prevHoraSalida)) {
+                            if (prevHoraSalida?.isValid() && currHoraEntrada.isBefore(prevHoraSalida)) {
                                 message.error(`Los horarios de los registros en el día ${dia} se solapan.`);
                                 valid = false;
                                 return;
@@ -210,8 +231,7 @@ const GestionTipoUsuariosCard = () => {
                             dia: dia,
                             tipo_horario: registro.tipo_horario
                           });
-                    });
-                }
+                });
             });
         }
     
@@ -220,6 +240,7 @@ const GestionTipoUsuariosCard = () => {
                     .then(() => {
                         setTiposJornada([...tiposJornada, newTipo]);
                         setIsAddModalVisible(false);
+                        resetAddModal();
                         message.success('Nuevo tipo de jornada añadido correctamente');
                         handleReload();
                     })
@@ -230,6 +251,11 @@ const GestionTipoUsuariosCard = () => {
             }
     
         }).catch((error) => {
+            if (error?.errorFields?.length) {
+                const first = error.errorFields[0];
+                message.error(first.errors?.[0] || 'Faltan campos requeridos o validación fallida');
+                return;
+            }
             message.error('Faltan campos requeridos o validación fallida');
         });
     };
@@ -246,7 +272,7 @@ const GestionTipoUsuariosCard = () => {
                     text="Añadir"
                     iconStart={<PlusOutlined />}
                     size="small"
-                    onClick={() => setIsAddModalVisible(true)}
+                    onClick={openAddModal}
                     className="gtu-add-btn"
                 />
             </div>

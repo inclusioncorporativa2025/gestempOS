@@ -2,6 +2,7 @@ const { sequelize } = require('../config/db');
 
 let cacheRetribucion = null;
 let cacheDocumentos = null;
+let cachePrenomina = null;
 
 const tablaExiste = async (nombreTabla) => {
   const filas = await sequelize.query(
@@ -26,11 +27,23 @@ const nominasSoportaRetribucion = async () => {
 
 const nominasSoportaDocumentos = async () => {
   if (cacheDocumentos !== null) return cacheDocumentos;
-  cacheDocumentos = await tablaExiste('documentos_nomina');
+  cacheDocumentos = await tablaExiste('usuarios_documentos_nomina');
   return cacheDocumentos;
+};
+
+const nominasSoportaPrenomina = async () => {
+  if (cachePrenomina !== null) return cachePrenomina;
+  const [cabecera, empleados, lineas] = await Promise.all([
+    tablaExiste('empresa_prenominas'),
+    tablaExiste('usuarios_prenomina'),
+    tablaExiste('usuarios_prenomina_lineas'),
+  ]);
+  cachePrenomina = cabecera && empleados && lineas;
+  return cachePrenomina;
 };
 
 module.exports = {
   nominasSoportaRetribucion,
   nominasSoportaDocumentos,
+  nominasSoportaPrenomina,
 };

@@ -20,9 +20,16 @@ const AnadirDiaCard = ({ dia, form }) => {
     }
   }, [dia, form]);
 
-  const getInitialFormListValue = () => {
-    return tipoHorarioValue === '1' ? [{}] : [{}, {}];
-  };
+  const getInitialFormListValue = () => [{}];
+
+  useEffect(() => {
+    const horarios = form.getFieldValue([dia, 'horarios']);
+    if (!Array.isArray(horarios) || horarios.length === 0) {
+      form.setFieldValue([dia, 'horarios'], [{}]);
+    } else if (horarios.length > 1) {
+      form.setFieldValue([dia, 'horarios'], [horarios[0]]);
+    }
+  }, [dia, form, tipoHorarioValue]);
 
   return (
     <Collapse className="anadir-dia-collapse">

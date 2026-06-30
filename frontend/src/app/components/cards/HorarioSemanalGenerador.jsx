@@ -42,16 +42,16 @@ const HorarioSemanalGenerador = ({ form, diasSeleccionados }) => {
         : {}),
     };
 
-    const payload = {};
-    diasSeleccionados.forEach((dia) => {
-      payload[dia] = {
-        tipo_horario: tipoHorario,
-        horarios: [clonarHorario(bloque)],
-      };
-    });
+    const fieldsToSet = diasSeleccionados.flatMap((dia) => [
+      { name: [dia, 'tipo_horario'], value: tipoHorario, touched: true },
+      {
+        name: [dia, 'horarios'],
+        value: [clonarHorario(bloque)],
+        touched: true,
+      },
+    ]);
 
-    const actual = form.getFieldsValue(true);
-    form.setFieldsValue({ ...actual, ...payload });
+    form.setFields(fieldsToSet);
     message.success(`Horario aplicado a ${diasSeleccionados.length} día(s).`);
   };
 
