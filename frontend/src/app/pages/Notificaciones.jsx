@@ -37,6 +37,8 @@ import {
   responderAusencia,
   formatDiasAusencia,
 } from '../../features/ausencias/ausenciasService';
+import JustificanteAusenciaAcciones from '../components/JustificanteAusenciaAcciones';
+import { requiereJustificanteParaAprobar } from '../../constants/tiposAusencia';
 import './Notificaciones.css';
 
 dayjs.locale('es');
@@ -680,6 +682,10 @@ const setVisibleModalDetalles = async (info) => {
         );
         return;
       }
+      if (error?.code === 'JUSTIFICANTE_REQUERIDO') {
+        message.error(error.message || 'Falta el justificante para aprobar');
+        return;
+      }
       message.error(error.message || 'Error al procesar la solicitud');
     }
   };
@@ -992,6 +998,21 @@ const setVisibleModalDetalles = async (info) => {
         render: formatDiasAusencia,
       },
       {
+        title: 'Justificante',
+        key: 'justificante',
+        width: 200,
+        render: (_, record) => (
+          <JustificanteAusenciaAcciones
+            ausencia={record}
+            compact
+            onActualizado={() => {
+              fetchAusenciasPendientes();
+              fetchHistorialAusencias();
+            }}
+          />
+        ),
+      },
+      {
         title: 'Comentario',
         dataIndex: 'comentarios',
         key: 'comentarios',
@@ -1029,16 +1050,33 @@ const setVisibleModalDetalles = async (info) => {
         width: 190,
         render: (_, record) => {
           const estado = obtenerEstado(record);
+          const requiereDoc = record.requiere_justificante
+            ?? requiereJustificanteParaAprobar(record.tipo);
+          const puedeAprobar = !requiereDoc || record.tiene_justificante;
+
           return estado === 'Pendiente' ? (
             <div className="notif-acciones">
-              <Popconfirm
-                title="¿Aprobar esta ausencia?"
-                onConfirm={() => handleRespuestaAusencia(record, 2)}
-                okText="Sí"
-                cancelText="No"
-              >
-                <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
-              </Popconfirm>
+              {puedeAprobar ? (
+                <Popconfirm
+                  title="¿Aprobar esta ausencia?"
+                  onConfirm={() => handleRespuestaAusencia(record, 2)}
+                  okText="Sí"
+                  cancelText="No"
+                >
+                  <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
+                </Popconfirm>
+              ) : (
+                <Tooltip title="El empleado debe subir el justificante antes de aprobar">
+                  <span>
+                    <GradientButton
+                      text="Aprobar"
+                      size="small"
+                      className="notif-btn-compact"
+                      disabled
+                    />
+                  </span>
+                </Tooltip>
+              )}
               <Button
                 danger
                 size="small"

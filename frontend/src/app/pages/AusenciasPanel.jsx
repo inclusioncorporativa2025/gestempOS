@@ -11,6 +11,7 @@ import {
   getOpcionesFiltroAusencias,
 } from '../../constants/tiposAusencia';
 import SolicitarAusenciaModal from '../components/SolicitarAusenciaModal';
+import JustificanteAusenciaAcciones from '../components/JustificanteAusenciaAcciones';
 import './AusenciasPanel.css';
 
 dayjs.extend(customParseFormat);
@@ -162,6 +163,18 @@ const AusenciasPanel = () => {
       key: 'estado',
       width: 110,
       render: (_, record) => renderEstadoAusencia(record),
+    },
+    {
+      title: 'Justificante',
+      key: 'justificante',
+      width: 220,
+      render: (_, record) => (
+        <JustificanteAusenciaAcciones
+          ausencia={record}
+          compact
+          onActualizado={cargar}
+        />
+      ),
     },
     {
       title: 'Comentario',

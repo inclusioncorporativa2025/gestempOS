@@ -26,6 +26,9 @@ const esTipoPermitido = (tipo, { incluyeVacaciones = true } = {}) => {
 
 const requiereComentario = (tipo) => normalizarClave(tipo) === 'otros';
 
+/** Vacaciones no exigen justificante para aprobar. */
+const requiereJustificanteParaAprobar = (tipo) => !esVacaciones(tipo);
+
 module.exports = {
   TIPO_AUSENCIA_VACACIONES,
   TIPOS_AUSENCIA_BASE,
@@ -33,5 +36,6 @@ module.exports = {
   esVacaciones,
   esTipoPermitido,
   requiereComentario,
+  requiereJustificanteParaAprobar,
   tiposPermitidosParaEmpresa,
 };

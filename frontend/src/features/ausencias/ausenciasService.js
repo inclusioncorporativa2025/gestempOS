@@ -147,6 +147,65 @@ export const crearAusencia = async (
   }
 };
 
+export const subirJustificanteAusencia = async ({ idAusencia, archivo, tipoJustificante }) => {
+  const idEmpresa = getIdEmpresa();
+  const formData = new FormData();
+  formData.append('idEmpresa', String(idEmpresa));
+  formData.append('idAusencia', String(idAusencia));
+  formData.append('archivo', archivo);
+  if (tipoJustificante) formData.append('tipoJustificante', tipoJustificante);
+
+  const response = await fetch(`${API_BASE_URL}/subirJustificanteAusencia`, {
+    method: 'POST',
+    body: formData,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const err = new Error(data.error || 'Error al subir el justificante');
+    err.code = data.code;
+    throw err;
+  }
+  return data;
+};
+
+export const listarJustificantesAusencia = async (idAusencia) => {
+  const idEmpresa = getIdEmpresa();
+  const response = await fetch(`${API_BASE_URL}/listarJustificantesAusencia`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idEmpresa, idAusencia }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || 'Error al listar justificantes');
+  }
+  return data;
+};
+
+export const descargarJustificanteAusencia = async (idDocumento, nombreArchivo = 'justificante') => {
+  const idEmpresa = getIdEmpresa();
+  const response = await fetch(`${API_BASE_URL}/descargarJustificanteAusencia`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idEmpresa, idDocumento }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || 'Error al descargar el justificante');
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = nombreArchivo;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
 /** Muestra días de ausencia (enteros o 0,5 para medio día). */
 export const formatDiasAusencia = (dias) => {
   if (dias == null || dias === '') return '—';

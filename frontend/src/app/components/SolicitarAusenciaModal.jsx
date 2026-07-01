@@ -12,7 +12,9 @@ import {
   esTipoVacaciones,
   getTiposAusenciaSeleccionables,
   requiereComentarioAusencia,
+  requiereJustificanteParaAprobar,
 } from '../../constants/tiposAusencia';
+import JustificanteAusenciaAcciones from './JustificanteAusenciaAcciones';
 import './SolicitarAusenciaModal.css';
 
 const { Text } = Typography;
@@ -36,6 +38,7 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
   const [horaDesde, setHoraDesde] = useState(null);
   const [horaHasta, setHoraHasta] = useState(null);
   const [comentario, setComentario] = useState('');
+  const [ausenciaCreada, setAusenciaCreada] = useState(null);
 
   const entradasAusencia = useMemo(
     () => getTiposAusenciaSeleccionables(planId),
@@ -99,6 +102,7 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
     setHoraDesde(null);
     setHoraHasta(null);
     setComentario('');
+    setAusenciaCreada(null);
   };
 
   useEffect(() => {
@@ -155,6 +159,19 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
       if (datos?.aprobada && esParaOtro) {
         message.success('Ausencia registrada correctamente');
       } else if (datos?.pendiente_aprobacion) {
+        const idAusencia = datos?.id_ausencia
+          ?? datos?.ausencia?.id_ausencia
+          ?? datos?.ausencia?.dataValues?.id_ausencia;
+        if (idAusencia && requiereJustificanteParaAprobar(selectedEntrada)) {
+          setAusenciaCreada({
+            id_ausencia: idAusencia,
+            tipo: selectedEntrada,
+            requiere_justificante: true,
+            tiene_justificante: false,
+          });
+          message.info('Sube el justificante para que el gestor pueda aprobar la solicitud.');
+          return;
+        }
         message.success('Solicitud enviada. Recibirás aviso cuando se resuelva.');
       } else {
         message.success('Ausencia registrada correctamente');
@@ -174,14 +191,30 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
       title={tituloModal}
       open={open}
       onCancel={handleClose}
-      onOk={handleSubmit}
-      okText={textoBoton}
-      cancelText="Cancelar"
+      onOk={ausenciaCreada ? handleClose : handleSubmit}
+      okText={ausenciaCreada ? 'Cerrar' : textoBoton}
+      cancelText={ausenciaCreada ? undefined : 'Cancelar'}
+      cancelButtonProps={ausenciaCreada ? { style: { display: 'none' } } : undefined}
       confirmLoading={enviando}
       destroyOnClose
       className="sol-ausencia-modal"
       width={520}
     >
+      {ausenciaCreada ? (
+        <div className="sol-ausencia-modal__justificante">
+          <Text>
+            La solicitud está pendiente de aprobación. Adjunta el justificante (PDF o imagen).
+          </Text>
+          <JustificanteAusenciaAcciones
+            ausencia={ausenciaCreada}
+            onActualizado={() => {
+              onSuccess?.();
+              setAusenciaCreada((prev) => (prev ? { ...prev, tiene_justificante: true } : prev));
+            }}
+          />
+        </div>
+      ) : (
+        <>
       {esGestor && (
         <Select
           placeholder="Empleado"
@@ -314,6 +347,8 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
         rows={2}
         className="sol-ausencia-modal__comentario"
       />
+        </>
+      )}
     </Modal>
   );
 };

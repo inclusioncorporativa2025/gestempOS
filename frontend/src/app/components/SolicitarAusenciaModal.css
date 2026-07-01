@@ -1,3 +1,9 @@
+.sol-ausencia-modal__justificante {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .sol-ausencia-modal__select {
   width: 100%;
   margin-bottom: 12px;

@@ -49,6 +49,10 @@ export const esTipoAusenciaPermitido = (tipo, planId) => {
 export const requiereComentarioAusencia = (tipo) =>
   normalizarClaveTipoAusencia(tipo) === 'otros';
 
+/** Vacaciones no exigen justificante para aprobar. */
+export const requiereJustificanteParaAprobar = (tipo) =>
+  !esTipoVacaciones(tipo);
+
 export const getConfigTipoAusenciaTag = (tipo) => {
   const valor = String(tipo || '').trim();
   return TIPOS_AUSENCIA_TAG[valor] || { label: valor || 'Ausencia', color: 'default' };

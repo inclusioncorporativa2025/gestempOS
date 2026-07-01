@@ -13,6 +13,7 @@ const TABLAS_EMPRESA_ID = [
   'usuarios_vacaciones_movimientos',
   'usuarios_vacaciones_cupo',
   'usuarios_documentos_nomina',
+  'usuarios_ausencias_documentos',
   'usuarios_prenomina_lineas',
   'usuarios_prenomina',
   'empresa_prenominas',

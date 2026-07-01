@@ -28,7 +28,18 @@ const { obtenerEmailsGestoresEmpresa } = require('../utils/gestoresEmpresa');
 const {
   esTipoPermitido,
   requiereComentario,
+  requiereJustificanteParaAprobar,
 } = require('../utils/tiposAusencia');
+const {
+  adjuntarInfoJustificantes,
+  assertPuedeAprobarConJustificante,
+  listarDocumentosAusencia,
+  subirDocumentoAusencia,
+  obtenerDocumento,
+  leerContenidoDocumento,
+  obtenerAusenciaActiva,
+  usuarioPuedeGestionarAusencia,
+} = require('../services/ausenciaDocumentosService');
 const {
   esAusenciaVacaciones,
   registrarConsumoPorAusencia,
@@ -96,7 +107,15 @@ const mapAusenciaListado = (a, idUsuarioToken) => ({
   notificacion_vista: a.notificacion_vista,
   dias: a.dias,
   es_propio: a.id_usuario === idUsuarioToken,
+  requiere_justificante: a.requiere_justificante,
+  num_justificantes: a.num_justificantes,
+  tiene_justificante: a.tiene_justificante,
 });
+
+const enriquecerAusenciasCompleto = async (idEmpresa, ausencias) => {
+  const conUsuarios = await enriquecerAusenciasConUsuarios(ausencias);
+  return adjuntarInfoJustificantes(idEmpresa, conUsuarios);
+};
 
 const getAusenciasByIdUsuario = async (req, res) => {
   const { idUsuario, mes, idEmpresa } = req.body;
@@ -230,7 +249,9 @@ const crearAusencia = async (req, res) => {
       }
     }
 
-    const autoAprobar = esParaOtro && puedeGestionarPersonal;
+    const autoAprobar = esParaOtro
+      && puedeGestionarPersonal
+      && !requiereJustificanteParaAprobar(tipoNormalizado);
 
     const ausenciasActivas = await Ausencias.findAll({
       where: {
@@ -342,7 +363,8 @@ const crearAusencia = async (req, res) => {
 
     res.status(201).json({
       message: mensaje,
-      ausencia: nuevaAusencia,
+      ausencia: ausenciaJson,
+      id_ausencia: ausenciaJson.id_ausencia,
       pendiente_aprobacion: !autoAprobar && soportaAprobacion,
       aprobada: autoAprobar || !soportaAprobacion,
     });
@@ -471,7 +493,7 @@ const getAusenciasListado = async (req, res) => {
       return true;
     });
 
-    const enriquecidas = await enriquecerAusenciasConUsuarios(filtradas);
+    const enriquecidas = await enriquecerAusenciasCompleto(idEmpresa, filtradas);
 
     res.status(200).json({
       ausencias: enriquecidas.map((a) => mapAusenciaListado(a, idUsuarioToken)),
@@ -507,7 +529,7 @@ const getAusenciasPendientesEmpresa = async (req, res) => {
       raw: true,
     });
 
-    const enriquecidas = await enriquecerAusenciasConUsuarios(ausencias);
+    const enriquecidas = await enriquecerAusenciasCompleto(idEmpresa, ausencias);
     res.status(200).json({ ausencias: enriquecidas });
   } catch (error) {
     console.error('Error al obtener ausencias pendientes:', error);
@@ -541,7 +563,7 @@ const getHistorialAusenciasEmpresa = async (req, res) => {
       raw: true,
     });
 
-    const enriquecidas = await enriquecerAusenciasConUsuarios(ausencias);
+    const enriquecidas = await enriquecerAusenciasCompleto(idEmpresa, ausencias);
     res.status(200).json({ ausencias: enriquecidas });
   } catch (error) {
     console.error('Error al obtener historial de ausencias:', error);
@@ -578,7 +600,7 @@ const getAusenciasNotificacionesEmpleado = async (req, res) => {
       raw: true,
     });
 
-    const enriquecidas = await enriquecerAusenciasConUsuarios(ausencias);
+    const enriquecidas = await enriquecerAusenciasCompleto(idEmpresa, ausencias);
     res.status(200).json({ ausencias: enriquecidas });
   } catch (error) {
     console.error('Error al obtener notificaciones de ausencias:', error);
@@ -624,6 +646,17 @@ const responderAusencia = async (req, res) => {
     }
 
     const ausenciaJson = ausencia.toJSON ? ausencia.toJSON() : ausencia;
+
+    if (estado === 2) {
+      try {
+        await assertPuedeAprobarConJustificante(ausenciaJson);
+      } catch (error) {
+        if (error.code === 'JUSTIFICANTE_REQUERIDO') {
+          return res.status(400).json({ error: error.message, code: error.code });
+        }
+        throw error;
+      }
+    }
 
     if (estado === 2 && esAusenciaVacaciones(ausenciaJson)) {
       const permiteVacaciones = await empresaTieneFeature(idEmpresa, 'vacaciones');
@@ -712,6 +745,107 @@ const marcarAusenciasVistas = async (req, res) => {
   }
 };
 
+const mapErrorDocumento = (res, error, fallback) => {
+  if ([
+    'ARCHIVO_REQUERIDO',
+    'ARCHIVO_NO_PERMITIDO',
+    'ARCHIVO_DEMASIADO_GRANDE',
+    'AUSENCIA_NO_ENCONTRADA',
+    'AUSENCIA_RESUELTA',
+    'DOCUMENTO_NO_ENCONTRADO',
+    'ARCHIVO_NO_ENCONTRADO',
+    'MODULO_NO_DISPONIBLE',
+  ].includes(error.code)) {
+    return res.status(400).json({ error: error.message, code: error.code });
+  }
+  console.error(fallback, error);
+  return res.status(500).json({ error: fallback });
+};
+
+const subirJustificanteAusencia = async (req, res) => {
+  const idEmpresa = Number(req.body?.idEmpresa || req.user.id_empresa);
+  const idAusencia = Number(req.body?.idAusencia);
+  const idUsuarioAccion = Number(req.user.id_usuario);
+  const tipoJustificante = req.body?.tipoJustificante;
+
+  if (!idEmpresa || !idAusencia) {
+    return res.status(400).json({ error: 'Faltan datos requeridos' });
+  }
+
+  try {
+    await assertEmpresaTieneFeature(idEmpresa, 'ausencias_basicas');
+    const ausencia = await obtenerAusenciaActiva(idEmpresa, idAusencia);
+    if (!usuarioPuedeGestionarAusencia(req.user.tipo_usuario, idUsuarioAccion, ausencia)) {
+      return res.status(403).json({ error: 'No puedes subir justificantes de esta ausencia' });
+    }
+
+    const documento = await subirDocumentoAusencia(
+      idEmpresa,
+      idAusencia,
+      req.file,
+      idUsuarioAccion,
+      tipoJustificante,
+    );
+
+    res.status(201).json({ message: 'Justificante subido correctamente', documento });
+  } catch (error) {
+    return mapErrorDocumento(res, error, 'Error al subir el justificante');
+  }
+};
+
+const listarJustificantesAusencia = async (req, res) => {
+  const idEmpresa = Number(req.body?.idEmpresa || req.user.id_empresa);
+  const idAusencia = Number(req.body?.idAusencia);
+  const idUsuarioAccion = Number(req.user.id_usuario);
+
+  if (!idEmpresa || !idAusencia) {
+    return res.status(400).json({ error: 'Faltan datos requeridos' });
+  }
+
+  try {
+    await assertEmpresaTieneFeature(idEmpresa, 'ausencias_basicas');
+    const ausencia = await obtenerAusenciaActiva(idEmpresa, idAusencia);
+    if (!usuarioPuedeGestionarAusencia(req.user.tipo_usuario, idUsuarioAccion, ausencia)) {
+      return res.status(403).json({ error: 'No puedes consultar justificantes de esta ausencia' });
+    }
+
+    const documentos = await listarDocumentosAusencia(idEmpresa, idAusencia);
+    res.status(200).json({ documentos });
+  } catch (error) {
+    return mapErrorDocumento(res, error, 'Error al listar justificantes');
+  }
+};
+
+const descargarJustificanteAusencia = async (req, res) => {
+  const idEmpresa = Number(req.body?.idEmpresa || req.user.id_empresa);
+  const idDocumento = Number(req.body?.idDocumento);
+  const idUsuarioAccion = Number(req.user.id_usuario);
+
+  if (!idEmpresa || !idDocumento) {
+    return res.status(400).json({ error: 'Faltan datos requeridos' });
+  }
+
+  try {
+    await assertEmpresaTieneFeature(idEmpresa, 'ausencias_basicas');
+    const documento = await obtenerDocumento(idEmpresa, idDocumento);
+    const ausencia = await obtenerAusenciaActiva(idEmpresa, documento.id_ausencia);
+
+    if (!usuarioPuedeGestionarAusencia(req.user.tipo_usuario, idUsuarioAccion, ausencia)) {
+      return res.status(403).json({ error: 'No puedes descargar este justificante' });
+    }
+
+    const buffer = await leerContenidoDocumento(documento);
+    res.setHeader('Content-Type', documento.mime_type || 'application/octet-stream');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${encodeURIComponent(documento.nombre_archivo || 'justificante')}"`,
+    );
+    return res.send(buffer);
+  } catch (error) {
+    return mapErrorDocumento(res, error, 'Error al descargar el justificante');
+  }
+};
+
 module.exports = {
   getAusenciasByIdUsuario,
   crearAusencia,
@@ -722,4 +856,7 @@ module.exports = {
   getAusenciasNotificacionesEmpleado,
   responderAusencia,
   marcarAusenciasVistas,
+  subirJustificanteAusencia,
+  listarJustificantesAusencia,
+  descargarJustificanteAusencia,
 };
