@@ -1,19 +1,29 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal, Row, Col, DatePicker, TimePicker, Checkbox, Select, Input, Radio, Typography, message,
 } from 'antd';
 import dayjs from 'dayjs';
 import { crearAusencia } from '../../features/ausencias/ausenciasService';
-import { getIdEmpresa, getIdUsuario } from '../../utils/authSession';
+import { getUsuariosEmpresa } from '../../features/user/usuarioService';
+import { getIdEmpresa, getIdUsuario, getTipoUsuario } from '../../utils/authSession';
+import { esInspector, normalizarTipoUsuario } from '../../utils/tipoUsuarioLabel';
 import usePlan from '../../hooks/usePlan';
 import { planIncluyeFeature } from '../../constants/plans';
 import './SolicitarAusenciaModal.css';
 
 const { Text } = Typography;
 
-const SolicitarAusenciaModal = ({ open, onClose, onSuccess }) => {
+const ROLES_GESTOR_AUSENCIAS = [1, 2, 3, 4];
+
+const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPersonal }) => {
   const { planId } = usePlan();
+  const idUsuarioSesion = getIdUsuario();
+  const esGestor = puedeRegistrarPersonal
+    ?? ROLES_GESTOR_AUSENCIAS.includes(normalizarTipoUsuario(getTipoUsuario()));
+
   const [enviando, setEnviando] = useState(false);
+  const [empleados, setEmpleados] = useState([]);
+  const [idEmpleadoDestino, setIdEmpleadoDestino] = useState(null);
   const [selectedEntrada, setSelectedEntrada] = useState(null);
   const [fechaDesde, setFechaDesde] = useState(null);
   const [fechaHasta, setFechaHasta] = useState(null);
@@ -31,6 +41,10 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess }) => {
     return tipos;
   }, [planId]);
 
+  const esParaOtro = esGestor && idEmpleadoDestino != null && Number(idEmpleadoDestino) !== Number(idUsuarioSesion);
+  const tituloModal = esParaOtro ? 'Registrar ausencia de personal' : 'Solicitar ausencia';
+  const textoBoton = esParaOtro ? 'Registrar' : 'Solicitar';
+
   const esVacaciones = selectedEntrada === 'Vacaciones';
   const esUnSoloDia = Boolean(
     fechaDesde
@@ -41,7 +55,41 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess }) => {
     esVacaciones && fechaDesde && fechaHasta && !fechaDesde.isSame(fechaHasta, 'day'),
   );
 
+  useEffect(() => {
+    if (!open || !esGestor) return undefined;
+
+    let cancelado = false;
+    const cargarEmpleados = async () => {
+      try {
+        const usuarios = await getUsuariosEmpresa();
+        if (cancelado) return;
+        const lista = (usuarios || []).filter(
+          (u) => u.activo !== false && u.activo !== 0 && !esInspector(u.tipo_usuario),
+        );
+        setEmpleados(lista);
+      } catch {
+        if (!cancelado) message.error('No se pudo cargar el personal de la empresa');
+      }
+    };
+
+    cargarEmpleados();
+    return () => { cancelado = true; };
+  }, [open, esGestor]);
+
+  const opcionesEmpleado = useMemo(() => {
+    const opciones = [
+      { value: idUsuarioSesion, label: 'Yo mismo' },
+    ];
+    empleados
+      .filter((u) => Number(u.id_usuario) !== Number(idUsuarioSesion))
+      .forEach((u) => {
+        opciones.push({ value: u.id_usuario, label: u.nombre });
+      });
+    return opciones;
+  }, [empleados, idUsuarioSesion]);
+
   const resetForm = () => {
+    setIdEmpleadoDestino(idUsuarioSesion);
     setSelectedEntrada(null);
     setFechaDesde(null);
     setFechaHasta(null);
@@ -51,6 +99,12 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess }) => {
     setHoraHasta(null);
     setComentario('');
   };
+
+  useEffect(() => {
+    if (open) {
+      setIdEmpleadoDestino(idUsuarioSesion);
+    }
+  }, [open, idUsuarioSesion]);
 
   const handleClose = () => {
     resetForm();
@@ -73,30 +127,32 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess }) => {
       return;
     }
 
-    const idUsuario = getIdUsuario();
+    const idUsuarioDestino = idEmpleadoDestino ?? idUsuarioSesion;
     const idEmpresa = getIdEmpresa();
     const usarFraccionVacaciones = esVacaciones && fechaDesde.isSame(fechaHastaEnvio, 'day');
 
     setEnviando(true);
     try {
       const datos = await crearAusencia(
-        idUsuario,
+        idUsuarioDestino,
         idEmpresa,
         fechaDesde.format('DD-MM-YYYY'),
         fechaHastaEnvio.format('DD-MM-YYYY'),
         (todoElDia || usarFraccionVacaciones) ? null : horaDesde?.format('HH:mm:ss'),
         (todoElDia || usarFraccionVacaciones) ? null : horaHasta?.format('HH:mm:ss'),
         comentario,
-        idUsuario,
+        idUsuarioSesion,
         selectedEntrada,
         usarFraccionVacaciones ? fraccionDia : null,
       );
 
-      message.success(
-        datos?.pendiente_aprobacion
-          ? 'Solicitud enviada. Recibirás aviso cuando se resuelva.'
-          : 'Ausencia registrada correctamente',
-      );
+      if (datos?.aprobada && esParaOtro) {
+        message.success('Ausencia registrada correctamente');
+      } else if (datos?.pendiente_aprobacion) {
+        message.success('Solicitud enviada. Recibirás aviso cuando se resuelva.');
+      } else {
+        message.success('Ausencia registrada correctamente');
+      }
       handleClose();
       onSuccess?.();
     } catch (error) {
@@ -109,17 +165,27 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess }) => {
 
   return (
     <Modal
-      title="Solicitar ausencia"
+      title={tituloModal}
       open={open}
       onCancel={handleClose}
       onOk={handleSubmit}
-      okText="Solicitar"
+      okText={textoBoton}
       cancelText="Cancelar"
       confirmLoading={enviando}
       destroyOnClose
       className="sol-ausencia-modal"
       width={520}
     >
+      {esGestor && (
+        <Select
+          placeholder="Empleado"
+          className="sol-ausencia-modal__select"
+          value={idEmpleadoDestino}
+          onChange={setIdEmpleadoDestino}
+          options={opcionesEmpleado}
+        />
+      )}
+
       <Select
         placeholder="Tipo de ausencia"
         className="sol-ausencia-modal__select"

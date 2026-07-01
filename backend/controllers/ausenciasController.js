@@ -18,6 +18,10 @@ const { assertEmpresaTieneFeature, empresaTieneFeature } = require('../services/
 const Usuario = require('../models/Usuario');
 const { createConId } = require('../utils/empresaScope');
 const { ROLE_GROUPS } = require('../middleware/authMiddleware');
+const {
+  obtenerMembresiaActiva,
+  membresiaEstaActiva,
+} = require('../services/usuarioEmpresaService');
 const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/ausenciasCompat');
 const { enviarNotificacionGestion } = require('../utils/mailService');
 const { obtenerEmailsGestoresEmpresa } = require('../utils/gestoresEmpresa');
@@ -193,10 +197,30 @@ const crearAusencia = async (req, res) => {
 
   try {
     const soportaAprobacion = await ausenciasSoportaAprobacion();
+    const idUsuarioToken = Number(req.user.id_usuario);
+    const idUsuarioDestino = Number(idUsuario);
+    const idEmpresaNum = Number(idEmpresa);
+    const tipoGestor = Number(req.user.tipo_usuario);
+    const esParaOtro = idUsuarioDestino !== idUsuarioToken;
+    const puedeGestionarPersonal = ROLE_GROUPS.COMPANY_STAFF.includes(tipoGestor);
+
+    if (esParaOtro) {
+      if (!puedeGestionarPersonal) {
+        return res.status(403).json({ error: 'No puedes registrar ausencias de otro usuario' });
+      }
+
+      const membresia = await obtenerMembresiaActiva(idUsuarioDestino, idEmpresaNum);
+      if (!membresiaEstaActiva(membresia)) {
+        return res.status(403).json({ error: 'El usuario no pertenece activamente a esta empresa' });
+      }
+    }
+
+    const autoAprobar = esParaOtro && puedeGestionarPersonal;
+
     const ausenciasActivas = await Ausencias.findAll({
       where: {
-        empresa_id: idEmpresa,
-        id_usuario: idUsuario,
+        empresa_id: idEmpresaNum,
+        id_usuario: idUsuarioDestino,
         fecha_baja: null,
       },
       raw: true,
@@ -219,8 +243,8 @@ const crearAusencia = async (req, res) => {
     }
 
     const ahora = dayjs().toDate();
-    const nuevaAusencia = await createConId(Ausencias, idEmpresa, 'id_ausencia', {
-      id_usuario: idUsuario,
+    const datosAusencia = {
+      id_usuario: idUsuarioDestino,
       fecha_desde: fechaDesdeGuardar,
       fecha_hasta: fechaHastaGuardar,
       hora_ausencia_desde: hora_ausencia_desde || null,
@@ -228,20 +252,59 @@ const crearAusencia = async (req, res) => {
       tipo,
       fraccion_dia: fraccion_dia ? String(fraccion_dia).trim().toLowerCase() : null,
       comentarios: comentario || null,
-      usuario_alta: idUsuario,
+      usuario_alta: idUsuarioToken,
       fecha_alta: ahora,
-      ...(soportaAprobacion
-        ? { notificacion_vista: false }
-        : { fecha_aceptacion: ahora, notificacion_vista: true }),
-    });
+    };
 
-    if (soportaAprobacion) {
+    if (autoAprobar) {
+      Object.assign(datosAusencia, {
+        fecha_aceptacion: ahora,
+        id_usuario_gestor: idUsuarioToken,
+        notificacion_vista: false,
+      });
+    } else if (soportaAprobacion) {
+      datosAusencia.notificacion_vista = false;
+    } else {
+      Object.assign(datosAusencia, {
+        fecha_aceptacion: ahora,
+        notificacion_vista: true,
+      });
+    }
+
+    const nuevaAusencia = await createConId(Ausencias, idEmpresaNum, 'id_ausencia', datosAusencia);
+    const ausenciaJson = nuevaAusencia.toJSON ? nuevaAusencia.toJSON() : nuevaAusencia;
+
+    if (autoAprobar && esAusenciaVacaciones(ausenciaJson)) {
+      const permiteVacaciones = await empresaTieneFeature(idEmpresaNum, 'vacaciones');
+      const soportaSaldo = await vacacionesSoportaSaldo();
+      if (permiteVacaciones && soportaSaldo) {
+        try {
+          await registrarConsumoPorAusencia(idEmpresaNum, ausenciaJson, idUsuarioToken);
+        } catch (error) {
+          await Ausencias.update(
+            { fecha_baja: ahora, usuario_baja: idUsuarioToken },
+            { where: { empresa_id: idEmpresaNum, id_ausencia: ausenciaJson.id_ausencia } },
+          );
+          if (error.code === 'SALDO_VACACIONES_INSUFICIENTE') {
+            return res.status(400).json({
+              error: error.message,
+              code: error.code,
+              disponibles: error.disponibles,
+              solicitados: error.solicitados,
+            });
+          }
+          throw error;
+        }
+      }
+    }
+
+    if (!autoAprobar && soportaAprobacion) {
       const solicitante = await Usuario.findOne({
-        where: { id_usuario: idUsuario },
+        where: { id_usuario: idUsuarioDestino },
         attributes: ['nombre'],
         raw: true,
       });
-      const destinatarios = await obtenerEmailsGestoresEmpresa(idEmpresa);
+      const destinatarios = await obtenerEmailsGestoresEmpresa(idEmpresaNum);
       const detalleAusencia = `${tipo}: ${fechaDesdeGuardar} – ${fechaHastaGuardar}`;
 
       try {
@@ -256,12 +319,17 @@ const crearAusencia = async (req, res) => {
       }
     }
 
-    res.status(201).json({
-      message: soportaAprobacion
+    const mensaje = autoAprobar
+      ? 'Ausencia registrada correctamente'
+      : soportaAprobacion
         ? 'Solicitud de ausencia enviada correctamente'
-        : 'Ausencia creada correctamente',
+        : 'Ausencia creada correctamente';
+
+    res.status(201).json({
+      message: mensaje,
       ausencia: nuevaAusencia,
-      pendiente_aprobacion: soportaAprobacion,
+      pendiente_aprobacion: !autoAprobar && soportaAprobacion,
+      aprobada: autoAprobar || !soportaAprobacion,
     });
   } catch (error) {
     console.error('Error al crear la ausencia:', error);

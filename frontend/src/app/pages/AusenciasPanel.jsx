@@ -72,11 +72,14 @@ const formatHorario = (record) => {
   return desde || hasta || '—';
 };
 
-const ROLES_SOLO_PROPIAS = [5];
+const ROLES_PUEDEN_SOLICITAR = [1, 2, 3, 4, 5];
+const ROLES_GESTOR_AUSENCIAS = [1, 2, 3, 4];
 
 const AusenciasPanel = () => {
   const [modalSolicitud, setModalSolicitud] = useState(false);
-  const puedeSolicitar = ROLES_SOLO_PROPIAS.includes(Number(getTipoUsuario()));
+  const tipoUsuario = Number(getTipoUsuario());
+  const puedeSolicitar = ROLES_PUEDEN_SOLICITAR.includes(tipoUsuario);
+  const puedeRegistrarPersonal = ROLES_GESTOR_AUSENCIAS.includes(tipoUsuario);
   const [ausencias, setAusencias] = useState([]);
   const [verTodaEmpresa, setVerTodaEmpresa] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -223,7 +226,7 @@ const AusenciasPanel = () => {
                 icon={<PlusOutlined />}
                 onClick={() => setModalSolicitud(true)}
               >
-                Solicitar
+                {puedeRegistrarPersonal ? 'Solicitar / Registrar' : 'Solicitar'}
               </Button>
             )}
             <button
@@ -241,6 +244,7 @@ const AusenciasPanel = () => {
           open={modalSolicitud}
           onClose={() => setModalSolicitud(false)}
           onSuccess={() => cargar()}
+          puedeRegistrarPersonal={puedeRegistrarPersonal}
         />
 
         <Spin spinning={loading}>
