@@ -7,6 +7,7 @@ export const PLAN_IDS = ['esencial', 'rrhh', 'completo'];
 
 /** Descuento anual: pago de 10 meses (2 meses gratis, ~17 %). */
 export const ANNUAL_DISCOUNT_LABEL = 'te regalamos 2 meses';
+export const ANNUAL_FREE_MONTHS_BADGE = '2 meses gratis';
 
 /** En facturación, cada licencia = un usuario activo en la plataforma. */
 export const LICENSE_IS_USER_NOTE = 'Cada licencia equivale a un usuario.';

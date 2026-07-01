@@ -7,7 +7,10 @@ import {
   PLANS,
   getPlanMinLicencias,
   getPlanLabel,
+  getPlanMinAnnual,
   PRICE_UNIT_MONTHLY,
+  PRICE_UNIT_ANNUAL,
+  ANNUAL_FREE_MONTHS_BADGE,
   LICENSE_IS_USER_NOTE,
 } from '../../../constants/plans';
 import './AltaEmpresa.css';
@@ -15,10 +18,33 @@ import './AltaEmpresa.css';
 const PLAN_UNAVAILABLE_TOOLTIP =
   'No disponible por el momento, disculpen las molestias';
 
-const PlanCardPicker = ({ value, onChange, onPlanChange }) => (
+const PlanBillingToggle = ({ value, onChange }) => (
+  <div className="alta-plan-billing" role="group" aria-label="Periodo de facturación">
+    <button
+      type="button"
+      className={`alta-plan-billing-option${value === 'mensual' ? ' alta-plan-billing-option--active' : ''}`}
+      aria-pressed={value === 'mensual'}
+      onClick={() => onChange('mensual')}
+    >
+      Mensual
+    </button>
+    <button
+      type="button"
+      className={`alta-plan-billing-option${value === 'anual' ? ' alta-plan-billing-option--active' : ''}`}
+      aria-pressed={value === 'anual'}
+      onClick={() => onChange('anual')}
+    >
+      Anual
+      <span className="alta-plan-billing-badge">({ANNUAL_FREE_MONTHS_BADGE})</span>
+    </button>
+  </div>
+);
+
+const PlanCardPicker = ({ value, onChange, onPlanChange, billingPeriod = 'mensual' }) => (
   <div className="alta-plan-picker" role="radiogroup" aria-label="Elige tu plan">
     {PLANS.map((plan) => {
       const selected = value === plan.id;
+      const esAnual = billingPeriod === 'anual';
       const selectPlan = () => {
         if (!plan.available) return;
         onChange?.(plan.id);
@@ -41,11 +67,21 @@ const PlanCardPicker = ({ value, onChange, onPlanChange }) => (
         >
           <span className="alta-plan-option-name">{plan.name}</span>
           <span className="alta-plan-option-price">
-            desde <strong>{plan.priceMonthly} €</strong>
-            <span className="alta-plan-option-unit">{PRICE_UNIT_MONTHLY}</span>
+            desde <strong>{esAnual ? plan.priceAnnual : plan.priceMonthly} €</strong>
+            <span className="alta-plan-option-unit">
+              {esAnual ? PRICE_UNIT_ANNUAL : PRICE_UNIT_MONTHLY}
+            </span>
+            {esAnual && (
+              <span className="alta-plan-option-annual-badge">{ANNUAL_FREE_MONTHS_BADGE}</span>
+            )}
           </span>
           <span className="alta-plan-option-min">
             Mín. {plan.minLicenses} usuarios
+            {esAnual && (
+              <span className="alta-plan-option-min-total">
+                {' '}· desde {getPlanMinAnnual(plan)} €/año
+              </span>
+            )}
           </span>
           {!plan.available && (
             <span className="alta-plan-option-unavailable">No disponible</span>
@@ -84,6 +120,7 @@ const AltaEmpresaForm = ({
   requireTermsAcceptance = false,
 }) => {
   const planSeleccionado = Form.useWatch('plan', form) || planId;
+  const cicloFacturacion = Form.useWatch('cicloFacturacion', form) || 'mensual';
   const minLicencias = minLicenciasProp ?? getPlanMinLicencias(planSeleccionado);
   const isCompact = planSelectVariant === 'cards';
   const rowGutter = isCompact ? [12, 0] : [16, 16];
@@ -123,20 +160,35 @@ const AltaEmpresaForm = ({
     className={className}
     initialValues={{
       plan: planId,
+      cicloFacturacion: 'mensual',
       numLicencias: getPlanMinLicencias(planId),
       ...(requireTermsAcceptance ? { acceptTerms: false } : {}),
     }}
   >
     {showPlanSelect && planSelectVariant === 'cards' ? (
-      <Form.Item
-        name="plan"
-        label="Elige tu plan"
-        rules={[{ required: true, message: 'Selecciona un plan' }]}
-        className="alta-plan-form-item"
-        extra={LICENSE_IS_USER_NOTE}
-      >
-        <PlanCardPicker onPlanChange={handlePlanChange} />
-      </Form.Item>
+      <>
+        <Form.Item name="cicloFacturacion" hidden>
+          <Input type="hidden" />
+        </Form.Item>
+        <div className="alta-plan-billing-row">
+          <PlanBillingToggle
+            value={cicloFacturacion}
+            onChange={(ciclo) => form.setFieldsValue({ cicloFacturacion: ciclo })}
+          />
+        </div>
+        <Form.Item
+          name="plan"
+          label="Elige tu plan"
+          rules={[{ required: true, message: 'Selecciona un plan' }]}
+          className="alta-plan-form-item"
+          extra={LICENSE_IS_USER_NOTE}
+        >
+          <PlanCardPicker
+            onPlanChange={handlePlanChange}
+            billingPeriod={cicloFacturacion}
+          />
+        </Form.Item>
+      </>
     ) : null}
 
     <Row gutter={rowGutter}>

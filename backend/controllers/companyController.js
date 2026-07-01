@@ -81,7 +81,7 @@ const pickEmpresaBranding = async (empresa) => {
 const registerCompany = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
-        const { Administrador, CIF, email, nombre_empresa, dni, numLicencias, alias, plan } = req.body.values;
+        const { Administrador, CIF, email, nombre_empresa, dni, numLicencias, alias, plan, cicloFacturacion } = req.body.values;
         const idUsuarioAccion = req.body.idUsuario;
         const schemaName = `empresa_${nombre_empresa.toLowerCase().replace(/\s+/g, '_')}`;
         const fecha = new Date();
@@ -218,12 +218,13 @@ const registerCompany = async (req, res) => {
 
         if (esRegistroPublico) {
           try {
+            const cicloCheckout = cicloFacturacion === 'anual' ? 'anual' : 'mensual';
             const checkout = await crearCheckoutSession({
               idEmpresa: empresa.id_empresa,
               email: emailNormalizado,
               nombre: Administrador,
               planCodigo: planId,
-              ciclo: 'mensual',
+              ciclo: cicloCheckout,
               licencias: licenciasSolicitadas,
               aplicarTrial: true,
             });
