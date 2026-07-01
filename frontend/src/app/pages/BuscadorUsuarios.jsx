@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tag, Card, Table, Input, Button, Modal, Tooltip, Popconfirm, Form, message, Typography, DatePicker, Switch, Select, ConfigProvider, Dropdown } from 'antd';
+import { Tag, Card, Table, Input, Button, Modal, Tooltip, Popconfirm, Form, message, Typography, DatePicker, Switch, Select, ConfigProvider, Dropdown, Radio } from 'antd';
 import GradientButton from '../components/shared/GradientButton';
 import { SearchOutlined, EditOutlined, StopOutlined, EyeOutlined, DownloadOutlined, UserAddOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -26,6 +26,8 @@ dayjs.locale('es');
 
 const { Title } = Typography;
 
+const esUsuarioActivo = (usuario) => usuario.activo !== false && usuario.activo !== 0;
+
 const BuscarUsuarios = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -44,7 +46,7 @@ const BuscarUsuarios = () => {
     const [jornadas, setJornadas] = useState([]);
     const [jornadasCargadas, setJornadasCargadas] = useState(false);
     const [id_usuario, setIdUsuario] = useState(null);
-    const [showOnlyActivos, setShowOnlyActivos] = useState(false);
+    const [filtroActivo, setFiltroActivo] = useState('activos');
     const [exportModalVisible, setExportModalVisible] = useState(false);
     const [exportDateRange, setExportDateRange] = useState(null);
     const [altaEmpleadoOpen, setAltaEmpleadoOpen] = useState(false);
@@ -79,7 +81,10 @@ const BuscarUsuarios = () => {
             usuario.email.toLowerCase().includes(searchText.toLowerCase()) ||
             usuario.dni.toLowerCase().includes(searchText.toLowerCase());
 
-        return matchesSearch;
+        const activo = esUsuarioActivo(usuario);
+        const matchesActivo = filtroActivo === 'activos' ? activo : !activo;
+
+        return matchesSearch && matchesActivo;
     });
 
     const irAAltaUsuarios = (section) => {
@@ -410,13 +415,25 @@ const BuscarUsuarios = () => {
             <div className="bu-page">
             <Card>
                 <div className="bu-toolbar">
-                    <Input
-                        placeholder="Buscar por nombre, correo o DNI"
-                        prefix={<SearchOutlined />}
-                        value={searchText}
-                        onChange={handleSearch}
-                        className="bu-search"
-                    />
+                    <div className="bu-toolbar-filters">
+                        <Input
+                            placeholder="Buscar por nombre, correo o DNI"
+                            prefix={<SearchOutlined />}
+                            value={searchText}
+                            onChange={handleSearch}
+                            className="bu-search"
+                        />
+                        <Radio.Group
+                            className="bu-filtro-activo"
+                            value={filtroActivo}
+                            onChange={(e) => setFiltroActivo(e.target.value)}
+                            optionType="button"
+                            buttonStyle="solid"
+                        >
+                            <Radio.Button value="activos">Activos</Radio.Button>
+                            <Radio.Button value="inactivos">No activos</Radio.Button>
+                        </Radio.Group>
+                    </div>
 
                     <div className="bu-toolbar-actions">
                         <GradientButton

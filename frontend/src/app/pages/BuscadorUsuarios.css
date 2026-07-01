@@ -17,6 +17,22 @@
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bu-toolbar-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.bu-filtro-activo .ant-radio-button-wrapper {
+  min-height: 34px;
+  line-height: 32px;
+  font-size: 0.85rem;
 }
 
 .bu-search.ant-input-affix-wrapper {
