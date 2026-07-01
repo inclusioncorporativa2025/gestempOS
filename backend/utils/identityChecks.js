@@ -113,12 +113,27 @@ const findMembresiaActivaEnEmpresa = async (idUsuario, idEmpresa, options = {}) 
   });
 };
 
+const MENSAJE_CONFLICTO_PUBLICO =
+  'Ya existe una cuenta en la plataforma con estos datos. Si es su cuenta, inicie sesión o use «Olvidé mi contraseña». Si necesita ayuda, contacte con soporte.';
+
+const MENSAJE_DNI_OTRO_EMAIL_INTERNO =
+  'Este DNI ya está asociado a otra cuenta. Vincule al empleado con el email de esa cuenta o contacte con soporte.';
+
+const sanitizarConflictoIdentidadPublico = () => ({
+  message: MENSAJE_CONFLICTO_PUBLICO,
+  codigo: 'CUENTA_YA_EXISTE',
+});
+
 /**
  * Resuelve la identidad global de una persona (email / DNI) para operaciones multi-empresa.
  * - Un mismo usuario puede pertenecer a varias empresas.
  * - El conflicto relevante es email+DNI que apunten a cuentas distintas, no el hecho de existir.
+ * - Con `respuestaPublica: true` no se devuelven datos de otras cuentas (p. ej. email ajeno).
  */
-const resolverUsuarioIdentidad = async ({ email, dni } = {}, options = {}) => {
+const resolverUsuarioIdentidad = async (
+  { email, dni, respuestaPublica = false } = {},
+  options = {},
+) => {
   const emailNorm = normalizeEmail(email);
   const dniNorm = normalizeDni(dni);
 
@@ -131,10 +146,12 @@ const resolverUsuarioIdentidad = async ({ email, dni } = {}, options = {}) => {
     return {
       usuario: null,
       esNuevo: false,
-      conflict: {
-        message: 'El email y el DNI pertenecen a cuentas distintas en la plataforma',
-        codigo: 'IDENTIDAD_CONFLICTO',
-      },
+      conflict: respuestaPublica
+        ? sanitizarConflictoIdentidadPublico()
+        : {
+            message: 'El email y el DNI pertenecen a cuentas distintas en la plataforma',
+            codigo: 'IDENTIDAD_CONFLICTO',
+          },
     };
   }
 
@@ -144,11 +161,12 @@ const resolverUsuarioIdentidad = async ({ email, dni } = {}, options = {}) => {
     return {
       usuario: null,
       esNuevo: false,
-      conflict: {
-        message: `Este DNI ya está registrado con el email ${usuario.email}. Utilice ese correo para añadir a esta persona a la empresa.`,
-        codigo: 'DNI_VINCULADO_OTRO_EMAIL',
-        emailRegistrado: usuario.email,
-      },
+      conflict: respuestaPublica
+        ? sanitizarConflictoIdentidadPublico()
+        : {
+            message: MENSAJE_DNI_OTRO_EMAIL_INTERNO,
+            codigo: 'DNI_VINCULADO_OTRO_EMAIL',
+          },
     };
   }
 
@@ -158,10 +176,12 @@ const resolverUsuarioIdentidad = async ({ email, dni } = {}, options = {}) => {
       return {
         usuario: null,
         esNuevo: false,
-        conflict: {
-          message: 'El DNI no coincide con el de la cuenta existente para este email',
-          codigo: 'DNI_NO_COINCIDE',
-        },
+        conflict: respuestaPublica
+          ? sanitizarConflictoIdentidadPublico()
+          : {
+              message: 'El DNI no coincide con el de la cuenta existente para este email',
+              codigo: 'DNI_NO_COINCIDE',
+            },
       };
     }
   }
@@ -183,4 +203,5 @@ module.exports = {
   findUsuariosActivosPorDni,
   findMembresiaActivaEnEmpresa,
   resolverUsuarioIdentidad,
+  sanitizarConflictoIdentidadPublico,
 };

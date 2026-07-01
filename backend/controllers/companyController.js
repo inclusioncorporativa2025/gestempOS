@@ -81,6 +81,7 @@ const pickEmpresaBranding = async (empresa) => {
 const registerCompany = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
+        const esRegistroPublico = req.body.idUsuario == null;
         const { Administrador, CIF, email, nombre_empresa, dni, numLicencias, alias, plan, cicloFacturacion } = req.body.values;
         const idUsuarioAccion = req.body.idUsuario;
         const schemaName = `empresa_${nombre_empresa.toLowerCase().replace(/\s+/g, '_')}`;
@@ -120,7 +121,7 @@ const registerCompany = async (req, res) => {
         }
 
         const identidadAdmin = await resolverUsuarioIdentidad(
-            { email: emailNormalizado, dni },
+            { email: emailNormalizado, dni, respuestaPublica: esRegistroPublico },
             { transaction },
         );
         if (identidadAdmin.conflict) {
@@ -180,7 +181,6 @@ const registerCompany = async (req, res) => {
             usuario_alta: usuarioAlta,
         }, { transaction });
 
-        const esRegistroPublico = idUsuarioAccion == null;
         const modoFacturacion = esRegistroPublico ? 'trial' : 'legacy';
         const trialEndsAt = esRegistroPublico ? calcularFechaFinPrueba(fecha) : null;
         const estadoSuscripcion = esRegistroPublico ? 'trialing' : null;
