@@ -1,5 +1,19 @@
+export const normalizarTipoUsuario = (tipoUsuario) => Number(tipoUsuario);
+
+export const valorTipoUsuarioForm = (tipoUsuario) => {
+  const n = normalizarTipoUsuario(tipoUsuario);
+  if ([3, 4, 5, 6].includes(n)) return String(n);
+  return '5';
+};
+
+export const esAdministradorEmpresa = (tipoUsuario) =>
+  normalizarTipoUsuario(tipoUsuario) === 3;
+
+export const esInspector = (tipoUsuario) =>
+  normalizarTipoUsuario(tipoUsuario) === 6;
+
 export const etiquetaTipoUsuario = (tipoUsuario) => {
-  const n = Number(tipoUsuario);
+  const n = normalizarTipoUsuario(tipoUsuario);
   if (n === 1) return 'Super-admin';
   if (n === 2) return 'Admin plataforma';
   if (n === 3) return 'Administrador';

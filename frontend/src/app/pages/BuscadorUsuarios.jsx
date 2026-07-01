@@ -13,7 +13,12 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import esES from 'antd/es/locale/es_ES';
 import { getTipoUsuario } from '../../utils/authSession';
-import { puedeVerFichaPersonal } from '../../utils/tipoUsuarioLabel';
+import {
+  puedeVerFichaPersonal,
+  esAdministradorEmpresa,
+  esInspector,
+  valorTipoUsuarioForm,
+} from '../../utils/tipoUsuarioLabel';
 import { opcionesTipoHora, tipoHoraFormValue } from '../../utils/tipoHora';
 import AltaEmpleadoModal from '../components/AltaEmpleadoModal';
 import './BuscadorUsuarios.css';
@@ -213,7 +218,7 @@ const BuscarUsuarios = () => {
             dni: record.dni,
             fechaAlta: dayjs(record.fecha_alta),
             activo: record.activo,
-            tipoUsuario: record.tipo_usuario === "5" || record.tipo_usuario === "4" ? record.tipo_usuario : "3",
+            tipoUsuario: valorTipoUsuarioForm(record.tipo_usuario),
             horario: jornadaNombre? jornadaNombre:"",
             tipoHora: tipoHoraFormValue(record.tipo_hora),
         });
@@ -516,9 +521,16 @@ const BuscarUsuarios = () => {
                             <Input value={form.getFieldValue('fechaAlta') ? formatDate(form.getFieldValue('fechaAlta')) : ''} disabled />
                         </Form.Item>
                         <Form.Item label="Tipo Usuario" name="tipoUsuario">
-                        <Select disabled={editingRecord?.tipo_usuario === "3"}>
-                            {editingRecord?.tipo_usuario === "3" ? (
+                        <Select
+                            disabled={
+                              esAdministradorEmpresa(editingRecord?.tipo_usuario)
+                              || esInspector(editingRecord?.tipo_usuario)
+                            }
+                        >
+                            {esAdministradorEmpresa(editingRecord?.tipo_usuario) ? (
                             <Select.Option value="3">Administrador</Select.Option>
+                            ) : esInspector(editingRecord?.tipo_usuario) ? (
+                            <Select.Option value="6">Inspector</Select.Option>
                             ) : (
                             <>
                                 <Select.Option value="5">Personal</Select.Option>
