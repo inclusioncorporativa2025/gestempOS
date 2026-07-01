@@ -106,7 +106,7 @@ const calcularFactorMes = (fechaAlta, fechaBaja, periodoAnio, periodoMes) => {
 
 const listarEmpleadosParaPrenomina = async (idEmpresa) => {
   const vinculos = await UsuarioEmpresa.findAll({
-    where: { id_empresa: idEmpresa, fecha_baja: null },
+    where: { id_empresa: idEmpresa, fecha_baja: null, activo: true },
   });
 
   if (!vinculos.length) return [];
@@ -116,7 +116,6 @@ const listarEmpleadosParaPrenomina = async (idEmpresa) => {
     where: {
       id_usuario: { [Op.in]: ids },
       fecha_baja: null,
-      activo: true,
     },
     attributes: ['id_usuario', 'nombre', 'dni', 'email'],
   });

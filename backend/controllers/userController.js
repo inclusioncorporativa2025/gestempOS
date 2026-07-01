@@ -16,7 +16,7 @@ const {
   obtenerDisponibilidadLicencias,
 } = require('../repositorios/usuariosEmpresasRepository');
 const { enviarInvitacionEmpleado } = require('../utils/mailService');
-const { obtenerMembresiaActiva, resolverTipoSesion } = require('../services/usuarioEmpresaService');
+const { obtenerMembresiaActiva, resolverTipoSesion, membresiaEstaActiva } = require('../services/usuarioEmpresaService');
 const { calcularResumenHorasMes, resolverTipoHora } = require('../services/horasResumenService');
 const {
   obtenerSaldoBolsa,
@@ -61,6 +61,7 @@ const sanitizePerfil = (usuario) => ({
     nombre: usuario.nombre,
     email: usuario.email,
     dni: usuario.dni ?? '',
+    telefono_whatsapp: usuario.telefono_whatsapp ?? null,
     tipo_usuario: usuario.tipo_usuario,
     email_verificado: usuario.email_verificado,
 });
@@ -79,7 +80,7 @@ const getMiPerfil = async (req, res) => {
         const perfil = {
             ...sanitizePerfil(usuario),
             fecha_alta: usuario.fecha_alta,
-            activo: usuario.activo,
+            activo: true,
             tipo_hora: null,
             jornadas: [],
         };
@@ -90,6 +91,7 @@ const getMiPerfil = async (req, res) => {
             if (membresia) {
                 perfil.tipo_usuario = resolverTipoSesion(usuario, membresia);
                 perfil.tipo_hora = membresia.tipo_hora ?? null;
+                perfil.activo = membresiaEstaActiva(membresia);
             }
 
             const usuarioJornadas = await UsuarioJornada.findAll({
@@ -236,7 +238,7 @@ const getUsuariosEmpresa = async (req, res) => {
 
         const idUsuarios = await UsuarioEmpresa.findAll({
             where: { id_empresa: idEmpresa, fecha_baja: null },
-            attributes: ['id_usuario', 'tipo_usuario', 'tipo_hora']
+            attributes: ['id_usuario', 'tipo_usuario', 'tipo_hora', 'activo']
         });
 
         const idUsuariosArray = idUsuarios.map(usuario => usuario.id_usuario);
@@ -270,6 +272,7 @@ const getUsuariosEmpresa = async (req, res) => {
 
             return {
                 ...usuario.toJSON(),
+                activo: membresiaEstaActiva(membresia),
                 tipo_usuario: membresia?.tipo_usuario ?? usuario.tipo_usuario,
                 tipo_hora: membresia?.tipo_hora ?? null,
                 jornadas: jornadasUsuario
@@ -472,14 +475,16 @@ const editUsuario= async (req, res) => {
                 usuario_modificacion: idUsuarioAccion,
                 nombre : values.nombre,
                 dni : values.dni,
-                activo : values.activo,
             },
             {
                 where: { id_usuario: idUsuario }
             }
         );
 
-        const updateMembresia = { tipo_usuario: values.tipoUsuario };
+        const updateMembresia = {
+            tipo_usuario: values.tipoUsuario,
+            activo: values.activo,
+        };
         if (Object.prototype.hasOwnProperty.call(values, 'tipoHora')) {
             updateMembresia.tipo_hora = normalizarTipoHoraInput(values.tipoHora);
         }
@@ -535,21 +540,76 @@ const editUsuario= async (req, res) => {
 const deleteUsuario= async (req, res) => {
     try{
         const date = new Date()
-        const {idUsuario,idUsuarioAccion} = req.body;
+        const {idUsuario, idUsuarioAccion, idEmpresa} = req.body;
 
-        await Usuario.update({
-             fecha_baja: date,
+        if (!idEmpresa) {
+            return res.status(400).json({ message: 'idEmpresa es obligatorio' });
+        }
+
+        const membresia = await UsuarioEmpresa.findOne({
+            where: {
+                id_usuario: idUsuario,
+                id_empresa: idEmpresa,
+                fecha_baja: null,
+            },
+        });
+
+        if (!membresia) {
+            return res.status(404).json({ message: 'El usuario no está vinculado a esta empresa' });
+        }
+
+        await UsuarioEmpresa.update(
+            {
+                fecha_baja: date,
                 usuario_baja: idUsuarioAccion,
                 activo: false,
-                email: `${idUsuario}_borrado_${Date.now()}`
-      }, {
-        where: {id_usuario: idUsuario },
-      });
+            },
+            {
+                where: {
+                    id_usuario: idUsuario,
+                    id_empresa: idEmpresa,
+                    fecha_baja: null,
+                },
+            },
+        );
 
-            res.status(201).json({
-            message: 'Usuario dado de baja correctamente',
-            creada: true,
+        await UsuarioJornada.update(
+            {
+                fecha_baja: date,
+                usuario_baja: idUsuarioAccion,
+            },
+            {
+                where: {
+                    empresa_id: idEmpresa,
+                    id_usuario: idUsuario,
+                    fecha_baja: null,
+                },
+            },
+        );
+
+        const otrasMembresiasActivas = await UsuarioEmpresa.count({
+            where: {
+                id_usuario: idUsuario,
+                fecha_baja: null,
+                activo: true,
+            },
+        });
+
+        if (otrasMembresiasActivas === 0) {
+            await Usuario.update({
+                fecha_baja: date,
+                usuario_baja: idUsuarioAccion,
+                activo: false,
+                email: `${idUsuario}_borrado_${Date.now()}`,
+            }, {
+                where: { id_usuario: idUsuario, fecha_baja: null },
             });
+        }
+
+        res.status(201).json({
+            message: 'Usuario dado de baja correctamente en la empresa',
+            creada: true,
+        });
 
     } catch (error) {
       console.error(error);

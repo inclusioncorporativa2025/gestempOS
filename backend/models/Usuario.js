@@ -29,6 +29,10 @@ const Usuario = sequelize.define('Usuario', {
         type: DataTypes.STRING,
         allowNull: true,
     },
+    telefono_whatsapp: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+    },
     activo: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

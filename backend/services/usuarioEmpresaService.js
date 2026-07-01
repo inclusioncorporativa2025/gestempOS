@@ -10,6 +10,18 @@ const PRE_AUTH_EXPIRES_IN = process.env.PRE_AUTH_JWT_EXPIRES_IN || '10m';
 
 const TIPOS_PLATAFORMA = [1, 2];
 
+const membresiaEstaActiva = (membresia) =>
+  membresia &&
+  !membresia.fecha_baja &&
+  membresia.activo !== false &&
+  membresia.activo !== 0;
+
+const usuarioActivoPlataforma = (usuario) =>
+  usuario &&
+  !usuario.fecha_baja &&
+  usuario.activo !== false &&
+  usuario.activo !== 0;
+
 const empresaEstaOperativa = (empresa) =>
   empresa &&
   !empresa.fecha_baja &&
@@ -42,7 +54,7 @@ const obtenerMembresiaActiva = async (idUsuario, idEmpresa) =>
 
 const listarMembresiasActivas = async (idUsuario) => {
   const membresias = await UsuarioEmpresa.findAll({
-    where: { id_usuario: idUsuario, fecha_baja: null },
+    where: { id_usuario: idUsuario, fecha_baja: null, activo: true },
     order: [['fecha_alta', 'DESC']],
   });
 
@@ -62,7 +74,20 @@ const listarMembresiasActivas = async (idUsuario) => {
       membresia,
       empresa: empresaPorId.get(membresia.id_empresa) ?? null,
     }))
-    .filter((item) => empresaEstaOperativa(item.empresa));
+    .filter((item) => empresaEstaOperativa(item.empresa) && membresiaEstaActiva(item.membresia));
+};
+
+const usuarioPuedeAutenticarse = async (usuario) => {
+  if (!usuario || usuario.fecha_baja) {
+    return false;
+  }
+
+  if (TIPOS_PLATAFORMA.includes(Number(usuario.tipo_usuario))) {
+    return usuarioActivoPlataforma(usuario);
+  }
+
+  const membresias = await listarMembresiasActivas(usuario.id_usuario);
+  return membresias.length > 0;
 };
 
 const listarEmpresasParaSelector = async (idUsuario, usuario) =>
@@ -77,7 +102,7 @@ const listarEmpresasParaSelector = async (idUsuario, usuario) =>
 
 const usuarioTieneAccesoEmpresa = async (idUsuario, idEmpresa) => {
   const membresia = await obtenerMembresiaActiva(idUsuario, idEmpresa);
-  if (!membresia) {
+  if (!membresiaEstaActiva(membresia)) {
     return false;
   }
   const empresa = await Empresa.findByPk(idEmpresa);
@@ -128,6 +153,9 @@ const verificarPreAuthToken = (token) => {
 
 module.exports = {
   TIPOS_PLATAFORMA,
+  membresiaEstaActiva,
+  usuarioActivoPlataforma,
+  usuarioPuedeAutenticarse,
   empresaEstaOperativa,
   resolverTipoUsuario,
   resolverTipoSesion,

@@ -13,6 +13,9 @@ const {
   listarMembresiasActivas,
   listarEmpresasParaSelector,
   obtenerMembresiaActiva,
+  membresiaEstaActiva,
+  usuarioActivoPlataforma,
+  usuarioPuedeAutenticarse,
   emitirJwtSesion,
   emitirPreAuthToken,
   verificarPreAuthToken,
@@ -31,8 +34,18 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const BCRYPT_ROUNDS = 10;
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'soporte@timecor.es';
 
-const usuarioActivo = (usuario) =>
-  usuario && usuario.activo !== false && usuario.activo !== 0;
+const sanitizeUsuario = (usuario, membresia = null) => ({
+  id_usuario: usuario.id_usuario,
+  nombre: usuario.nombre,
+  email: usuario.email,
+  tipo_usuario: usuario.tipo_usuario,
+  dni: usuario.dni,
+  activo: membresia != null
+    ? membresiaEstaActiva(membresia)
+    : TIPOS_PLATAFORMA.includes(Number(usuario.tipo_usuario))
+      ? usuarioActivoPlataforma(usuario)
+      : true,
+});
 
 const buscarUsuarioPorEmail = async (email) => {
   const emailNorm = String(email || '').trim().toLowerCase();
@@ -72,15 +85,6 @@ const responderErrorResetCorreo = (res, error, respuestaGenerica) => {
     message: `No pudimos enviar el correo en este momento. Inténtalo más tarde o contacta con ${SUPPORT_EMAIL}.`,
   });
 };
-
-const sanitizeUsuario = (usuario) => ({
-  id_usuario: usuario.id_usuario,
-  nombre: usuario.nombre,
-  email: usuario.email,
-  tipo_usuario: usuario.tipo_usuario,
-  dni: usuario.dni,
-  activo: usuario.activo,
-});
 
 /**
  * Usuarios de empresa (3–6) deben tener al menos una empresa operativa vinculada.
@@ -185,7 +189,7 @@ const completarLoginConEmpresa = async (req, res, usuario, membresia, empresa) =
   return res.status(200).json({
     message: 'Login exitoso',
     token,
-    usuario: sanitizeUsuario(usuario),
+    usuario: sanitizeUsuario(usuario, membresia),
     empresa: id_empresa
       ? {
           id_empresa,
@@ -208,7 +212,7 @@ const login = async (req, res) => {
   try {
     const usuario = await buscarUsuarioPorEmail(email);
 
-    if (!usuarioActivo(usuario)) {
+    if (!(await usuarioPuedeAutenticarse(usuario))) {
       return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 
@@ -267,7 +271,7 @@ const login = async (req, res) => {
         message: 'Selecciona la empresa con la que deseas acceder',
         preAuthToken: emitirPreAuthToken(usuario.id_usuario),
         empresas,
-        usuario: sanitizeUsuario(usuario),
+        usuario: sanitizeUsuario(usuario, membresia),
       });
     }
 
@@ -297,13 +301,13 @@ const selectEmpresa = async (req, res) => {
       where: { id_usuario: payload.id_usuario, fecha_baja: null },
     });
 
-    if (!usuarioActivo(usuario)) {
+    if (!(await usuarioPuedeAutenticarse(usuario))) {
       return res.status(401).json({ message: 'Sesión de selección no válida' });
     }
 
     const membresia = await obtenerMembresiaActiva(usuario.id_usuario, idEmpresa);
-    if (!membresia) {
-      return res.status(403).json({ message: 'No tienes acceso a esa empresa' });
+    if (!membresiaEstaActiva(membresia)) {
+      return res.status(403).json({ message: 'No tienes acceso activo a esa empresa' });
     }
 
     const empresa = await Empresa.findByPk(idEmpresa);
@@ -344,7 +348,7 @@ const switchEmpresa = async (req, res) => {
       where: { id_usuario: req.user.id_usuario, fecha_baja: null },
     });
 
-    if (!usuarioActivo(usuario)) {
+    if (!(await usuarioPuedeAutenticarse(usuario))) {
       return res.status(401).json({ message: 'Usuario no válido' });
     }
 
@@ -354,8 +358,8 @@ const switchEmpresa = async (req, res) => {
     }
 
     const membresia = await obtenerMembresiaActiva(usuario.id_usuario, idEmpresa);
-    if (!membresia) {
-      return res.status(403).json({ message: 'No tienes acceso a esa empresa' });
+    if (!membresiaEstaActiva(membresia)) {
+      return res.status(403).json({ message: 'No tienes acceso activo a esa empresa' });
     }
 
     const empresa = await Empresa.findByPk(idEmpresa);
@@ -411,7 +415,7 @@ const misEmpresas = async (req, res) => {
       where: { id_usuario: req.user.id_usuario, fecha_baja: null },
     });
 
-    if (!usuarioActivo(usuario)) {
+    if (!(await usuarioPuedeAutenticarse(usuario))) {
       return res.status(401).json({ message: 'Usuario no válido' });
     }
 
@@ -453,7 +457,7 @@ const forgotPassword = async (req, res) => {
   try {
     const usuario = await buscarUsuarioPorEmail(email);
 
-    if (!usuarioActivo(usuario)) {
+    if (!(await usuarioPuedeAutenticarse(usuario))) {
       return res.status(200).json(respuestaGenerica);
     }
 
@@ -527,7 +531,7 @@ const reanudarCheckout = async (req, res) => {
   try {
     const usuario = await buscarUsuarioPorEmail(email);
 
-    if (!usuarioActivo(usuario)) {
+    if (!(await usuarioPuedeAutenticarse(usuario))) {
       return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 

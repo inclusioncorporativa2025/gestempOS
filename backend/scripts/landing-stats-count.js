@@ -7,18 +7,19 @@ const queries = {
     FROM m_empresas
     WHERE fecha_baja IS NULL
   `,
-  vinculos_usuario_empresa_activos: `
-    SELECT COUNT(*) AS total
-    FROM m_usuarios_empresas
-    WHERE fecha_baja IS NULL
-  `,
   usuarios_activos_vinculados: `
     SELECT COUNT(DISTINCT ue.id_usuario) AS total
     FROM m_usuarios_empresas ue
     JOIN m_usuarios u ON u.id_usuario = ue.id_usuario
     WHERE ue.fecha_baja IS NULL
+      AND ue.activo = 1
       AND u.fecha_baja IS NULL
-      AND u.activo = 1
+  `,
+  vinculos_usuario_empresa_activos: `
+    SELECT COUNT(*) AS total
+    FROM m_usuarios_empresas
+    WHERE fecha_baja IS NULL
+      AND activo = 1
   `,
   fichajes_activos: `
     SELECT COUNT(*) AS total

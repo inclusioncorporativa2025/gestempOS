@@ -8,21 +8,22 @@ const { ROLE_GROUPS } = require('../middleware/authMiddleware');
 const {
   listarMembresiasActivas,
   construirClaimsSesion,
+  usuarioPuedeAutenticarse,
+  membresiaEstaActiva,
 } = require('../services/usuarioEmpresaService');
 
 const IMPERSONATION_EXPIRES_IN = process.env.IMPERSONATION_JWT_EXPIRES_IN || '1h';
 const TIPOS_PLATAFORMA = ROLE_GROUPS.PLATFORM;
 
-const usuarioActivo = (usuario) =>
-  usuario && usuario.activo !== false && usuario.activo !== 0;
-
-const sanitizeUsuario = (usuario) => ({
+const sanitizeUsuario = (usuario, membresia = null) => ({
   id_usuario: usuario.id_usuario,
   nombre: usuario.nombre,
   email: usuario.email,
   tipo_usuario: usuario.tipo_usuario,
   dni: usuario.dni,
-  activo: usuario.activo,
+  activo: membresia != null
+    ? membresiaEstaActiva(membresia)
+    : usuario.activo !== false && usuario.activo !== 0,
 });
 
 const RUTAS_IGNORADAS = new Set([
@@ -163,7 +164,7 @@ const accederComoUsuario = async (req, res) => {
       where: { email, fecha_baja: null },
     });
 
-    if (!usuarioActivo(usuario)) {
+    if (!(await usuarioPuedeAutenticarse(usuario))) {
       return res.status(404).json({ message: 'No existe un usuario activo con ese correo' });
     }
 

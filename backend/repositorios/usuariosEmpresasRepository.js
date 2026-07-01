@@ -24,6 +24,7 @@ const obtenerDisponibilidadLicencias = async (idEmpresa) => {
       where: {
         id_empresa: idEmpresa,
         fecha_baja: null,
+        activo: true,
       },
     });
 
@@ -72,6 +73,7 @@ const crearUsuarioEmpresa = async (
       existente.fecha_alta = fechaAlta;
       existente.usuario_alta = idUsuarioAccion;
       existente.tipo_usuario = tipoUsuario;
+      existente.activo = true;
       if (tipoHora !== undefined) {
         existente.tipo_hora = tipoHora;
       }
@@ -84,6 +86,7 @@ const crearUsuarioEmpresa = async (
       id_empresa,
       tipo_usuario: tipoUsuario,
       tipo_hora: tipoHora,
+      activo: true,
       fecha_alta: fechaAlta,
       usuario_alta: idUsuarioAccion,
     });

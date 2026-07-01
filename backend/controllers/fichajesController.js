@@ -16,6 +16,7 @@ const { TIPO_REGISTRO_A_EVENTO } = require('../utils/registroHash');
 const { registrarEventoFichaje, verificarEventosMes } = require('../repositorios/fichajeRegistroEventosRepository');
 const {getTipoRegistro} = require('./companyController');
 const { empresaTieneFeature } = require('../services/planService');
+const { crearRegistroFichaje } = require('../services/fichajeRegistroService');
 const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/ausenciasCompat');
 const moment = require('moment-timezone');
 const dayjs = require('dayjs');
@@ -384,77 +385,13 @@ const crearRegistro = async (req, res) => {
       return res.status(400).json({ error: 'Datos incompletos' });
     }
 
-    const tipoEvento = TIPO_REGISTRO_A_EVENTO[tipoRegistro];
-    if (!tipoEvento) {
-      return res.status(400).json({ error: 'Tipo de registro no válido' });
-    }
-
-    const ubicacionSt = formatUbicacionStorage(ubicacion) || '';
-
-    const ultimoRegistro = await getUltimoRegistro(idUsuario, idEmpresa);
-    const ultimoDescanso = await getUltimoDescanso(idUsuario, idEmpresa);
-
-    await sequelize.transaction(async (transaction) => {
-      let idFichajeRef = null;
-      let idDescansoRef = null;
-
-      if ((!ultimoRegistro || ultimoRegistro.dataValues.fecha_salida != null) && tipoRegistro === 1) {
-        const fichaje = await createConId(Fichajes, idEmpresa, 'id_fichaje', {
-          id_usuario: idUsuario,
-          fecha_alta: fecha,
-          ubicacion_entrada: ubicacionSt,
-          fecha_entrada: fecha,
-          usuario_alta: usuarioAccion,
-        }, transaction);
-        idFichajeRef = fichaje.id_fichaje;
-      } else if (tipoRegistro === 2) {
-        if (!ultimoRegistro || ultimoRegistro.dataValues.fecha_salida != null) {
-          throw new Error('No hay fichaje abierto para registrar salida');
-        }
-        idFichajeRef = ultimoRegistro.dataValues.id_fichaje;
-        await Fichajes.update({
-          fecha_salida: fecha,
-          ubicacion_salida: ubicacionSt,
-        }, {
-          where: { empresa_id: idEmpresa, id_fichaje: idFichajeRef },
-          transaction,
-        });
-      } else if (tipoRegistro === 3) {
-        const descanso = await createConId(Descansos, idEmpresa, 'id_descanso', {
-          id_usuario: idUsuario,
-          fecha_entrada: fecha,
-          ubicacion_entrada: ubicacionSt,
-          fecha_alta: fecha,
-          usuario_alta: usuarioAccion,
-        }, transaction);
-        idDescansoRef = descanso.id_descanso;
-      } else if (tipoRegistro === 4) {
-        if (!ultimoDescanso) {
-          throw new Error('No hay descanso abierto para registrar fin de pausa');
-        }
-        idDescansoRef = ultimoDescanso.id_descanso;
-        await Descansos.update({
-          fecha_salida: fecha,
-          ubicacion_salida: ubicacionSt,
-        }, {
-          where: { empresa_id: idEmpresa, id_descanso: idDescansoRef },
-          transaction,
-        });
-      } else {
-        throw new Error('Error creando registro');
-      }
-
-      await registrarEventoFichaje({
-        empresaId: idEmpresa,
-        idUsuario,
-        tipo: tipoEvento,
-        fechaInput: fecha,
-        ubicacion: ubicacionSt,
-        idFichaje: idFichajeRef,
-        idDescanso: idDescansoRef,
-        usuarioAlta: usuarioAccion,
-        transaction,
-      });
+    await crearRegistroFichaje({
+      idUsuario,
+      idEmpresa,
+      tipoRegistro,
+      ubicacion,
+      fecha,
+      usuarioAccion,
     });
 
     res.status(200).json({ message: 'Registro exitoso' });
@@ -1385,11 +1322,13 @@ const getEstadoPersonalEmpresa = async (req, res) => {
 
   try {
     const vinculos = await UsuariosEmpresas.findAll({
-      where: { id_empresa: idEmpresa, fecha_baja: null },
-      attributes: ['id_usuario'],
+      where: { id_empresa: idEmpresa, fecha_baja: null, activo: true },
+      attributes: ['id_usuario', 'tipo_usuario'],
     });
 
-    const idsVinculados = vinculos.map((v) => v.id_usuario);
+    const idsVinculados = vinculos
+      .filter((v) => [3, 4, 5].includes(Number(v.tipo_usuario)))
+      .map((v) => v.id_usuario);
 
     if (!idsVinculados.length) {
       return res.status(200).json({
@@ -1402,8 +1341,6 @@ const getEstadoPersonalEmpresa = async (req, res) => {
       where: {
         id_usuario: { [Op.in]: idsVinculados },
         fecha_baja: null,
-        activo: true,
-        tipo_usuario: { [Op.in]: [3, 4, 5] },
       },
       attributes: ['id_usuario', 'nombre', 'email', 'tipo_usuario'],
     });

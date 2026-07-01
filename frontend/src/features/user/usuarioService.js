@@ -178,10 +178,11 @@ export const deleteUsuario = async (idUsuario) =>{
 
   try{
     const idUsuarioAccion = getIdUsuario();
+    const idEmpresa = getIdEmpresa();
     const response = await fetch(API_BASE_URL+`/delete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idUsuario,idUsuarioAccion}),
+      body: JSON.stringify({ idUsuario, idUsuarioAccion, idEmpresa }),
     });
 
     if (!response.ok) {
