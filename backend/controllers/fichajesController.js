@@ -1346,6 +1346,13 @@ const resolverEstadoJornada = (fichajeAbierto, descansoAbierto) => {
   return 'out';
 };
 
+const ausenciaCubreHoy = (ausencia, hoy) => {
+  const desde = parseFechaRegistro(ausencia.fecha_desde).startOf('day');
+  const hasta = parseFechaRegistro(ausencia.fecha_hasta).startOf('day');
+  if (!desde.isValid() || !hasta.isValid()) return false;
+  return !hoy.isBefore(desde, 'day') && !hoy.isAfter(hasta, 'day');
+};
+
 const getEstadoPersonalEmpresa = async (req, res) => {
   const { idEmpresa } = req.body;
 
@@ -1456,10 +1463,47 @@ const getEstadoPersonalEmpresa = async (req, res) => {
       }
     });
 
+    const incluirAusencias = await empresaTieneFeature(idEmpresa, 'ausencias_basicas');
+    const soportaAprobacionAusencias = incluirAusencias
+      ? await ausenciasSoportaAprobacion()
+      : false;
+
+    const ausenciaPorUsuario = {};
+    if (incluirAusencias && userIds.length) {
+      const hoy = dayjs().tz(tz).startOf('day');
+      const ausenciasEmpresa = await Ausencias.findAll({
+        where: {
+          empresa_id: idEmpresa,
+          id_usuario: { [Op.in]: userIds },
+          fecha_baja: null,
+          fecha_cancelacion: null,
+          ...whereSoloAprobadas(soportaAprobacionAusencias),
+        },
+        attributes: ['id_usuario', 'tipo', 'fecha_desde', 'fecha_hasta'],
+      });
+
+      ausenciasEmpresa.forEach((a) => {
+        const raw = a.toJSON();
+        if (!ausenciaCubreHoy(raw, hoy)) return;
+
+        const prev = ausenciaPorUsuario[raw.id_usuario];
+        const hastaNueva = parseFechaRegistro(raw.fecha_hasta);
+        const hastaPrev = prev ? parseFechaRegistro(prev.fecha_hasta) : null;
+
+        if (!prev || (hastaNueva.isValid() && hastaPrev?.isValid() && hastaNueva.isAfter(hastaPrev, 'day'))) {
+          ausenciaPorUsuario[raw.id_usuario] = {
+            tipo: raw.tipo,
+            fecha_hasta: raw.fecha_hasta,
+          };
+        }
+      });
+    }
+
     const personal = usuarios.map((u) => {
       const fichaje = fichajePorUsuario[u.id_usuario] || null;
       const descanso = descansoPorUsuario[u.id_usuario] || null;
       const estado = resolverEstadoJornada(fichaje, descanso);
+      const ausenciaActiva = estado === 'out' ? (ausenciaPorUsuario[u.id_usuario] || null) : null;
 
       let fechaEntradaJornada = fichaje?.fecha_entrada || null;
       let fechaSalidaJornada = fichaje?.fecha_salida || null;
@@ -1481,6 +1525,7 @@ const getEstadoPersonalEmpresa = async (req, res) => {
         fecha_salida: fechaSalidaJornada,
         fecha_descanso: descanso?.fecha_entrada || null,
         num_pausas: pausasPorUsuario[u.id_usuario] || 0,
+        ausencia_activa: ausenciaActiva,
       };
     });
 

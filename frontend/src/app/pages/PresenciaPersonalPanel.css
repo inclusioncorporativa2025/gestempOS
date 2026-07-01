@@ -108,6 +108,25 @@
   background: #9aa5b1;
 }
 
+.presencia-dot--ausencia {
+  background: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.2);
+}
+
+.presencia-estado-ausencia {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.presencia-ausencia-hasta {
+  font-size: 0.72rem;
+  color: #5a6472;
+  line-height: 1.2;
+  padding-left: 2px;
+}
+
 .presencia-table .ant-table {
   background: transparent;
 }

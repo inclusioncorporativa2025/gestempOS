@@ -1,11 +1,24 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, Table, Tag, Input, Button, Empty, Spin, message } from 'antd';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { getEstadoPersonalEmpresa } from '../../features/fichaje/fichajeService';
 import { getTipoUsuario } from '../../utils/authSession';
 import { formatHoraFichaje } from '../../utils/fechaFichaje';
+import { getConfigTipoAusenciaTag } from '../../constants/tiposAusencia';
 import { JORNADA_ACTUALIZADA } from '../../hooks/useEstadoJornada';
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import './PresenciaPersonalPanel.css';
+
+dayjs.extend(customParseFormat);
+
+const parseFechaAusencia = (valor) =>
+  dayjs(valor, ['DD-MM-YYYY', 'YYYY-MM-DD'], true);
+
+const formatFechaAusencia = (valor) => {
+  const fecha = parseFechaAusencia(valor);
+  return fecha.isValid() ? fecha.format('DD/MM/YYYY') : valor || '—';
+};
 
 const ESTADO_CONFIG = {
   in: { label: 'Trabajando', color: 'green', dotClass: 'presencia-dot--in' },
@@ -74,19 +87,39 @@ const PresenciaPersonalPanel = () => {
       title: 'Nombre',
       dataIndex: 'nombre',
       key: 'nombre',
-      render: (nombre, record) => (
-        <div className="presencia-nombre">
-          <span className={`presencia-dot ${ESTADO_CONFIG[record.estado]?.dotClass || ''}`} aria-hidden />
-          <span>{nombre}</span>
-        </div>
-      ),
+      render: (nombre, record) => {
+        const dotClass = record.ausencia_activa && record.estado === 'out'
+          ? 'presencia-dot--ausencia'
+          : (ESTADO_CONFIG[record.estado]?.dotClass || '');
+
+        return (
+          <div className="presencia-nombre">
+            <span className={`presencia-dot ${dotClass}`} aria-hidden />
+            <span>{nombre}</span>
+          </div>
+        );
+      },
     },
     {
       title: 'Estado',
       dataIndex: 'estado',
       key: 'estado',
-      width: 140,
-      render: (estado) => {
+      width: 180,
+      render: (estado, record) => {
+        const ausencia = record.ausencia_activa;
+
+        if (estado === 'out' && ausencia?.tipo) {
+          const config = getConfigTipoAusenciaTag(ausencia.tipo);
+          return (
+            <div className="presencia-estado-ausencia">
+              <Tag color={config.color}>{config.label}</Tag>
+              <span className="presencia-ausencia-hasta">
+                Hasta {formatFechaAusencia(ausencia.fecha_hasta)}
+              </span>
+            </div>
+          );
+        }
+
         const cfg = ESTADO_CONFIG[estado] || ESTADO_CONFIG.out;
         return <Tag color={cfg.color}>{cfg.label}</Tag>;
       },
