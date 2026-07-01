@@ -1,0 +1,62 @@
+.ja-acciones {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ja-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: var(--input-radius-pill);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.28);
+  background: rgba(var(--color-primary-rgb), 0.07);
+  color: var(--color-primary-dark);
+  font-size: 12px;
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.ja-upload-btn .anticon {
+  font-size: 11px;
+}
+
+.ja-upload-btn:hover:not(:disabled) {
+  background: rgba(var(--color-primary-rgb), 0.12);
+  border-color: rgba(var(--color-primary-rgb), 0.42);
+  color: var(--color-primary-dark);
+}
+
+.ja-upload-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ja-ver-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #5a6472;
+  font-size: 12px;
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.ja-ver-btn .anticon {
+  font-size: 11px;
+}
+
+.ja-ver-btn:hover {
+  color: var(--color-primary);
+}

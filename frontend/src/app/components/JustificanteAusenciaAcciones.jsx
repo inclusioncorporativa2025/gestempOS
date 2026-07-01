@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Button, Upload, Space, Tag, message } from 'antd';
-import { PaperClipOutlined, UploadOutlined } from '@ant-design/icons';
+import { Upload, Tag, message } from 'antd';
+import { LoadingOutlined, PaperClipOutlined, UploadOutlined } from '@ant-design/icons';
 import {
   subirJustificanteAusencia,
   descargarJustificanteAusencia,
   listarJustificantesAusencia,
 } from '../../features/ausencias/ausenciasService';
 import { requiereJustificanteParaAprobar } from '../../constants/tiposAusencia';
+import './JustificanteAusenciaAcciones.css';
 
 const JustificanteAusenciaAcciones = ({
   ausencia,
@@ -52,7 +53,7 @@ const JustificanteAusenciaAcciones = ({
   };
 
   return (
-    <Space size="small" wrap>
+    <div className="ja-acciones">
       <Tag color={tiene ? 'green' : 'orange'}>
         {tiene ? 'Adjunto' : 'Pendiente'}
       </Tag>
@@ -63,26 +64,19 @@ const JustificanteAusenciaAcciones = ({
           beforeUpload={handleUpload}
           disabled={subiendo}
         >
-          <Button
-            size="small"
-            icon={<UploadOutlined />}
-            loading={subiendo}
-          >
+          <button type="button" className="ja-upload-btn" disabled={subiendo}>
+            {subiendo ? <LoadingOutlined spin /> : <UploadOutlined />}
             {compact ? 'Subir' : 'Subir justificante'}
-          </Button>
+          </button>
         </Upload>
       )}
       {tiene && (
-        <Button
-          size="small"
-          type="link"
-          icon={<PaperClipOutlined />}
-          onClick={handleDescargar}
-        >
+        <button type="button" className="ja-ver-btn" onClick={handleDescargar}>
+          <PaperClipOutlined />
           Ver
-        </Button>
+        </button>
       )}
-    </Space>
+    </div>
   );
 };
 

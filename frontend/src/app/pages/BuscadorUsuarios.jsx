@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Tag, Card, Table, Input, Button, Modal, Tooltip, Popconfirm, Form, message, Typography, DatePicker, Switch, Select, ConfigProvider, Dropdown, Radio } from 'antd';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Tag, Card, Table, Input, Button, Modal, Tooltip, Popconfirm, Form, message, Typography, DatePicker, Switch, Select, ConfigProvider, Dropdown } from 'antd';
 import GradientButton from '../components/shared/GradientButton';
 import { SearchOutlined, EditOutlined, StopOutlined, EyeOutlined, DownloadOutlined, UserAddOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -74,6 +74,14 @@ const BuscarUsuarios = () => {
             navigate(location.pathname, { replace: true, state: {} });
         }
     }, [location.state, location.pathname, navigate]);
+
+    const contadores = useMemo(() => {
+        const activos = usuarios.filter(esUsuarioActivo).length;
+        return {
+            activos,
+            inactivos: usuarios.length - activos,
+        };
+    }, [usuarios]);
 
     const filteredUsuarios = usuarios.filter((usuario) => {
         const matchesSearch =
@@ -414,26 +422,35 @@ const BuscarUsuarios = () => {
         <ConfigProvider locale={esES}>
             <div className="bu-page">
             <Card>
+                <div className="bu-stats">
+                    <button
+                        type="button"
+                        className={`bu-stat bu-stat--activos ${filtroActivo === 'activos' ? 'bu-stat--selected' : ''}`}
+                        onClick={() => setFiltroActivo('activos')}
+                        aria-pressed={filtroActivo === 'activos'}
+                    >
+                        <span className="bu-stat-value">{contadores.activos}</span>
+                        <span className="bu-stat-label">Activos</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`bu-stat bu-stat--inactivos ${filtroActivo === 'inactivos' ? 'bu-stat--selected' : ''}`}
+                        onClick={() => setFiltroActivo('inactivos')}
+                        aria-pressed={filtroActivo === 'inactivos'}
+                    >
+                        <span className="bu-stat-value">{contadores.inactivos}</span>
+                        <span className="bu-stat-label">No activos</span>
+                    </button>
+                </div>
+
                 <div className="bu-toolbar">
-                    <div className="bu-toolbar-filters">
-                        <Input
-                            placeholder="Buscar por nombre, correo o DNI"
-                            prefix={<SearchOutlined />}
-                            value={searchText}
-                            onChange={handleSearch}
-                            className="bu-search"
-                        />
-                        <Radio.Group
-                            className="bu-filtro-activo"
-                            value={filtroActivo}
-                            onChange={(e) => setFiltroActivo(e.target.value)}
-                            optionType="button"
-                            buttonStyle="solid"
-                        >
-                            <Radio.Button value="activos">Activos</Radio.Button>
-                            <Radio.Button value="inactivos">No activos</Radio.Button>
-                        </Radio.Group>
-                    </div>
+                    <Input
+                        placeholder="Buscar por nombre, correo o DNI"
+                        prefix={<SearchOutlined />}
+                        value={searchText}
+                        onChange={handleSearch}
+                        className="bu-search"
+                    />
 
                     <div className="bu-toolbar-actions">
                         <GradientButton
@@ -513,7 +530,7 @@ const BuscarUsuarios = () => {
                 <Table
                     dataSource={filteredUsuarios}
                     columns={columns}
-                    pagination={{ pageSize: 5 }}
+                    pagination={{ pageSize: 8, hideOnSinglePage: true }}
                     scroll={{ x: 800 }}
                     rowKey="id_usuario"
                 />
