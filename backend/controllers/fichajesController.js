@@ -493,6 +493,7 @@ const crearPeticionEdicion = async (req, res) => {
   try {
     const { idUsuario, idEmpresa, values } = req.body;
     const fechaConOffset = new Date();
+    const tz = 'Europe/Madrid';
 
     const fichaje = await Fichajes.findOne({
       where: {
@@ -509,8 +510,40 @@ const crearPeticionEdicion = async (req, res) => {
     const entrada_original = fichaje.fecha_entrada;
     const salida_original = fichaje.fecha_salida || fichaje.fecha_entrada;
 
-    const nueva_entrada = combinarFechaConHoraMadrid(entrada_original, values.hora_entrada);
-    const nueva_salida = combinarFechaConHoraMadrid(salida_original, values.hora_salida);
+    const resolverFechaBase = (fechaPropuesta, fallback) => {
+      if (fechaPropuesta) {
+        const parsed = parseFechaRegistro(fechaPropuesta);
+        if (!parsed.isValid()) return null;
+        return parsed.format('YYYY-MM-DD');
+      }
+      return dayjs(fallback).tz(tz).format('YYYY-MM-DD');
+    };
+
+    const fechaEntradaBase = resolverFechaBase(values.fecha_entrada, entrada_original);
+    const fechaSalidaBase = resolverFechaBase(values.fecha_salida, salida_original);
+
+    if (!fechaEntradaBase || !fechaSalidaBase) {
+      return res.status(400).json({ error: 'Fecha de entrada o salida no válida' });
+    }
+
+    if (!values.hora_entrada || !values.hora_salida) {
+      return res.status(400).json({ error: 'Hora de entrada y salida obligatorias' });
+    }
+
+    const nueva_entrada = combinarFechaConHoraMadrid(fechaEntradaBase, values.hora_entrada);
+    const nueva_salida = combinarFechaConHoraMadrid(fechaSalidaBase, values.hora_salida);
+
+    const entradaDt = dayjs(nueva_entrada).tz(tz);
+    const salidaDt = dayjs(nueva_salida).tz(tz);
+    const ahora = dayjs().tz(tz);
+
+    if (!entradaDt.isBefore(salidaDt)) {
+      return res.status(400).json({ error: 'La entrada debe ser anterior a la salida' });
+    }
+
+    if (entradaDt.isAfter(ahora) || salidaDt.isAfter(ahora)) {
+      return res.status(400).json({ error: 'Las fechas no pueden ser futuras' });
+    }
 
     const info = await createConId(Peticiones, idEmpresa, 'id_peticion', {
       id_usuario_peticion: idUsuario,

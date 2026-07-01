@@ -337,7 +337,8 @@ export const crearPeticionEdicion = async (values) => {
     });
 
     if (!response.ok) {
-       await response.json();
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || errorData.message || 'Error al crear la petición');
     }
 
     const data = await response.json();
@@ -345,6 +346,7 @@ export const crearPeticionEdicion = async (values) => {
     return data; 
   } catch (error) {
     console.error('Error obteniendo datos:', error);
+    throw error;
   }   
 };
 

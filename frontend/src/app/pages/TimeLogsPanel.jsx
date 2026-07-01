@@ -507,7 +507,7 @@ const confirmarCierreMensual = async () => {
             date: dayjs(record.date, 'DD/MM/YYYY'),
             checkIn: moment(record.checkIn, 'HH:mm'),
             checkInType: record.checkInType,
-            dateOut: dayjs(record.dateOut, 'DD/MM/YYYY'),
+            dateOut: dayjs(record.dateOut || record.date, 'DD/MM/YYYY'),
             checkOut: record.checkOut ? moment(record.checkOut, 'HH:mm') : null,
             exitType: record.exitType,
         });
@@ -531,22 +531,36 @@ const confirmarCierreMensual = async () => {
             throw new Error('Hora de salida no válida');
         }
 
-        // Validar que la hora de entrada sea anterior a la salida
-        const fechaEntrada = dayjs(editingRecord.date, 'DD/MM/YYYY');
-        const fechaSalida = dayjs(editingRecord.dateOut || editingRecord.date, 'DD/MM/YYYY');
-        const entrada = fechaEntrada.hour(values.checkIn.hour()).minute(values.checkIn.minute());
-        const salida = fechaSalida.hour(values.checkOut.hour()).minute(values.checkOut.minute());
+        const fechaEntrada = dayjs(values.date);
+        const fechaSalida = dayjs(values.dateOut);
+        const entrada = fechaEntrada
+            .hour(values.checkIn.hour())
+            .minute(values.checkIn.minute())
+            .second(0);
+        const salida = fechaSalida
+            .hour(values.checkOut.hour())
+            .minute(values.checkOut.minute())
+            .second(0);
 
+        if (!entrada.isValid() || !salida.isValid()) {
+            message.error('Fecha u hora no válida');
+            return;
+        }
 
         if (entrada.isAfter(salida)) {
-            message.error('La hora de entrada debe ser anterior a la hora de salida');
+            message.error('La fecha y hora de entrada deben ser anteriores a la de salida');
+            return;
+        }
+
+        if (entrada.isAfter(dayjs()) || salida.isAfter(dayjs())) {
+            message.error('Las fechas no pueden ser futuras');
             return;
         }
 
         const peticionPayload = {
             id_fichaje: editingRecord.key.replace('fichaje-', ''),
-            fecha: dayjs(editingRecord.date, 'DD/MM/YYYY').format(),
-            fechaSalida: dayjs(editingRecord.dateOut || editingRecord.date, 'DD/MM/YYYY').format(),
+            fecha_entrada: fechaEntrada.format('YYYY-MM-DD'),
+            fecha_salida: fechaSalida.format('YYYY-MM-DD'),
             hora_entrada: values.checkIn.format('HH:mm'),
             hora_salida: values.checkOut.format('HH:mm'),
             justificacion: values.justificacion,
@@ -561,7 +575,7 @@ const confirmarCierreMensual = async () => {
         await fetchData();
     } catch (error) {
         console.error('Error en el envío:', error);
-        message.error('Error al enviar la solicitud');
+        message.error(error.message || 'Error al enviar la solicitud');
     }
 };
 
@@ -900,7 +914,11 @@ const handleMonthChange = (date, dateString) => {
                     <Form form={form} layout="vertical">
                         <Form.Item label="Fecha Entrada" name="date"
                          rules={[{ required: true, message: 'Por favor, ingresa la fecha de entrada' }]}>
-                        <DatePicker format="DD/MM/YYYY" className="tlp-full-width" disabled />
+                        <DatePicker
+                            format="DD/MM/YYYY"
+                            className="tlp-full-width"
+                            disabledDate={(current) => current && current.isAfter(dayjs(), 'day')}
+                        />
                         </Form.Item>
                         <Form.Item
                             label="Hora Entrada"
@@ -909,8 +927,12 @@ const handleMonthChange = (date, dateString) => {
                         >
                             <TimePicker format="HH:mm" />
                         </Form.Item>
-                        <Form.Item label="Fecha Salida" name="dateOut" rules={[{ required: true, message: 'Por favor, ingresa la fecha de entrada' }]} >
-                        <DatePicker format="DD/MM/YYYY" className="tlp-full-width" disabled />
+                        <Form.Item label="Fecha Salida" name="dateOut" rules={[{ required: true, message: 'Por favor, ingresa la fecha de salida' }]} >
+                        <DatePicker
+                            format="DD/MM/YYYY"
+                            className="tlp-full-width"
+                            disabledDate={(current) => current && current.isAfter(dayjs(), 'day')}
+                        />
 
                         </Form.Item>
                         <Form.Item
