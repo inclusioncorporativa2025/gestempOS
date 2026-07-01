@@ -5,27 +5,15 @@ import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { getAusenciasListado, formatDiasAusencia } from '../../features/ausencias/ausenciasService';
 import { getTipoUsuario } from '../../utils/authSession';
+import usePlan from '../../hooks/usePlan';
+import {
+  getConfigTipoAusenciaTag,
+  getOpcionesFiltroAusencias,
+} from '../../constants/tiposAusencia';
 import SolicitarAusenciaModal from '../components/SolicitarAusenciaModal';
 import './AusenciasPanel.css';
 
 dayjs.extend(customParseFormat);
-
-const TIPO_CONFIG = {
-  vacaciones: { label: 'Vacaciones', color: 'blue' },
-  baja: { label: 'Baja', color: 'red' },
-  'asuntos propios': { label: 'Asuntos propios', color: 'purple' },
-  'días retribuidos': { label: 'Días retribuidos', color: 'cyan' },
-  'dias retribuidos': { label: 'Días retribuidos', color: 'cyan' },
-  otros: { label: 'Otros', color: 'default' },
-};
-
-const FILTRO_TIPOS = [
-  { value: 'Vacaciones', label: 'Vacaciones' },
-  { value: 'Baja', label: 'Baja' },
-  { value: 'Asuntos Propios', label: 'Asuntos propios' },
-  { value: 'Días retribuidos', label: 'Días retribuidos' },
-  { value: 'Otros', label: 'Otros' },
-];
 
 const parseFechaAusencia = (valor) =>
   dayjs(valor, ['DD-MM-YYYY', 'YYYY-MM-DD'], true);
@@ -42,8 +30,7 @@ const formatHora = (hora) => {
 };
 
 const renderTipoTag = (tipo) => {
-  const clave = String(tipo || '').trim().toLowerCase();
-  const config = TIPO_CONFIG[clave] || { label: tipo || 'Ausencia', color: 'default' };
+  const config = getConfigTipoAusenciaTag(tipo);
   return <Tag color={config.color}>{config.label}</Tag>;
 };
 
@@ -76,6 +63,11 @@ const ROLES_PUEDEN_SOLICITAR = [1, 2, 3, 4, 5];
 const ROLES_GESTOR_AUSENCIAS = [1, 2, 3, 4];
 
 const AusenciasPanel = () => {
+  const { planId } = usePlan();
+  const opcionesFiltroTipo = useMemo(
+    () => getOpcionesFiltroAusencias(planId),
+    [planId],
+  );
   const [modalSolicitud, setModalSolicitud] = useState(false);
   const tipoUsuario = Number(getTipoUsuario());
   const puedeSolicitar = ROLES_PUEDEN_SOLICITAR.includes(tipoUsuario);
@@ -207,7 +199,7 @@ const AusenciasPanel = () => {
               placeholder="Tipo de ausencia"
               value={filtroTipo}
               onChange={setFiltroTipo}
-              options={FILTRO_TIPOS}
+              options={opcionesFiltroTipo}
               className="ausencias-tipo-select"
             />
             <DatePicker.RangePicker

@@ -26,6 +26,10 @@ const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/aus
 const { enviarNotificacionGestion } = require('../utils/mailService');
 const { obtenerEmailsGestoresEmpresa } = require('../utils/gestoresEmpresa');
 const {
+  esTipoPermitido,
+  requiereComentario,
+} = require('../utils/tiposAusencia');
+const {
   esAusenciaVacaciones,
   registrarConsumoPorAusencia,
   calcularDiasConsumoAusencia,
@@ -195,6 +199,17 @@ const crearAusencia = async (req, res) => {
     }
   }
 
+  const incluyeVacaciones = await empresaTieneFeature(idEmpresa, 'vacaciones');
+  const tipoNormalizado = String(tipo).trim();
+
+  if (!esTipoPermitido(tipoNormalizado, { incluyeVacaciones })) {
+    return res.status(400).json({ error: 'Tipo de ausencia no válido' });
+  }
+
+  if (requiereComentario(tipoNormalizado) && !String(comentario || '').trim()) {
+    return res.status(400).json({ error: 'El comentario es obligatorio para el tipo «Otros»' });
+  }
+
   try {
     const soportaAprobacion = await ausenciasSoportaAprobacion();
     const idUsuarioToken = Number(req.user.id_usuario);
@@ -249,7 +264,7 @@ const crearAusencia = async (req, res) => {
       fecha_hasta: fechaHastaGuardar,
       hora_ausencia_desde: hora_ausencia_desde || null,
       hora_ausencia_hasta: hora_ausencia_hasta || null,
-      tipo,
+      tipo: tipoNormalizado,
       fraccion_dia: fraccion_dia ? String(fraccion_dia).trim().toLowerCase() : null,
       comentarios: comentario || null,
       usuario_alta: idUsuarioToken,
@@ -305,7 +320,7 @@ const crearAusencia = async (req, res) => {
         raw: true,
       });
       const destinatarios = await obtenerEmailsGestoresEmpresa(idEmpresaNum);
-      const detalleAusencia = `${tipo}: ${fechaDesdeGuardar} – ${fechaHastaGuardar}`;
+      const detalleAusencia = `${tipoNormalizado}: ${fechaDesdeGuardar} – ${fechaHastaGuardar}`;
 
       try {
         await enviarNotificacionGestion({

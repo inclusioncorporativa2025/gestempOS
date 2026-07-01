@@ -508,7 +508,7 @@ const LandingPage = () => {
             Días libres, permisos y bajas sincronizadas con la jornada laboral
           </h2>
           <p className="landing-absences-intro">
-            Gestiona vacaciones, asuntos propios y bajas junto al registro horario:
+            Gestiona vacaciones, bajas, permisos retribuidos y formación junto al registro horario:
             el calendario de la empresa refleja quién trabaja, quién está de permiso
             y qué días computan según la jornada asignada.
           </p>

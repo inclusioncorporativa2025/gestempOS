@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
+import { etiquetaAusenciaCalendario } from '../constants/tiposAusencia';
 
 dayjs.locale('es');
 
@@ -116,18 +117,6 @@ export const obtenerProximoDiaLaborable = (diasLaborables, contextoCalendario = 
   };
 };
 
-const etiquetaAusencia = (tipo) => {
-  const normalizado = String(tipo || '').trim().toLowerCase();
-  if (normalizado === 'vacaciones') return 'vacaciones';
-  if (normalizado === 'baja') return 'baja';
-  if (normalizado === 'asuntos propios') return 'asuntos propios';
-  if (normalizado === 'días retribuidos' || normalizado === 'dias retribuidos') {
-    return 'días retribuidos';
-  }
-  if (normalizado === 'otros') return 'ausencia';
-  return tipo || 'ausencia';
-};
-
 export const construirContextoCalendario = ({ ausencias = [], festivos = [] } = {}) => {
   const ausenciasPorFecha = new Map();
   ausencias
@@ -194,7 +183,7 @@ export const obtenerAgendaProximosDias = (
         fechaIso,
         nombreDia,
         tipo: 'ausencia',
-        detalle: etiquetaAusencia(ausencia.tipo),
+        detalle: etiquetaAusenciaCalendario(ausencia.tipo),
       });
       continue;
     }

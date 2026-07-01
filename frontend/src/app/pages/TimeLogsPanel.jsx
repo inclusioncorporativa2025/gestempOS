@@ -22,7 +22,11 @@ import { parseFechaFichaje } from '../../utils/fechaFichaje';
 import { parseUbicacionCoords } from '../../utils/ubicacion';
 import { notifyNotificacionesActualizadas } from '../../hooks/useNotificacionesPendientes';
 import usePlan from '../../hooks/usePlan';
-import { planIncluyeFeature } from '../../constants/plans';
+import {
+  esTipoVacaciones,
+  getTiposAusenciaSeleccionables,
+  requiereComentarioAusencia,
+} from '../../constants/tiposAusencia';
 import { DECLARACION_CIERRE_MENSUAL, ETIQUETA_CONFIRMACION_CIERRE } from '../../utils/cierreMensualLegal';
 import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import UbicacionMapModal from '../components/UbicacionMapModal';
@@ -98,13 +102,10 @@ const mesTieneCierreActivo = (mesesCierre, mesFormateado) =>
 const TimeLogsPanel = () => {
     const { planId, tieneFeature } = usePlan();
     const puedeAusencias = tieneFeature('ausencias_basicas');
-    const entradasAusencia = useMemo(() => {
-      const tipos = ['Baja', 'Asuntos Propios', 'Otros'];
-      if (planIncluyeFeature(planId, 'vacaciones')) {
-        return ['Vacaciones', ...tipos];
-      }
-      return tipos;
-    }, [planId]);
+    const entradasAusencia = useMemo(
+      () => getTiposAusenciaSeleccionables(planId),
+      [planId],
+    );
 
     const [data, setData] = useState([]);
     const [filteredData, setFilteredData] = useState([]);
@@ -139,7 +140,7 @@ const [firmaCierre, setFirmaCierre] = useState(null);
 const [confirmoRegistros, setConfirmoRegistros] = useState(false);
 const [enviandoCierre, setEnviandoCierre] = useState(false);
 
-    const esVacaciones = selectedEntrada === 'Vacaciones';
+    const esVacaciones = esTipoVacaciones(selectedEntrada);
     const esUnSoloDia = Boolean(
       absenceFechaDesde
       && (!absenceFechaHasta || absenceFechaDesde.isSame(absenceFechaHasta, 'day')),
@@ -180,6 +181,10 @@ const anadirAusencia = async () => {
 
     if (!selectedEntrada) {
       return message.error('Selecciona el tipo de ausencia');
+    }
+
+    if (requiereComentarioAusencia(selectedEntrada) && !String(comentario || '').trim()) {
+      return message.error('Indica el motivo en el comentario');
     }
 
     if (!absenceFechaDesde) {
@@ -1002,7 +1007,7 @@ const handleMonthChange = (date, dateString) => {
                             setAbsenceFechaDesde(date);
                             if (date && absenceFechaHasta && absenceFechaHasta.isBefore(date, 'day')) {
                                 setAbsenceFechaHasta(null);
-                            } else if (selectedEntrada === 'Vacaciones' && date && (!absenceFechaHasta || eraUnSoloDia)) {
+                            } else if (esVacaciones && date && (!absenceFechaHasta || eraUnSoloDia)) {
                                 setAbsenceFechaHasta(date);
                             }
                         }}
@@ -1098,7 +1103,7 @@ const handleMonthChange = (date, dateString) => {
                         value={selectedEntrada}
                         onChange={(value) => {
                           setSelectedEntrada(value);
-                          if (value !== 'Vacaciones') {
+                          if (!esTipoVacaciones(value)) {
                             setFraccionDia('completo');
                             return;
                           }
@@ -1121,7 +1126,11 @@ const handleMonthChange = (date, dateString) => {
                     ))}
                         </Select>
                         <Input
-                        placeholder="Comentario"
+                        placeholder={
+                          requiereComentarioAusencia(selectedEntrada)
+                            ? 'Comentario (obligatorio para «Otros»)'
+                            : 'Comentario (opcional)'
+                        }
                         value={comentario}
                         onChange={(e) => setComentario(e.target.value)}
                         />                    

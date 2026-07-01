@@ -60,7 +60,7 @@ export const PLAN_COMPARISON_ROWS = [
   },
   {
     id: 'ausencias_basicas',
-    label: 'Ausencias (baja, asuntos propios, otros)',
+    label: 'Ausencias (bajas, permisos, formación)',
     plans: { esencial: false, rrhh: true, completo: true },
   },
   {
@@ -136,7 +136,7 @@ export const PLANS = [
     available: true,
     features: [
       'Todo Esencial',
-      'Ausencias (baja, asuntos propios, otros)',
+      'Ausencias (bajas, permisos, formación)',
       'Vacaciones con saldo y aprobación',
       'Nóminas y prenómina',
       'Multiempresa (varias sociedades)',

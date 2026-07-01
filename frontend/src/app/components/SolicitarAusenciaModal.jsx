@@ -8,7 +8,11 @@ import { getUsuariosEmpresa } from '../../features/user/usuarioService';
 import { getIdEmpresa, getIdUsuario, getTipoUsuario } from '../../utils/authSession';
 import { esInspector, normalizarTipoUsuario } from '../../utils/tipoUsuarioLabel';
 import usePlan from '../../hooks/usePlan';
-import { planIncluyeFeature } from '../../constants/plans';
+import {
+  esTipoVacaciones,
+  getTiposAusenciaSeleccionables,
+  requiereComentarioAusencia,
+} from '../../constants/tiposAusencia';
 import './SolicitarAusenciaModal.css';
 
 const { Text } = Typography;
@@ -33,19 +37,16 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
   const [horaHasta, setHoraHasta] = useState(null);
   const [comentario, setComentario] = useState('');
 
-  const entradasAusencia = useMemo(() => {
-    const tipos = ['Baja', 'Asuntos Propios', 'Otros'];
-    if (planIncluyeFeature(planId, 'vacaciones')) {
-      return ['Vacaciones', ...tipos];
-    }
-    return tipos;
-  }, [planId]);
+  const entradasAusencia = useMemo(
+    () => getTiposAusenciaSeleccionables(planId),
+    [planId],
+  );
 
   const esParaOtro = esGestor && idEmpleadoDestino != null && Number(idEmpleadoDestino) !== Number(idUsuarioSesion);
   const tituloModal = esParaOtro ? 'Registrar ausencia de personal' : 'Solicitar ausencia';
   const textoBoton = esParaOtro ? 'Registrar' : 'Solicitar';
 
-  const esVacaciones = selectedEntrada === 'Vacaciones';
+  const esVacaciones = esTipoVacaciones(selectedEntrada);
   const esUnSoloDia = Boolean(
     fechaDesde
     && (!fechaHasta || fechaDesde.isSame(fechaHasta, 'day')),
@@ -127,6 +128,11 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
       return;
     }
 
+    if (requiereComentarioAusencia(selectedEntrada) && !String(comentario || '').trim()) {
+      message.error('Indica el motivo en el comentario');
+      return;
+    }
+
     const idUsuarioDestino = idEmpleadoDestino ?? idUsuarioSesion;
     const idEmpresa = getIdEmpresa();
     const usarFraccionVacaciones = esVacaciones && fechaDesde.isSame(fechaHastaEnvio, 'day');
@@ -192,7 +198,7 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
         value={selectedEntrada}
         onChange={(value) => {
           setSelectedEntrada(value);
-          if (value !== 'Vacaciones') {
+          if (!esTipoVacaciones(value)) {
             setFraccionDia('completo');
             return;
           }
@@ -217,7 +223,7 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
               setFechaDesde(date);
               if (date && fechaHasta && fechaHasta.isBefore(date, 'day')) {
                 setFechaHasta(null);
-              } else if (selectedEntrada === 'Vacaciones' && date && (!fechaHasta || eraUnSoloDia)) {
+              } else if (esTipoVacaciones(selectedEntrada) && date && (!fechaHasta || eraUnSoloDia)) {
                 setFechaHasta(date);
               }
             }}
@@ -298,7 +304,11 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
       )}
 
       <Input.TextArea
-        placeholder="Comentario (opcional)"
+        placeholder={
+          requiereComentarioAusencia(selectedEntrada)
+            ? 'Comentario (obligatorio para «Otros»)'
+            : 'Comentario (opcional)'
+        }
         value={comentario}
         onChange={(e) => setComentario(e.target.value)}
         rows={2}

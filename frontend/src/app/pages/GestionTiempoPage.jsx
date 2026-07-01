@@ -15,7 +15,7 @@ const ROLES_PRESENCIA_EQUIPO = [1, 2, 3, 4];
 const SUBTITULOS = {
   presencia: 'Consulta en tiempo real quién está trabajando',
   'mi-registro': 'Consulta y gestiona tus fichajes',
-  ausencias: 'Días solicitados: vacaciones, bajas, asuntos propios y días retribuidos',
+  ausencias: 'Vacaciones, bajas, permisos retribuidos, formación y otros motivos laborales',
 };
 
 const GestionTiempoPage = () => {
