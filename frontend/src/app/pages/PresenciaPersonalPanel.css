@@ -154,3 +154,53 @@
 .presencia-pausas--active {
   color: #d48806;
 }
+
+.presencia-pausas--hoverable {
+  cursor: help;
+  border-bottom: 1px dashed rgba(212, 136, 6, 0.45);
+}
+
+.presencia-pausas-popover-overlay .ant-popover-inner {
+  border-radius: 10px;
+}
+
+.presencia-pausas-popover {
+  min-width: 180px;
+  max-width: 260px;
+}
+
+.presencia-pausas-popover__total {
+  font-size: 13px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text, #333);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(var(--color-primary-rgb), 0.1);
+}
+
+.presencia-pausas-popover__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.presencia-pausas-popover__lista li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.presencia-pausas-popover__horas {
+  color: var(--color-text, #333);
+}
+
+.presencia-pausas-popover__duracion {
+  color: #9aa5b1;
+  white-space: nowrap;
+}

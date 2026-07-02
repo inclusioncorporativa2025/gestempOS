@@ -1445,8 +1445,19 @@ const getEstadoPersonalEmpresa = async (req, res) => {
     });
 
     const pausasPorUsuario = {};
+    const pausasDetallePorUsuario = {};
     descansosHoy.forEach((d) => {
       pausasPorUsuario[d.id_usuario] = (pausasPorUsuario[d.id_usuario] || 0) + 1;
+      if (!pausasDetallePorUsuario[d.id_usuario]) {
+        pausasDetallePorUsuario[d.id_usuario] = [];
+      }
+      pausasDetallePorUsuario[d.id_usuario].push({
+        fecha_entrada: d.fecha_entrada,
+        fecha_salida: d.fecha_salida,
+      });
+    });
+    Object.values(pausasDetallePorUsuario).forEach((lista) => {
+      lista.sort((a, b) => new Date(a.fecha_entrada) - new Date(b.fecha_entrada));
     });
 
     const fichajePorUsuario = {};
@@ -1525,6 +1536,7 @@ const getEstadoPersonalEmpresa = async (req, res) => {
         fecha_salida: fechaSalidaJornada,
         fecha_descanso: descanso?.fecha_entrada || null,
         num_pausas: pausasPorUsuario[u.id_usuario] || 0,
+        pausas_detalle: pausasDetallePorUsuario[u.id_usuario] || [],
         ausencia_activa: ausenciaActiva,
       };
     });

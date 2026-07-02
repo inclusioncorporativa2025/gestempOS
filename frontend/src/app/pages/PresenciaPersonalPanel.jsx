@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, Table, Tag, Input, Button, Empty, Spin, message } from 'antd';
+import { Card, Table, Tag, Input, Button, Empty, Spin, message, Popover } from 'antd';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { getEstadoPersonalEmpresa } from '../../features/fichaje/fichajeService';
 import { getTipoUsuario } from '../../utils/authSession';
-import { formatHoraFichaje } from '../../utils/fechaFichaje';
+import { formatHoraFichaje, parseFechaFichaje } from '../../utils/fechaFichaje';
 import { getConfigTipoAusenciaTag } from '../../constants/tiposAusencia';
 import { JORNADA_ACTUALIZADA } from '../../hooks/useEstadoJornada';
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
@@ -33,6 +33,59 @@ const ROLES_PRESENCIA_EQUIPO = [1, 2, 3, 4];
 const formatHora = (fecha) => {
   const hora = formatHoraFichaje(fecha);
   return hora || '—';
+};
+
+const minutosEntreFechas = (entrada, salida) => {
+  const inicio = parseFechaFichaje(entrada);
+  if (!inicio?.isValid()) return 0;
+  const fin = salida ? parseFechaFichaje(salida) : dayjs();
+  if (!fin?.isValid()) return 0;
+  const diffMs = fin.diff(inicio);
+  return diffMs > 0 ? Math.floor(diffMs / (1000 * 60)) : 0;
+};
+
+const formatDuracionMinutos = (minutos) => {
+  if (!minutos || minutos <= 0) return '0 min';
+  const horas = Math.floor(minutos / 60);
+  const mins = minutos % 60;
+  if (horas > 0 && mins > 0) return `${horas}h ${mins}min`;
+  if (horas > 0) return `${horas}h`;
+  return `${mins}min`;
+};
+
+const renderDetallePausas = (pausas = []) => {
+  if (!pausas.length) return null;
+
+  const totalMin = pausas.reduce(
+    (acc, pausa) => acc + minutosEntreFechas(pausa.fecha_entrada, pausa.fecha_salida),
+    0,
+  );
+
+  return (
+    <div className="presencia-pausas-popover">
+      <div className="presencia-pausas-popover__total">
+        Total descanso: {formatDuracionMinutos(totalMin)}
+      </div>
+      <ul className="presencia-pausas-popover__lista">
+        {pausas.map((pausa, index) => {
+          const inicio = formatHora(pausa.fecha_entrada);
+          const fin = pausa.fecha_salida ? formatHora(pausa.fecha_salida) : 'En curso';
+          return (
+            <li key={`${pausa.fecha_entrada}-${index}`}>
+              <span className="presencia-pausas-popover__horas">
+                {inicio} – {fin}
+              </span>
+              <span className="presencia-pausas-popover__duracion">
+                {formatDuracionMinutos(
+                  minutosEntreFechas(pausa.fecha_entrada, pausa.fecha_salida),
+                )}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 };
 
 const PresenciaPersonalPanel = () => {
@@ -144,11 +197,34 @@ const PresenciaPersonalPanel = () => {
       key: 'num_pausas',
       width: 80,
       align: 'center',
-      render: (num) => (
-        <span className={num > 0 ? 'presencia-pausas presencia-pausas--active' : 'presencia-pausas'}>
-          {num ?? 0}
-        </span>
-      ),
+      render: (num, record) => {
+        const pausas = record.pausas_detalle || [];
+        const contenido = (
+          <span
+            className={
+              num > 0
+                ? 'presencia-pausas presencia-pausas--active presencia-pausas--hoverable'
+                : 'presencia-pausas'
+            }
+          >
+            {num ?? 0}
+          </span>
+        );
+
+        if (!num || !pausas.length) return contenido;
+
+        return (
+          <Popover
+            content={renderDetallePausas(pausas)}
+            title="Pausas de hoy"
+            trigger="hover"
+            placement="left"
+            overlayClassName="presencia-pausas-popover-overlay"
+          >
+            {contenido}
+          </Popover>
+        );
+      },
     },
   ];
 
