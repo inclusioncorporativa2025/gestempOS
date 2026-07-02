@@ -37,7 +37,7 @@ router.post('/getAusenciasListado', requireRole(ROLE_GROUPS.CALENDARIO_VIEW), ge
 router.post('/getAusenciasPendientesEmpresa', requireRole(ROLE_GROUPS.COMPANY_STAFF), getAusenciasPendientesEmpresa);
 router.post('/getHistorialAusenciasEmpresa', requireRole(ROLE_GROUPS.COMPANY_STAFF), getHistorialAusenciasEmpresa);
 router.post('/getAusenciasNotificacionesEmpleado', requireRole(ROLE_GROUPS.FICHAJE), getAusenciasNotificacionesEmpleado);
-router.post('/responderAusencia', requireRole(ROLE_GROUPS.COMPANY_STAFF), responderAusencia);
+router.post('/responderAusencia', requireRole(ROLE_GROUPS.APROBACION_SOLICITUDES), responderAusencia);
 router.post('/marcarAusenciasVistas', requireRole(ROLE_GROUPS.FICHAJE), marcarAusenciasVistas);
 router.post('/crearAusencia', requireRole(ROLE_GROUPS.FICHAJE), crearAusencia);
 router.post(

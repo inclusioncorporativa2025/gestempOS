@@ -514,6 +514,13 @@
   margin-inline-start: 0;
 }
 
+.tlp-solicitud-hint {
+  margin: 0 0 16px;
+  font-size: 0.85rem;
+  color: #5a6472;
+  line-height: 1.45;
+}
+
 .tlp-solicitudes-collapse {
   margin-block-start: 1.5rem;
 }

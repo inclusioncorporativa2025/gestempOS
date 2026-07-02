@@ -25,3 +25,7 @@ export const etiquetaTipoUsuario = (tipoUsuario) => {
 
 export const puedeVerFichaPersonal = (tipoUsuario) =>
   [1, 2, 3, 4].includes(Number(tipoUsuario));
+
+/** Aprobar/rechazar solicitudes de la empresa (administrador o supervisor). */
+export const puedeAprobarSolicitudesEmpresa = (tipoUsuario) =>
+  [3, 4].includes(normalizarTipoUsuario(tipoUsuario));

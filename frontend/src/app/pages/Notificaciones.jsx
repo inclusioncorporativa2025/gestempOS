@@ -28,6 +28,7 @@ import {
 
 } from '../../features/user/usuarioService';
 import { getTipoUsuario } from '../../utils/authSession';
+import { puedeAprobarSolicitudesEmpresa } from '../../utils/tipoUsuarioLabel';
 import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import NotificacionesEmpleado from './NotificacionesEmpleado';
 import { usePlan } from '../../hooks/usePlan';
@@ -147,6 +148,7 @@ const formatFechaAusencia = (valor) => {
 
 const NotificacionesGestor = () => {
   const { tieneFeature } = usePlan();
+  const puedeAprobarComoGestor = puedeAprobarSolicitudesEmpresa(getTipoUsuario());
   const puedeVerAusencias = tieneFeature('ausencias_basicas');
 const [peticiones, setPeticiones] = useState([]);
 const [historialEdiciones, setHistorialEdiciones] = useState([]);
@@ -815,7 +817,17 @@ const setVisibleModalDetalles = async (info) => {
         width: 190,
         render: (_, record) => {
           const estado = obtenerEstado(record);
-          return estado === 'Pendiente' ? (
+          if (estado !== 'Pendiente') {
+            return <span className="notif-procesada">—</span>;
+          }
+          if (!puedeAprobarComoGestor) {
+            return (
+              <Tooltip title="Solo un administrador o supervisor puede aprobar">
+                <span className="notif-procesada">Pendiente</span>
+              </Tooltip>
+            );
+          }
+          return (
             <div className="notif-acciones">
               <Popconfirm
                 title="¿Aprobar esta petición?"
@@ -834,8 +846,6 @@ const setVisibleModalDetalles = async (info) => {
               Rechazar
             </Button>
           </div>
-          ) : (
-            <span className="notif-procesada">—</span>
           );
         },
       },
@@ -922,6 +932,14 @@ const setVisibleModalDetalles = async (info) => {
 
           if (estado !== 'Pendiente') {
             return <span className="notif-procesada">—</span>;
+          }
+
+          if (!puedeAprobarComoGestor) {
+            return (
+              <Tooltip title="Solo un administrador o supervisor puede aprobar">
+                <span className="notif-procesada">Pendiente</span>
+              </Tooltip>
+            );
           }
 
           return (
@@ -1052,11 +1070,23 @@ const setVisibleModalDetalles = async (info) => {
           const estado = obtenerEstado(record);
           const requiereDoc = record.requiere_justificante
             ?? requiereJustificanteParaAprobar(record.tipo);
-          const puedeAprobar = !requiereDoc || record.tiene_justificante;
+          const cumpleJustificante = !requiereDoc || record.tiene_justificante;
 
-          return estado === 'Pendiente' ? (
+          if (estado !== 'Pendiente') {
+            return <span className="notif-procesada">—</span>;
+          }
+
+          if (!puedeAprobarComoGestor) {
+            return (
+              <Tooltip title="Solo un administrador o supervisor puede aprobar">
+                <span className="notif-procesada">Pendiente</span>
+              </Tooltip>
+            );
+          }
+
+          return (
             <div className="notif-acciones">
-              {puedeAprobar ? (
+              {cumpleJustificante ? (
                 <Popconfirm
                   title="¿Aprobar esta ausencia?"
                   onConfirm={() => handleRespuestaAusencia(record, 2)}
@@ -1086,8 +1116,6 @@ const setVisibleModalDetalles = async (info) => {
                 Rechazar
               </Button>
             </div>
-          ) : (
-            <span className="notif-procesada">—</span>
           );
         },
       },

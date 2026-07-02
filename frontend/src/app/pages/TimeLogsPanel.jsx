@@ -574,7 +574,7 @@ const confirmarCierreMensual = async () => {
         await crearPeticionEdicion(peticionPayload);
 
         notifyNotificacionesActualizadas();
-        message.success('Solicitud enviada. Pendiente de aprobación por un gestor.');
+        message.success('Solicitud enviada. Pendiente de aprobación por un administrador o supervisor.');
         setIsModalOpen(false);
         setEditingRecord(null);
         await fetchData();
@@ -909,13 +909,16 @@ const handleMonthChange = (date, dateString) => {
                 )}
 
                 <Modal
-                    title="Editar Registro"
+                    title="Solicitar corrección de horario"
                     open={isModalOpen}
                     onOk={handleEditSubmit}
                     onCancel={() => setIsModalOpen(false)}
-                    okText="Enviar Solicitud"
+                    okText="Enviar solicitud"
                     cancelText="Cancelar"
                 >
+                    <p className="tlp-solicitud-hint">
+                      Los cambios no se aplican al instante: un administrador o supervisor deberá aprobar la solicitud.
+                    </p>
                     <Form form={form} layout="vertical">
                         <Form.Item label="Fecha Entrada" name="date"
                          rules={[{ required: true, message: 'Por favor, ingresa la fecha de entrada' }]}>

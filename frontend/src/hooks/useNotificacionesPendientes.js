@@ -11,15 +11,15 @@ export const notifyNotificacionesActualizadas = () => {
   window.dispatchEvent(new CustomEvent(NOTIFICACIONES_ACTUALIZADAS));
 };
 
-const TIPOS_GESTOR = [1, 2, 3, 4];
+const TIPOS_APROBADOR = [3, 4];
 const TIPOS_EMPLEADO = [5];
 
 export const useNotificacionesPendientes = () => {
   const { user } = useAuth();
   const tipoUsuario = Number(user?.tipo_usuario);
-  const esGestor = TIPOS_GESTOR.includes(tipoUsuario);
+  const esAprobador = TIPOS_APROBADOR.includes(tipoUsuario);
   const esEmpleado = TIPOS_EMPLEADO.includes(tipoUsuario);
-  const puedeVer = esGestor || esEmpleado;
+  const puedeVer = esAprobador || esEmpleado;
   const [pendientes, setPendientes] = useState(false);
 
   const refetch = useCallback(async () => {
@@ -28,7 +28,7 @@ export const useNotificacionesPendientes = () => {
       return;
     }
     try {
-      if (esGestor) {
+      if (esAprobador) {
         const data = await countNotificacionesPendientes();
         setPendientes((data?.total ?? 0) > 0);
       } else if (esEmpleado) {
@@ -38,7 +38,7 @@ export const useNotificacionesPendientes = () => {
     } catch (error) {
       console.error('Error al contar notificaciones pendientes:', error);
     }
-  }, [puedeVer, esGestor, esEmpleado]);
+  }, [puedeVer, esAprobador, esEmpleado]);
 
   useEffect(() => {
     refetch();
