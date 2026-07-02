@@ -29,3 +29,7 @@ export const puedeVerFichaPersonal = (tipoUsuario) =>
 /** Aprobar/rechazar solicitudes de la empresa (administrador o supervisor). */
 export const puedeAprobarSolicitudesEmpresa = (tipoUsuario) =>
   [3, 4].includes(normalizarTipoUsuario(tipoUsuario));
+
+/** Cupo y ajustes de vacaciones en la propia ficha (super-admin y administrador de empresa). */
+export const puedeAutogestionarVacacionesSaldo = (tipoUsuario) =>
+  [1, 3].includes(normalizarTipoUsuario(tipoUsuario));

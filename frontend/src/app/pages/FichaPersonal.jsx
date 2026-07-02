@@ -45,7 +45,7 @@ import RetribucionPanel from '../components/RetribucionPanel';
 import NominaDocumentoPanel from '../components/NominaDocumentoPanel';
 import { usePlan } from '../../hooks/usePlan';
 import { getTipoUsuario, getIdUsuario } from '../../utils/authSession';
-import { puedeVerFichaPersonal } from '../../utils/tipoUsuarioLabel';
+import { puedeVerFichaPersonal, puedeAutogestionarVacacionesSaldo } from '../../utils/tipoUsuarioLabel';
 import { etiquetaTipoUsuario } from '../../utils/tipoUsuarioLabel';
 import {
   combinarCierres,
@@ -418,7 +418,8 @@ const FichaPersonal = () => {
   const tipoUsuarioActual = getTipoUsuario();
   const esPropio = esMiPerfil || idUsuario === idSesion;
   const puedeAjustarBolsa = puedeVerFichaPersonal(tipoUsuarioActual) && Number(tipoUsuarioActual) !== 6;
-  const puedeGestionarVacaciones = puedeAjustarBolsa && puedeVerVacaciones && !esPropio;
+  const puedeGestionarVacaciones = puedeAjustarBolsa && puedeVerVacaciones
+    && (!esPropio || puedeAutogestionarVacacionesSaldo(tipoUsuarioActual));
   const puedeGestionarNominas = puedeAjustarBolsa && puedeVerNominas && !esPropio;
   const tipoHoraEfectivo = usuario.tipo_hora ?? jornadaAsignada?.tipo_hora ?? resumenHoras?.tipo_hora;
   const esBolsa = Number(tipoHoraEfectivo) === TIPO_HORA_BOLSA;
