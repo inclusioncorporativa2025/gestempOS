@@ -436,9 +436,10 @@ const NotificacionesEmpleado = () => {
     }
   };
 
-  const descargarPdfCierre = () => {
+  const descargarPdfCierre = async () => {
     if (!detalleCierreContext) return;
-    generarPdfCierreMensual({
+    try {
+      await generarPdfCierreMensual({
       nombreEmpleado: detalleCierreContext.nombreEmpleado,
       mes: detalleCierreContext.mes,
       registros: registroHoras,
@@ -450,7 +451,10 @@ const NotificacionesEmpleado = () => {
       hashRegistroMes: firmaCierreDetalle?.hash_registro_mes,
       fechaSolicitud: detalleCierreContext.fechaSolicitud,
       estado: detalleCierreContext.estado,
-    });
+      });
+    } catch (error) {
+      console.error('Error al generar PDF de cierre:', error);
+    }
   };
 
   const columnsDetalles = [

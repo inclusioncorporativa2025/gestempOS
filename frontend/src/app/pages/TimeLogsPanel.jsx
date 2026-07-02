@@ -451,7 +451,7 @@ const crearPeticionMensual = async (firmaImagen) => {
             type="link"
             size="small"
             className="tlp-cierre-notif__btn"
-            onClick={() => generarPdfCierreMensual(datosPdf)}
+            onClick={() => { void generarPdfCierreMensual(datosPdf); }}
           >
             Descargar copia en PDF
           </Button>

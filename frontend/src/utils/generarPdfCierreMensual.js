@@ -4,8 +4,40 @@ import 'dayjs/locale/es';
 import { DECLARACION_CIERRE_MENSUAL } from './cierreMensualLegal';
 import { SUPPORT_EMAIL } from '../constants/support';
 import { TIPO_HORA_BOLSA } from './tipoHora';
+import { LOGO_SRC } from '../constants/brand';
 
 dayjs.locale('es');
+
+const LOGO_HEADER_HEIGHT_MM = 7;
+const LOGO_HEADER_MAX_WIDTH_MM = 32;
+
+let logoHeaderDataUrlPromise = null;
+
+const cargarLogoHeaderPdf = () => {
+  if (logoHeaderDataUrlPromise) return logoHeaderDataUrlPromise;
+
+  logoHeaderDataUrlPromise = new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.filter = 'brightness(0) invert(1)';
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } catch (error) {
+        reject(error);
+      }
+    };
+    img.onerror = () => reject(new Error('No se pudo cargar el logo'));
+    img.src = LOGO_SRC;
+  });
+
+  return logoHeaderDataUrlPromise;
+};
 
 const PAGE_WIDTH = 210;
 const PAGE_HEIGHT = 297;
@@ -45,7 +77,7 @@ const escribirParrafo = (doc, texto, x, y, maxWidth, lineHeight = LINE_HEIGHT) =
   return y + lineas.length * lineHeight;
 };
 
-const dibujarHeader = (doc, mesLabel) => {
+const dibujarHeader = (doc, mesLabel, logoDataUrl = null) => {
   doc.setFillColor(...BRAND.primaryDark);
   doc.rect(0, 0, PAGE_WIDTH, HEADER_HEIGHT - 4, 'F');
 
@@ -65,10 +97,31 @@ const dibujarHeader = (doc, mesLabel) => {
   doc.setTextColor(235, 225, 248);
   doc.text('Registro de jornada laboral', MARGIN, 20);
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(...BRAND.white);
-  doc.text('timecor.es', PAGE_WIDTH - MARGIN, 12, { align: 'right' });
+  if (logoDataUrl) {
+    try {
+      const props = doc.getImageProperties(logoDataUrl);
+      const aspect = props.width / props.height;
+      let logoHeight = LOGO_HEADER_HEIGHT_MM;
+      let logoWidth = logoHeight * aspect;
+      if (logoWidth > LOGO_HEADER_MAX_WIDTH_MM) {
+        logoWidth = LOGO_HEADER_MAX_WIDTH_MM;
+        logoHeight = logoWidth / aspect;
+      }
+      const logoX = PAGE_WIDTH - MARGIN - logoWidth;
+      const logoY = 7.5;
+      doc.addImage(logoDataUrl, 'PNG', logoX, logoY, logoWidth, logoHeight);
+    } catch {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...BRAND.white);
+      doc.text('Timecor', PAGE_WIDTH - MARGIN, 12, { align: 'right' });
+    }
+  } else {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND.white);
+    doc.text('Timecor', PAGE_WIDTH - MARGIN, 12, { align: 'right' });
+  }
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
@@ -159,7 +212,7 @@ const dibujarSeccionBolsaHoras = (doc, resumenHoras, y) => {
 /**
  * Genera y descarga un PDF del cierre mensual firmado.
  */
-export const generarPdfCierreMensual = ({
+export const generarPdfCierreMensual = async ({
   nombreEmpleado,
   mes,
   registros = [],
@@ -172,6 +225,13 @@ export const generarPdfCierreMensual = ({
   fechaSolicitud = null,
   estado = 'Pendiente',
 }) => {
+  let logoDataUrl = null;
+  try {
+    logoDataUrl = await cargarLogoHeaderPdf();
+  } catch {
+    logoDataUrl = null;
+  }
+
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const mesLabel = dayjs(`${mes}-01`).isValid()
     ? dayjs(`${mes}-01`).format('MMMM [de] YYYY')
@@ -314,7 +374,7 @@ export const generarPdfCierreMensual = ({
   const totalPages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= totalPages; i += 1) {
     doc.setPage(i);
-    dibujarHeader(doc, mesLabel);
+    dibujarHeader(doc, mesLabel, logoDataUrl);
     dibujarFooter(doc, i, totalPages, fechaGeneracion);
   }
 
