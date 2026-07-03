@@ -28,7 +28,13 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
+  margin-bottom: 8px;
+}
+
+.nominas-def-panel__importes-hint {
+  display: block;
   margin-bottom: 16px;
+  font-size: 13px;
 }
 
 .nominas-def-panel__importe {

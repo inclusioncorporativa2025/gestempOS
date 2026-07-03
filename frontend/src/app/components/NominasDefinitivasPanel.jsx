@@ -28,7 +28,7 @@ import {
   listarNominas,
   subirNomina,
 } from '../../features/nominas/nominasService';
-import './NominasDefinitivasPanel.css';
+import { propsInputImporteEs } from '../../utils/importes';
 
 const { Text, Title } = Typography;
 const { Dragger } = Upload;
@@ -274,40 +274,37 @@ const NominasDefinitivasPanel = () => {
           <div>
             <Text strong>Bruto devengado (€)</Text>
             <InputNumber
-              min={0}
-              step={0.01}
-              precision={2}
+              {...propsInputImporteEs}
               value={importeBruto}
               onChange={setImporteBruto}
               className="nominas-def-panel__importe"
-              placeholder="Opcional"
+              placeholder="Ej. 773,36"
             />
           </div>
           <div>
             <Text strong>Total deducciones (€)</Text>
             <InputNumber
-              min={0}
-              step={0.01}
-              precision={2}
+              {...propsInputImporteEs}
               value={importeDeducciones}
               onChange={setImporteDeducciones}
               className="nominas-def-panel__importe"
-              placeholder="Opcional"
+              placeholder="Ej. 131,94"
             />
           </div>
           <div>
             <Text strong>Líquido a percibir (€)</Text>
             <InputNumber
-              min={0}
-              step={0.01}
-              precision={2}
+              {...propsInputImporteEs}
               value={importeLiquido}
               onChange={setImporteLiquido}
               className="nominas-def-panel__importe"
-              placeholder="Opcional"
+              placeholder="Ej. 641,42"
             />
           </div>
         </div>
+        <Text type="secondary" className="nominas-def-panel__importes-hint">
+          Use coma para los decimales, como en la nómina (773,36 — no 77336).
+        </Text>
 
         <Dragger
           accept=".pdf,application/pdf"

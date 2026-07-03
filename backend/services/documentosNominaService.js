@@ -10,6 +10,7 @@ const {
   eliminarPdfNomina,
   hashBuffer,
 } = require('./nominaStorageService');
+const { parseImporteOpcional } = require('../utils/importes');
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -31,17 +32,6 @@ const mapDocumento = (row) => {
     importe_deducciones: data.importe_deducciones != null ? Number(data.importe_deducciones) : null,
     importe_liquido: data.importe_liquido != null ? Number(data.importe_liquido) : null,
   };
-};
-
-const parseImporteOpcional = (valor) => {
-  if (valor == null || valor === '') return null;
-  const n = Number(valor);
-  if (!Number.isFinite(n) || n < 0) {
-    const error = new Error('El importe indicado no es válido');
-    error.code = 'IMPORTE_INVALIDO';
-    throw error;
-  }
-  return Math.round(n * 100) / 100;
 };
 
 const normalizarPeriodo = (mes, anio) => {
