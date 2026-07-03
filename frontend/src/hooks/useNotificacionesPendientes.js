@@ -4,6 +4,10 @@ import {
   countNotificacionesEmpleado,
 } from '../features/fichaje/fichajeService';
 import { useAuth } from '../config/AuthContext';
+import {
+  puedeAprobarSolicitudesEmpresaSesion,
+  esEmpleadoNotificacionesSesion,
+} from '../utils/tipoUsuarioLabel';
 
 export const NOTIFICACIONES_ACTUALIZADAS = 'gestemp:notificaciones-actualizadas';
 
@@ -11,14 +15,10 @@ export const notifyNotificacionesActualizadas = () => {
   window.dispatchEvent(new CustomEvent(NOTIFICACIONES_ACTUALIZADAS));
 };
 
-const TIPOS_APROBADOR = [3, 4];
-const TIPOS_EMPLEADO = [5];
-
 export const useNotificacionesPendientes = () => {
   const { user } = useAuth();
-  const tipoUsuario = Number(user?.tipo_usuario);
-  const esAprobador = TIPOS_APROBADOR.includes(tipoUsuario);
-  const esEmpleado = TIPOS_EMPLEADO.includes(tipoUsuario);
+  const esAprobador = puedeAprobarSolicitudesEmpresaSesion(user);
+  const esEmpleado = esEmpleadoNotificacionesSesion(user);
   const puedeVer = esAprobador || esEmpleado;
   const [pendientes, setPendientes] = useState(false);
 

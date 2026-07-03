@@ -92,8 +92,15 @@ const requireRole = (...tiposPermitidos) => {
       return res.status(401).json({ message: 'No autorizado' });
     }
 
+    const permitidosNum = permitidos.map(Number);
     const tipo = Number(req.user.tipo_usuario);
-    if (!permitidos.map(Number).includes(tipo)) {
+    const tipoEmpresa = req.user.tipo_usuario_empresa != null
+      ? Number(req.user.tipo_usuario_empresa)
+      : null;
+    const autorizado = permitidosNum.includes(tipo)
+      || (tipoEmpresa != null && permitidosNum.includes(tipoEmpresa));
+
+    if (!autorizado) {
       return res.status(403).json({ message: 'Acceso denegado: rol no permitido' });
     }
 

@@ -28,6 +28,7 @@ import SidebarEmpresaBrand from './components/SidebarEmpresaBrand';
 import SupportModal from './components/SupportModal';
 import { OPEN_SUPPORT_EVENT } from './components/Header';
 import { useAuth } from '../config/AuthContext';
+import { puedeVerNotificacionesSesion } from '../utils/tipoUsuarioLabel';
 import { redirectToApp, isAuthAppPath, isLegalPath } from '../utils/appLinks';
 import { isLandingHost } from '../utils/host';
 import { getAuthToken } from '../utils/authSession';
@@ -190,7 +191,11 @@ const AppShell = () => {
   const filteredPages =
     tipousuario != null
       ? pages.filter(
-        (page) => page.tipousuario.includes(tipousuario)
+        (page) => (
+          page.path === APP_ROUTES.notifications
+            ? puedeVerNotificacionesSesion(user)
+            : page.tipousuario.includes(tipousuario)
+        )
           && (!page.planFeature || tieneFeature(page.planFeature)),
       )
       : [];

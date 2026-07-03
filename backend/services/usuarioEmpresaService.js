@@ -120,6 +120,7 @@ const construirClaimsSesion = (usuario, empresa, membresia, extras = {}) => {
     id_usuario: usuario.id_usuario,
     email: usuario.email,
     tipo_usuario: resolverTipoSesion(usuario, membresia),
+    tipo_usuario_empresa: membresia ? resolverTipoUsuario(membresia, usuario) : null,
     nombre: usuario.nombre,
     id_empresa,
     nombre_empresa,

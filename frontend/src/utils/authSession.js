@@ -108,6 +108,9 @@ export const claimsToUser = (claims) => {
     id_usuario: claims.id_usuario,
     email: claims.email,
     tipo_usuario: Number(claims.tipo_usuario),
+    tipo_usuario_empresa: claims.tipo_usuario_empresa != null
+      ? Number(claims.tipo_usuario_empresa)
+      : null,
     nombre: claims.nombre,
     id_empresa: claims.id_empresa,
     nombre_empresa: claims.nombre_empresa,
@@ -134,6 +137,11 @@ export const getIdEmpresa = () => {
 
 export const getTipoUsuario = () => {
   const t = getSession()?.tipo_usuario;
+  return t != null ? Number(t) : null;
+};
+
+export const getTipoUsuarioEmpresa = () => {
+  const t = getSession()?.tipo_usuario_empresa;
   return t != null ? Number(t) : null;
 };
 

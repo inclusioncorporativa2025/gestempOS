@@ -30,6 +30,26 @@ export const puedeVerFichaPersonal = (tipoUsuario) =>
 export const puedeAprobarSolicitudesEmpresa = (tipoUsuario) =>
   [3, 4].includes(normalizarTipoUsuario(tipoUsuario));
 
+export const getTipoUsuarioEmpresa = (userOrValor) => {
+  if (userOrValor != null && typeof userOrValor === 'object') {
+    const valor = userOrValor.tipo_usuario_empresa;
+    return valor != null ? normalizarTipoUsuario(valor) : null;
+  }
+  return userOrValor != null ? normalizarTipoUsuario(userOrValor) : null;
+};
+
+export const puedeAprobarSolicitudesEmpresaSesion = (user) =>
+  puedeAprobarSolicitudesEmpresa(user?.tipo_usuario)
+  || puedeAprobarSolicitudesEmpresa(getTipoUsuarioEmpresa(user));
+
+export const esEmpleadoNotificacionesSesion = (user) =>
+  normalizarTipoUsuario(user?.tipo_usuario) === 5
+  || getTipoUsuarioEmpresa(user) === 5;
+
+export const puedeVerNotificacionesSesion = (user) =>
+  puedeAprobarSolicitudesEmpresaSesion(user)
+  || esEmpleadoNotificacionesSesion(user);
+
 /** Cupo y ajustes de vacaciones en la propia ficha (super-admin y administrador de empresa). */
 export const puedeAutogestionarVacacionesSaldo = (tipoUsuario) =>
   [1, 3].includes(normalizarTipoUsuario(tipoUsuario));

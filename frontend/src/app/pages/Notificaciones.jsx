@@ -27,8 +27,11 @@ import {
    getHorasTotalesMesByIdUsuario,
 
 } from '../../features/user/usuarioService';
-import { getTipoUsuario } from '../../utils/authSession';
-import { puedeAprobarSolicitudesEmpresa } from '../../utils/tipoUsuarioLabel';
+import { useAuth } from '../../config/AuthContext';
+import {
+  puedeAprobarSolicitudesEmpresaSesion,
+  esEmpleadoNotificacionesSesion,
+} from '../../utils/tipoUsuarioLabel';
 import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import NotificacionesEmpleado from './NotificacionesEmpleado';
 import { usePlan } from '../../hooks/usePlan';
@@ -147,8 +150,9 @@ const formatFechaAusencia = (valor) => {
 };
 
 const NotificacionesGestor = () => {
+  const { user } = useAuth();
   const { tieneFeature } = usePlan();
-  const puedeAprobarComoGestor = puedeAprobarSolicitudesEmpresa(getTipoUsuario());
+  const puedeAprobarComoGestor = puedeAprobarSolicitudesEmpresaSesion(user);
   const puedeVerAusencias = tieneFeature('ausencias_basicas');
 const [peticiones, setPeticiones] = useState([]);
 const [historialEdiciones, setHistorialEdiciones] = useState([]);
@@ -1341,11 +1345,12 @@ const setVisibleModalDetalles = async (info) => {
 };
 
 const Notificaciones = () => {
-  const tipo = getTipoUsuario();
-  if (tipo === 5) {
+  const { user } = useAuth();
+
+  if (esEmpleadoNotificacionesSesion(user) && !puedeAprobarSolicitudesEmpresaSesion(user)) {
     return <NotificacionesEmpleado />;
   }
-  if (puedeAprobarSolicitudesEmpresa(tipo)) {
+  if (puedeAprobarSolicitudesEmpresaSesion(user)) {
     return <NotificacionesGestor />;
   }
   return null;
