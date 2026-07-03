@@ -24,6 +24,19 @@
   margin-bottom: 16px;
 }
 
+.nominas-def-panel__importes-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.nominas-def-panel__importe {
+  display: block;
+  margin-top: 8px;
+  width: 100%;
+}
+
 .nominas-def-panel__select,
 .nominas-def-panel__periodo {
   display: block;

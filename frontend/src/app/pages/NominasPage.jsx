@@ -7,15 +7,15 @@ import './NominasPage.css';
 const { Title, Text } = Typography;
 
 const SUBTITULOS = {
-  prenominas: 'Calcula y revisa la prenómina mensual de todo el personal',
-  definitivas: 'Sube y gestiona los PDF de las nóminas definitivas',
+  prenominas: 'Previsión de coste laboral bruto de todo el personal (uso interno empresa)',
+  definitivas: 'Sube y gestiona los PDF de las nóminas definitivas con neto e impuestos',
 };
 
 const NominasPage = () => {
   const [activeKey, setActiveKey] = useState('prenominas');
 
   const submenuItems = useMemo(() => ([
-    { key: 'prenominas', label: 'Prenóminas' },
+    { key: 'prenominas', label: 'Coste bruto estimado' },
     { key: 'definitivas', label: 'Nóminas definitivas' },
   ]), []);
 

@@ -34,7 +34,7 @@ const formatearFecha = (fecha) => (
   fecha && dayjs(fecha).isValid() ? dayjs(fecha).format('DD/MM/YYYY') : '—'
 );
 
-const RetribucionPanel = ({ idUsuario }) => {
+const RetribucionPanel = ({ idUsuario, soloLectura = false }) => {
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [soportado, setSoportado] = useState(true);
@@ -138,11 +138,12 @@ const RetribucionPanel = ({ idUsuario }) => {
     <div className="retribucion-panel">
       <Card loading={loading} className="retribucion-panel__card">
         <Title level={5} className="retribucion-panel__title">
-          Salario base mensual
+          {soloLectura ? 'Retribución de referencia' : 'Salario base mensual'}
         </Title>
         <Text type="secondary" className="retribucion-panel__hint">
-          Se usa para la prenómina. Si cambias el importe con una nueva fecha de efecto,
-          el salario anterior queda en el histórico.
+          {soloLectura
+            ? 'Importe base acordado en tu contrato. El cobro real de cada mes figura en tu nómina oficial (PDF).'
+            : 'Se usa para la previsión de coste bruto. Si cambias el importe con una nueva fecha de efecto, el salario anterior queda en el histórico.'}
         </Text>
 
         {vigente && (
@@ -158,6 +159,7 @@ const RetribucionPanel = ({ idUsuario }) => {
           </div>
         )}
 
+        {!soloLectura && (
         <Form
           form={form}
           layout="vertical"
@@ -203,8 +205,10 @@ const RetribucionPanel = ({ idUsuario }) => {
             </Button>
           </Space>
         </Form>
+        )}
       </Card>
 
+      {!soloLectura && (
       <Card
         title="Histórico de salarios"
         className="retribucion-panel__card retribucion-panel__historial"
@@ -219,6 +223,7 @@ const RetribucionPanel = ({ idUsuario }) => {
           scroll={{ x: 640 }}
         />
       </Card>
+      )}
     </div>
   );
 };

@@ -3,6 +3,7 @@ const { sequelize } = require('../config/db');
 let cacheRetribucion = null;
 let cacheDocumentos = null;
 let cachePrenomina = null;
+let cacheDocumentosImportes = null;
 
 const tablaExiste = async (nombreTabla) => {
   const filas = await sequelize.query(
@@ -42,8 +43,36 @@ const nominasSoportaPrenomina = async () => {
   return cachePrenomina;
 };
 
+const columnaExiste = async (nombreTabla, nombreColumna) => {
+  const filas = await sequelize.query(
+    `SELECT 1 AS ok
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = :tabla
+       AND COLUMN_NAME = :columna
+     LIMIT 1`,
+    {
+      replacements: { tabla: nombreTabla, columna: nombreColumna },
+      type: sequelize.QueryTypes.SELECT,
+    },
+  );
+  return filas.length > 0;
+};
+
+const nominasSoportaImportesDocumento = async () => {
+  if (cacheDocumentosImportes !== null) return cacheDocumentosImportes;
+  const tablaOk = await nominasSoportaDocumentos();
+  if (!tablaOk) {
+    cacheDocumentosImportes = false;
+    return false;
+  }
+  cacheDocumentosImportes = await columnaExiste('usuarios_documentos_nomina', 'importe_liquido');
+  return cacheDocumentosImportes;
+};
+
 module.exports = {
   nominasSoportaRetribucion,
   nominasSoportaDocumentos,
   nominasSoportaPrenomina,
+  nominasSoportaImportesDocumento,
 };

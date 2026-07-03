@@ -42,6 +42,7 @@ import { etiquetaTipoHora, TIPO_HORA_BOLSA } from '../../utils/tipoHora';
 import BolsaHorasPanel from '../components/BolsaHorasPanel';
 import VacacionesSaldoPanel from '../components/VacacionesSaldoPanel';
 import RetribucionPanel from '../components/RetribucionPanel';
+import MisNominasPanel from '../components/MisNominasPanel';
 import NominaDocumentoPanel from '../components/NominaDocumentoPanel';
 import { usePlan } from '../../hooks/usePlan';
 import { getTipoUsuario, getIdUsuario } from '../../utils/authSession';
@@ -519,6 +520,20 @@ const FichaPersonal = () => {
           children: (
             <NominaDocumentoPanel idUsuario={idUsuario} />
           ),
+        }]
+      : []),
+    ...(puedeVerNominas && esPropio
+      ? [{
+          key: 'mi-retribucion',
+          label: 'Retribución',
+          children: (
+            <RetribucionPanel idUsuario={idUsuario} soloLectura />
+          ),
+        },
+        {
+          key: 'mis-nominas',
+          label: 'Mis nóminas',
+          children: <MisNominasPanel />,
         }]
       : []),
     ...(puedeVerVacaciones && (puedeGestionarVacaciones || esPropio)

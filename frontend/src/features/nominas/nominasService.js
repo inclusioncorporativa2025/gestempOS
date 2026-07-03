@@ -40,7 +40,15 @@ export const listarNominas = async (filtros = {}) => {
   return parseJsonError(response, 'Error al cargar las nóminas');
 };
 
-export const subirNomina = async ({ idUsuario, periodoMes, periodoAnio, archivo }) => {
+export const subirNomina = async ({
+  idUsuario,
+  periodoMes,
+  periodoAnio,
+  archivo,
+  importe_bruto,
+  importe_deducciones,
+  importe_liquido,
+}) => {
   const idEmpresa = getIdEmpresa();
   const formData = new FormData();
   formData.append('idEmpresa', String(idEmpresa));
@@ -48,6 +56,15 @@ export const subirNomina = async ({ idUsuario, periodoMes, periodoAnio, archivo 
   formData.append('periodoMes', String(periodoMes));
   formData.append('periodoAnio', String(periodoAnio));
   formData.append('archivo', archivo);
+  if (importe_bruto != null && importe_bruto !== '') {
+    formData.append('importe_bruto', String(importe_bruto));
+  }
+  if (importe_deducciones != null && importe_deducciones !== '') {
+    formData.append('importe_deducciones', String(importe_deducciones));
+  }
+  if (importe_liquido != null && importe_liquido !== '') {
+    formData.append('importe_liquido', String(importe_liquido));
+  }
 
   const response = await fetch(`${API_BASE_URL}/subirNomina`, {
     method: 'POST',

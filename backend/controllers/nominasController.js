@@ -51,7 +51,7 @@ const mapError = (res, error, fallback) => {
   if (error.code === 'USUARIO_NO_EMPRESA') {
     return res.status(404).json({ message: error.message, code: error.code });
   }
-  if (['SALARIO_INVALIDO', 'FECHA_INVALIDA', 'FECHA_ANTERIOR_VIGENTE'].includes(error.code)) {
+  if (['SALARIO_INVALIDO', 'FECHA_INVALIDA', 'FECHA_ANTERIOR_VIGENTE', 'IMPORTE_INVALIDO'].includes(error.code)) {
     return res.status(400).json({ message: error.message, code: error.code });
   }
   if ([
@@ -75,9 +75,15 @@ const mapError = (res, error, fallback) => {
 const getRetribucion = async (req, res) => {
   const idEmpresa = Number(req.body?.idEmpresa || req.user.id_empresa);
   const idUsuario = Number(req.body?.idUsuario);
+  const idSesion = Number(req.user?.id_usuario);
+  const tipoUsuario = Number(req.user?.tipo_usuario);
 
   if (!idEmpresa || !idUsuario) {
     return res.status(400).json({ message: 'Datos incompletos' });
+  }
+
+  if (tipoUsuario === ROLES.EMPLEADO && idUsuario !== idSesion) {
+    return res.status(403).json({ message: 'No autorizado para consultar esta retribución' });
   }
 
   try {
@@ -222,6 +228,11 @@ const subirNomina = async (req, res) => {
       periodoAnio,
       req.file,
       idUsuarioAccion,
+      {
+        importe_bruto: req.body?.importe_bruto,
+        importe_deducciones: req.body?.importe_deducciones,
+        importe_liquido: req.body?.importe_liquido,
+      },
     );
 
     return res.status(200).json({

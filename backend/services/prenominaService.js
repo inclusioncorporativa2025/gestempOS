@@ -6,17 +6,129 @@ const UsuarioPrenomina = require('../models/UsuarioPrenomina');
 const UsuarioPrenominaLinea = require('../models/UsuarioPrenominaLinea');
 const UsuarioEmpresa = require('../models/UsuarioEmpresa');
 const Usuario = require('../models/Usuario');
+const Ausencias = require('../models/Ausencias');
 const { createConId } = require('../utils/empresaScope');
 const { nominasSoportaPrenomina } = require('../utils/nominasCompat');
 const { obtenerRetribucionEnFecha } = require('./retribucionService');
 const { calcularResumenHorasMes } = require('./horasResumenService');
 const { TIPOS_HORA } = require('../utils/tipoHora');
 const { ROLES } = require('../middleware/authMiddleware');
+const { esVacaciones } = require('../utils/tiposAusencia');
+const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/ausenciasCompat');
+const { empresaTieneFeature } = require('./planService');
 
 const FACTOR_HORA_EXTRA = 1.75;
 const ESTADOS_CABECERA = ['borrador', 'revisada', 'cerrada'];
 
 const redondearEuros = (valor) => Math.round((Number(valor) || 0) * 100) / 100;
+
+const redondearDias = (valor) => Math.round(Number(valor) * 10) / 10;
+
+const parseFechaAusencia = (valor) =>
+  dayjs(valor, ['DD-MM-YYYY', 'YYYY-MM-DD'], true);
+
+const expandirRangoDiasAusencia = (fechaDesde, fechaHasta) => {
+  const dias = [];
+  let actual = parseFechaAusencia(fechaDesde).startOf('day');
+  const fin = parseFechaAusencia(fechaHasta).startOf('day');
+  if (!actual.isValid() || !fin.isValid()) return [];
+  while (actual.isSame(fin, 'day') || actual.isBefore(fin, 'day')) {
+    dias.push(actual.format('YYYY-MM-DD'));
+    actual = actual.add(1, 'day');
+  }
+  return dias;
+};
+
+const normalizarFraccionAusencia = (ausencia) => {
+  const fraccion = String(ausencia?.fraccion_dia || '').trim().toLowerCase();
+  if (['manana', 'tarde'].includes(fraccion)) return fraccion;
+  if (fraccion === 'completo') return 'completo';
+  if (ausencia?.hora_ausencia_desde || ausencia?.hora_ausencia_hasta) return 'parcial';
+  return 'completo';
+};
+
+const diasPorFraccionAusencia = (fraccion) => {
+  if (fraccion === 'manana' || fraccion === 'tarde' || fraccion === 'parcial') return 0.5;
+  return 1;
+};
+
+const diasAusenciaEnMes = (ausencia, inicioMes, finMes) => {
+  const todosDias = expandirRangoDiasAusencia(ausencia.fecha_desde, ausencia.fecha_hasta);
+  const diasMes = todosDias.filter((d) => {
+    const fecha = dayjs(d);
+    return !fecha.isBefore(inicioMes, 'day') && !fecha.isAfter(finMes, 'day');
+  });
+  if (!diasMes.length) return 0;
+  if (diasMes.length === 1 && todosDias.length === 1) {
+    return diasPorFraccionAusencia(normalizarFraccionAusencia(ausencia));
+  }
+  return diasMes.length;
+};
+
+const ausenciaSolapaMes = (ausencia, inicioMes, finMes) => {
+  const desde = parseFechaAusencia(ausencia.fecha_desde).startOf('day');
+  const hasta = parseFechaAusencia(ausencia.fecha_hasta).startOf('day');
+  if (!desde.isValid() || !hasta.isValid()) return false;
+  return !desde.isAfter(finMes, 'day') && !hasta.isBefore(inicioMes, 'day');
+};
+
+const resumirAusenciasMes = (ausenciasUsuario, periodoAnio, periodoMes) => {
+  const inicioMes = dayjs(`${periodoAnio}-${String(periodoMes).padStart(2, '0')}-01`).startOf('month');
+  const finMes = inicioMes.endOf('month');
+  let diasVacaciones = 0;
+  let diasAusencia = 0;
+
+  (ausenciasUsuario || []).forEach((ausencia) => {
+    const dias = diasAusenciaEnMes(ausencia, inicioMes, finMes);
+    if (dias <= 0) return;
+    if (esVacaciones(ausencia.tipo)) {
+      diasVacaciones += dias;
+    } else {
+      diasAusencia += dias;
+    }
+  });
+
+  return {
+    dias_vacaciones: diasVacaciones > 0 ? redondearDias(diasVacaciones) : null,
+    dias_ausencia: diasAusencia > 0 ? redondearDias(diasAusencia) : null,
+  };
+};
+
+const cargarAusenciasMesPorUsuario = async (idEmpresa, userIds, periodoAnio, periodoMes) => {
+  const mapa = new Map(userIds.map((id) => [id, []]));
+  if (!userIds.length) return mapa;
+
+  const incluirAusencias = await empresaTieneFeature(idEmpresa, 'ausencias_basicas');
+  if (!incluirAusencias) return mapa;
+
+  const soportaAprobacion = await ausenciasSoportaAprobacion();
+  const inicioMes = dayjs(`${periodoAnio}-${String(periodoMes).padStart(2, '0')}-01`).startOf('month');
+  const finMes = inicioMes.endOf('month');
+
+  const ausencias = await Ausencias.findAll({
+    where: {
+      empresa_id: idEmpresa,
+      id_usuario: { [Op.in]: userIds },
+      fecha_baja: null,
+      fecha_cancelacion: null,
+      ...whereSoloAprobadas(soportaAprobacion),
+    },
+    attributes: [
+      'id_usuario', 'tipo', 'fecha_desde', 'fecha_hasta',
+      'fraccion_dia', 'hora_ausencia_desde', 'hora_ausencia_hasta',
+    ],
+  });
+
+  ausencias.forEach((row) => {
+    const data = row.toJSON ? row.toJSON() : row;
+    if (!ausenciaSolapaMes(data, inicioMes, finMes)) return;
+    const lista = mapa.get(data.id_usuario) || [];
+    lista.push(data);
+    mapa.set(data.id_usuario, lista);
+  });
+
+  return mapa;
+};
 
 const activoWhere = (idEmpresa, extras = {}) => ({
   empresa_id: idEmpresa,
@@ -130,7 +242,14 @@ const listarEmpleadosParaPrenomina = async (idEmpresa) => {
     }));
 };
 
-const calcularEmpleado = async (idEmpresa, idUsuario, membresia, periodoAnio, periodoMes) => {
+const calcularEmpleado = async (
+  idEmpresa,
+  idUsuario,
+  membresia,
+  periodoAnio,
+  periodoMes,
+  ausenciasUsuario = [],
+) => {
   const mes = `${periodoAnio}-${String(periodoMes).padStart(2, '0')}`;
   const ultimoDiaMes = dayjs(mes).endOf('month').format('YYYY-MM-DD');
   const alertas = [];
@@ -183,6 +302,11 @@ const calcularEmpleado = async (idEmpresa, idUsuario, membresia, periodoAnio, pe
 
   const otrosDevengos = 0;
   const totalBruto = redondearEuros(salarioBase + importeExtras + importeComplementarias + otrosDevengos);
+  const { dias_vacaciones: diasVacaciones, dias_ausencia: diasAusencia } = resumirAusenciasMes(
+    ausenciasUsuario,
+    periodoAnio,
+    periodoMes,
+  );
 
   const lineas = [];
 
@@ -238,6 +362,32 @@ const calcularEmpleado = async (idEmpresa, idUsuario, membresia, periodoAnio, pe
     });
   }
 
+  if (diasVacaciones) {
+    lineas.push({
+      codigo_concepto: 'VAC',
+      descripcion: 'Días de vacaciones (informativo)',
+      tipo: 'informativo',
+      cantidad: diasVacaciones,
+      unidad: 'dias',
+      importe: 0,
+      origen: 'automatico',
+      orden: 50,
+    });
+  }
+
+  if (diasAusencia) {
+    lineas.push({
+      codigo_concepto: 'AUS',
+      descripcion: 'Días de ausencia (informativo)',
+      tipo: 'informativo',
+      cantidad: diasAusencia,
+      unidad: 'dias',
+      importe: 0,
+      origen: 'automatico',
+      orden: 60,
+    });
+  }
+
   const snapshot = {
     periodo: mes,
     prorrateo: { factor, diasEfectivos, diasMes },
@@ -246,6 +396,7 @@ const calcularEmpleado = async (idEmpresa, idUsuario, membresia, periodoAnio, pe
     precio_hora: precioHora != null ? redondearEuros(precioHora) : null,
     factor_hora_extra: FACTOR_HORA_EXTRA,
     alertas,
+    ausencias: { dias_vacaciones: diasVacaciones, dias_ausencia: diasAusencia },
   };
 
   return {
@@ -259,8 +410,8 @@ const calcularEmpleado = async (idEmpresa, idUsuario, membresia, periodoAnio, pe
     moneda,
     id_retribucion: retribucion?.id_retribucion ?? null,
     dias_trabajados: diasEfectivos,
-    dias_ausencia: null,
-    dias_vacaciones: null,
+    dias_ausencia: diasAusencia,
+    dias_vacaciones: diasVacaciones,
     snapshot_json: snapshot,
     lineas,
   };
@@ -338,6 +489,8 @@ const generarPrenomina = async (idEmpresa, periodoMes, periodoAnio, idUsuarioAcc
     }
 
     const empleados = await listarEmpleadosParaPrenomina(idEmpresa);
+    const userIds = empleados.map(({ usuario }) => usuario.id_usuario);
+    const ausenciasPorUsuario = await cargarAusenciasMesPorUsuario(idEmpresa, userIds, anio, mes);
     const resultados = [];
 
     for (const { usuario, membresia } of empleados) {
@@ -347,6 +500,7 @@ const generarPrenomina = async (idEmpresa, periodoMes, periodoAnio, idUsuarioAcc
         membresia,
         anio,
         mes,
+        ausenciasPorUsuario.get(usuario.id_usuario) || [],
       );
 
       if (calculo.omitir) continue;

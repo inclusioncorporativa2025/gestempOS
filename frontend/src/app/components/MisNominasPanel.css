@@ -1,0 +1,15 @@
+.mis-nominas-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mis-nominas-panel__hint {
+  display: block;
+}
+
+.mis-nominas-panel__ultimo {
+  max-width: 360px;
+  border-radius: 10px;
+  background: rgba(var(--color-primary-rgb), 0.04);
+}

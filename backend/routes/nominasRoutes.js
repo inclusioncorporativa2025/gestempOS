@@ -30,7 +30,7 @@ const handleMulterError = (err, req, res, next) => {
   });
 };
 
-router.post('/getRetribucion', requireRole(ROLE_GROUPS.USER_WRITE), getRetribucion);
+router.post('/getRetribucion', requireRole(ROLE_GROUPS.FICHAJE), getRetribucion);
 router.post('/guardarRetribucion', requireRole(ROLE_GROUPS.USER_WRITE), guardarRetribucionUsuario);
 
 router.post('/listarNominas', requireRole(ROLE_GROUPS.USER_WRITE), listarNominas);
@@ -48,7 +48,7 @@ router.post('/listarPrenominas', requireRole(ROLE_GROUPS.USER_WRITE), listarPren
 router.post('/detallePrenomina', requireRole(ROLE_GROUPS.USER_WRITE), detallePrenomina);
 router.post('/cerrarPrenomina', requireRole(ROLE_GROUPS.USER_WRITE), cerrarPrenominaMes);
 
-router.post('/misNominas', requireRole(ROLES.EMPLEADO), misNominas);
+router.post('/misNominas', requireRole(ROLE_GROUPS.FICHAJE), misNominas);
 router.post('/descargarNomina', requireRole(ROLE_GROUPS.FICHAJE), descargarNomina);
 
 module.exports = router;

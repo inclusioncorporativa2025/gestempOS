@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   DatePicker,
+  InputNumber,
   Popconfirm,
   Select,
   Space,
@@ -39,6 +40,11 @@ const MESES = [
 
 const etiquetaPeriodo = (mes, anio) => `${MESES[mes - 1] || mes} ${anio}`;
 
+const formatearEuros = (valor) => {
+  if (valor == null) return '—';
+  return Number(valor).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+};
+
 const formatearFecha = (fecha) => (
   fecha && dayjs(fecha).isValid() ? dayjs(fecha).format('DD/MM/YYYY HH:mm') : '—'
 );
@@ -53,6 +59,9 @@ const NominasDefinitivasPanel = () => {
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
   const [periodo, setPeriodo] = useState(dayjs().subtract(1, 'month').startOf('month'));
   const [archivoPendiente, setArchivoPendiente] = useState(null);
+  const [importeBruto, setImporteBruto] = useState(null);
+  const [importeDeducciones, setImporteDeducciones] = useState(null);
+  const [importeLiquido, setImporteLiquido] = useState(null);
 
   const mapaEmpleados = useMemo(
     () => new Map(empleados.map((e) => [e.id_usuario, e])),
@@ -97,9 +106,15 @@ const NominasDefinitivasPanel = () => {
         periodoMes: periodo.month() + 1,
         periodoAnio: periodo.year(),
         archivo: archivoPendiente,
+        importe_bruto: importeBruto,
+        importe_deducciones: importeDeducciones,
+        importe_liquido: importeLiquido,
       });
       message.success('Nómina subida correctamente');
       setArchivoPendiente(null);
+      setImporteBruto(null);
+      setImporteDeducciones(null);
+      setImporteLiquido(null);
       await cargar();
     } catch (error) {
       message.error(error.message || 'No se pudo subir la nómina');
@@ -150,6 +165,18 @@ const NominasDefinitivasPanel = () => {
       title: 'Periodo',
       key: 'periodo',
       render: (_, row) => etiquetaPeriodo(row.periodo_mes, row.periodo_anio),
+    },
+    {
+      title: 'Líquido',
+      dataIndex: 'importe_liquido',
+      key: 'importe_liquido',
+      render: formatearEuros,
+    },
+    {
+      title: 'Bruto',
+      dataIndex: 'importe_bruto',
+      key: 'importe_bruto',
+      render: formatearEuros,
     },
     {
       title: 'Archivo',
@@ -211,7 +238,8 @@ const NominasDefinitivasPanel = () => {
           Subir nómina definitiva (PDF)
         </Title>
         <Text type="secondary" className="nominas-def-panel__hint">
-          Asigna el PDF de la nómina cerrada a cada empleado y al mes correspondiente.
+          Asigna el PDF de la nómina cerrada a cada empleado. Opcionalmente registra bruto,
+          deducciones y líquido según la nómina oficial (para consulta del empleado).
         </Text>
 
         <div className="nominas-def-panel__upload-row">
@@ -238,6 +266,45 @@ const NominasDefinitivasPanel = () => {
               onChange={(value) => value && setPeriodo(value)}
               format="MMMM YYYY"
               className="nominas-def-panel__periodo"
+            />
+          </div>
+        </div>
+
+        <div className="nominas-def-panel__importes-row">
+          <div>
+            <Text strong>Bruto devengado (€)</Text>
+            <InputNumber
+              min={0}
+              step={0.01}
+              precision={2}
+              value={importeBruto}
+              onChange={setImporteBruto}
+              className="nominas-def-panel__importe"
+              placeholder="Opcional"
+            />
+          </div>
+          <div>
+            <Text strong>Total deducciones (€)</Text>
+            <InputNumber
+              min={0}
+              step={0.01}
+              precision={2}
+              value={importeDeducciones}
+              onChange={setImporteDeducciones}
+              className="nominas-def-panel__importe"
+              placeholder="Opcional"
+            />
+          </div>
+          <div>
+            <Text strong>Líquido a percibir (€)</Text>
+            <InputNumber
+              min={0}
+              step={0.01}
+              precision={2}
+              value={importeLiquido}
+              onChange={setImporteLiquido}
+              className="nominas-def-panel__importe"
+              placeholder="Opcional"
             />
           </div>
         </div>

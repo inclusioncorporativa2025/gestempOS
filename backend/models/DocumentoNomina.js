@@ -45,6 +45,18 @@ const DocumentoNomina = sequelize.define('DocumentoNomina', {
     type: DataTypes.CHAR(64),
     allowNull: true,
   },
+  importe_bruto: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+  },
+  importe_deducciones: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+  },
+  importe_liquido: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+  },
   fecha_publicacion: {
     type: DataTypes.DATE,
     allowNull: false,

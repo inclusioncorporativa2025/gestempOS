@@ -13,6 +13,46 @@
   margin-bottom: 16px;
 }
 
+.prenominas-panel__disclaimer {
+  margin-bottom: 16px;
+}
+
+.prenominas-panel__expandido {
+  padding: 8px 0 4px;
+}
+
+.prenominas-panel__alertas {
+  margin-bottom: 12px;
+}
+
+.prenominas-panel__alertas-lista {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.prenominas-panel__expandido-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.prenominas-panel__horas-lista {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.prenominas-panel__ref-salario {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.prenominas-panel__lineas-table {
+  margin-top: 8px;
+}
+
 .prenominas-panel__generar {
   display: flex;
   flex-wrap: wrap;
