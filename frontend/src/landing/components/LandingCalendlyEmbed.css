@@ -1,0 +1,42 @@
+.landing-calendly-embed {
+  width: 100%;
+  background: #fff;
+  line-height: 0;
+  overflow: hidden;
+}
+
+.landing-calendly-embed__iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: #fff;
+}
+
+.landing-calendly-embed--modal.landing-calendly-embed--widget {
+  min-width: 320px;
+  min-height: 520px;
+  height: auto;
+  overflow: hidden;
+}
+
+.landing-calendly-embed--modal.landing-calendly-embed--widget iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+}
+
+.landing-calendly-embed--modal:not(.landing-calendly-embed--widget),
+.landing-calendly-embed--modal:not(.landing-calendly-embed--widget) .landing-calendly-embed__iframe {
+  height: min(700px, calc(100vh - 12rem));
+}
+
+@media (max-width: 640px) {
+  .landing-calendly-embed--modal.landing-calendly-embed--widget {
+    min-height: 460px;
+  }
+
+  .landing-calendly-embed--modal:not(.landing-calendly-embed--widget),
+  .landing-calendly-embed--modal:not(.landing-calendly-embed--widget) .landing-calendly-embed__iframe {
+    height: min(640px, calc(100vh - 10.5rem));
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "fecha_registro": "2026-07-03T15:41:00+02:00",
+  "nombre": "María García López",
+  "email": "maria.garcia@empresa-ejemplo.es",
+  "telefono": "+34600123456",
+  "empresa": "Empresa Ejemplo SL",
+  "cargo": "Directora de RRHH",
+  "num_empleados": "51-200",
+  "interes": "Demo Timecor - gestión de fichajes y nóminas",
+  "mensaje": "Queremos centralizar fichajes y previsión de coste laboral para 120 empleados.",
+  "origen": "landing_timecor",
+  "evento": "timecor-demo",
+  "utm_source": "google",
+  "utm_medium": "cpc",
+  "utm_campaign": "demo_q3_2026",
+  "estado_lead": "nuevo",
+  "consentimiento_rgpd": true,
+  "ip": "185.123.45.67",
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+  "make_execution_id": ""
+}

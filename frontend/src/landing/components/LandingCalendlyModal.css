@@ -1,0 +1,112 @@
+.landing-calendly-modal-wrap {
+  overflow: hidden !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.landing-calendly-modal-wrap::-webkit-scrollbar {
+  display: none;
+}
+
+.landing-calendly-modal {
+  max-width: calc(100vw - 1.5rem);
+  max-height: calc(100vh - 2rem);
+  padding-bottom: 0;
+}
+
+.landing-calendly-modal .ant-modal-content {
+  overflow: hidden;
+  border-radius: 12px;
+  max-height: calc(100vh - 2rem);
+}
+
+.landing-calendly-modal .ant-modal-close {
+  top: 0.85rem;
+  inset-inline-end: 0.85rem;
+  color: rgba(0, 21, 41, 0.45);
+}
+
+.landing-calendly-modal .ant-modal-close:hover {
+  color: var(--color-primary, #a85ce0);
+  background: rgba(var(--color-primary-rgb, 168, 92, 224), 0.08);
+}
+
+.landing-calendly-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.35rem 3rem 1.15rem 1.35rem;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--color-primary-rgb, 168, 92, 224), 0.06) 0%,
+    rgba(255, 255, 255, 1) 55%
+  );
+  border-bottom: 1px solid rgba(var(--color-primary-rgb, 168, 92, 224), 0.12);
+}
+
+.landing-calendly-modal__header-text {
+  min-width: 0;
+}
+
+.landing-calendly-modal__eyebrow {
+  display: block;
+  margin: 0 0 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-medium, 500);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary, #a85ce0);
+}
+
+.landing-calendly-modal__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.25rem;
+  font-weight: var(--font-weight-medium, 500);
+  line-height: 1.25;
+  color: var(--color-dark, #001529);
+}
+
+.landing-calendly-modal__subtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: rgba(0, 21, 41, 0.58);
+}
+
+.landing-calendly-modal__badge {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-medium, 500);
+  line-height: 1;
+  color: var(--color-primary, #a85ce0);
+  background: rgba(var(--color-primary-rgb, 168, 92, 224), 0.1);
+  border: 1px solid rgba(var(--color-primary-rgb, 168, 92, 224), 0.18);
+  border-radius: 999px;
+}
+
+.landing-calendly-modal .ant-modal-body {
+  padding: 0;
+  line-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .landing-calendly-modal {
+    max-width: calc(100vw - 1rem);
+  }
+
+  .landing-calendly-modal__header {
+    padding: 1.15rem 2.75rem 1rem 1.15rem;
+  }
+
+  .landing-calendly-modal__title {
+    font-size: 1.1rem;
+  }
+
+  .landing-calendly-modal__badge {
+    display: none;
+  }
+}
