@@ -39,6 +39,7 @@ const registrarDemoLead = async (req, res) => {
 
   try {
     await sendLeadToMake(lead);
+    console.log('[landing/demo-lead] Lead enviado a Make:', lead.email, lead.fecha_demo_legible || lead.fecha_demo);
     return res.status(200).json({ message: 'Lead enviado a Make', lead });
   } catch (error) {
     console.error('Error enviando lead a Make:', error.message);

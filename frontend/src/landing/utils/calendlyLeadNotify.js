@@ -45,7 +45,8 @@ export const notifyCalendlyBooking = async ({ invitee, event }) => {
     });
 
     if (!response.ok) {
-      console.warn('[Calendly → Make] Error al registrar lead:', response.status);
+      const body = await response.text().catch(() => '');
+      console.warn('[Calendly → Make] Error al registrar lead:', response.status, endpoint, body);
     }
   } catch (error) {
     console.warn('[Calendly → Make] No se pudo contactar con el backend:', error.message);
