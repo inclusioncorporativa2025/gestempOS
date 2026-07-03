@@ -13,9 +13,12 @@ const TIPO_LABELS = {
   suplantacion: { label: 'Suplantación', color: 'orange' },
 };
 
+const MAX_ACCESOS_UI = 3000;
+
 const PlatformAccesos = () => {
   const [accesos, setAccesos] = useState([]);
   const [total, setTotal] = useState(0);
+  const [truncado, setTruncado] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pagina, setPagina] = useState(1);
   const [limite] = useState(50);
@@ -39,6 +42,7 @@ const PlatformAccesos = () => {
       });
       setAccesos(data.accesos || []);
       setTotal(data.total || 0);
+      setTruncado(Boolean(data.truncado));
     } catch (error) {
       message.error(error.message || 'Error al cargar accesos');
     } finally {
@@ -139,6 +143,20 @@ const PlatformAccesos = () => {
         />
       </div>
 
+      <Text type="secondary" className="platform-accesos__limite">
+        Se muestran como máximo los
+        {' '}
+        {MAX_ACCESOS_UI.toLocaleString('es-ES')}
+        {' '}
+        accesos más recientes.
+        {truncado && (
+          <>
+            {' '}
+            Existen más registros en la base de datos; para consultar el histórico completo use una consulta SQL directa.
+          </>
+        )}
+      </Text>
+
       <Table
         rowKey="id_acceso"
         columns={columns}
@@ -149,7 +167,7 @@ const PlatformAccesos = () => {
           pageSize: limite,
           total,
           showSizeChanger: false,
-          showTotal: (t) => `${t} registros`,
+          showTotal: (t) => `${t.toLocaleString('es-ES')} registros`,
           onChange: (p) => setPagina(p),
         }}
         scroll={{ x: 900 }}

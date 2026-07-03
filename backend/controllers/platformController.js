@@ -14,6 +14,7 @@ const {
 
 const IMPERSONATION_EXPIRES_IN = process.env.IMPERSONATION_JWT_EXPIRES_IN || '1h';
 const TIPOS_PLATAFORMA = ROLE_GROUPS.PLATFORM;
+const MAX_ACCESOS_UI = 3000;
 
 const sanitizeUsuario = (usuario, membresia = null) => ({
   id_usuario: usuario.id_usuario,
@@ -69,6 +70,29 @@ const listarAccesos = async (req, res) => {
   const tipoEvento = req.query.tipo ? String(req.query.tipo).trim() : null;
   const busqueda = req.query.q ? String(req.query.q).trim() : null;
 
+  const responderAccesos = (accesos, total, truncado = false) => res.status(200).json({
+    accesos,
+    total,
+    pagina,
+    limite,
+    max_ui: MAX_ACCESOS_UI,
+    truncado,
+  });
+
+  const contarAccesosUi = async (where) => {
+    const muestras = await AccesoPlataforma.findAll({
+      where,
+      attributes: ['id_acceso'],
+      order: [['fecha', 'DESC']],
+      limit: MAX_ACCESOS_UI + 1,
+      raw: true,
+    });
+    return {
+      total: Math.min(muestras.length, MAX_ACCESOS_UI),
+      truncado: muestras.length > MAX_ACCESOS_UI,
+    };
+  };
+
   try {
     const where = {};
 
@@ -88,17 +112,26 @@ const listarAccesos = async (req, res) => {
       });
       const ids = usuarios.map((u) => u.id_usuario);
       if (!ids.length) {
-        return res.status(200).json({ accesos: [], total: 0, pagina, limite });
+        return responderAccesos([], 0);
       }
       where.id_usuario = { [Op.in]: ids };
     }
 
-    const { rows, count } = await AccesoPlataforma.findAndCountAll({
-      where,
-      order: [['fecha', 'DESC']],
-      limit: limite,
-      offset,
-    });
+    if (offset >= MAX_ACCESOS_UI) {
+      return responderAccesos([], MAX_ACCESOS_UI, true);
+    }
+
+    const limiteEfectivo = Math.min(limite, MAX_ACCESOS_UI - offset);
+
+    const [rows, conteo] = await Promise.all([
+      AccesoPlataforma.findAll({
+        where,
+        order: [['fecha', 'DESC']],
+        limit: limiteEfectivo,
+        offset,
+      }),
+      contarAccesosUi(where),
+    ]);
 
     const userIds = [...new Set(rows.map((r) => r.id_usuario))];
     const usuarios = userIds.length
@@ -126,12 +159,7 @@ const listarAccesos = async (req, res) => {
       };
     });
 
-    return res.status(200).json({
-      accesos,
-      total: count,
-      pagina,
-      limite,
-    });
+    return responderAccesos(accesos, conteo.total, conteo.truncado);
   } catch (error) {
     console.error('Error en listarAccesos:', error.message);
     return res.status(500).json({ message: 'Error al obtener accesos' });

@@ -15,6 +15,12 @@
   min-width: 180px;
 }
 
+.platform-accesos__limite {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
 .platform-acceder__intro {
   display: flex;
   flex-direction: column;
