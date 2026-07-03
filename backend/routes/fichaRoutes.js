@@ -28,7 +28,7 @@ const {
 } = require('../controllers/fichajesController');
 const { requireRole, ROLE_GROUPS } = require('../middleware/authMiddleware');
 
-const GESTION_PETICIONES = ROLE_GROUPS.COMPANY_STAFF;
+const GESTION_PETICIONES = ROLE_GROUPS.APROBACION_SOLICITUDES;
 
 router.post('/getData', requireRole(ROLE_GROUPS.FICHAJE), getDatosUsuario);
 router.post('/getDataById', requireRole(ROLE_GROUPS.FICHAJE), getDatosUsuarioById);

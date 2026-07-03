@@ -114,7 +114,7 @@ const pages = [
     key: '10',
     icon: <MailOutlined />,
     path: APP_ROUTES.notifications,
-    tipousuario: [1, 2, 3, 4, 5],
+    tipousuario: [3, 4, 5],
   },
   {
     label: 'Nóminas',

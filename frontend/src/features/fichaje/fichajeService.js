@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import tz from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import { getFechaEuropeMadrid } from '../../utils/Helper';
-import { getIdUsuario, getIdEmpresa, getTipoUsuario } from '../../utils/authSession';
+import { getIdUsuario, getIdEmpresa } from '../../utils/authSession';
 
 
 dayjs.extend(utc);
@@ -10,8 +10,6 @@ dayjs.extend(tz);
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL+'ficha'; 
 
 const bodyGestionEmpresa = () => {
-  const tipoUsuario = getTipoUsuario();
-  if (tipoUsuario === 1) return {};
   const idEmpresa = getIdEmpresa();
   return idEmpresa ? { idEmpresa } : {};
 };
@@ -125,9 +123,8 @@ export const getDireccionDesdeCoords = async (lat, lng) => {
 
 export const countNotificacionesPendientes = async () => {
   try {
-    const tipoUsuario = getTipoUsuario();
     const payload = bodyGestionEmpresa();
-    if (tipoUsuario !== 1 && !payload.idEmpresa) {
+    if (!payload.idEmpresa) {
       return { correcciones: 0, cierres: 0, total: 0 };
     }
 

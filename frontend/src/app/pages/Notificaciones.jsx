@@ -1341,10 +1341,14 @@ const setVisibleModalDetalles = async (info) => {
 };
 
 const Notificaciones = () => {
-  if (getTipoUsuario() === 5) {
+  const tipo = getTipoUsuario();
+  if (tipo === 5) {
     return <NotificacionesEmpleado />;
   }
-  return <NotificacionesGestor />;
+  if (puedeAprobarSolicitudesEmpresa(tipo)) {
+    return <NotificacionesGestor />;
+  }
+  return null;
 };
 
 export default Notificaciones;

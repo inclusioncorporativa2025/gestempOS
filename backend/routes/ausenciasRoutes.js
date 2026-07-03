@@ -34,8 +34,8 @@ const handleMulterError = (err, req, res, next) => {
 router.post('/getAusenciasByIdUsuario', requireRole(ROLE_GROUPS.FICHAJE), getAusenciasByIdUsuario);
 router.post('/getAusenciasCalendario', requireRole(ROLE_GROUPS.CALENDARIO_VIEW), getAusenciasCalendario);
 router.post('/getAusenciasListado', requireRole(ROLE_GROUPS.CALENDARIO_VIEW), getAusenciasListado);
-router.post('/getAusenciasPendientesEmpresa', requireRole(ROLE_GROUPS.COMPANY_STAFF), getAusenciasPendientesEmpresa);
-router.post('/getHistorialAusenciasEmpresa', requireRole(ROLE_GROUPS.COMPANY_STAFF), getHistorialAusenciasEmpresa);
+router.post('/getAusenciasPendientesEmpresa', requireRole(ROLE_GROUPS.APROBACION_SOLICITUDES), getAusenciasPendientesEmpresa);
+router.post('/getHistorialAusenciasEmpresa', requireRole(ROLE_GROUPS.APROBACION_SOLICITUDES), getHistorialAusenciasEmpresa);
 router.post('/getAusenciasNotificacionesEmpleado', requireRole(ROLE_GROUPS.FICHAJE), getAusenciasNotificacionesEmpleado);
 router.post('/responderAusencia', requireRole(ROLE_GROUPS.APROBACION_SOLICITUDES), responderAusencia);
 router.post('/marcarAusenciasVistas', requireRole(ROLE_GROUPS.FICHAJE), marcarAusenciasVistas);

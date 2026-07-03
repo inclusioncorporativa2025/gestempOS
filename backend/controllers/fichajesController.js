@@ -49,7 +49,14 @@ const resolveIdEmpresa = (req) => {
   return fromToken || null;
 };
 
-const esRootPlataforma = (req) => Number(req.user?.tipo_usuario) === ROLES.ROOT;
+const filtroEmpresaObligatorio = (req, res) => {
+  const idEmpresa = resolveIdEmpresa(req);
+  if (!idEmpresa) {
+    res.status(400).json({ error: 'Empresa no indicada' });
+    return null;
+  }
+  return { empresa_id: idEmpresa };
+};
 
 const combinarFechaConHoraMadrid = (fechaBase, horaHHmm) => {
   const tz = 'Europe/Madrid';
@@ -696,12 +703,8 @@ const crearPeticionCierreMes = async (req, res) => {
 };
 
 const getPeticionesByIdEmpresa = async (req, res) => {
-  const esRoot = esRootPlataforma(req);
-  const idEmpresa = resolveIdEmpresa(req);
-
-  if (!esRoot && !idEmpresa) {
-    return res.status(400).json({ error: 'Empresa no indicada' });
-  }
+  const filtroEmpresa = filtroEmpresaObligatorio(req, res);
+  if (!filtroEmpresa) return;
 
   try {
 
@@ -709,7 +712,7 @@ const getPeticionesByIdEmpresa = async (req, res) => {
       where: {
         fecha_aceptacion: null,
         fecha_cancelacion: null,
-        ...(esRoot ? {} : { empresa_id: idEmpresa }),
+        ...filtroEmpresa,
       },
       order: [['fecha_alta', 'DESC']]
     });
@@ -728,13 +731,9 @@ const getPeticionesByIdEmpresa = async (req, res) => {
 };
 
 const getHistorialEdicionesHorario = async (req, res) => {
-  const esRoot = esRootPlataforma(req);
-  const idEmpresa = resolveIdEmpresa(req);
+  const filtroEmpresa = filtroEmpresaObligatorio(req, res);
+  if (!filtroEmpresa) return;
   const idUsuario = req.body?.idUsuario;
-
-  if (!esRoot && !idEmpresa) {
-    return res.status(400).json({ error: 'Empresa no indicada' });
-  }
 
   try {
     const where = {
@@ -742,7 +741,7 @@ const getHistorialEdicionesHorario = async (req, res) => {
         { fecha_aceptacion: { [Op.ne]: null } },
         { fecha_cancelacion: { [Op.ne]: null } },
       ],
-      ...(esRoot ? {} : { empresa_id: idEmpresa }),
+      ...filtroEmpresa,
       ...(idUsuario ? { id_usuario_peticion: idUsuario } : {}),
     };
 
@@ -1118,19 +1117,13 @@ const editarHoras = async (req, res) => {
   }
 };
 const countNotificacionesPendientes = async (req, res) => {
-  const esRoot = esRootPlataforma(req);
-  const idEmpresa = resolveIdEmpresa(req);
-
-  if (!esRoot && !idEmpresa) {
-    return res.status(400).json({ error: 'Empresa no indicada' });
-  }
+  const filtroEmpresa = filtroEmpresaObligatorio(req, res);
+  if (!filtroEmpresa) return;
+  const idEmpresa = filtroEmpresa.empresa_id;
 
   try {
-    const filtroEmpresa = esRoot ? {} : { empresa_id: idEmpresa };
     const soportaAprobacionAusencias = await ausenciasSoportaAprobacion();
-    const permiteAusencias = idEmpresa
-      ? await empresaTieneFeature(idEmpresa, 'ausencias_basicas')
-      : true;
+    const permiteAusencias = await empresaTieneFeature(idEmpresa, 'ausencias_basicas');
 
     const [correcciones, cierres, ausenciasPendientes] = await Promise.all([
       Peticiones.count({
@@ -1202,12 +1195,8 @@ const enriquecerMesesCierreConUsuarios = async (meses) => {
 };
 
 const getCierresMensualesByIdEmpresa = async (req, res) => {
-  const esRoot = esRootPlataforma(req);
-  const idEmpresa = resolveIdEmpresa(req);
-
-  if (!esRoot && !idEmpresa) {
-    return res.status(400).json({ error: 'Empresa no indicada' });
-  }
+  const filtroEmpresa = filtroEmpresaObligatorio(req, res);
+  if (!filtroEmpresa) return;
 
   try {
 
@@ -1217,7 +1206,7 @@ const getCierresMensualesByIdEmpresa = async (req, res) => {
         fecha_baja: null,
         fecha_aceptacion: null,
         fecha_cancelacion: null,
-        ...(esRoot ? {} : { empresa_id: idEmpresa }),
+        ...filtroEmpresa,
       },
       order: [['fecha_alta', 'DESC']],
       raw: true,
@@ -1234,12 +1223,8 @@ const getCierresMensualesByIdEmpresa = async (req, res) => {
 };
 
 const getHistorialCierresMensuales = async (req, res) => {
-  const esRoot = esRootPlataforma(req);
-  const idEmpresa = resolveIdEmpresa(req);
-
-  if (!esRoot && !idEmpresa) {
-    return res.status(400).json({ error: 'Empresa no indicada' });
-  }
+  const filtroEmpresa = filtroEmpresaObligatorio(req, res);
+  if (!filtroEmpresa) return;
 
   try {
     const meses = await MesesCierre.findAll({
@@ -1250,7 +1235,7 @@ const getHistorialCierresMensuales = async (req, res) => {
           { fecha_aceptacion: { [Op.ne]: null } },
           { fecha_cancelacion: { [Op.ne]: null } },
         ],
-        ...(esRoot ? {} : { empresa_id: idEmpresa }),
+        ...filtroEmpresa,
       },
       order: [['fecha_alta', 'DESC']],
       raw: true,
