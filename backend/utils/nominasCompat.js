@@ -1,6 +1,7 @@
 const { sequelize } = require('../config/db');
 
 let cacheRetribucion = null;
+let cacheRetribucionAnual = null;
 let cacheDocumentos = null;
 let cachePrenomina = null;
 let cacheDocumentosImportes = null;
@@ -24,6 +25,17 @@ const nominasSoportaRetribucion = async () => {
   if (cacheRetribucion !== null) return cacheRetribucion;
   cacheRetribucion = await tablaExiste('usuarios_retribucion');
   return cacheRetribucion;
+};
+
+const nominasSoportaRetribucionAnual = async () => {
+  if (cacheRetribucionAnual !== null) return cacheRetribucionAnual;
+  const tablaOk = await nominasSoportaRetribucion();
+  if (!tablaOk) {
+    cacheRetribucionAnual = false;
+    return false;
+  }
+  cacheRetribucionAnual = await columnaExiste('usuarios_retribucion', 'salario_bruto_anual');
+  return cacheRetribucionAnual;
 };
 
 const nominasSoportaDocumentos = async () => {
@@ -72,6 +84,7 @@ const nominasSoportaImportesDocumento = async () => {
 
 module.exports = {
   nominasSoportaRetribucion,
+  nominasSoportaRetribucionAnual,
   nominasSoportaDocumentos,
   nominasSoportaPrenomina,
   nominasSoportaImportesDocumento,

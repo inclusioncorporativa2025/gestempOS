@@ -51,7 +51,7 @@ const mapError = (res, error, fallback) => {
   if (error.code === 'USUARIO_NO_EMPRESA') {
     return res.status(404).json({ message: error.message, code: error.code });
   }
-  if (['SALARIO_INVALIDO', 'FECHA_INVALIDA', 'FECHA_ANTERIOR_VIGENTE', 'IMPORTE_INVALIDO'].includes(error.code)) {
+  if (['SALARIO_INVALIDO', 'FECHA_INVALIDA', 'FECHA_ANTERIOR_VIGENTE', 'PAGAS_INVALIDAS', 'MODULO_ANUAL_NO_DISPONIBLE'].includes(error.code)) {
     return res.status(400).json({ message: error.message, code: error.code });
   }
   if ([

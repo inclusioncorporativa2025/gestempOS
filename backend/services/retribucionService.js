@@ -4,7 +4,7 @@ const { Op } = require('sequelize');
 const { sequelize } = require('../config/db');
 const UsuarioRetribucion = require('../models/UsuarioRetribucion');
 const { createConId } = require('../utils/empresaScope');
-const { nominasSoportaRetribucion } = require('../utils/nominasCompat');
+const { nominasSoportaRetribucion, nominasSoportaRetribucionAnual } = require('../utils/nominasCompat');
 
 dayjs.extend(customParseFormat);
 
@@ -21,6 +21,49 @@ const mapRetribucion = (row) => {
   return {
     ...data,
     salario_bruto_mensual: Number(data.salario_bruto_mensual),
+    salario_bruto_anual: data.salario_bruto_anual != null ? Number(data.salario_bruto_anual) : null,
+    numero_pagas: data.numero_pagas != null ? Number(data.numero_pagas) : null,
+  };
+};
+
+const PAGAS_VALIDAS = [12, 14];
+
+const normalizarPagas = (valor) => {
+  const n = Number(valor);
+  if (!PAGAS_VALIDAS.includes(n)) {
+    const error = new Error('El número de pagas debe ser 12 o 14');
+    error.code = 'PAGAS_INVALIDAS';
+    throw error;
+  }
+  return n;
+};
+
+const resolverSalarioDesdePayload = async (payload) => {
+  const modo = String(payload.modo_retribucion || 'mensual').toLowerCase();
+  const soportaAnual = await nominasSoportaRetribucionAnual();
+
+  if (modo === 'anual') {
+    if (!soportaAnual) {
+      const error = new Error(
+        'La retribución anual no está disponible. Ejecute usuarios_retribucion_anual.sql',
+      );
+      error.code = 'MODULO_ANUAL_NO_DISPONIBLE';
+      throw error;
+    }
+    const anual = normalizarSalario(payload.salario_bruto_anual, 'anual');
+    const pagas = normalizarPagas(payload.numero_pagas);
+    const mensual = Math.round((anual / pagas) * 100) / 100;
+    return {
+      salario_bruto_mensual: mensual,
+      salario_bruto_anual: anual,
+      numero_pagas: pagas,
+    };
+  }
+
+  return {
+    salario_bruto_mensual: normalizarSalario(payload.salario_bruto_mensual),
+    salario_bruto_anual: null,
+    numero_pagas: null,
   };
 };
 
@@ -54,10 +97,11 @@ const obtenerResumenRetribucion = async (idEmpresa, idUsuario) => {
   return { soportado: true, vigente, historial };
 };
 
-const normalizarSalario = (valor) => {
+const normalizarSalario = (valor, tipo = 'mensual') => {
   const n = Number(valor);
   if (!Number.isFinite(n) || n < 0) {
-    const error = new Error('El salario bruto mensual no es válido');
+    const etiqueta = tipo === 'anual' ? 'anual' : 'mensual';
+    const error = new Error(`El salario bruto ${etiqueta} no es válido`);
     error.code = 'SALARIO_INVALIDO';
     throw error;
   }
@@ -80,11 +124,26 @@ const guardarRetribucion = async (
   payload,
   idUsuarioAccion,
 ) => {
-  const salario = normalizarSalario(payload.salario_bruto_mensual);
+  const {
+    salario_bruto_mensual: salario,
+    salario_bruto_anual: salarioAnual,
+    numero_pagas: numeroPagas,
+  } = await resolverSalarioDesdePayload(payload);
   const fechaDesde = parseFechaDesde(payload.fecha_desde);
   const observaciones = payload.observaciones?.trim() || null;
   const moneda = String(payload.moneda || 'EUR').trim().toUpperCase().slice(0, 3) || 'EUR';
   const ahora = new Date();
+  const soportaAnual = await nominasSoportaRetribucionAnual();
+
+  const datosRetribucion = {
+    salario_bruto_mensual: salario,
+    moneda,
+    observaciones,
+  };
+  if (soportaAnual) {
+    datosRetribucion.salario_bruto_anual = salarioAnual;
+    datosRetribucion.numero_pagas = numeroPagas;
+  }
 
   return sequelize.transaction(async (transaction) => {
     const vigente = await UsuarioRetribucion.findOne({
@@ -105,6 +164,8 @@ const guardarRetribucion = async (
       }
 
       const mismoSalario = Number(vigente.salario_bruto_mensual) === salario
+        && Number(vigente.salario_bruto_anual || 0) === Number(salarioAnual || 0)
+        && Number(vigente.numero_pagas || 0) === Number(numeroPagas || 0)
         && vigente.moneda === moneda
         && inicioNuevo.isSame(inicioVigente, 'day');
 
@@ -121,9 +182,7 @@ const guardarRetribucion = async (
 
       if (inicioNuevo.isSame(inicioVigente, 'day')) {
         await vigente.update({
-          salario_bruto_mensual: salario,
-          moneda,
-          observaciones,
+          ...datosRetribucion,
           usuario_modificacion: idUsuarioAccion,
           fecha_modificacion: ahora,
         }, { transaction });
@@ -144,11 +203,9 @@ const guardarRetribucion = async (
       'id_retribucion',
       {
         id_usuario: idUsuario,
-        salario_bruto_mensual: salario,
-        moneda,
+        ...datosRetribucion,
         fecha_desde: fechaDesde,
         fecha_hasta: null,
-        observaciones,
         usuario_alta: idUsuarioAccion,
         fecha_alta: ahora,
       },

@@ -20,6 +20,14 @@ const UsuarioRetribucion = sequelize.define('UsuarioRetribucion', {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
+  salario_bruto_anual: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+  },
+  numero_pagas: {
+    type: DataTypes.TINYINT.UNSIGNED,
+    allowNull: true,
+  },
   moneda: {
     type: DataTypes.STRING(3),
     allowNull: false,

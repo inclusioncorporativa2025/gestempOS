@@ -24,6 +24,17 @@
   background: rgba(var(--color-primary-rgb), 0.08);
 }
 
+.retribucion-panel__preview {
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.retribucion-panel__origen-anual {
+  font-size: 0.85em;
+}
+
 .retribucion-panel__form-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
