@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
   const landingApiBaseUrl =
     env.VITE_LANDING_API_BASE_URL
     || apiBaseUrl
-    || (isProd ? 'https://app.fichaeneltrabajo.es/api/' : 'http://127.0.0.1:5000/api/');
+    || (isProd ? 'https://app.timecor.es/api/' : 'http://127.0.0.1:5000/api/');
   const calendlyDemoUrl =
     env.VITE_CALENDLY_DEMO_URL
     || 'https://calendly.com/inclusioncorporativa-info/timecor-demo';

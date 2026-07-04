@@ -36,8 +36,10 @@ const LandingCalendlyEmbed = ({
 
   useEffect(() => {
     const onCalendlyMessage = (event) => {
-      if (event.origin !== 'https://calendly.com') return;
-      if (event.data?.event !== 'calendly.event_scheduled') return;
+      if (!String(event.origin || '').includes('calendly.com')) return;
+
+      const eventName = event.data?.event;
+      if (eventName !== 'calendly.event_scheduled') return;
 
       notifyCalendlyBooking({
         invitee: event.data.payload?.invitee,

@@ -89,6 +89,36 @@ const mapCalendlyBookingToLead = ({
   };
 };
 
+const mapCalendlyWebhookPayloadToLead = (body = {}, { ip = '', userAgent = '' } = {}) => {
+  const payload = body.payload || body;
+  const scheduled = payload.scheduled_event || {};
+
+  return mapCalendlyBookingToLead({
+    invitee: {
+      email: payload.email,
+      name: payload.name,
+      created_at: payload.created_at,
+      timezone: payload.timezone,
+      text_reminder_number: payload.text_reminder_number,
+      cancel_url: payload.cancel_url,
+      reschedule_url: payload.reschedule_url,
+      questions_and_answers: payload.questions_and_answers,
+      tracking: payload.tracking,
+    },
+    event: {
+      name: scheduled.name,
+      start_time: scheduled.start_time,
+      end_time: scheduled.end_time,
+    },
+    tracking: payload.tracking || {},
+    origen: 'calendly_webhook',
+    evento: 'demo_solicitada',
+    ip,
+    userAgent,
+  });
+};
+
 module.exports = {
   mapCalendlyBookingToLead,
+  mapCalendlyWebhookPayloadToLead,
 };

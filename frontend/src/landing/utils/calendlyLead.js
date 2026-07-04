@@ -13,7 +13,7 @@ export const getLandingApiBase = () => {
   if (import.meta.env.PROD) {
     if (landingApi && !isLocalhostUrl(landingApi)) return resolveUrl(landingApi);
     if (appApi && !isLocalhostUrl(appApi)) return resolveUrl(appApi);
-    return resolveUrl('https://app.fichaeneltrabajo.es/api/');
+    return resolveUrl('https://app.timecor.es/api/');
   }
 
   if (landingApi) return resolveUrl(landingApi);

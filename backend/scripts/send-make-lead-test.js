@@ -7,7 +7,6 @@
  *
  * Requiere en backend/.env:
  *   MAKE_LEAD_WEBHOOK_URL=https://hook.eu1.make.com/...
- *   MAKE_LEAD_WEBHOOK_API_KEY=tc_make_...
  */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 

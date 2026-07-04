@@ -35,6 +35,7 @@ export const notifyCalendlyBooking = async ({ invitee, event }) => {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
       body: JSON.stringify({
         invitee,
         event,
@@ -49,6 +50,6 @@ export const notifyCalendlyBooking = async ({ invitee, event }) => {
       console.warn('[Calendly → Make] Error al registrar lead:', response.status, endpoint, body);
     }
   } catch (error) {
-    console.warn('[Calendly → Make] No se pudo contactar con el backend:', error.message);
+    console.warn('[Calendly → Make] No se pudo contactar con el backend:', endpoint, error.message);
   }
 };
