@@ -2,7 +2,6 @@
   width: 100%;
   background: #fff;
   line-height: 0;
-  overflow: hidden;
 }
 
 .landing-calendly-embed__iframe {
@@ -13,15 +12,16 @@
 }
 
 .landing-calendly-embed--modal.landing-calendly-embed--widget {
-  min-width: 320px;
+  width: 100%;
   min-height: 520px;
   height: auto;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .landing-calendly-embed--modal.landing-calendly-embed--widget iframe {
   display: block;
-  width: 100%;
+  width: 100% !important;
+  min-height: 520px;
   border: 0;
 }
 
@@ -32,6 +32,10 @@
 
 @media (max-width: 640px) {
   .landing-calendly-embed--modal.landing-calendly-embed--widget {
+    min-height: 460px;
+  }
+
+  .landing-calendly-embed--modal.landing-calendly-embed--widget iframe {
     min-height: 460px;
   }
 

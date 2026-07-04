@@ -39,6 +39,15 @@ const LandingCalendlyEmbed = ({
       if (!String(event.origin || '').includes('calendly.com')) return;
 
       const eventName = event.data?.event;
+
+      if (eventName === 'calendly.page_height' && containerRef.current) {
+        const height = Number(event.data.payload?.height);
+        if (height > 0) {
+          containerRef.current.style.height = `${height}px`;
+        }
+        return;
+      }
+
       if (eventName !== 'calendly.event_scheduled') return;
 
       notifyCalendlyBooking({

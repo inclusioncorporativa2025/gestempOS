@@ -9,15 +9,15 @@ const LandingCalendlyModal = ({ open, onClose }) => (
     open={open}
     onCancel={onClose}
     footer={null}
-    width={720}
-    centered
+    width={980}
+    centered={false}
     destroyOnClose
     className="landing-calendly-modal"
     wrapClassName="landing-calendly-modal-wrap"
+    style={{ top: 20, paddingBottom: 0 }}
     styles={{
-      body: { padding: 0, overflow: 'hidden' },
-      content: { overflow: 'hidden', padding: 0 },
-      wrapper: { overflow: 'hidden' },
+      body: { padding: 0, overflow: 'visible', flex: 1, minHeight: 0 },
+      content: { overflow: 'visible', padding: 0, display: 'flex', flexDirection: 'column' },
     }}
   >
     <header className="landing-calendly-modal__header">

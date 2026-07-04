@@ -1,21 +1,15 @@
 .landing-calendly-modal-wrap {
-  overflow: hidden !important;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.landing-calendly-modal-wrap::-webkit-scrollbar {
-  display: none;
+  overflow: auto !important;
 }
 
 .landing-calendly-modal {
-  max-width: calc(100vw - 1.5rem);
-  max-height: calc(100vh - 2rem);
+  max-width: min(980px, calc(100vw - 1.5rem));
+  top: 1rem;
   padding-bottom: 0;
 }
 
 .landing-calendly-modal .ant-modal-content {
-  overflow: hidden;
+  overflow: visible;
   border-radius: 12px;
   max-height: calc(100vh - 2rem);
 }
@@ -33,10 +27,11 @@
 
 .landing-calendly-modal__header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.35rem 3rem 1.15rem 1.35rem;
+  flex-shrink: 0;
+  padding: 1rem 3rem 0.85rem 1.25rem;
   background: linear-gradient(
     135deg,
     rgba(var(--color-primary-rgb, 168, 92, 224), 0.06) 0%,
@@ -51,7 +46,7 @@
 
 .landing-calendly-modal__eyebrow {
   display: block;
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.25rem;
   font-size: 0.6875rem;
   font-weight: var(--font-weight-medium, 500);
   letter-spacing: 0.08em;
@@ -60,8 +55,8 @@
 }
 
 .landing-calendly-modal__title {
-  margin: 0 0 0.35rem;
-  font-size: 1.25rem;
+  margin: 0 0 0.2rem;
+  font-size: 1.15rem;
   font-weight: var(--font-weight-medium, 500);
   line-height: 1.25;
   color: var(--color-dark, #001529);
@@ -69,14 +64,13 @@
 
 .landing-calendly-modal__subtitle {
   margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.45;
+  font-size: 0.8125rem;
+  line-height: 1.4;
   color: rgba(0, 21, 41, 0.58);
 }
 
 .landing-calendly-modal__badge {
   flex-shrink: 0;
-  margin-top: 0.15rem;
   padding: 0.3rem 0.65rem;
   font-size: 0.75rem;
   font-weight: var(--font-weight-medium, 500);
@@ -90,20 +84,27 @@
 .landing-calendly-modal .ant-modal-body {
   padding: 0;
   line-height: 0;
-  overflow: hidden;
+  overflow: visible;
+  flex: 1;
+  min-height: 0;
 }
 
 @media (max-width: 640px) {
   .landing-calendly-modal {
-    max-width: calc(100vw - 1rem);
+    max-width: calc(100vw - 0.75rem);
+    top: 0.5rem;
   }
 
   .landing-calendly-modal__header {
-    padding: 1.15rem 2.75rem 1rem 1.15rem;
+    padding: 0.9rem 2.75rem 0.75rem 1rem;
   }
 
   .landing-calendly-modal__title {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
+  }
+
+  .landing-calendly-modal__subtitle {
+    font-size: 0.75rem;
   }
 
   .landing-calendly-modal__badge {

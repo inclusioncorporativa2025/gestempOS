@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const helmet = require('helmet');
 const jwt = require('jsonwebtoken');
 const path = require('path');
-const { APP_URL } = require('./appUrls');
+const { APP_URL, LANDING_URL } = require('./appUrls');
 
 const parseOrigins = (raw) =>
   String(raw || '')
@@ -21,6 +21,9 @@ const configureMiddleware = (app) => {
   const allowedOrigins = new Set(parseOrigins(process.env.ALLOWED_ORIGINS));
   if (APP_URL) {
     allowedOrigins.add(APP_URL);
+  }
+  if (LANDING_URL) {
+    allowedOrigins.add(LANDING_URL);
   }
 
   const isDev = process.env.NODE_ENV !== 'production';

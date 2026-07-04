@@ -27,7 +27,11 @@ export const getStoredUtmParams = () => {
 };
 
 export const notifyCalendlyBooking = async ({ invitee, event }) => {
-  if (!invitee?.email) return;
+  const email = invitee?.email || invitee?.invitee?.email || '';
+  if (!email) {
+    console.warn('[Calendly → Make] Reserva detectada pero sin email en postMessage:', invitee);
+    return;
+  }
 
   const endpoint = `${getLandingApiBase()}landing/demo-lead`;
 
@@ -37,7 +41,7 @@ export const notifyCalendlyBooking = async ({ invitee, event }) => {
       headers: { 'Content-Type': 'application/json' },
       keepalive: true,
       body: JSON.stringify({
-        invitee,
+        invitee: invitee?.email ? invitee : { ...invitee, email },
         event,
         utm: getStoredUtmParams(),
         origen: 'landing_timecor',
@@ -48,7 +52,10 @@ export const notifyCalendlyBooking = async ({ invitee, event }) => {
     if (!response.ok) {
       const body = await response.text().catch(() => '');
       console.warn('[Calendly → Make] Error al registrar lead:', response.status, endpoint, body);
+      return;
     }
+
+    console.info('[Calendly → Make] Lead registrado:', email);
   } catch (error) {
     console.warn('[Calendly → Make] No se pudo contactar con el backend:', endpoint, error.message);
   }
