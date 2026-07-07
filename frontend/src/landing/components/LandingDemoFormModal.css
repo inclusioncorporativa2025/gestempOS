@@ -1,0 +1,120 @@
+.landing-demo-modal-wrap .ant-modal-content {
+  border-radius: 16px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.landing-demo-modal .ant-modal-body {
+  padding: 2rem 2rem 1.75rem;
+}
+
+.landing-demo-modal__header {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.landing-demo-modal__eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-medium, 500);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-primary, #a85ce0);
+}
+
+.landing-demo-modal__title {
+  margin: 0 0 0.65rem;
+  font-size: 1.35rem;
+  font-weight: var(--font-weight-medium, 500);
+  line-height: 1.25;
+  color: var(--color-dark, #001529);
+}
+
+.landing-demo-modal__intro {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: rgba(0, 21, 41, 0.62);
+}
+
+.landing-demo-modal__form .ant-form-item-label > label {
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-dark, #001529);
+}
+
+.landing-demo-modal__form .ant-input,
+.landing-demo-modal__form .ant-input-affix-wrapper,
+.landing-demo-modal__form .ant-select-selector,
+.landing-demo-modal__form .ant-picker {
+  border-radius: 999px !important;
+}
+
+.landing-demo-modal__form .ant-picker {
+  width: 100%;
+}
+
+.landing-demo-modal__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1rem;
+}
+
+.landing-demo-modal__consent {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: rgba(0, 21, 41, 0.72);
+}
+
+.landing-demo-modal__consent a {
+  color: var(--color-primary, #a85ce0);
+  text-decoration: underline;
+}
+
+.landing-demo-modal__submit {
+  height: 3rem !important;
+  border-radius: 999px !important;
+  font-weight: var(--font-weight-medium, 500) !important;
+  margin-top: 0.25rem;
+  border: none !important;
+  color: #fff !important;
+}
+
+.landing-demo-modal__footer-note {
+  margin: 0.85rem 0 0;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: rgba(0, 21, 41, 0.45);
+}
+
+.landing-demo-modal__success {
+  text-align: center;
+  padding: 1rem 0 0.25rem;
+}
+
+.landing-demo-modal__success-icon {
+  font-size: 3rem;
+  color: #52c41a;
+  margin-bottom: 1rem;
+}
+
+.landing-demo-modal__note {
+  margin: 0 0 1.5rem;
+  font-size: 0.875rem;
+  color: rgba(0, 21, 41, 0.55);
+}
+
+@media (max-width: 640px) {
+  .landing-demo-modal .ant-modal-body {
+    padding: 1.35rem 1.15rem 1.25rem;
+  }
+
+  .landing-demo-modal__row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .landing-demo-modal__title {
+    font-size: 1.2rem;
+  }
+}

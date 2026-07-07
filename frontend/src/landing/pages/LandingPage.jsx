@@ -17,7 +17,7 @@ import { getAppLoginHref, getAppRegisterHref } from '../../utils/appLinks';
 import { PLANS, PLAN_COMPARISON_ROWS, ANNUAL_DISCOUNT_LABEL, getPlanMinAnnual, LICENSE_IS_USER_NOTE, PRICES_EXCLUDE_TAX_NOTE, PRICE_UNIT_MONTHLY, PRICE_UNIT_ANNUAL, MIN_USERS_LABEL } from '../../constants/plans';
 import LandingFooter from '../components/LandingFooter';
 import LandingHeroVisual from '../components/LandingHeroVisual';
-import LandingCalendlyModal from '../components/LandingCalendlyModal';
+import LandingDemoFormModal from '../components/LandingDemoFormModal';
 import LandingPlexusBackground from '../components/LandingPlexusBackground';
 import LandingReveal from '../components/LandingReveal';
 import LandingStats from '../components/LandingStats';
@@ -188,7 +188,7 @@ const PlanBillingToggle = ({ billingPeriod, onChange, variant = 'standalone' }) 
 
 const LandingPage = () => {
   const [billingPeriod, setBillingPeriod] = useState('monthly');
-  const [calendlyOpen, setCalendlyOpen] = useState(false);
+  const [demoFormOpen, setDemoFormOpen] = useState(false);
   const loginHref = getAppLoginHref();
   const registerHref = getAppRegisterHref();
   const loginIsExternal = loginHref.startsWith('http');
@@ -235,7 +235,7 @@ const LandingPage = () => {
                 type="primary"
                 size="large"
                 className="landing-cta-start landing-hero-cta-primary"
-                onClick={() => setCalendlyOpen(true)}
+                onClick={() => setDemoFormOpen(true)}
               >
                 Demo gratuita
               </Button>
@@ -570,9 +570,9 @@ const LandingPage = () => {
       </LandingReveal>
       </div>
 
-      <LandingCalendlyModal
-        open={calendlyOpen}
-        onClose={() => setCalendlyOpen(false)}
+      <LandingDemoFormModal
+        open={demoFormOpen}
+        onClose={() => setDemoFormOpen(false)}
       />
     </div>
   );

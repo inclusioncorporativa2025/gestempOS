@@ -5,7 +5,7 @@ const { ROLES } = require('../middleware/authMiddleware');
 const isEmailValido = (email) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
 
-/** Admin (3) y supervisor (4) vinculados a la empresa, con email válido. */
+/** Admin (3) y supervisor (4) activos en la empresa, con email válido. */
 const obtenerEmailsGestoresEmpresa = async (idEmpresa) => {
   const filas = await sequelize.query(
     `SELECT DISTINCT u.email
@@ -14,6 +14,8 @@ const obtenerEmailsGestoresEmpresa = async (idEmpresa) => {
      WHERE ue.id_empresa = :idEmpresa
        AND ue.fecha_baja IS NULL
        AND u.fecha_baja IS NULL
+       AND IFNULL(ue.activo, 1) = 1
+       AND IFNULL(u.activo, 1) = 1
        AND COALESCE(ue.tipo_usuario, u.tipo_usuario) IN (:tipoAdmin, :tipoSupervisor)`,
     {
       type: QueryTypes.SELECT,

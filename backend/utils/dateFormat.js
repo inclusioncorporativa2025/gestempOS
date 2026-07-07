@@ -19,6 +19,23 @@ const formatDateDMY = (value, timeZone = 'Europe/Madrid') => {
   }
 };
 
+const formatDateTimeDMY = (dateStr, timeStr = '') => {
+  if (!dateStr) return '';
+
+  const cleanDate = String(dateStr).split('T')[0];
+  const isoMatch = cleanDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const time = String(timeStr || '').trim();
+
+  if (isoMatch && time) {
+    const [, year, month, day] = isoMatch;
+    return `${day}/${month}/${year} ${time}`;
+  }
+
+  const formattedDate = formatDateDMY(dateStr);
+  return time ? `${formattedDate} ${time}` : formattedDate;
+};
+
 module.exports = {
   formatDateDMY,
+  formatDateTimeDMY,
 };

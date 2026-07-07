@@ -17,42 +17,18 @@ const buildTestLead = () => {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const demoStart = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
   demoStart.setMinutes(0, 0, 0);
-  const demoEnd = new Date(demoStart.getTime() + 30 * 60 * 1000);
 
   return buildLeadPayload({
     fecha_registro: new Date().toISOString(),
-    fecha_demo: demoStart.toISOString(),
-    fecha_demo_legible: demoStart.toLocaleString('es-ES', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Madrid',
-    }),
-    fecha_demo_fin: demoEnd.toISOString(),
+    fecha_demo: demoStart.toISOString().split('T')[0],
+    hora_demo: '11:00',
     demo_zona_horaria: 'Europe/Madrid',
-    demo_enlace_cancelar: 'https://calendly.com/cancellations/ejemplo',
-    demo_enlace_reagendar: 'https://calendly.com/reschedulings/ejemplo',
     nombre: 'Julia Prueba Real',
     email: `prueba.demo+${stamp}@timecor.es`,
     telefono: '+34600999888',
-    empresa: 'Prueba Integración SL',
-    cargo: 'Responsable RRHH',
-    num_empleados: '11-50',
-    interes: 'Demo Timecor - fichajes y prenómina',
-    mensaje: 'Reserva de prueba real para validar flujo Make → Google Sheets.',
-    origen: 'landing_timecor',
-    evento: 'demo_solicitada',
-    utm_source: 'test_manual',
-    utm_medium: 'script',
-    utm_campaign: 'validacion_make',
-    estado_lead: 'prueba',
+    empresa: 'Empresa con empleados',
+    num_empleados: '6-20',
     consentimiento_rgpd: true,
-    ip: '127.0.0.1',
-    user_agent: 'gestempOS/send-make-lead-test',
-    make_execution_id: '',
   });
 };
 
