@@ -768,6 +768,247 @@ const puedeAmpliarLicenciasStripe = (facturacion) => {
   return ESTADOS_AMPLIABLES.has(estado);
 };
 
+const resolverPriceIdPlan = async (planCodigo, ciclo) => {
+  const planId = normalizePlanId(planCodigo);
+  const planRow = await Plan.findOne({
+    where: { codigo: planId, activo: true },
+    raw: true,
+  });
+
+  if (!planRow) {
+    const error = new Error('Plan no encontrado o no disponible');
+    error.status = 404;
+    error.code = 'PLAN_NOT_FOUND';
+    throw error;
+  }
+
+  const cicloNormalizado = ciclo === 'anual' ? 'anual' : 'mensual';
+  const priceId = cicloNormalizado === 'anual'
+    ? planRow.stripe_price_id_anual
+    : planRow.stripe_price_id_mensual;
+
+  if (!priceId) {
+    const error = new Error('Precio de Stripe no configurado para este plan');
+    error.status = 503;
+    error.code = 'STRIPE_PRICE_NOT_CONFIGURED';
+    throw error;
+  }
+
+  await validarPrecioSuscripcion(priceId, cicloNormalizado);
+
+  return { planRow, planId, priceId, ciclo: cicloNormalizado };
+};
+
+const resolverCambioPlanStripe = async (idEmpresa, { plan: planCodigo, licencias } = {}) => {
+  const facturacion = await asegurarSuscripcionSincronizada(idEmpresa);
+  if (!puedeAmpliarLicenciasStripe(facturacion)) {
+    const error = new Error(
+      'No hay suscripción de Stripe activa. Activa la suscripción en Facturación.',
+    );
+    error.status = 400;
+    error.code = 'NO_STRIPE_SUBSCRIPTION';
+    throw error;
+  }
+
+  const empresa = await Empresa.findByPk(idEmpresa);
+  if (!empresa) {
+    const error = new Error('Empresa no encontrada');
+    error.status = 404;
+    throw error;
+  }
+
+  const planActual = normalizePlanId(empresa.plan);
+  const ciclo = String(facturacion.ciclo_facturacion || 'mensual').toLowerCase() === 'anual'
+    ? 'anual'
+    : 'mensual';
+
+  const { planRow, planId: planNuevo, priceId } = await resolverPriceIdPlan(planCodigo, ciclo);
+  const disponibilidad = await obtenerDisponibilidadLicencias(idEmpresa);
+  const minLicencias = Math.max(
+    getPlanMinLicencias(planNuevo),
+    Number(planRow.min_licencias) || getPlanMinLicencias(planNuevo),
+  );
+  const licenciasAnterior = Number(empresa.licencias) || Number(facturacion.licencias_facturadas) || 0;
+
+  let nuevaCantidad = licencias != null ? Number(licencias) : licenciasAnterior;
+  if (!Number.isFinite(nuevaCantidad)) {
+    nuevaCantidad = licenciasAnterior;
+  }
+
+  nuevaCantidad = Math.max(nuevaCantidad, minLicencias, disponibilidad.usadas);
+
+  if (nuevaCantidad < disponibilidad.usadas) {
+    const error = new Error(
+      `No puede reducir por debajo de las licencias en uso (${disponibilidad.usadas})`,
+    );
+    error.status = 400;
+    error.code = 'LICENCIAS_EN_USO';
+    throw error;
+  }
+
+  let itemId = facturacion.stripe_subscription_item_id;
+  const subscriptionId = facturacion.stripe_subscription_id;
+  const customerId = facturacion.stripe_customer_id;
+
+  if (!itemId) {
+    const sub = await getStripe().subscriptions.retrieve(subscriptionId);
+    itemId = sub.items?.data?.[0]?.id ?? null;
+  }
+
+  if (!itemId) {
+    const error = new Error('No se encontró el ítem de suscripción en Stripe');
+    error.status = 400;
+    error.code = 'SUBSCRIPTION_ITEM_NOT_FOUND';
+    throw error;
+  }
+
+  if (!customerId) {
+    const error = new Error('No hay cliente de Stripe asociado');
+    error.status = 400;
+    error.code = 'NO_STRIPE_CUSTOMER';
+    throw error;
+  }
+
+  return {
+    facturacion,
+    empresa,
+    planActual,
+    planNuevo,
+    planRow,
+    priceId,
+    ciclo,
+    nuevaCantidad,
+    licenciasAnterior,
+    itemId,
+    subscriptionId,
+    customerId,
+    disponibilidad,
+  };
+};
+
+const centimosAEur = (centimos) => Number(centimos || 0) / 100;
+
+const mapearLineasPreviewStripe = (invoice) =>
+  (invoice?.lines?.data || []).map((line) => ({
+    descripcion: line.description || 'Concepto',
+    importe_eur: centimosAEur(line.amount),
+    prorrateo: Boolean(line.proration),
+  }));
+
+const previewCambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias } = {}) => {
+  const resolved = await resolverCambioPlanStripe(idEmpresa, { plan: planCodigo, licencias });
+  const {
+    planActual,
+    planNuevo,
+    priceId,
+    ciclo,
+    nuevaCantidad,
+    licenciasAnterior,
+    itemId,
+    subscriptionId,
+    customerId,
+  } = resolved;
+
+  if (planNuevo === planActual && nuevaCantidad === licenciasAnterior) {
+    return {
+      sin_cambios: true,
+      plan: planNuevo,
+      plan_anterior: planActual,
+      plan_label: getPlanLabel(planNuevo),
+      licencias: nuevaCantidad,
+      licencias_anterior: licenciasAnterior,
+      importe_cobrar_ahora_eur: 0,
+      importe_subtotal_eur: 0,
+      importe_iva_eur: 0,
+      moneda: 'EUR',
+      lineas: [],
+      ciclo_facturacion: ciclo,
+    };
+  }
+
+  const previewParams = {
+    customer: customerId,
+    subscription: subscriptionId,
+    subscription_details: {
+      items: [{ id: itemId, price: priceId, quantity: nuevaCantidad }],
+      proration_behavior: 'create_prorations',
+    },
+  };
+
+  if (impuestosAutomaticosActivos()) {
+    previewParams.automatic_tax = { enabled: true };
+  }
+
+  const preview = await getStripe().invoices.createPreview(previewParams);
+
+  const importeIva = (preview.total_tax_amounts || []).reduce(
+    (sum, tax) => sum + Number(tax.amount || 0),
+    0,
+  );
+
+  return {
+    sin_cambios: false,
+    plan: planNuevo,
+    plan_anterior: planActual,
+    plan_label: getPlanLabel(planNuevo),
+    licencias: nuevaCantidad,
+    licencias_anterior: licenciasAnterior,
+    importe_cobrar_ahora_eur: centimosAEur(preview.amount_due),
+    importe_subtotal_eur: centimosAEur(preview.subtotal),
+    importe_iva_eur: centimosAEur(importeIva),
+    moneda: String(preview.currency || 'eur').toUpperCase(),
+    lineas: mapearLineasPreviewStripe(preview),
+    ciclo_facturacion: ciclo,
+  };
+};
+
+const cambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias } = {}) => {
+  const resolved = await resolverCambioPlanStripe(idEmpresa, { plan: planCodigo, licencias });
+  const {
+    planActual,
+    planNuevo,
+    priceId,
+    ciclo,
+    nuevaCantidad,
+    licenciasAnterior,
+    itemId,
+    subscriptionId,
+    disponibilidad,
+  } = resolved;
+
+  if (planNuevo === planActual && nuevaCantidad === licenciasAnterior) {
+    const error = new Error('No hay cambios en el plan ni en las licencias');
+    error.status = 400;
+    error.code = 'PLAN_SIN_CAMBIO';
+    throw error;
+  }
+
+  await getStripe().subscriptions.update(subscriptionId, {
+    items: [{ id: itemId, price: priceId, quantity: nuevaCantidad }],
+    proration_behavior: 'create_prorations',
+    metadata: {
+      id_empresa: String(idEmpresa),
+      plan_codigo: planNuevo,
+    },
+  });
+
+  await sincronizarSuscripcion(subscriptionId, { motivo: 'cambiar_plan' });
+
+  const actualizada = await obtenerDisponibilidadLicencias(idEmpresa);
+
+  return {
+    plan: planNuevo,
+    plan_anterior: planActual,
+    plan_label: getPlanLabel(planNuevo),
+    licencias: nuevaCantidad,
+    licencias_anterior: licenciasAnterior,
+    licencias_usadas: actualizada.usadas,
+    plazas_libres: actualizada.plazasLibres,
+    ciclo_facturacion: ciclo,
+    prorrateo: true,
+  };
+};
+
 const ampliarLicenciasStripe = async (idEmpresa, { licencias } = {}) => {
   const disponibilidad = await obtenerDisponibilidadLicencias(idEmpresa);
 
@@ -880,6 +1121,7 @@ const obtenerEstadoFacturacion = async (idEmpresa) => {
     cancel_at_period_end: Boolean(facturacionFinal?.cancel_at_period_end),
     tiene_stripe: Boolean(facturacionFinal?.stripe_subscription_id),
     puede_ampliar_stripe: puedeAmpliarLicenciasStripe(facturacionFinal),
+    puede_cambiar_plan: puedeAmpliarLicenciasStripe(facturacionFinal),
     puede_portal: Boolean(facturacionFinal?.stripe_customer_id),
     puede_cancelar:
       Boolean(facturacionFinal?.stripe_subscription_id)
@@ -970,6 +1212,8 @@ module.exports = {
   cancelarSuscripcion,
   reactivarSuscripcion,
   ampliarLicenciasStripe,
+  cambiarPlanStripe,
+  previewCambiarPlanStripe,
   puedeAmpliarLicenciasStripe,
   obtenerEstadoFacturacion,
   verificarSesionCheckout,

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Typography,
   Tag,
@@ -36,6 +36,8 @@ import {
   crearPortal,
   cancelarSuscripcion,
   reactivarSuscripcion,
+  cambiarPlan,
+  previewCambiarPlan,
 } from '../../features/billing/billingService';
 import { TRIAL_EXPIRED_EVENT } from '../../hooks/useTrialStatus';
 import { APP_ROUTES } from '../../constants/routes';
@@ -79,6 +81,11 @@ const formatEuro = (amount) =>
 const FacturacionPanel = ({ activo = true }) => {
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [cambiarPlanLoading, setCambiarPlanLoading] = useState(false);
+  const [cambiarPlanModalOpen, setCambiarPlanModalOpen] = useState(false);
+  const [previewCambioPlan, setPreviewCambioPlan] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const previewRequestId = useRef(0);
   const [portalLoading, setPortalLoading] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [reactivarLoading, setReactivarLoading] = useState(false);
@@ -269,6 +276,84 @@ const FacturacionPanel = ({ activo = true }) => {
     }
   };
 
+  const suscripcionActiva =
+    estado?.estado_suscripcion === 'active' || estado?.estado_suscripcion === 'trialing';
+  const esLegacy = estado?.modo_facturacion === 'legacy' || estado?.es_legacy;
+
+  const puedeCambiarPlan =
+    Boolean(estado?.puede_cambiar_plan) && suscripcionActiva && !esLegacy;
+  const planActual = normalizePlanId(estado?.plan || plan);
+  const licenciasActuales = estado?.licencias ?? licencias;
+  const hayCambiosPendientes =
+    plan !== planActual || Number(licencias) !== Number(licenciasActuales);
+
+  const abrirConfirmacionCambioPlan = () => {
+    if (!planDisponible) {
+      message.info(PLAN_UNAVAILABLE_TOOLTIP);
+      return;
+    }
+    if (licencias < minLicencias) {
+      message.warning(`Mínimo ${minLicencias} licencias para el plan ${getPlanLabel(plan)}`);
+      return;
+    }
+    if (!hayCambiosPendientes) {
+      message.info('Selecciona un plan o número de licencias distinto al actual');
+      return;
+    }
+    setCambiarPlanModalOpen(true);
+  };
+
+  const ejecutarCambioPlan = async () => {
+    setCambiarPlanLoading(true);
+    try {
+      const resultado = await cambiarPlan({ plan, licencias });
+      message.success(
+        `Plan actualizado a ${resultado.plan_label || getPlanLabel(plan)}. `
+        + 'Stripe cargará el importe prorrateado en su método de pago.',
+      );
+      setCambiarPlanModalOpen(false);
+      setPreviewCambioPlan(null);
+      await cargar();
+    } catch (error) {
+      message.error(error.message || 'No se pudo cambiar el plan');
+    } finally {
+      setCambiarPlanLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!activo || !puedeCambiarPlan || !hayCambiosPendientes) {
+      setPreviewCambioPlan(null);
+      setPreviewLoading(false);
+      return undefined;
+    }
+
+    const requestId = previewRequestId.current + 1;
+    previewRequestId.current = requestId;
+
+    const timer = setTimeout(async () => {
+      setPreviewLoading(true);
+      try {
+        const preview = await previewCambiarPlan({ plan, licencias });
+        if (previewRequestId.current === requestId) {
+          setPreviewCambioPlan(preview);
+        }
+      } catch {
+        if (previewRequestId.current === requestId) {
+          setPreviewCambioPlan(null);
+        }
+      } finally {
+        if (previewRequestId.current === requestId) {
+          setPreviewLoading(false);
+        }
+      }
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [activo, puedeCambiarPlan, hayCambiosPendientes, plan, licencias]);
+
   if (loading && !estado) {
     return (
       <div className="facturacion-panel facturacion-panel--loading">
@@ -277,10 +362,6 @@ const FacturacionPanel = ({ activo = true }) => {
     );
   }
 
-  const suscripcionActiva =
-    estado?.estado_suscripcion === 'active' || estado?.estado_suscripcion === 'trialing';
-
-  const esLegacy = estado?.modo_facturacion === 'legacy' || estado?.es_legacy;
   const enPruebaStripe = Boolean(estado?.en_prueba_stripe);
   const fechaFinAcceso = enPruebaStripe
     ? estado?.trial_ends_at || estado?.current_period_end
@@ -503,25 +584,35 @@ const FacturacionPanel = ({ activo = true }) => {
         </section>
 
         <section className="facturacion-panel__card facturacion-panel__card--checkout">
-          <Text className="facturacion-panel__section-title">Configurar plan</Text>
+          <Text className="facturacion-panel__section-title">
+            {puedeCambiarPlan ? 'Cambiar de plan' : 'Configurar plan'}
+          </Text>
 
-          <div className="facturacion-billing-toggle" role="group" aria-label="Ciclo de suscripción">
-            <button
-              type="button"
-              className={`facturacion-billing-toggle__option${ciclo === 'mensual' ? ' is-active' : ''}`}
-              onClick={() => setCiclo('mensual')}
-            >
-              Mensual
-            </button>
-            <button
-              type="button"
-              className={`facturacion-billing-toggle__option${ciclo === 'anual' ? ' is-active' : ''}`}
-              onClick={() => setCiclo('anual')}
-            >
-              Anual
-              <span className="facturacion-billing-toggle__badge">{ANNUAL_DISCOUNT_LABEL}</span>
-            </button>
-          </div>
+          {puedeCambiarPlan ? (
+            <Text type="secondary" className="facturacion-panel__hint facturacion-panel__hint--block">
+              Ciclo actual:{' '}
+              <strong>{ciclo === 'anual' ? 'Anual' : 'Mensual'}</strong>
+              . El cambio de plan mantiene el mismo ciclo hasta la próxima renovación.
+            </Text>
+          ) : (
+            <div className="facturacion-billing-toggle" role="group" aria-label="Ciclo de suscripción">
+              <button
+                type="button"
+                className={`facturacion-billing-toggle__option${ciclo === 'mensual' ? ' is-active' : ''}`}
+                onClick={() => setCiclo('mensual')}
+              >
+                Mensual
+              </button>
+              <button
+                type="button"
+                className={`facturacion-billing-toggle__option${ciclo === 'anual' ? ' is-active' : ''}`}
+                onClick={() => setCiclo('anual')}
+              >
+                Anual
+                <span className="facturacion-billing-toggle__badge">{ANNUAL_DISCOUNT_LABEL}</span>
+              </button>
+            </div>
+          )}
 
           <div className="facturacion-plan-picker">
             <Text type="secondary" className="facturacion-panel__field-label">
@@ -600,33 +691,68 @@ const FacturacionPanel = ({ activo = true }) => {
 
           <div className="facturacion-price-summary">
             <div className="facturacion-price-summary__row">
-              <span>Importe estimado</span>
+              <span>
+                {puedeCambiarPlan ? 'Importe a cobrar ahora (prorrateo)' : 'Importe estimado'}
+              </span>
               <strong className="facturacion-price-summary__total">
-                {formatEuro(precioEstimado)} €
-                <span className="facturacion-price-summary__period">
-                  {ciclo === 'mensual' ? '/ mes' : '/ año'}
-                </span>
+                {puedeCambiarPlan ? (
+                  previewLoading ? (
+                    <Spin size="small" />
+                  ) : previewCambioPlan ? (
+                    <>
+                      {formatEuro(previewCambioPlan.importe_cobrar_ahora_eur)} €
+                    </>
+                  ) : (
+                    '—'
+                  )
+                ) : (
+                  <>
+                    {formatEuro(precioEstimado)} €
+                    <span className="facturacion-price-summary__period">
+                      {ciclo === 'mensual' ? '/ mes' : '/ año'}
+                    </span>
+                  </>
+                )}
               </strong>
             </div>
             <Text type="secondary" className="facturacion-price-summary__note">
-              {ciclo === 'anual'
-                ? `Precio con descuento anual (${ANNUAL_DISCOUNT_LABEL}) en el primer año.`
-                : `${planInfo.priceMonthly} € por usuario al mes.`}
+              {puedeCambiarPlan
+                ? previewCambioPlan?.importe_iva_eur > 0
+                  ? `Incluye ${formatEuro(previewCambioPlan.importe_iva_eur)} € de IVA. Calculado por Stripe según los días restantes del periodo.`
+                  : 'Calculado por Stripe según los días restantes del periodo.'
+                : ciclo === 'anual'
+                  ? `Precio con descuento anual (${ANNUAL_DISCOUNT_LABEL}) en el primer año.`
+                  : `${planInfo.priceMonthly} € por usuario al mes.`}
             </Text>
           </div>
 
-          <Button
-            type="primary"
-            size="large"
-            block
-            icon={<CreditCardOutlined />}
-            loading={checkoutLoading}
-            disabled={!planDisponible}
-            onClick={handleCheckout}
-            className="facturacion-panel__cta"
-          >
-            {suscripcionActiva ? 'Actualizar suscripción' : 'Activar suscripción'}
-          </Button>
+          {puedeCambiarPlan ? (
+            <Button
+              type="primary"
+              size="large"
+              block
+              icon={<CreditCardOutlined />}
+              loading={cambiarPlanLoading}
+              disabled={!planDisponible || !hayCambiosPendientes || previewLoading || !previewCambioPlan}
+              onClick={abrirConfirmacionCambioPlan}
+              className="facturacion-panel__cta"
+            >
+              Cambiar de plan
+            </Button>
+          ) : (
+            <Button
+              type="primary"
+              size="large"
+              block
+              icon={<CreditCardOutlined />}
+              loading={checkoutLoading}
+              disabled={!planDisponible}
+              onClick={handleCheckout}
+              className="facturacion-panel__cta"
+            >
+              {suscripcionActiva ? 'Actualizar suscripción' : 'Activar suscripción'}
+            </Button>
+          )}
         </section>
       </div>
     </>
@@ -643,6 +769,48 @@ const FacturacionPanel = ({ activo = true }) => {
           { key: 'facturas', label: 'Facturas', children: contenidoFacturas },
         ]}
       />
+
+      <Modal
+        title="Confirmar cambio de plan"
+        open={cambiarPlanModalOpen}
+        onCancel={() => setCambiarPlanModalOpen(false)}
+        onOk={ejecutarCambioPlan}
+        okText="Confirmar cambio"
+        cancelText="Cancelar"
+        confirmLoading={cambiarPlanLoading}
+        okButtonProps={{ disabled: !previewCambioPlan || previewLoading }}
+        destroyOnClose
+      >
+        <p className="facturacion-cancel-modal__text">
+          Pasará de <strong>{getPlanLabel(planActual)}</strong> ({licenciasActuales} licencias)
+          {' '}a <strong>{getPlanLabel(plan)}</strong> ({licencias} licencias).
+        </p>
+        {previewCambioPlan?.lineas?.length > 0 && (
+          <ul className="facturacion-preview-lines">
+            {previewCambioPlan.lineas.map((linea) => (
+              <li key={`${linea.descripcion}-${linea.importe_eur}`} className="facturacion-preview-lines__item">
+                <span className="facturacion-preview-lines__desc">{linea.descripcion}</span>
+                <span className="facturacion-preview-lines__amount">
+                  {linea.importe_eur < 0 ? '−' : ''}
+                  {formatEuro(Math.abs(linea.importe_eur))} €
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="facturacion-cancel-modal__text">
+          <strong>Total a cobrar ahora:</strong>{' '}
+          {previewCambioPlan
+            ? `${formatEuro(previewCambioPlan.importe_cobrar_ahora_eur)} €`
+            : '—'}
+          {previewCambioPlan?.importe_iva_eur > 0
+            ? ` (IVA incl.: ${formatEuro(previewCambioPlan.importe_iva_eur)} €)`
+            : null}
+        </p>
+        <p className="facturacion-cancel-modal__text">
+          Stripe cargará este importe en su método de pago al confirmar el cambio.
+        </p>
+      </Modal>
 
       <Modal
         title={enPruebaStripe ? '¿Cancelar la prueba gratuita?' : '¿Cancelar la suscripción?'}

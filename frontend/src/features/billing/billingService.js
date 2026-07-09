@@ -112,6 +112,25 @@ export const ampliarLicencias = async (licencias) => {
   return parseJsonError(response, 'Error al ampliar las licencias');
 };
 
+export const cambiarPlan = async ({ plan, licencias }) => {
+  const response = await fetch(`${API_BASE_URL}/cambiar-plan`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ plan, licencias }),
+  });
+  return parseJsonError(response, 'Error al cambiar el plan');
+};
+
+export const previewCambiarPlan = async ({ plan, licencias }) => {
+  const response = await fetch(`${API_BASE_URL}/cambiar-plan/preview`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ plan, licencias }),
+  });
+  const data = await parseJsonError(response, 'Error al calcular el importe del cambio');
+  return data.preview;
+};
+
 export const getRenovacionInfo = async (token) => {
   const response = await fetch(
     `${API_BASE_URL}/renovacion/info?token=${encodeURIComponent(token)}`,

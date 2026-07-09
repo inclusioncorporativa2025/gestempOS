@@ -6,6 +6,8 @@ const {
   cancelarSuscripcion,
   reactivarSuscripcion,
   ampliarLicenciasStripe,
+  cambiarPlanStripe,
+  previewCambiarPlanStripe,
   obtenerEstadoFacturacion,
   verificarSesionCheckout,
   listarFacturasPagadas,
@@ -145,6 +147,52 @@ const postAmpliarLicencias = async (req, res) => {
   }
 };
 
+const postCambiarPlan = async (req, res) => {
+  try {
+    const idEmpresa = getIdEmpresaSesion(req);
+    if (!idEmpresa) {
+      return res.status(400).json({ message: 'No hay empresa en la sesión' });
+    }
+
+    const { plan, licencias } = req.body ?? {};
+    if (!plan) {
+      return res.status(400).json({ message: 'Indique el plan destino' });
+    }
+
+    const resultado = await cambiarPlanStripe(idEmpresa, { plan, licencias });
+    return res.status(200).json(resultado);
+  } catch (error) {
+    console.error('billing postCambiarPlan:', error);
+    return res.status(error.status || 500).json({
+      message: error.message || 'Error al cambiar el plan',
+      code: error.code,
+    });
+  }
+};
+
+const postPreviewCambiarPlan = async (req, res) => {
+  try {
+    const idEmpresa = getIdEmpresaSesion(req);
+    if (!idEmpresa) {
+      return res.status(400).json({ message: 'No hay empresa en la sesión' });
+    }
+
+    const { plan, licencias } = req.body ?? {};
+    if (!plan) {
+      return res.status(400).json({ message: 'Indique el plan destino' });
+    }
+
+    const preview = await previewCambiarPlanStripe(idEmpresa, { plan, licencias });
+    return res.status(200).json({ preview });
+  } catch (error) {
+    console.error('billing postPreviewCambiarPlan:', error);
+    return res.status(error.status || 500).json({
+      message: error.message || 'Error al calcular el importe del cambio de plan',
+      code: error.code,
+    });
+  }
+};
+
 const getSession = async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -277,6 +325,8 @@ module.exports = {
   postCancelar,
   postReactivar,
   postAmpliarLicencias,
+  postCambiarPlan,
+  postPreviewCambiarPlan,
   getSession,
   getFacturas,
   getFacturaDocumento,

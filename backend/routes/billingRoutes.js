@@ -6,6 +6,8 @@ const {
   postCancelar,
   postReactivar,
   postAmpliarLicencias,
+  postCambiarPlan,
+  postPreviewCambiarPlan,
   getRenovacionInfo,
   postRenovacionCheckout,
   getSession,
@@ -32,6 +34,8 @@ router.post('/portal', ...requireBillingAccess, postPortal);
 router.post('/cancelar', ...requireBillingAccess, postCancelar);
 router.post('/reactivar', ...requireBillingAccess, postReactivar);
 router.post('/ampliar-licencias', ...requireBillingAccess, postAmpliarLicencias);
+router.post('/cambiar-plan/preview', ...requireBillingAccess, postPreviewCambiarPlan);
+router.post('/cambiar-plan', ...requireBillingAccess, postCambiarPlan);
 router.get('/session/:sessionId', ...requireBillingAccess, getSession);
 
 module.exports = router;
