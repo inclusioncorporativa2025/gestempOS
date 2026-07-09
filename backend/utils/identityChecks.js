@@ -63,6 +63,19 @@ const findUsuarioActivoPorEmail = async (email, options = {}) => {
   });
 };
 
+/** Cualquier cuenta (activa o dada de baja) por email. */
+const findUsuarioPorEmail = async (email, options = {}) => {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return null;
+
+  return Usuario.findOne({
+    where: {
+      [Op.and]: [where(fn('LOWER', fn('TRIM', col('email'))), normalized)],
+    },
+    ...options,
+  });
+};
+
 const findUsuariosActivosPorDni = async (dni, options = {}) => {
   const normalized = normalizeDni(dni);
   if (!normalized) return [];
@@ -70,6 +83,26 @@ const findUsuariosActivosPorDni = async (dni, options = {}) => {
   const { excludeUserId, ...queryOptions } = options;
   const whereClause = {
     fecha_baja: null,
+    dni: { [Op.ne]: null },
+    [Op.and]: [where(dniSqlNormalized, normalized)],
+  };
+
+  if (excludeUserId != null) {
+    whereClause.id_usuario = { [Op.ne]: excludeUserId };
+  }
+
+  return Usuario.findAll({
+    where: whereClause,
+    ...queryOptions,
+  });
+};
+
+const findUsuariosPorDni = async (dni, options = {}) => {
+  const normalized = normalizeDni(dni);
+  if (!normalized) return [];
+
+  const { excludeUserId, ...queryOptions } = options;
+  const whereClause = {
     dni: { [Op.ne]: null },
     [Op.and]: [where(dniSqlNormalized, normalized)],
   };
@@ -98,6 +131,52 @@ const findUsuarioActivoPorDni = async (dni, options = {}) => {
   }
 
   return usuarios[0];
+};
+
+const findUsuarioPorDni = async (dni, options = {}) => {
+  const usuarios = await findUsuariosPorDni(dni, options);
+  if (usuarios.length === 0) return null;
+  if (usuarios.length === 1) return usuarios[0];
+
+  const emailNorm = normalizeEmail(options.email);
+  if (emailNorm) {
+    const porEmail = usuarios.find(
+      (usuario) => normalizeEmail(usuario.email) === emailNorm,
+    );
+    if (porEmail) return porEmail;
+  }
+
+  return usuarios[0];
+};
+
+const usuarioEstaActivoGlobal = (usuario) =>
+  Boolean(
+    usuario
+    && !usuario.fecha_baja
+    && usuario.activo !== false
+    && usuario.activo !== 0,
+  );
+
+const reactivarUsuarioGlobal = async (
+  idUsuario,
+  { nombre, dni, idUsuarioAccion, fecha, transaction } = {},
+) => {
+  const update = {
+    fecha_baja: null,
+    usuario_baja: null,
+    activo: true,
+    fecha_modificacion: fecha ?? new Date(),
+    usuario_modificacion: idUsuarioAccion ?? null,
+  };
+  if (nombre) update.nombre = nombre;
+  if (dni) update.dni = dni;
+
+  await Usuario.update(update, {
+    where: { id_usuario: idUsuario },
+    transaction,
+  });
+
+  return Usuario.findByPk(idUsuario, { transaction });
 };
 
 const findMembresiaActivaEnEmpresa = async (idUsuario, idEmpresa, options = {}) => {
@@ -138,8 +217,8 @@ const resolverUsuarioIdentidad = async (
   const dniNorm = normalizeDni(dni);
 
   const [byEmail, byDni] = await Promise.all([
-    emailNorm ? findUsuarioActivoPorEmail(emailNorm, options) : null,
-    dniNorm ? findUsuarioActivoPorDni(dniNorm, { ...options, email: emailNorm }) : null,
+    emailNorm ? findUsuarioPorEmail(emailNorm, options) : null,
+    dniNorm ? findUsuarioPorDni(dniNorm, { ...options, email: emailNorm }) : null,
   ]);
 
   if (byEmail && byDni && byEmail.id_usuario !== byDni.id_usuario) {
@@ -199,9 +278,14 @@ module.exports = {
   normalizeDni,
   findEmpresaActivaPorCif,
   findUsuarioActivoPorEmail,
+  findUsuarioPorEmail,
   findUsuarioActivoPorDni,
+  findUsuarioPorDni,
   findUsuariosActivosPorDni,
+  findUsuariosPorDni,
   findMembresiaActivaEnEmpresa,
+  usuarioEstaActivoGlobal,
+  reactivarUsuarioGlobal,
   resolverUsuarioIdentidad,
   sanitizarConflictoIdentidadPublico,
 };

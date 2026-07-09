@@ -12,7 +12,7 @@ import { parseFechaFichaje } from '../../utils/fechaFichaje';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import esES from 'antd/es/locale/es_ES';
-import { getTipoUsuario } from '../../utils/authSession';
+import { getTipoUsuario, getIdUsuario } from '../../utils/authSession';
 import {
   puedeVerFichaPersonal,
   esAdministradorEmpresa,
@@ -32,6 +32,7 @@ const BuscarUsuarios = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const tipoUsuario = getTipoUsuario();
+    const idUsuarioSesion = getIdUsuario();
     const verFichaPersonal = puedeVerFichaPersonal(tipoUsuario);
     const [usuarios, setUsuarios] = useState([]);
     const [searchText, setSearchText] = useState('');
@@ -345,7 +346,10 @@ const BuscarUsuarios = () => {
                             />
                         </Tooltip>
                     )}
-                    {tipoUsuario !== 6 && record.activo !== false && record.activo !== 0 && (
+                    {tipoUsuario !== 6
+                        && record.activo !== false
+                        && record.activo !== 0
+                        && Number(record.id_usuario) !== Number(idUsuarioSesion) && (
                         <Tooltip title="Dar de baja">
                             <Popconfirm
                                 title="¿Dar de baja a este personal?"

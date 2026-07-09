@@ -30,6 +30,8 @@ const {
   findMembresiaActivaEnEmpresa,
   normalizeEmail,
   resolverUsuarioIdentidad,
+  reactivarUsuarioGlobal,
+  usuarioEstaActivoGlobal,
 } = require('../utils/identityChecks');
 const { Op } = require('sequelize');
 const dayjs = require('dayjs');
@@ -328,6 +330,15 @@ const crearUsuario= async (req, res) => {
                         codigo: 'YA_EN_EMPRESA',
                     });
                 }
+
+                if (!usuarioEstaActivoGlobal(usuario)) {
+                    usuario = await reactivarUsuarioGlobal(usuario.id_usuario, {
+                        nombre: nombreUsuario,
+                        dni,
+                        idUsuarioAccion,
+                        fecha: date,
+                    });
+                }
             } else {
                 usuario = await crearUsuarioRepo(
                     nombreUsuario,
@@ -357,6 +368,15 @@ const crearUsuario= async (req, res) => {
 
                     usuario = reintento.usuario;
                     usuarioNuevo = false;
+
+                    if (!usuarioEstaActivoGlobal(usuario)) {
+                        usuario = await reactivarUsuarioGlobal(usuario.id_usuario, {
+                            nombre: nombreUsuario,
+                            dni,
+                            idUsuarioAccion,
+                            fecha: date,
+                        });
+                    }
 
                     const vinculoActivo = await findMembresiaActivaEnEmpresa(
                         usuario.id_usuario,
@@ -546,6 +566,13 @@ const deleteUsuario= async (req, res) => {
             return res.status(400).json({ message: 'idEmpresa es obligatorio' });
         }
 
+        if (Number(idUsuario) === Number(idUsuarioAccion)) {
+            return res.status(400).json({
+                message: 'No puedes darte de baja a ti mismo. Pide a otro administrador que gestione tu baja.',
+                codigo: 'AUTO_BAJA_NO_PERMITIDA',
+            });
+        }
+
         const membresia = await UsuarioEmpresa.findOne({
             where: {
                 id_usuario: idUsuario,
@@ -600,7 +627,6 @@ const deleteUsuario= async (req, res) => {
                 fecha_baja: date,
                 usuario_baja: idUsuarioAccion,
                 activo: false,
-                email: `${idUsuario}_borrado_${Date.now()}`,
             }, {
                 where: { id_usuario: idUsuario, fecha_baja: null },
             });

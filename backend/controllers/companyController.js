@@ -25,6 +25,8 @@ const {
   findEmpresaActivaPorCif,
   normalizeEmail,
   resolverUsuarioIdentidad,
+  reactivarUsuarioGlobal,
+  usuarioEstaActivoGlobal,
 } = require('../utils/identityChecks');
 
 const trimOptional = (value) => {
@@ -131,6 +133,16 @@ const registerCompany = async (req, res) => {
 
         let usuarioAdmin = identidadAdmin.usuario;
         const adminExistente = !identidadAdmin.esNuevo;
+
+        if (adminExistente && !usuarioEstaActivoGlobal(usuarioAdmin)) {
+            usuarioAdmin = await reactivarUsuarioGlobal(usuarioAdmin.id_usuario, {
+                nombre: Administrador,
+                dni,
+                idUsuarioAccion: idUsuarioAccion ?? usuarioAdmin.id_usuario,
+                fecha,
+                transaction,
+            });
+        }
 
         if (!adminExistente) {
             const idUsuarioNuevo = await getNextGlobalId(Usuario, 'id_usuario', transaction);
