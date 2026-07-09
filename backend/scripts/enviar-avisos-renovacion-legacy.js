@@ -2,16 +2,17 @@
 /**
  * Envía emails de renovación legacy 7 días antes de current_period_end.
  *
- * Uso (desde backend/):
- *   node scripts/enviar-avisos-renovacion-legacy.js
- *   node scripts/enviar-avisos-renovacion-legacy.js --dry-run
- *   node scripts/enviar-avisos-renovacion-legacy.js --dias=7
+ * Uso (desde raíz del repo o desde backend/):
+ *   node backend/scripts/enviar-avisos-renovacion-legacy.js
+ *   cd backend && node scripts/enviar-avisos-renovacion-legacy.js
+ *   node backend/scripts/enviar-avisos-renovacion-legacy.js --dry-run
  *
  * Cron diario (prod, 08:00):
- *   0 8 * * * cd /ruta/gestempOS/backend && node scripts/enviar-avisos-renovacion-legacy.js >> /var/log/timecor-renovacion.log 2>&1
+ *   0 8 * * * cd /root/fichaeneltrabajo/gestempOS/backend && node scripts/enviar-avisos-renovacion-legacy.js >> /var/log/timecor-renovacion.log 2>&1
  */
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const { connectToDatabase } = require('../config/db');
 const { enviarAvisosRenovacionLegacy } = require('../services/legacyRenewalService');
