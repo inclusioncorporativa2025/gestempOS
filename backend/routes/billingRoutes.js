@@ -5,6 +5,9 @@ const {
   postPortal,
   postCancelar,
   postReactivar,
+  postAmpliarLicencias,
+  getRenovacionInfo,
+  postRenovacionCheckout,
   getSession,
   getFacturas,
   getFacturaDocumento,
@@ -19,6 +22,8 @@ const requireBillingAccess = [
 ];
 
 router.get('/session/:sessionId/verify', getSession);
+router.get('/renovacion/info', getRenovacionInfo);
+router.post('/renovacion/checkout', postRenovacionCheckout);
 router.get('/estado', ...requireBillingAccess, getEstado);
 router.get('/facturas', ...requireBillingAccess, getFacturas);
 router.get('/facturas/:idFactura/documento', ...requireBillingAccess, getFacturaDocumento);
@@ -26,6 +31,7 @@ router.post('/checkout', ...requireBillingAccess, postCheckout);
 router.post('/portal', ...requireBillingAccess, postPortal);
 router.post('/cancelar', ...requireBillingAccess, postCancelar);
 router.post('/reactivar', ...requireBillingAccess, postReactivar);
+router.post('/ampliar-licencias', ...requireBillingAccess, postAmpliarLicencias);
 router.get('/session/:sessionId', ...requireBillingAccess, getSession);
 
 module.exports = router;

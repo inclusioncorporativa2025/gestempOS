@@ -489,6 +489,121 @@ const enviarCorreoSoporte = async ({
   });
 };
 
+const botonPlanEnlace = (href, texto, primario = false) => {
+  if (!href) {
+    return `<span style="display:inline-block; padding:8px 14px; font-size:13px; color:#999; border:1px solid #ddd; border-radius:6px;">${texto}</span>`;
+  }
+  const bg = primario
+    ? 'background:linear-gradient(90deg,#2BA9E0 0%,#E0529C 100%); background-color:#2BA9E0; color:#ffffff;'
+    : 'background:#ffffff; color:#2BA9E0; border:1px solid #2BA9E0;';
+  return `<a href="${href}" style="display:inline-block; ${bg} font-size:13px; font-weight:bold; text-decoration:none; padding:8px 14px; border-radius:6px; margin:2px 4px;">${texto}</a>`;
+};
+
+const buildRenewalEmailHtml = ({
+  nombre,
+  nombreEmpresa,
+  licencias,
+  periodEndLabel,
+  enlaceRenovacion,
+  enlacesPlanes,
+  descuentoAnual,
+}) => {
+  const filasPlanes = (enlacesPlanes || []).map((plan) => {
+    const disabled = !plan.available;
+    return `
+      <tr>
+        <td style="padding:14px 12px; border-bottom:1px solid #eee; font-family:Arial,Helvetica,sans-serif; vertical-align:top;">
+          <strong style="font-size:15px; color:#0f1020;">${escapeHtml(plan.name)}</strong>
+          ${disabled ? '<br /><span style="font-size:12px; color:#999;">Próximamente</span>' : ''}
+          <br /><span style="font-size:13px; color:#666;">Mín. ${plan.minLicencias} licencias</span>
+        </td>
+        <td style="padding:14px 12px; border-bottom:1px solid #eee; font-size:13px; color:#444; white-space:nowrap;">
+          ${plan.priceMonthly} € / mes
+        </td>
+        <td style="padding:14px 12px; border-bottom:1px solid #eee; font-size:13px; color:#444; white-space:nowrap;">
+          ${plan.priceAnnual} € / año
+        </td>
+        <td style="padding:14px 8px; border-bottom:1px solid #eee; text-align:right;">
+          ${disabled ? '—' : botonPlanEnlace(plan.mensual, 'Mensual')}
+          ${disabled ? '' : botonPlanEnlace(plan.anual, 'Anual', true)}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  return emailLayout(`
+    <tr>
+      <td style="padding:36px 40px 8px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <h1 style="margin:0 0 16px 0; font-size:22px; color:#0f1020;">Renueva tu suscripción</h1>
+        <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">Hola <strong>${escapeHtml(nombre)}</strong>,</p>
+        <p style="margin:0 0 20px 0; font-size:15px; line-height:1.6; color:#444;">
+          El periodo de facturación manual de <strong>${escapeHtml(nombreEmpresa)}</strong>
+          finaliza el <strong>${escapeHtml(periodEndLabel)}</strong> (en 7 días).
+          Para seguir usando ${BRAND_NAME} sin interrupciones, activa el pago automático con tarjeta.
+        </p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px 0; background:#f9fafb; border-radius:8px;">
+          <tr>
+            <td style="padding:16px 20px; font-size:14px; color:#444; font-family:Arial,Helvetica,sans-serif;">
+              <p style="margin:0 0 8px 0;"><strong>Licencias actuales:</strong> ${escapeHtml(licencias)}</p>
+              <p style="margin:0;"><strong>Fin del periodo:</strong> ${escapeHtml(periodEndLabel)}</p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">
+          Elige plan y ciclo de pago. En el <strong>plan anual ${escapeHtml(descuentoAnual)}</strong>.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 24px 8px 24px; font-family:Arial,Helvetica,sans-serif;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse; font-size:14px;">
+          <tr style="background:#f3f4f6;">
+            <th align="left" style="padding:10px 12px; font-size:12px; color:#666;">Plan</th>
+            <th align="left" style="padding:10px 12px; font-size:12px; color:#666;">Mensual</th>
+            <th align="left" style="padding:10px 12px; font-size:12px; color:#666;">Anual</th>
+            <th align="right" style="padding:10px 8px; font-size:12px; color:#666;">Pagar</th>
+          </tr>
+          ${filasPlanes}
+        </table>
+      </td>
+    </tr>
+    ${bloqueBotonEnlace(enlaceRenovacion, 'Ver planes y elegir ciclo')}
+    <tr>
+      <td style="padding:0 40px 24px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <p style="margin:0; font-size:13px; color:#777;">
+          Si ya has renovado, puedes ignorar este correo. Para ampliar licencias antes de la renovación,
+          contacta con soporte.
+        </p>
+      </td>
+    </tr>
+  `);
+};
+
+const enviarAvisoRenovacionLegacy = async ({
+  nombre,
+  email,
+  nombreEmpresa,
+  licencias,
+  periodEndLabel,
+  enlaceRenovacion,
+  enlacesPlanes,
+  descuentoAnual,
+}) => {
+  await enviarCorreo({
+    to: email,
+    subject: `${BRAND_NAME} - Renueva tu suscripción (7 días restantes)`,
+    html: buildRenewalEmailHtml({
+      nombre,
+      nombreEmpresa,
+      licencias,
+      periodEndLabel,
+      enlaceRenovacion,
+      enlacesPlanes,
+      descuentoAnual,
+    }),
+  });
+};
+
 module.exports = {
   hashToken,
   RESET_TOKEN_TTL_MINUTES,
@@ -500,5 +615,6 @@ module.exports = {
   enviarNotificacionGestion,
   enviarCorreoSoporte,
   buildSupportSubject,
+  enviarAvisoRenovacionLegacy,
   SUPPORT_EMAIL,
 };

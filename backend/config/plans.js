@@ -32,6 +32,36 @@ const PLAN_LABELS = {
   completo: 'Completo',
 };
 
+/** Catálogo comercial (alineado con frontend/src/constants/plans.js). */
+const PLAN_CATALOG = [
+  {
+    id: 'esencial',
+    name: 'Esencial',
+    priceMonthly: '2,50',
+    priceAnnual: '25',
+    minLicencias: 5,
+    available: true,
+  },
+  {
+    id: 'rrhh',
+    name: 'RRHH',
+    priceMonthly: '3,90',
+    priceAnnual: '39',
+    minLicencias: 10,
+    available: true,
+  },
+  {
+    id: 'completo',
+    name: 'Completo',
+    priceMonthly: '5,90',
+    priceAnnual: '59',
+    minLicencias: 15,
+    available: false,
+  },
+];
+
+const ANNUAL_DISCOUNT_LABEL = 'te regalamos 2 meses';
+
 const normalizePlanId = (plan) => {
   const id = String(plan || DEFAULT_PLAN).toLowerCase().trim();
   return PLAN_IDS.includes(id) ? id : DEFAULT_PLAN;
@@ -53,6 +83,8 @@ module.exports = {
   PLAN_FEATURES,
   PLAN_MIN_LICENCIAS,
   PLAN_LABELS,
+  PLAN_CATALOG,
+  ANNUAL_DISCOUNT_LABEL,
   normalizePlanId,
   planIncluyeFeature,
   getPlanMinLicencias,

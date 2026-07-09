@@ -102,6 +102,34 @@ export const reactivarSuscripcion = async () => {
   return parseJsonError(response, 'Error al reactivar la suscripción');
 };
 
+export const ampliarLicencias = async (licencias) => {
+  const body = licencias != null ? { licencias } : {};
+  const response = await fetch(`${API_BASE_URL}/ampliar-licencias`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  });
+  return parseJsonError(response, 'Error al ampliar las licencias');
+};
+
+export const getRenovacionInfo = async (token) => {
+  const response = await fetch(
+    `${API_BASE_URL}/renovacion/info?token=${encodeURIComponent(token)}`,
+    { method: 'GET' },
+  );
+  const data = await parseJsonError(response, 'No se pudo cargar la renovación');
+  return data.info;
+};
+
+export const crearCheckoutRenovacion = async ({ token, plan, ciclo, licencias }) => {
+  const response = await fetch(`${API_BASE_URL}/renovacion/checkout`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, plan, ciclo, licencias }),
+  });
+  return parseJsonError(response, 'Error al iniciar el pago');
+};
+
 export const verificarSesionCheckout = async (sessionId) => {
   const response = await fetch(
     `${API_BASE_URL}/session/${encodeURIComponent(sessionId)}/verify`,

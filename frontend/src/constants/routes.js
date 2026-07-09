@@ -38,6 +38,7 @@ export const APP_ROUTES = {
   facturacion: '/facturacion',
   facturacionExito: '/facturacion/exito',
   facturacionCancelado: '/facturacion/cancelado',
+  renovarSuscripcion: '/renovar',
 };
 
 /** Rutas de facturación accesibles aunque el trial haya expirado */
@@ -45,6 +46,7 @@ export const FACTURACION_ROUTES = [
   APP_ROUTES.facturacion,
   APP_ROUTES.facturacionExito,
   APP_ROUTES.facturacionCancelado,
+  APP_ROUTES.renovarSuscripcion,
 ];
 
 /** @deprecated Prefer APP_ROUTES or LANDING_ROUTES */

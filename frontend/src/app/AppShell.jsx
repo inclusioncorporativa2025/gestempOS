@@ -54,6 +54,7 @@ import TrialExpiredGate from './components/TrialExpiredGate';
 import FacturacionPage from './pages/facturacion/FacturacionPage';
 import FacturacionExito from './pages/facturacion/FacturacionExito';
 import FacturacionCancelado from './pages/facturacion/FacturacionCancelado';
+import RenovarSuscripcion from './pages/facturacion/RenovarSuscripcion';
 import NominasPage from './pages/NominasPage';
 import { useTrialStatus } from '../hooks/useTrialStatus';
 import { usePlan } from '../hooks/usePlan';
@@ -153,6 +154,7 @@ const AppShell = () => {
     APP_ROUTES.resetPassword,
     APP_ROUTES.facturacionExito,
     APP_ROUTES.facturacionCancelado,
+    APP_ROUTES.renovarSuscripcion,
   ];
 
   useEffect(() => {
@@ -391,6 +393,7 @@ const AppShell = () => {
                 <Route path={APP_ROUTES.resetPassword} element={<ResetPassword />} />
                 <Route path={APP_ROUTES.facturacionExito} element={<FacturacionExito />} />
                 <Route path={APP_ROUTES.facturacionCancelado} element={<FacturacionCancelado />} />
+                <Route path={APP_ROUTES.renovarSuscripcion} element={<RenovarSuscripcion />} />
                 <Route
                   path={APP_ROUTES.timeLogs}
                   element={

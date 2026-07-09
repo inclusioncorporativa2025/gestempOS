@@ -7,7 +7,7 @@ import { APP_ROUTES } from '../../../constants/routes';
 import * as XLSX from 'xlsx'; // Importamos la biblioteca para manejar Excel
 
 import { crearUsuario, importarUsuariosEmpresa } from '../../../features/user/usuarioService';
-import { SUPPORT_EMAIL } from '../../../constants/support';
+import { mostrarModalLicenciasAgotadas } from '../../../features/billing/licenciasAgotadasModal';
 import { obtenerJornadas, obtenerJornadasByIdEmpresa } from "../../../features/jornada/jornadaService";
 import './UserManagementForm.css';
 
@@ -20,29 +20,6 @@ const etiquetaTipoUsuario = (tipoUsuario) => {
   if (String(tipoUsuario) === '5') return 'Personal';
   if (String(tipoUsuario) === '6') return 'Inspector';
   return 'Usuario';
-};
-
-const mostrarAlertaSinPlazas = (response) => {
-  Modal.warning({
-    title: 'Sin plazas disponibles',
-    content: (
-      <div>
-        <p>{response?.message || 'No tiene plazas disponibles para dar de alta a más usuarios.'}</p>
-        {response?.licencias != null && (
-          <p style={{ marginTop: 8 }}>
-            Licencias contratadas: <strong>{response.licencias}</strong>
-            {' · '}
-            En uso: <strong>{response.usadas}</strong>
-          </p>
-        )}
-        <p style={{ marginTop: 12 }}>
-          Póngase en contacto con soporte en{' '}
-          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> para solicitar más licencias.
-        </p>
-      </div>
-    ),
-    okText: 'Entendido',
-  });
 };
 
 const SECCIONES_VALIDAS = ['importUsers', 'addInspector'];
@@ -101,11 +78,39 @@ const UserManagementForm = () => {
   };
 
   const crearInspector = async (values) => {
+    const intentarAlta = () =>
+      crearUsuario(values.email, values.nombreCompleto, values.Identificador, 6, null);
+
     try {
-      const response = await crearUsuario(values.email, values.nombreCompleto, values.Identificador, 6, null);
+      const response = await intentarAlta();
       if (!response.creada) {
         if (response.codigo === 'LICENCIAS_AGOTADAS') {
-          mostrarAlertaSinPlazas(response);
+          mostrarModalLicenciasAgotadas({
+            response,
+            onAmpliado: async () => {
+              const reintento = await intentarAlta();
+              if (!reintento.creada) {
+                notification.error({
+                  message: reintento.message || 'No se pudo completar el alta tras ampliar licencias',
+                });
+                return;
+              }
+              if (reintento.emailInvitacionEnviado === false) {
+                inspectorForm.resetFields();
+                notification.warning({
+                  message: 'Usuario creado sin correo',
+                  description:
+                    reintento.message
+                    || `Inspector creado, pero no se pudo enviar el email a ${values.email}. Puede usar "Olvidé mi contraseña".`,
+                });
+              } else {
+                inspectorForm.resetFields();
+                notification.success({
+                  message: `Inspector "${values.nombreCompleto}" creado, se le ha enviado el email de invitación.`,
+                });
+              }
+            },
+          });
         } else {
           notification.error({
             message: response.message,

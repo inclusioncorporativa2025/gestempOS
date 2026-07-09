@@ -3,7 +3,7 @@ import { Modal, Form, Input, Select, notification, message } from 'antd';
 import GradientButton from './shared/GradientButton';
 import { crearUsuario } from '../../features/user/usuarioService';
 import { obtenerJornadas } from '../../features/jornada/jornadaService';
-import { SUPPORT_EMAIL } from '../../constants/support';
+import { mostrarModalLicenciasAgotadas } from '../../features/billing/licenciasAgotadasModal';
 import { opcionesTipoHora, TIPO_HORA_INHERIT, etiquetaTipoHora } from '../../utils/tipoHora';
 
 const { Option } = Select;
@@ -12,29 +12,6 @@ const etiquetaTipoUsuario = (tipoUsuario) => {
   if (String(tipoUsuario) === '4') return 'Supervisor';
   if (String(tipoUsuario) === '5') return 'Personal';
   return 'Usuario';
-};
-
-const mostrarAlertaSinPlazas = (response) => {
-  Modal.warning({
-    title: 'Sin plazas disponibles',
-    content: (
-      <div>
-        <p>{response?.message || 'No tiene plazas disponibles para dar de alta a más usuarios.'}</p>
-        {response?.licencias != null && (
-          <p style={{ marginTop: 8 }}>
-            Licencias contratadas: <strong>{response.licencias}</strong>
-            {' · '}
-            En uso: <strong>{response.usadas}</strong>
-          </p>
-        )}
-        <p style={{ marginTop: 12 }}>
-          Póngase en contacto con soporte en{' '}
-          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> para solicitar más licencias.
-        </p>
-      </div>
-    ),
-    okText: 'Entendido',
-  });
 };
 
 const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
@@ -50,6 +27,25 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
       .catch(() => message.error('Error recuperando tipo de jornadas'));
   }, [open, form]);
 
+  const completarAlta = async (values, response) => {
+    form.resetFields();
+    const tipo = etiquetaTipoUsuario(values.tipoUsuario);
+
+    if (response.emailInvitacionEnviado === false) {
+      notification.warning({
+        message: `${tipo} "${values.nombreCompleto}" creado, pero no se pudo enviar el email de invitación.`,
+        description: 'Puede usar «Olvidé mi contraseña» con su correo para activar la cuenta.',
+      });
+    } else {
+      notification.success({
+        message: `${tipo} "${values.nombreCompleto}" creado, se le ha enviado el email de invitación.`,
+      });
+    }
+
+    onSuccess?.();
+    onClose();
+  };
+
   const handleFinish = async (values) => {
     setSubmitting(true);
     try {
@@ -64,7 +60,26 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
 
       if (!response.creada) {
         if (response.codigo === 'LICENCIAS_AGOTADAS') {
-          mostrarAlertaSinPlazas(response);
+          mostrarModalLicenciasAgotadas({
+            response,
+            onAmpliado: async () => {
+              const reintento = await crearUsuario(
+                values.email,
+                values.nombreCompleto,
+                values.dni,
+                values.tipoUsuario,
+                values.tipoHorario,
+                values.tipoHora,
+              );
+              if (!reintento.creada) {
+                notification.error({
+                  message: reintento.message || 'No se pudo completar el alta tras ampliar licencias',
+                });
+                return;
+              }
+              await completarAlta(values, reintento);
+            },
+          });
         } else {
           notification.error({
             message: response.message,
@@ -74,22 +89,7 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
         return;
       }
 
-      form.resetFields();
-      const tipo = etiquetaTipoUsuario(values.tipoUsuario);
-
-      if (response.emailInvitacionEnviado === false) {
-        notification.warning({
-          message: `${tipo} "${values.nombreCompleto}" creado, pero no se pudo enviar el email de invitación.`,
-          description: 'Puede usar «Olvidé mi contraseña» con su correo para activar la cuenta.',
-        });
-      } else {
-        notification.success({
-          message: `${tipo} "${values.nombreCompleto}" creado, se le ha enviado el email de invitación.`,
-        });
-      }
-
-      onSuccess?.();
-      onClose();
+      await completarAlta(values, response);
     } catch (error) {
       notification.error({
         message: error.message || 'No se pudo dar de alta al empleado',

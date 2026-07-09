@@ -12,9 +12,14 @@ const axios = require('axios');
 const Empresa = require('../models/Empresa');
 const {crearUsuarioRepo,crearUsuarioHorario} = require('../repositorios/usuarioRepository');
 const {
-  crearUsuarioEmpresa,
   obtenerDisponibilidadLicencias,
 } = require('../repositorios/usuariosEmpresasRepository');
+const {
+  obtenerFacturacionCompleta,
+  puedeAmpliarLicenciasStripe,
+} = require('../services/billingService');
+const { calcularProrrateoLicencia } = require('../services/legacyRenewalService');
+const { normalizePlanId } = require('../config/plans');
 const { enviarInvitacionEmpleado } = require('../utils/mailService');
 const { obtenerMembresiaActiva, resolverTipoSesion, membresiaEstaActiva } = require('../services/usuarioEmpresaService');
 const { calcularResumenHorasMes, resolverTipoHora } = require('../services/horasResumenService');
@@ -443,12 +448,36 @@ const crearUsuario= async (req, res) => {
             return res.status(201).json(respuesta);
 
         } else {
+            const facturacion = await obtenerFacturacionCompleta(idEmpresa);
+            const puedeAmpliarStripe = puedeAmpliarLicenciasStripe(facturacion);
+            const licenciasNecesarias = disponibilidad.usadas + 1;
+            const esLegacy = String(facturacion?.modo_facturacion || '').toLowerCase() === 'legacy'
+              && !facturacion?.stripe_subscription_id;
+            let prorrateoEstimado = null;
+
+            if (esLegacy && facturacion?.current_period_end) {
+              const empresaRow = await Empresa.findByPk(idEmpresa);
+              prorrateoEstimado = calcularProrrateoLicencia({
+                planId: normalizePlanId(empresaRow?.plan),
+                periodStart: facturacion.current_period_start,
+                periodEnd: facturacion.current_period_end,
+              });
+            }
+
             res.status(200).json({
               creada: false,
               codigo: 'LICENCIAS_AGOTADAS',
-              message: 'No tiene plazas disponibles. Póngase en contacto con soporte para ampliar las licencias.',
+              message: puedeAmpliarStripe
+                ? 'No tiene plazas disponibles. Puede añadir una licencia; el importe se prorrateará en su suscripción.'
+                : esLegacy
+                  ? 'No tiene plazas disponibles. Contacte con soporte para ampliar la licencia (cobro manual prorrateado). La suscripción automática se activará en la renovación.'
+                  : 'No tiene plazas disponibles. Active una suscripción en Facturación o póngase en contacto con soporte.',
               licencias: disponibilidad.licencias,
               usadas: disponibilidad.usadas,
+              puede_ampliar_stripe: puedeAmpliarStripe,
+              es_legacy: esLegacy,
+              licencias_necesarias: licenciasNecesarias,
+              prorrateo_estimado_eur: prorrateoEstimado,
             });
         }
 

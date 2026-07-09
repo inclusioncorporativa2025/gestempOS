@@ -580,6 +580,7 @@ const crearPortalSession = async (idEmpresa, returnUrl) => {
 };
 
 const ESTADOS_CANCELABLES = new Set(['active', 'trialing']);
+const ESTADOS_AMPLIABLES = new Set(['active', 'trialing']);
 
 const buscarSuscripcionStripeDelCliente = async (customerId) => {
   if (!customerId) return null;
@@ -759,6 +760,92 @@ const reactivarSuscripcion = async (idEmpresa) => {
   return { cancel_at_period_end: false };
 };
 
+const puedeAmpliarLicenciasStripe = (facturacion) => {
+  if (!facturacion?.stripe_subscription_id) {
+    return false;
+  }
+  const estado = String(facturacion.estado_suscripcion || '').toLowerCase();
+  return ESTADOS_AMPLIABLES.has(estado);
+};
+
+const ampliarLicenciasStripe = async (idEmpresa, { licencias } = {}) => {
+  const disponibilidad = await obtenerDisponibilidadLicencias(idEmpresa);
+
+  if (disponibilidad.disponible) {
+    const error = new Error('Ya hay plazas disponibles');
+    error.status = 400;
+    error.code = 'LICENCIAS_DISPONIBLES';
+    throw error;
+  }
+
+  const facturacion = await asegurarSuscripcionSincronizada(idEmpresa);
+  if (!puedeAmpliarLicenciasStripe(facturacion)) {
+    const error = new Error(
+      'No hay suscripción de Stripe activa. Activa la suscripción en Facturación.',
+    );
+    error.status = 400;
+    error.code = 'NO_STRIPE_SUBSCRIPTION';
+    throw error;
+  }
+
+  const empresa = await Empresa.findByPk(idEmpresa);
+  if (!empresa) {
+    const error = new Error('Empresa no encontrada');
+    error.status = 404;
+    throw error;
+  }
+
+  const planId = normalizePlanId(empresa.plan);
+  const minLicencias = getPlanMinLicencias(planId);
+  const licenciasAnterior = disponibilidad.licencias;
+
+  let nuevaCantidad = licencias != null ? Number(licencias) : disponibilidad.usadas + 1;
+  if (!Number.isFinite(nuevaCantidad)) {
+    nuevaCantidad = disponibilidad.usadas + 1;
+  }
+
+  nuevaCantidad = Math.max(nuevaCantidad, minLicencias, disponibilidad.usadas + 1);
+
+  if (nuevaCantidad <= licenciasAnterior) {
+    const error = new Error('La cantidad debe ser mayor que las licencias contratadas');
+    error.status = 400;
+    error.code = 'LICENCIAS_SIN_CAMBIO';
+    throw error;
+  }
+
+  let itemId = facturacion.stripe_subscription_item_id;
+  const subscriptionId = facturacion.stripe_subscription_id;
+
+  if (!itemId) {
+    const sub = await getStripe().subscriptions.retrieve(subscriptionId);
+    itemId = sub.items?.data?.[0]?.id ?? null;
+  }
+
+  if (!itemId) {
+    const error = new Error('No se encontró el ítem de suscripción en Stripe');
+    error.status = 400;
+    error.code = 'SUBSCRIPTION_ITEM_NOT_FOUND';
+    throw error;
+  }
+
+  await getStripe().subscriptions.update(subscriptionId, {
+    items: [{ id: itemId, quantity: nuevaCantidad }],
+    proration_behavior: 'create_prorations',
+  });
+
+  await sincronizarSuscripcion(subscriptionId, { motivo: 'ampliar_licencias' });
+
+  const actualizada = await obtenerDisponibilidadLicencias(idEmpresa);
+
+  return {
+    licencias: nuevaCantidad,
+    licencias_anterior: licenciasAnterior,
+    licencias_usadas: actualizada.usadas,
+    plazas_libres: actualizada.plazasLibres,
+    prorrateo: true,
+  };
+};
+
 const obtenerEstadoFacturacion = async (idEmpresa) => {
   const empresa = await Empresa.findByPk(idEmpresa);
   if (!empresa) {
@@ -792,6 +879,7 @@ const obtenerEstadoFacturacion = async (idEmpresa) => {
     current_period_end: facturacionFinal?.current_period_end ?? null,
     cancel_at_period_end: Boolean(facturacionFinal?.cancel_at_period_end),
     tiene_stripe: Boolean(facturacionFinal?.stripe_subscription_id),
+    puede_ampliar_stripe: puedeAmpliarLicenciasStripe(facturacionFinal),
     puede_portal: Boolean(facturacionFinal?.stripe_customer_id),
     puede_cancelar:
       Boolean(facturacionFinal?.stripe_subscription_id)
@@ -881,6 +969,8 @@ module.exports = {
   crearPortalSession,
   cancelarSuscripcion,
   reactivarSuscripcion,
+  ampliarLicenciasStripe,
+  puedeAmpliarLicenciasStripe,
   obtenerEstadoFacturacion,
   verificarSesionCheckout,
   listarFacturasPagadas,

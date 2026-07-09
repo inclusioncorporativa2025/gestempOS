@@ -5,12 +5,17 @@ const {
   crearPortalSession,
   cancelarSuscripcion,
   reactivarSuscripcion,
+  ampliarLicenciasStripe,
   obtenerEstadoFacturacion,
   verificarSesionCheckout,
   listarFacturasPagadas,
   listarFacturasEmitidas,
   getStripe,
 } = require('../services/billingService');
+const {
+  obtenerInfoRenovacion,
+  crearCheckoutRenovacionLegacy,
+} = require('../services/legacyRenewalService');
 
 const getIdEmpresaSesion = (req) => Number(req.user?.id_empresa);
 
@@ -121,6 +126,25 @@ const postReactivar = async (req, res) => {
   }
 };
 
+const postAmpliarLicencias = async (req, res) => {
+  try {
+    const idEmpresa = getIdEmpresaSesion(req);
+    if (!idEmpresa) {
+      return res.status(400).json({ message: 'No hay empresa en la sesión' });
+    }
+
+    const { licencias } = req.body ?? {};
+    const resultado = await ampliarLicenciasStripe(idEmpresa, { licencias });
+    return res.status(200).json(resultado);
+  } catch (error) {
+    console.error('billing postAmpliarLicencias:', error);
+    return res.status(error.status || 500).json({
+      message: error.message || 'Error al ampliar las licencias',
+      code: error.code,
+    });
+  }
+};
+
 const getSession = async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -213,14 +237,50 @@ const getFacturaDocumento = async (req, res) => {
   }
 };
 
+const getRenovacionInfo = async (req, res) => {
+  try {
+    const token = String(req.query?.token || '').trim();
+    const info = await obtenerInfoRenovacion(token);
+    return res.status(200).json({ info });
+  } catch (error) {
+    console.error('billing getRenovacionInfo:', error);
+    return res.status(error.status || 500).json({
+      message: error.message || 'No se pudo cargar la renovación',
+      code: error.code,
+    });
+  }
+};
+
+const postRenovacionCheckout = async (req, res) => {
+  try {
+    const { token, plan, ciclo, licencias } = req.body ?? {};
+    const resultado = await crearCheckoutRenovacionLegacy({
+      rawToken: token,
+      planCodigo: plan,
+      ciclo,
+      licencias,
+    });
+    return res.status(200).json(resultado);
+  } catch (error) {
+    console.error('billing postRenovacionCheckout:', error);
+    return res.status(error.status || 500).json({
+      message: error.message || 'Error al iniciar el pago de renovación',
+      code: error.code,
+    });
+  }
+};
+
 module.exports = {
   getEstado,
   postCheckout,
   postPortal,
   postCancelar,
   postReactivar,
+  postAmpliarLicencias,
   getSession,
   getFacturas,
   getFacturaDocumento,
   handleStripeWebhook,
+  getRenovacionInfo,
+  postRenovacionCheckout,
 };
