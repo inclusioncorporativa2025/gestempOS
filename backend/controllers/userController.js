@@ -470,7 +470,7 @@ const crearUsuario= async (req, res) => {
               message: puedeAmpliarStripe
                 ? 'No tiene plazas disponibles. Puede añadir una licencia; el importe se prorrateará en su suscripción.'
                 : esLegacy
-                  ? 'No tiene plazas disponibles. Contacte con soporte para ampliar la licencia (cobro manual prorrateado). La suscripción automática se activará en la renovación.'
+                  ? 'No tiene plazas disponibles. Contacte con soporte para ampliar la licencia.'
                   : 'No tiene plazas disponibles. Active una suscripción en Facturación o póngase en contacto con soporte.',
               licencias: disponibilidad.licencias,
               usadas: disponibilidad.usadas,

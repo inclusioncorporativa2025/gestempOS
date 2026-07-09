@@ -2,6 +2,12 @@ import { Modal, message } from 'antd';
 import { ampliarLicencias } from './billingService';
 import { SUPPORT_EMAIL } from '../../constants/support';
 
+const formatEuro = (amount) =>
+  Number(amount).toLocaleString('es-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
 export const mostrarModalLicenciasAgotadas = ({ response, onAmpliado }) => {
   const puedeAmpliar = Boolean(response?.puede_ampliar_stripe);
   const esLegacy = Boolean(response?.es_legacy);
@@ -9,7 +15,30 @@ export const mostrarModalLicenciasAgotadas = ({ response, onAmpliado }) => {
     response?.licencias_necesarias ?? (Number(response?.usadas || 0) + 1);
   const prorrateo = response?.prorrateo_estimado_eur;
 
-  const contenido = (
+  const contenido = esLegacy && !puedeAmpliar ? (
+    <div>
+      <p>No tiene plazas disponibles. Contacte con soporte para ampliar la licencia.</p>
+      {response?.licencias != null && (
+        <p style={{ marginTop: 8 }}>
+          Licencias contratadas: <strong>{response.licencias}</strong>
+          {' · '}
+          En uso: <strong>{response.usadas}</strong>
+        </p>
+      )}
+      {prorrateo != null && (
+        <p style={{ marginTop: 12 }}>
+          Importe estimado de la licencia extra: <strong>{formatEuro(prorrateo)} €</strong>
+          {' '}
+          (precio anual prorrateado hasta la fecha de fin de periodo).
+        </p>
+      )}
+      <p style={{ marginTop: 12 }}>
+        <a href={`mailto:${SUPPORT_EMAIL}?subject=Solicitud%20licencia%20extra`}>
+          {SUPPORT_EMAIL}
+        </a>
+      </p>
+    </div>
+  ) : (
     <div>
       <p>
         {response?.message
@@ -28,39 +57,12 @@ export const mostrarModalLicenciasAgotadas = ({ response, onAmpliado }) => {
           {licenciasNecesarias} en total). Stripe cargará el importe prorrateado
           en su método de pago.
         </p>
-      ) : esLegacy ? (
-        <p style={{ marginTop: 12 }}>
-          Las ampliaciones en facturación manual se gestionan con soporte
-          {prorrateo != null ? (
-            <>
-              {' '}
-              (importe estimado de la licencia extra:{' '}
-              <strong>
-                {Number(prorrateo).toLocaleString('es-ES', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-                €
-              </strong>
-              )
-            </>
-          ) : null}
-          . Recibirá un correo 7 días antes de la renovación para activar el
-          pago automático con tarjeta.
-        </p>
       ) : (
         <p style={{ marginTop: 12 }}>
           Active una suscripción en Facturación o contacte con soporte en{' '}
           <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
         </p>
       )}
-      {esLegacy && !puedeAmpliar ? (
-        <p style={{ marginTop: 8 }}>
-          <a href={`mailto:${SUPPORT_EMAIL}?subject=Solicitud%20licencia%20extra`}>
-            {SUPPORT_EMAIL}
-          </a>
-        </p>
-      ) : null}
     </div>
   );
 
