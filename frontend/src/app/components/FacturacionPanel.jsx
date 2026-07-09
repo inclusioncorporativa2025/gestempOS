@@ -280,6 +280,7 @@ const FacturacionPanel = ({ activo = true }) => {
   const suscripcionActiva =
     estado?.estado_suscripcion === 'active' || estado?.estado_suscripcion === 'trialing';
 
+  const esLegacy = estado?.modo_facturacion === 'legacy' || estado?.es_legacy;
   const enPruebaStripe = Boolean(estado?.en_prueba_stripe);
   const fechaFinAcceso = enPruebaStripe
     ? estado?.trial_ends_at || estado?.current_period_end
@@ -448,16 +449,16 @@ const FacturacionPanel = ({ activo = true }) => {
                 <dd>{formatFecha(estado.trial_ends_at)}</dd>
               </div>
             )}
-            {estado?.current_period_end && suscripcionActiva && !enPruebaStripe && (
+            {estado?.current_period_end && (suscripcionActiva || esLegacy) && !enPruebaStripe && (
               <div className="facturacion-status-list__row">
                 <dt>{estado?.cancel_at_period_end ? 'Acceso hasta' : 'Próxima renovación'}</dt>
                 <dd>{formatFecha(estado.current_period_end)}</dd>
               </div>
             )}
-            {estado?.ciclo_facturacion && (
+            {(estado?.ciclo_facturacion || esLegacy) && (
               <div className="facturacion-status-list__row">
                 <dt>Ciclo de suscripción</dt>
-                <dd>{estado.ciclo_facturacion === 'anual' ? 'Anual' : 'Mensual'}</dd>
+                <dd>{(estado.ciclo_facturacion || 'anual') === 'anual' ? 'Anual' : 'Mensual'}</dd>
               </div>
             )}
           </dl>

@@ -12,6 +12,10 @@ const {
 const { camposPlanEmpresa } = require('./planCatalogService');
 const { obtenerDisponibilidadLicencias } = require('../repositorios/usuariosEmpresasRepository');
 const { TRIAL_DAYS, obtenerEstadoTrialEmpresa } = require('./trialService');
+const {
+  calcularPeriodoLegacy,
+  periodoLegacyVigente,
+} = require('../utils/legacyBillingPeriod');
 
 let stripeClient = null;
 
@@ -620,6 +624,65 @@ const asegurarSuscripcionSincronizada = async (idEmpresa) => {
   return facturacion;
 };
 
+const sincronizarFacturacionLegacy = async (idEmpresa, empresa) => {
+  let facturacion = await obtenerFacturacionCompleta(idEmpresa);
+  if (!facturacion || facturacion.stripe_subscription_id) {
+    return facturacion;
+  }
+
+  const modo = String(facturacion.modo_facturacion || '').toLowerCase();
+  if (modo === 'trial' || modo === 'stripe') {
+    return facturacion;
+  }
+
+  if (!empresa?.fecha_alta) {
+    return facturacion;
+  }
+
+  const cicloLegacy = 'anual';
+  const cicloGuardado = String(facturacion.ciclo_facturacion || '').toLowerCase();
+  const vigente = periodoLegacyVigente(
+    facturacion.current_period_start,
+    facturacion.current_period_end,
+  );
+
+  if (vigente && modo === 'legacy' && cicloGuardado === cicloLegacy) {
+    return facturacion;
+  }
+
+  if (vigente && modo !== 'legacy') {
+    await sequelize.query(
+      `UPDATE empresa_facturacion
+       SET modo_facturacion = 'legacy',
+           ciclo_facturacion = :ciclo
+       WHERE id_empresa = :idEmpresa`,
+      { replacements: { idEmpresa, ciclo: cicloLegacy } },
+    );
+    return obtenerFacturacionCompleta(idEmpresa);
+  }
+
+  const { start, end } = calcularPeriodoLegacy(empresa.fecha_alta, cicloLegacy);
+
+  await sequelize.query(
+    `UPDATE empresa_facturacion
+     SET modo_facturacion = 'legacy',
+         ciclo_facturacion = :ciclo,
+         current_period_start = :periodStart,
+         current_period_end = :periodEnd
+     WHERE id_empresa = :idEmpresa`,
+    {
+      replacements: {
+        idEmpresa,
+        ciclo: cicloLegacy,
+        periodStart: start,
+        periodEnd: end,
+      },
+    },
+  );
+
+  return obtenerFacturacionCompleta(idEmpresa);
+};
+
 const obtenerSuscripcionStripe = async (idEmpresa) => {
   const facturacion = await asegurarSuscripcionSincronizada(idEmpresa);
   if (!facturacion?.stripe_subscription_id) {
@@ -705,11 +768,14 @@ const obtenerEstadoFacturacion = async (idEmpresa) => {
   }
 
   const facturacion = await asegurarSuscripcionSincronizada(idEmpresa);
+  const facturacionLegacy = await sincronizarFacturacionLegacy(idEmpresa, empresa);
+  const facturacionFinal = facturacionLegacy ?? facturacion;
   const licencias = await obtenerDisponibilidadLicencias(idEmpresa);
   const trial = await obtenerEstadoTrialEmpresa(idEmpresa);
   const planCodigo = normalizePlanId(empresa.plan);
-  const estadoSuscripcion = String(facturacion?.estado_suscripcion || '').toLowerCase();
+  const estadoSuscripcion = String(facturacionFinal?.estado_suscripcion || '').toLowerCase();
   const enPruebaStripe = estadoSuscripcion === 'trialing';
+  const esLegacy = String(facturacionFinal?.modo_facturacion || '').toLowerCase() === 'legacy';
 
   return {
     plan: planCodigo,
@@ -718,19 +784,20 @@ const obtenerEstadoFacturacion = async (idEmpresa) => {
     licencias: empresa.licencias,
     licencias_usadas: licencias.usadas,
     plazas_libres: licencias.plazasLibres,
-    modo_facturacion: facturacion?.modo_facturacion ?? 'legacy',
-    estado_suscripcion: facturacion?.estado_suscripcion ?? null,
-    ciclo_facturacion: facturacion?.ciclo_facturacion ?? null,
-    trial_ends_at: facturacion?.trial_ends_at ?? null,
-    current_period_start: facturacion?.current_period_start ?? null,
-    current_period_end: facturacion?.current_period_end ?? null,
-    cancel_at_period_end: Boolean(facturacion?.cancel_at_period_end),
-    tiene_stripe: Boolean(facturacion?.stripe_subscription_id),
-    puede_portal: Boolean(facturacion?.stripe_customer_id),
+    modo_facturacion: facturacionFinal?.modo_facturacion ?? 'legacy',
+    estado_suscripcion: facturacionFinal?.estado_suscripcion ?? null,
+    ciclo_facturacion: facturacionFinal?.ciclo_facturacion ?? (esLegacy ? 'anual' : null),
+    trial_ends_at: facturacionFinal?.trial_ends_at ?? null,
+    current_period_start: facturacionFinal?.current_period_start ?? null,
+    current_period_end: facturacionFinal?.current_period_end ?? null,
+    cancel_at_period_end: Boolean(facturacionFinal?.cancel_at_period_end),
+    tiene_stripe: Boolean(facturacionFinal?.stripe_subscription_id),
+    puede_portal: Boolean(facturacionFinal?.stripe_customer_id),
     puede_cancelar:
-      Boolean(facturacion?.stripe_subscription_id)
+      Boolean(facturacionFinal?.stripe_subscription_id)
       && ESTADOS_CANCELABLES.has(estadoSuscripcion),
     en_prueba_stripe: enPruebaStripe,
+    es_legacy: esLegacy,
     min_licencias: getPlanMinLicencias(planCodigo),
     trial,
   };
