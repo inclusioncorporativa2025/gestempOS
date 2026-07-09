@@ -11,12 +11,12 @@ import {
   normalizePlanId,
   PLAN_UNAVAILABLE_TOOLTIP,
   PRICES_EXCLUDE_TAX_NOTE,
-} from '../../constants/plans';
+} from '../../../constants/plans';
 import {
   crearCheckoutRenovacion,
   getRenovacionInfo,
-} from '../../features/billing/billingService';
-import '../facturacion/Facturacion.css';
+} from '../../../features/billing/billingService';
+import './Facturacion.css';
 
 const { Text, Title } = Typography;
 
