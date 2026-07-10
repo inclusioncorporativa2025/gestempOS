@@ -27,12 +27,14 @@ import {
   StopOutlined,
   RedoOutlined,
   DeleteOutlined,
+  CopyOutlined,
 } from '@ant-design/icons';
 import {
   crearEmpresa,
   editEmpresa,
   eliminarEmpresa,
   getEmpresasUsuarios,
+  generarEnlacePagoEmpresa,
   purgarEmpresaPermanente,
   reactivarEmpresa,
 } from '../../../features/empresas/empresasService';
@@ -80,6 +82,14 @@ const empresaFacturacionBloquea = (record) => {
 
 const empresaEstaActiva = (record) =>
   !empresaDadaDeBaja(record) && !empresaFacturacionBloquea(record);
+
+const empresaRequiereEnlacePago = (record) =>
+  record.requiere_enlace_pago === 1
+  || record.requiere_enlace_pago === true
+  || (
+    String(record.modo_facturacion || '').toLowerCase() === 'trial'
+    && !record.stripe_subscription_id
+  );
 
 const renderEstadoEmpresa = (record) => {
   if (empresaDadaDeBaja(record)) {
@@ -137,6 +147,7 @@ const BuscadorEmpresa = ({ embedded = false }) => {
   const [purgeTarget, setPurgeTarget] = useState(null);
   const [purgeCif, setPurgeCif] = useState('');
   const [purgeLoading, setPurgeLoading] = useState(false);
+  const [paymentLinkLoadingId, setPaymentLinkLoadingId] = useState(null);
   const esRoot = Number(getTipoUsuario()) === 1;
 
   useEffect(() => {
@@ -306,6 +317,23 @@ const BuscadorEmpresa = ({ embedded = false }) => {
     setIsAltaModalVisible(false);
   };
 
+  const copiarEnlacePagoEmpresa = async (record) => {
+    setPaymentLinkLoadingId(record.id_empresa);
+    try {
+      const resultado = await generarEnlacePagoEmpresa(record.id_empresa);
+      if (!resultado?.url) {
+        throw new Error('No se recibió la URL de pago');
+      }
+      await navigator.clipboard.writeText(resultado.url);
+      const destino = resultado.email || record.email || 'el administrador';
+      message.success(`Enlace copiado. Envíalo a ${destino}`);
+    } catch (error) {
+      message.error(error.message || 'No se pudo copiar el enlace de pago');
+    } finally {
+      setPaymentLinkLoadingId(null);
+    }
+  };
+
   const handleAltaSubmit = async (values) => {
     setAltaLoading(true);
     try {
@@ -406,6 +434,29 @@ const BuscadorEmpresa = ({ embedded = false }) => {
               title: 'Estado',
               key: 'estado',
               render: (_, record) => renderEstadoEmpresa(record),
+            },
+            {
+              title: 'Pago',
+              key: 'enlace_pago',
+              width: 56,
+              align: 'center',
+              render: (_, record) => {
+                if (!empresaRequiereEnlacePago(record)) {
+                  return '—';
+                }
+                return (
+                  <Tooltip title="Copiar enlace de pago">
+                    <Button
+                      type="text"
+                      icon={<CopyOutlined />}
+                      loading={paymentLinkLoadingId === record.id_empresa}
+                      onClick={() => copiarEnlacePagoEmpresa(record)}
+                      aria-label="Copiar enlace de pago"
+                      className="be-accion-btn be-accion-btn--copy"
+                    />
+                  </Tooltip>
+                );
+              },
             },
             {
               title: 'Acciones',

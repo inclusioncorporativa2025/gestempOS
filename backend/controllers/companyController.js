@@ -19,7 +19,7 @@ const {
 } = require('../services/planCatalogService');
 const { isValidRegionCode, resolveRegionCode, provinceByCpPrefix } = require('../config/spanishRegions');
 const { calcularFechaFinPrueba } = require('../services/trialService');
-const { crearCheckoutSession } = require('../services/billingService');
+const { crearCheckoutSession, crearCheckoutTrialPendiente } = require('../services/billingService');
 const { purgarEmpresaCompleta } = require('../services/empresaPurgeService');
 const {
   findEmpresaActivaPorCif,
@@ -402,6 +402,13 @@ const getEmpresasUsuarios = async (req, res)=> {
                         ef.stripe_subscription_id,
                         ef.cancel_at_period_end,
                         (
+                          CASE
+                            WHEN LOWER(IFNULL(ef.modo_facturacion, '')) = 'trial'
+                              AND ef.stripe_subscription_id IS NULL THEN 1
+                            ELSE 0
+                          END
+                        ) AS requiere_enlace_pago,
+                        (
                           SELECT u.email
                           FROM m_usuarios_empresas ue
                           INNER JOIN m_usuarios u ON u.id_usuario = ue.id_usuario AND u.tipo_usuario = 3
@@ -757,6 +764,61 @@ const registerCompanyPublic = async (req, res) => {
   return registerCompany(req, res);
 };
 
+const obtenerAdminEmpresa = async (idEmpresa) => {
+  const rows = await sequelize.query(
+    `SELECT u.id_usuario, u.email, u.nombre
+     FROM m_usuarios u
+     INNER JOIN m_usuarios_empresas ue ON ue.id_usuario = u.id_usuario
+     WHERE ue.id_empresa = :idEmpresa
+       AND ue.tipo_usuario = 3
+       AND ue.fecha_baja IS NULL
+       AND IFNULL(ue.activo, 1) = 1
+       AND IFNULL(u.activo, 1) = 1
+     ORDER BY ue.fecha_alta ASC
+     LIMIT 1`,
+    {
+      replacements: { idEmpresa },
+      type: sequelize.QueryTypes.SELECT,
+    },
+  );
+  return rows[0] ?? null;
+};
+
+const generarEnlacePagoEmpresa = async (req, res) => {
+  try {
+    const idEmpresa = Number(req.body?.idEmpresa);
+    if (!idEmpresa) {
+      return res.status(400).json({ message: 'idEmpresa es obligatorio' });
+    }
+
+    const admin = await obtenerAdminEmpresa(idEmpresa);
+    if (!admin?.email) {
+      return res.status(400).json({
+        message: 'No se encontró el administrador de la empresa',
+        code: 'ADMIN_NOT_FOUND',
+      });
+    }
+
+    const checkout = await crearCheckoutTrialPendiente(idEmpresa, {
+      email: admin.email,
+      nombre: admin.nombre,
+    });
+
+    return res.status(200).json({
+      url: checkout.url,
+      sessionId: checkout.sessionId,
+      email: admin.email,
+    });
+  } catch (error) {
+    console.error('Error al generar enlace de pago:', error);
+    return res.status(error.status || 500).json({
+      message: error.message || 'Error al generar el enlace de pago',
+      code: error.code,
+      campos_faltantes: error.campos_faltantes,
+    });
+  }
+};
+
 const purgaEmpresaPermanente = async (req, res) => {
   try {
     const idEmpresa = Number(req.body?.idEmpresa);
@@ -813,4 +875,5 @@ module.exports = {
   editMiEmpresa,
   getEmpresaBranding,
   purgaEmpresaPermanente,
+  generarEnlacePagoEmpresa,
 };

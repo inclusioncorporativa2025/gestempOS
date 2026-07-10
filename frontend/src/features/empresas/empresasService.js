@@ -206,6 +206,24 @@ export const getEmpresasUsuarios = async () => {
     }   
 };
 
+export const generarEnlacePagoEmpresa = async (idEmpresa) => {
+  const idUsuario = getIdUsuario();
+
+  const response = await fetch(`${API_BASE_URL}/enlace-pago`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idEmpresa, idUsuario }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Error al generar el enlace de pago');
+  }
+
+  return data;
+};
+
 // 
 export const editEmpresa = async (idEmpresa,datos) => {
 
