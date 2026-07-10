@@ -603,6 +603,7 @@ const crearCheckoutSession = async ({
     sessionParams.customer_update = { address: 'auto', name: 'auto' };
   } else if (impuestoManual) {
     sessionParams.tax_id_collection = { enabled: true };
+    sessionParams.customer_update = { name: 'auto' };
   }
 
   const couponAnual = process.env.STRIPE_COUPON_ANUAL;
