@@ -270,9 +270,8 @@ const registerCompany = async (req, res) => {
 
         await transaction.commit();
 
-        let emailBienvenidaEnviado = true;
-        let devWelcomeUrl = null;
         let checkoutUrl = null;
+        let checkoutErrorMsg = null;
 
         if (esRegistroPublico) {
           try {
@@ -288,47 +287,45 @@ const registerCompany = async (req, res) => {
             });
             checkoutUrl = checkout.url;
           } catch (checkoutError) {
-            console.error('Empresa creada pero falló el checkout Stripe:', checkoutError.message);
+            checkoutErrorMsg = checkoutError.message;
+            console.error('Empresa creada pero falló el checkout Stripe:', checkoutErrorMsg);
           }
-        }
-
-        try {
-          devWelcomeUrl = await enviarBienvenidaEmpresa(usuarioAdmin, {
-            nombreEmpresa: nombre_empresa,
-            licencias: numLicencias,
-            alias,
-            identificadorFiscal: CIF,
-            enlacePago: checkoutUrl,
-          });
-        } catch (mailError) {
-          emailBienvenidaEnviado = false;
-          console.error('Empresa creada pero falló el email de bienvenida:', mailError.message);
         }
 
         const respuesta = {
           message: adminExistente
-            ? (emailBienvenidaEnviado
-                ? 'Empresa registrada con éxito. Se ha vinculado su cuenta como administrador y se ha enviado un correo de confirmación.'
-                : 'Empresa registrada con éxito y cuenta vinculada como administrador, pero no se pudo enviar el correo de confirmación.')
-            : (emailBienvenidaEnviado
-                ? 'Empresa registrada con éxito. Se ha enviado un correo de bienvenida al administrador.'
-                : 'Empresa registrada con éxito, pero no se pudo enviar el correo de bienvenida. Use "Olvidé mi contraseña" con el email del administrador.'),
-          emailBienvenidaEnviado,
+            ? 'Empresa registrada con éxito. Se ha vinculado su cuenta como administrador.'
+            : 'Empresa registrada con éxito.',
+          emailBienvenidaEnviado: null,
           adminExistente,
         };
 
-        if (process.env.NODE_ENV !== 'production' && devWelcomeUrl) {
-          respuesta.devWelcomeUrl = devWelcomeUrl;
-        }
-
         if (checkoutUrl) {
           respuesta.checkoutUrl = checkoutUrl;
+          respuesta.message += ' Completa el pago con tarjeta para activar la prueba.';
         } else if (esRegistroPublico) {
           respuesta.checkoutError =
-            'No se pudo iniciar el pago con tarjeta. Inicia sesión más tarde para reintentarlo.';
+            checkoutErrorMsg
+            || 'No se pudo iniciar el pago con tarjeta. Inicia sesión más tarde para reintentarlo.';
         }
 
         res.status(201).json(respuesta);
+
+        enviarBienvenidaEmpresa(usuarioAdmin, {
+          nombreEmpresa: nombre_empresa,
+          licencias: numLicencias,
+          alias,
+          identificadorFiscal: CIF,
+          enlacePago: checkoutUrl,
+        })
+          .then((devWelcomeUrl) => {
+            if (process.env.NODE_ENV !== 'production' && devWelcomeUrl) {
+              console.info('[DEV] Enlace de bienvenida:', devWelcomeUrl);
+            }
+          })
+          .catch((mailError) => {
+            console.error('Empresa creada pero falló el email de bienvenida:', mailError.message);
+          });
     } catch (error) {
 
         await transaction.rollback();

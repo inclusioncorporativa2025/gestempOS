@@ -36,7 +36,11 @@ const getStripe = () => {
     throw error;
   }
   if (!stripeClient) {
-    stripeClient = new Stripe(key, { apiVersion: '2024-06-20' });
+    stripeClient = new Stripe(key, {
+      apiVersion: '2024-06-20',
+      timeout: 25_000,
+      maxNetworkRetries: 1,
+    });
   }
   return stripeClient;
 };
@@ -448,6 +452,27 @@ const tipoTaxIdStripe = (identificador) => {
   return /^[ABCDEFGHJNPQRSUVW]/.test(id) ? 'es_cif' : 'es_nif';
 };
 
+const registrarTaxIdCustomerStripe = async (customerId, empresa) => {
+  const identificador = normalizarIdentificadorFiscal(empresa?.identificador_fiscal);
+  if (!identificador) {
+    return;
+  }
+
+  const existentes = await getStripe().customers.listTaxIds(customerId, { limit: 20 });
+  const yaRegistrado = existentes.data.some(
+    (taxId) => normalizarIdentificadorFiscal(taxId.value) === identificador,
+  );
+
+  if (yaRegistrado) {
+    return;
+  }
+
+  await getStripe().customers.createTaxId(customerId, {
+    type: tipoTaxIdStripe(identificador),
+    value: identificador,
+  });
+};
+
 const sincronizarCustomerStripeDesdeEmpresa = async (customerId, empresa, email) => {
   const name = nombreFacturacionEmpresa(empresa);
   const cp = String(empresa?.codigo_postal || '').replace(/\s/g, '');
@@ -464,26 +489,9 @@ const sincronizarCustomerStripeDesdeEmpresa = async (customerId, empresa, email)
     },
   });
 
-  const identificador = normalizarIdentificadorFiscal(empresa?.identificador_fiscal);
-  if (!identificador) {
-    return;
-  }
-
-  const existentes = await getStripe().customers.listTaxIds(customerId, { limit: 20 });
-  const yaRegistrado = existentes.data.some(
-    (taxId) => normalizarIdentificadorFiscal(taxId.value) === identificador,
-  );
-
-  if (!yaRegistrado) {
-    try {
-      await getStripe().customers.createTaxId(customerId, {
-        type: tipoTaxIdStripe(identificador),
-        value: identificador,
-      });
-    } catch (error) {
-      console.warn('billingService: no se pudo registrar el CIF/NIF en Stripe', error.message);
-    }
-  }
+  registrarTaxIdCustomerStripe(customerId, empresa).catch((error) => {
+    console.warn('billingService: no se pudo registrar el CIF/NIF en Stripe', error.message);
+  });
 };
 
 const obtenerOCrearCustomer = async (idEmpresa, email, nombre) => {
