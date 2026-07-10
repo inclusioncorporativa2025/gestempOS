@@ -80,6 +80,11 @@ export const PROVINCIAS = [
 export const provinciaPorNombre = (nombre) =>
   PROVINCIAS.find((p) => p.name.toLowerCase() === String(nombre || '').trim().toLowerCase());
 
+export const provinciaDesdeCodigoPostal = (cp) => {
+  const prefix = String(cp || '').trim().slice(0, 2);
+  return PROVINCIAS.find((p) => p.cpPrefix === prefix)?.name ?? null;
+};
+
 export const regionDesdeCodigoPostal = (cp) => {
   const prefix = String(cp || '').trim().slice(0, 2);
   const prov = PROVINCIAS.find((p) => p.cpPrefix === prefix);

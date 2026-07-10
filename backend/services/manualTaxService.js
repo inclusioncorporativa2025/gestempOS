@@ -3,6 +3,45 @@ const {
   aplicarPorcentajeImpuesto,
 } = require('../utils/spanishTax');
 
+const CAMPOS_FISCALES = [
+  { key: 'identificador_fiscal', etiqueta: 'CIF / NIF' },
+  { key: 'razon_social', etiqueta: 'Razón social', fallback: 'nombre' },
+  { key: 'direccion', etiqueta: 'Dirección' },
+  { key: 'codigo_postal', etiqueta: 'Código postal' },
+  { key: 'ciudad', etiqueta: 'Ciudad' },
+  { key: 'provincia', etiqueta: 'Provincia' },
+];
+
+const valorCampoFiscal = (empresa, campo) => {
+  const raw = empresa?.[campo.key] ?? (campo.fallback ? empresa?.[campo.fallback] : null);
+  return String(raw || '').trim();
+};
+
+const obtenerCamposFiscalesFaltantes = (empresa) =>
+  CAMPOS_FISCALES.filter((campo) => !valorCampoFiscal(empresa, campo)).map((campo) => ({
+    campo: campo.key,
+    etiqueta: campo.etiqueta,
+  }));
+
+const assertDatosFiscalesEmpresa = (empresa) => {
+  if (impuestosAutomaticosActivos()) {
+    return;
+  }
+
+  const faltantes = obtenerCamposFiscalesFaltantes(empresa);
+  if (faltantes.length === 0) {
+    return;
+  }
+
+  const error = new Error(
+    'Complete los datos fiscales de la empresa antes de activar o modificar la suscripción.',
+  );
+  error.status = 400;
+  error.code = 'DATOS_FISCALES_INCOMPLETOS';
+  error.campos_faltantes = faltantes;
+  throw error;
+};
+
 const impuestosAutomaticosActivos = () =>
   String(process.env.STRIPE_AUTOMATIC_TAX ?? 'false').toLowerCase() === 'true';
 
@@ -61,4 +100,7 @@ module.exports = {
   resolverImpuestoManualEmpresa,
   enriquecerPreviewConImpuestoManual,
   aplicarPorcentajeImpuesto,
+  obtenerCamposFiscalesFaltantes,
+  assertDatosFiscalesEmpresa,
+  CAMPOS_FISCALES,
 };

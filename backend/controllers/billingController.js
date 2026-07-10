@@ -69,6 +69,7 @@ const postCheckout = async (req, res) => {
     return res.status(error.status || 500).json({
       message: error.message || 'Error al crear la sesión de pago',
       code: error.code,
+      campos_faltantes: error.campos_faltantes,
     });
   }
 };

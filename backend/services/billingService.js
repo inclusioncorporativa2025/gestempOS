@@ -20,7 +20,10 @@ const {
   impuestosAutomaticosActivos,
   resolverImpuestoManualEmpresa,
   aplicarPorcentajeImpuesto,
+  obtenerCamposFiscalesFaltantes,
+  assertDatosFiscalesEmpresa,
 } = require('./manualTaxService');
+const { resolverRegimenImpuestoEmpresa } = require('../utils/spanishTax');
 
 let stripeClient = null;
 
@@ -434,6 +437,55 @@ const customerStripeExiste = async (customerId) => {
   }
 };
 
+const nombreFacturacionEmpresa = (empresa) =>
+  String(empresa?.razon_social || empresa?.nombre_comercial || empresa?.nombre || '').trim();
+
+const normalizarIdentificadorFiscal = (valor) =>
+  String(valor || '').trim().toUpperCase().replace(/[\s-]/g, '');
+
+const tipoTaxIdStripe = (identificador) => {
+  const id = normalizarIdentificadorFiscal(identificador);
+  return /^[ABCDEFGHJNPQRSUVW]/.test(id) ? 'es_cif' : 'es_nif';
+};
+
+const sincronizarCustomerStripeDesdeEmpresa = async (customerId, empresa, email) => {
+  const name = nombreFacturacionEmpresa(empresa);
+  const cp = String(empresa?.codigo_postal || '').replace(/\s/g, '');
+
+  await getStripe().customers.update(customerId, {
+    email: email || undefined,
+    name: name || undefined,
+    address: {
+      line1: String(empresa?.direccion || '').trim() || undefined,
+      city: String(empresa?.ciudad || '').trim() || undefined,
+      postal_code: cp || undefined,
+      state: String(empresa?.provincia || '').trim() || undefined,
+      country: 'ES',
+    },
+  });
+
+  const identificador = normalizarIdentificadorFiscal(empresa?.identificador_fiscal);
+  if (!identificador) {
+    return;
+  }
+
+  const existentes = await getStripe().customers.listTaxIds(customerId, { limit: 20 });
+  const yaRegistrado = existentes.data.some(
+    (taxId) => normalizarIdentificadorFiscal(taxId.value) === identificador,
+  );
+
+  if (!yaRegistrado) {
+    try {
+      await getStripe().customers.createTaxId(customerId, {
+        type: tipoTaxIdStripe(identificador),
+        value: identificador,
+      });
+    } catch (error) {
+      console.warn('billingService: no se pudo registrar el CIF/NIF en Stripe', error.message);
+    }
+  }
+};
+
 const obtenerOCrearCustomer = async (idEmpresa, email, nombre) => {
   const facturacion = await obtenerFacturacionCompleta(idEmpresa);
 
@@ -561,11 +613,23 @@ const crearCheckoutSession = async ({
   await validarPrecioSuscripcion(priceId, cicloNormalizado);
 
   const empresa = await Empresa.findByPk(idEmpresa);
-  const impuestoManual = empresa ? resolverImpuestoManualEmpresa(empresa) : null;
+  if (!empresa) {
+    const error = new Error('Empresa no encontrada');
+    error.status = 404;
+    throw error;
+  }
+
+  assertDatosFiscalesEmpresa(empresa);
+  const impuestoManual = resolverImpuestoManualEmpresa(empresa);
 
   const { successUrl, cancelUrl } = resolverUrlsCheckout();
 
-  const customerId = await obtenerOCrearCustomer(idEmpresa, email, nombre);
+  const customerId = await obtenerOCrearCustomer(
+    idEmpresa,
+    email,
+    nombreFacturacionEmpresa(empresa) || nombre,
+  );
+  await sincronizarCustomerStripeDesdeEmpresa(customerId, empresa, email);
 
   const lineItem = impuestoManual
     ? aplicarImpuestoManualLineItem({ price: priceId, quantity: qty }, impuestoManual.taxRateIds)
@@ -601,9 +665,6 @@ const crearCheckoutSession = async ({
     sessionParams.billing_address_collection = 'required';
     sessionParams.tax_id_collection = { enabled: true };
     sessionParams.customer_update = { address: 'auto', name: 'auto' };
-  } else if (impuestoManual) {
-    sessionParams.tax_id_collection = { enabled: true };
-    sessionParams.customer_update = { name: 'auto' };
   }
 
   const couponAnual = process.env.STRIPE_COUPON_ANUAL;
@@ -882,6 +943,8 @@ const resolverCambioPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
     throw error;
   }
 
+  assertDatosFiscalesEmpresa(empresa);
+
   const planActual = normalizePlanId(empresa.plan);
   const ciclo = String(facturacion.ciclo_facturacion || 'mensual').toLowerCase() === 'anual'
     ? 'anual'
@@ -933,6 +996,8 @@ const resolverCambioPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
     error.code = 'NO_STRIPE_CUSTOMER';
     throw error;
   }
+
+  await sincronizarCustomerStripeDesdeEmpresa(customerId, empresa, empresa.email);
 
   return {
     facturacion,
@@ -1108,6 +1173,8 @@ const ampliarLicenciasStripe = async (idEmpresa, { licencias } = {}) => {
     throw error;
   }
 
+  assertDatosFiscalesEmpresa(empresa);
+
   const planId = normalizePlanId(empresa.plan);
   const minLicencias = getPlanMinLicencias(planId);
   const licenciasAnterior = disponibilidad.licencias;
@@ -1147,6 +1214,12 @@ const ampliarLicenciasStripe = async (idEmpresa, { licencias } = {}) => {
     updateItem.tax_rates = impuestoManual.taxRateIds;
   }
 
+  await sincronizarCustomerStripeDesdeEmpresa(
+    facturacion.stripe_customer_id,
+    empresa,
+    empresa.email,
+  );
+
   await getStripe().subscriptions.update(subscriptionId, {
     items: [updateItem],
     proration_behavior: 'create_prorations',
@@ -1183,6 +1256,12 @@ const obtenerEstadoFacturacion = async (idEmpresa) => {
   const estadoSuscripcion = String(facturacionFinal?.estado_suscripcion || '').toLowerCase();
   const enPruebaStripe = estadoSuscripcion === 'trialing';
   const esLegacy = String(facturacionFinal?.modo_facturacion || '').toLowerCase() === 'legacy';
+  const camposFiscalesFaltantes = impuestosAutomaticosActivos()
+    ? []
+    : obtenerCamposFiscalesFaltantes(empresa);
+  const regimenImpuesto = impuestosAutomaticosActivos()
+    ? null
+    : resolverRegimenImpuestoEmpresa(empresa);
 
   return {
     plan: planCodigo,
@@ -1209,6 +1288,10 @@ const obtenerEstadoFacturacion = async (idEmpresa) => {
     es_legacy: esLegacy,
     min_licencias: getPlanMinLicencias(planCodigo),
     trial,
+    datos_fiscales_completos: camposFiscalesFaltantes.length === 0,
+    campos_fiscales_faltantes: camposFiscalesFaltantes,
+    regimen_impuesto: regimenImpuesto?.codigo ?? null,
+    regimen_impuesto_etiqueta: regimenImpuesto?.etiqueta ?? null,
   };
 };
 

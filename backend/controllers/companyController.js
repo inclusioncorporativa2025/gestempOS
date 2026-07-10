@@ -17,7 +17,7 @@ const {
   camposPlanEmpresa,
   obtenerCodigoPlanEmpresa,
 } = require('../services/planCatalogService');
-const { isValidRegionCode } = require('../config/spanishRegions');
+const { isValidRegionCode, resolveRegionCode, provinceByCpPrefix } = require('../config/spanishRegions');
 const { calcularFechaFinPrueba } = require('../services/trialService');
 const { crearCheckoutSession } = require('../services/billingService');
 const { purgarEmpresaCompleta } = require('../services/empresaPurgeService');
@@ -84,7 +84,21 @@ const registerCompany = async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
         const esRegistroPublico = req.body.idUsuario == null;
-        const { Administrador, CIF, email, nombre_empresa, dni, numLicencias, alias, plan, cicloFacturacion } = req.body.values;
+        const {
+            Administrador,
+            CIF,
+            email,
+            nombre_empresa,
+            dni,
+            numLicencias,
+            alias,
+            plan,
+            cicloFacturacion,
+            direccion,
+            codigo_postal,
+            ciudad,
+            provincia,
+        } = req.body.values;
         const idUsuarioAccion = req.body.idUsuario;
         const schemaName = `empresa_${nombre_empresa.toLowerCase().replace(/\s+/g, '_')}`;
         const fecha = new Date();
@@ -121,6 +135,30 @@ const registerCompany = async (req, res) => {
             await transaction.rollback();
             return res.status(400).json({ message: 'El email de contacto es obligatorio' });
         }
+
+        const direccionFiscal = String(direccion ?? '').trim();
+        const codigoPostal = String(codigo_postal ?? '').replace(/\s/g, '');
+        const ciudadFiscal = String(ciudad ?? '').trim();
+        const provinciaFiscal = String(provincia ?? '').trim();
+
+        if (esRegistroPublico) {
+            if (!direccionFiscal || !codigoPostal || !ciudadFiscal || !provinciaFiscal) {
+                await transaction.rollback();
+                return res.status(400).json({
+                    message: 'La dirección fiscal es obligatoria: dirección, código postal, ciudad y provincia.',
+                    codigo: 'DATOS_FISCALES_INCOMPLETOS',
+                });
+            }
+            if (!/^\d{5}$/.test(codigoPostal)) {
+                await transaction.rollback();
+                return res.status(400).json({ message: 'El código postal debe tener 5 dígitos' });
+            }
+        }
+
+        const codigoRegionFestivos = resolveRegionCode({
+            codigoPostal,
+            provincia: provinciaFiscal || provinceByCpPrefix[codigoPostal.slice(0, 2)] || null,
+        });
 
         const identidadAdmin = await resolverUsuarioIdentidad(
             { email: emailNormalizado, dni, respuestaPublica: esRegistroPublico },
@@ -166,6 +204,14 @@ const registerCompany = async (req, res) => {
             id_empresa: idEmpresa,
             nombre: nombre_empresa,
             identificador_fiscal: cifNormalizado,
+            razon_social: nombre_empresa,
+            email: emailNormalizado,
+            direccion: direccionFiscal || null,
+            codigo_postal: codigoPostal || null,
+            ciudad: ciudadFiscal || null,
+            provincia: provinciaFiscal || null,
+            codigo_region_festivos: codigoRegionFestivos,
+            pais: 'España',
             fecha_alta: fecha,
             usuario_alta: usuarioAlta,
             licencias: licenciasSolicitadas,

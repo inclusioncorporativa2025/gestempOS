@@ -97,6 +97,7 @@ const Register = () => {
           showPlanSelect
           planSelectVariant="cards"
           requireTermsAcceptance
+          collectFiscalAddress
         />
 
         <p className="register-footer">

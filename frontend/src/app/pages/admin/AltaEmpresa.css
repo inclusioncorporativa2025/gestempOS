@@ -1,5 +1,8 @@
-.alta-layout {
-  background-color: transparent;
+.alta-fiscal-note {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.55);
+  line-height: 1.45;
 }
 
 .alta-content {

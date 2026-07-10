@@ -13,6 +13,10 @@ import {
   ANNUAL_FREE_MONTHS_BADGE,
   LICENSE_IS_USER_NOTE,
 } from '../../../constants/plans';
+import {
+  PROVINCIAS,
+  provinciaDesdeCodigoPostal,
+} from '../../../constants/spanishRegions';
 import './AltaEmpresa.css';
 
 const PLAN_UNAVAILABLE_TOOLTIP =
@@ -118,6 +122,7 @@ const AltaEmpresaForm = ({
   showPlanSelect = false,
   planSelectVariant = 'select',
   requireTermsAcceptance = false,
+  collectFiscalAddress = false,
 }) => {
   const planSeleccionado = Form.useWatch('plan', form) || planId;
   const cicloFacturacion = Form.useWatch('cicloFacturacion', form) || 'mensual';
@@ -150,6 +155,14 @@ const AltaEmpresaForm = ({
       .then(() => setCanSubmit(true))
       .catch(() => setCanSubmit(false));
   }, [form, watchedValues, requireTermsAcceptance, minLicencias]);
+
+  const handleCodigoPostalChange = (event) => {
+    const cp = String(event?.target?.value || '').replace(/\s/g, '');
+    const provinciaCp = provinciaDesdeCodigoPostal(cp);
+    if (provinciaCp) {
+      form.setFieldsValue({ provincia: provinciaCp });
+    }
+  };
 
   return (
   <Form
@@ -284,6 +297,70 @@ const AltaEmpresaForm = ({
           <Input placeholder="Ej. 12345678A" />
         </Form.Item>
       </Col>
+      {collectFiscalAddress ? (
+        <>
+          <Col xs={24}>
+            <p className="alta-fiscal-note">
+              Necesitamos la dirección fiscal para calcular el IVA y emitir facturas en Stripe.
+            </p>
+          </Col>
+          <Col xs={24}>
+            <Form.Item
+              name="direccion"
+              label="Dirección fiscal"
+              rules={[{ required: true, message: 'Campo requerido' }]}
+            >
+              <Input placeholder="Calle, número, piso…" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="codigo_postal"
+              label="Código postal"
+              rules={[
+                { required: true, message: 'Campo requerido' },
+                {
+                  pattern: /^\d{5}$/,
+                  message: 'Introduce un CP español de 5 dígitos',
+                },
+              ]}
+            >
+              <Input
+                placeholder="28001"
+                maxLength={5}
+                inputMode="numeric"
+                onChange={handleCodigoPostalChange}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="ciudad"
+              label="Ciudad"
+              rules={[{ required: true, message: 'Campo requerido' }]}
+            >
+              <Input placeholder="Ej. Madrid" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="provincia"
+              label="Provincia"
+              rules={[{ required: true, message: 'Campo requerido' }]}
+            >
+              <Select
+                showSearch
+                placeholder="Selecciona provincia"
+                optionFilterProp="label"
+                options={PROVINCIAS.map((prov) => ({
+                  value: prov.name,
+                  label: prov.name,
+                }))}
+              />
+            </Form.Item>
+          </Col>
+        </>
+      ) : null}
       {requireTermsAcceptance ? (
         <Col xs={24}>
           <Form.Item
