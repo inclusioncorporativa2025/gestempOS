@@ -718,8 +718,10 @@ const FacturacionPanel = ({ activo = true }) => {
             <Text type="secondary" className="facturacion-price-summary__note">
               {puedeCambiarPlan
                 ? previewCambioPlan?.importe_iva_eur > 0
-                  ? `Incluye ${formatEuro(previewCambioPlan.importe_iva_eur)} € de IVA. Calculado por Stripe según los días restantes del periodo.`
-                  : 'Calculado por Stripe según los días restantes del periodo.'
+                  ? `Incluye ${formatEuro(previewCambioPlan.importe_iva_eur)} € de IVA${previewCambioPlan.regimen_impuesto_etiqueta ? ` (${previewCambioPlan.regimen_impuesto_etiqueta})` : ''}. Según los días restantes del periodo.`
+                  : previewCambioPlan?.regimen_impuesto_etiqueta
+                    ? `${previewCambioPlan.regimen_impuesto_etiqueta}. Según los días restantes del periodo.`
+                    : 'Según los días restantes del periodo.'
                 : ciclo === 'anual'
                   ? `Precio con descuento anual (${ANNUAL_DISCOUNT_LABEL}) en el primer año.`
                   : `${planInfo.priceMonthly} € por usuario al mes.`}

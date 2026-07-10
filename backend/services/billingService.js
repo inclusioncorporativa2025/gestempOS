@@ -16,6 +16,11 @@ const {
   calcularPeriodoLegacy,
   periodoLegacyVigente,
 } = require('../utils/legacyBillingPeriod');
+const {
+  impuestosAutomaticosActivos,
+  resolverImpuestoManualEmpresa,
+  aplicarPorcentajeImpuesto,
+} = require('./manualTaxService');
 
 let stripeClient = null;
 
@@ -399,10 +404,45 @@ const procesarWebhookEvent = async (event) => {
   }
 };
 
+const limpiarReferenciasStripeEmpresa = async (idEmpresa) => {
+  await sequelize.query(
+    `UPDATE empresa_facturacion
+     SET stripe_customer_id = NULL,
+         stripe_subscription_id = NULL,
+         stripe_subscription_item_id = NULL,
+         stripe_price_id = NULL,
+         estado_suscripcion = NULL,
+         stripe_synced_at = NOW()
+     WHERE id_empresa = :idEmpresa`,
+    { replacements: { idEmpresa } },
+  );
+};
+
+const customerStripeExiste = async (customerId) => {
+  if (!customerId) {
+    return false;
+  }
+
+  try {
+    const customer = await getStripe().customers.retrieve(customerId);
+    return Boolean(customer?.id) && !customer.deleted;
+  } catch (error) {
+    if (error.code === 'resource_missing') {
+      return false;
+    }
+    throw error;
+  }
+};
+
 const obtenerOCrearCustomer = async (idEmpresa, email, nombre) => {
   const facturacion = await obtenerFacturacionCompleta(idEmpresa);
+
   if (facturacion?.stripe_customer_id) {
-    return facturacion.stripe_customer_id;
+    const existe = await customerStripeExiste(facturacion.stripe_customer_id);
+    if (existe) {
+      return facturacion.stripe_customer_id;
+    }
+    await limpiarReferenciasStripeEmpresa(idEmpresa);
   }
 
   const customer = await getStripe().customers.create({
@@ -473,8 +513,10 @@ const resolverUrlsCheckout = () => {
   };
 };
 
-const impuestosAutomaticosActivos = () =>
-  String(process.env.STRIPE_AUTOMATIC_TAX ?? 'true').toLowerCase() !== 'false';
+const aplicarImpuestoManualLineItem = (lineItem, taxRateIds) => ({
+  ...lineItem,
+  tax_rates: taxRateIds,
+});
 
 const crearCheckoutSession = async ({
   idEmpresa,
@@ -518,14 +560,21 @@ const crearCheckoutSession = async ({
 
   await validarPrecioSuscripcion(priceId, cicloNormalizado);
 
+  const empresa = await Empresa.findByPk(idEmpresa);
+  const impuestoManual = empresa ? resolverImpuestoManualEmpresa(empresa) : null;
+
   const { successUrl, cancelUrl } = resolverUrlsCheckout();
 
   const customerId = await obtenerOCrearCustomer(idEmpresa, email, nombre);
 
+  const lineItem = impuestoManual
+    ? aplicarImpuestoManualLineItem({ price: priceId, quantity: qty }, impuestoManual.taxRateIds)
+    : { price: priceId, quantity: qty };
+
   const sessionParams = {
     mode: 'subscription',
     customer: customerId,
-    line_items: [{ price: priceId, quantity: qty }],
+    line_items: [lineItem],
     success_url: successUrl,
     cancel_url: cancelUrl,
     metadata: {
@@ -539,6 +588,7 @@ const crearCheckoutSession = async ({
         plan_codigo: planId,
       },
       ...(aplicarTrial ? { trial_period_days: TRIAL_DAYS } : {}),
+      ...(impuestoManual ? { default_tax_rates: impuestoManual.taxRateIds } : {}),
     },
   };
 
@@ -551,6 +601,8 @@ const crearCheckoutSession = async ({
     sessionParams.billing_address_collection = 'required';
     sessionParams.tax_id_collection = { enabled: true };
     sessionParams.customer_update = { address: 'auto', name: 'auto' };
+  } else if (impuestoManual) {
+    sessionParams.tax_id_collection = { enabled: true };
   }
 
   const couponAnual = process.env.STRIPE_COUPON_ANUAL;
@@ -571,8 +623,20 @@ const crearPortalSession = async (idEmpresa, returnUrl) => {
     throw error;
   }
 
+  const customerId = facturacion.stripe_customer_id;
+  const existe = await customerStripeExiste(customerId);
+  if (!existe) {
+    await limpiarReferenciasStripeEmpresa(idEmpresa);
+    const error = new Error(
+      'El cliente de Stripe ya no existe. Vuelva a activar la suscripción desde Facturación.',
+    );
+    error.status = 400;
+    error.code = 'STRIPE_CUSTOMER_NOT_FOUND';
+    throw error;
+  }
+
   const session = await getStripe().billingPortal.sessions.create({
-    customer: facturacion.stripe_customer_id,
+    customer: customerId,
     return_url: returnUrl || process.env.STRIPE_SUCCESS_URL?.split('?')[0] || process.env.FRONTEND_URL,
   });
 
@@ -983,9 +1047,16 @@ const cambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias } = {}
     throw error;
   }
 
+  const impuestoManual = resolverImpuestoManualEmpresa(resolved.empresa);
+  const updateItem = { id: itemId, price: priceId, quantity: nuevaCantidad };
+  if (impuestoManual) {
+    updateItem.tax_rates = impuestoManual.taxRateIds;
+  }
+
   await getStripe().subscriptions.update(subscriptionId, {
-    items: [{ id: itemId, price: priceId, quantity: nuevaCantidad }],
+    items: [updateItem],
     proration_behavior: 'create_prorations',
+    ...(impuestoManual ? { default_tax_rates: impuestoManual.taxRateIds } : {}),
     metadata: {
       id_empresa: String(idEmpresa),
       plan_codigo: planNuevo,
@@ -1069,9 +1140,16 @@ const ampliarLicenciasStripe = async (idEmpresa, { licencias } = {}) => {
     throw error;
   }
 
+  const impuestoManual = resolverImpuestoManualEmpresa(empresa);
+  const updateItem = { id: itemId, quantity: nuevaCantidad };
+  if (impuestoManual) {
+    updateItem.tax_rates = impuestoManual.taxRateIds;
+  }
+
   await getStripe().subscriptions.update(subscriptionId, {
-    items: [{ id: itemId, quantity: nuevaCantidad }],
+    items: [updateItem],
     proration_behavior: 'create_prorations',
+    ...(impuestoManual ? { default_tax_rates: impuestoManual.taxRateIds } : {}),
   });
 
   await sincronizarSuscripcion(subscriptionId, { motivo: 'ampliar_licencias' });
