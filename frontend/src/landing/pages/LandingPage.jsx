@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Tooltip } from 'antd';
 import {
@@ -22,7 +22,13 @@ import LandingPlexusBackground from '../components/LandingPlexusBackground';
 import LandingReveal from '../components/LandingReveal';
 import LandingStats from '../components/LandingStats';
 import BrandLogo from '../../components/BrandLogo';
+import { getStoredUtmParams } from '../utils/calendlyLeadNotify';
 import './LandingPage.css';
+
+const shouldOpenDemoForm = (search) => {
+  const demo = new URLSearchParams(search).get('demo');
+  return demo === '1' || demo === 'true';
+};
 
 /** Capturas del producto en el hero (rotación automática). */
 const LANDING_HERO_IMAGES = [
@@ -190,6 +196,14 @@ const LandingPage = () => {
   const [billingPeriod, setBillingPeriod] = useState('monthly');
   const [demoFormOpen, setDemoFormOpen] = useState(false);
   const loginHref = getAppLoginHref();
+
+  useEffect(() => {
+    getStoredUtmParams();
+
+    if (shouldOpenDemoForm(window.location.search)) {
+      setDemoFormOpen(true);
+    }
+  }, []);
   const registerHref = getAppRegisterHref();
   const loginIsExternal = loginHref.startsWith('http');
   const registerIsExternal = registerHref.startsWith('http');

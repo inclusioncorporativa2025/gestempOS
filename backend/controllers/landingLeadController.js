@@ -51,7 +51,22 @@ const enviarLeadAMake = async (lead, source) => {
   }
 
   await sendLeadToMake(lead);
-  console.log(`[landing/${source}] Lead enviado a Make:`, lead.email, lead.fecha_demo_legible || lead.fecha_demo);
+  console.log(`[landing/${source}] Lead enviado a Make:`, lead.email, lead.fecha_demo || lead.fecha_demo_legible);
+};
+
+const enviarLeadIntegraciones = async (lead, source, brevoContext = {}) => {
+  await enviarLeadAMake(lead, source);
+
+  if (!isBrevoConfigured()) {
+    return;
+  }
+
+  try {
+    await syncDemoLeadToBrevo(lead, brevoContext);
+    console.log(`[landing/${source}] Lead sincronizado en Brevo:`, lead.email);
+  } catch (error) {
+    console.warn(`[landing/${source}] Brevo no sincronizado:`, error.message);
+  }
 };
 
 const landingStatus = (req, res) => {
