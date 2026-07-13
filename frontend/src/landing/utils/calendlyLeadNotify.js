@@ -2,6 +2,12 @@ import { getLandingApiBase } from './calendlyLead';
 
 const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign'];
 
+export const isDemoDeepLink = (search = '') => {
+  const normalized = search.startsWith('?') ? search : `?${search}`;
+  const demo = new URLSearchParams(normalized).get('demo');
+  return demo === '1' || demo === 'true';
+};
+
 export const getStoredUtmParams = () => {
   if (typeof window === 'undefined') return {};
 
@@ -24,6 +30,19 @@ export const getStoredUtmParams = () => {
   }
 
   return utm;
+};
+
+/** Guarda UTMs y detecta ?demo=1 (también tras bfcache al volver desde email). */
+export const syncLandingCampaignFromUrl = () => {
+  if (typeof window === 'undefined') {
+    return { openDemo: false };
+  }
+
+  getStoredUtmParams();
+
+  return {
+    openDemo: isDemoDeepLink(window.location.search),
+  };
 };
 
 export const notifyCalendlyBooking = async ({ invitee, event }) => {

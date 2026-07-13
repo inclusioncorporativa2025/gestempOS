@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Button, Tooltip } from 'antd';
 import {
   ClockCircleOutlined,
@@ -22,13 +22,8 @@ import LandingPlexusBackground from '../components/LandingPlexusBackground';
 import LandingReveal from '../components/LandingReveal';
 import LandingStats from '../components/LandingStats';
 import BrandLogo from '../../components/BrandLogo';
-import { getStoredUtmParams } from '../utils/calendlyLeadNotify';
+import { syncLandingCampaignFromUrl } from '../utils/calendlyLeadNotify';
 import './LandingPage.css';
-
-const shouldOpenDemoForm = (search) => {
-  const demo = new URLSearchParams(search).get('demo');
-  return demo === '1' || demo === 'true';
-};
 
 /** Capturas del producto en el hero (rotación automática). */
 const LANDING_HERO_IMAGES = [
@@ -193,17 +188,32 @@ const PlanBillingToggle = ({ billingPeriod, onChange, variant = 'standalone' }) 
 };
 
 const LandingPage = () => {
+  const [searchParams] = useSearchParams();
   const [billingPeriod, setBillingPeriod] = useState('monthly');
-  const [demoFormOpen, setDemoFormOpen] = useState(false);
+  const [demoFormOpen, setDemoFormOpen] = useState(
+    () => syncLandingCampaignFromUrl().openDemo,
+  );
   const loginHref = getAppLoginHref();
 
   useEffect(() => {
-    getStoredUtmParams();
+    const applyCampaignParams = () => {
+      const { openDemo } = syncLandingCampaignFromUrl();
+      if (openDemo) {
+        setDemoFormOpen(true);
+      }
+    };
 
-    if (shouldOpenDemoForm(window.location.search)) {
-      setDemoFormOpen(true);
-    }
-  }, []);
+    applyCampaignParams();
+
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        applyCampaignParams();
+      }
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [searchParams]);
   const registerHref = getAppRegisterHref();
   const loginIsExternal = loginHref.startsWith('http');
   const registerIsExternal = registerHref.startsWith('http');
