@@ -11,6 +11,44 @@ const parseOrigins = (raw) =>
     .map((o) => o.trim().replace(/^["']|["']$/g, ''))
     .filter(Boolean);
 
+const addOriginWithWwwVariant = (set, origin) => {
+  if (!origin) return;
+
+  set.add(origin);
+
+  try {
+    const parsed = new URL(origin);
+    const { protocol, hostname, port } = parsed;
+
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('app.')) {
+      return;
+    }
+
+    const portSuffix = port ? `:${port}` : '';
+
+    if (hostname.startsWith('www.')) {
+      set.add(`${protocol}//${hostname.slice(4)}${portSuffix}`);
+    } else {
+      set.add(`${protocol}//www.${hostname}${portSuffix}`);
+    }
+  } catch {
+    // noop — origin ya añadido tal cual
+  }
+};
+
+const buildAllowedOrigins = () => {
+  const allowedOrigins = new Set();
+
+  parseOrigins(process.env.ALLOWED_ORIGINS).forEach((origin) => {
+    addOriginWithWwwVariant(allowedOrigins, origin);
+  });
+
+  addOriginWithWwwVariant(allowedOrigins, APP_URL);
+  addOriginWithWwwVariant(allowedOrigins, LANDING_URL);
+
+  return allowedOrigins;
+};
+
 const isLocalDevOrigin = (origin) =>
   /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 
@@ -18,13 +56,7 @@ const configureMiddleware = (app) => {
 
   app.use(helmet());
 
-  const allowedOrigins = new Set(parseOrigins(process.env.ALLOWED_ORIGINS));
-  if (APP_URL) {
-    allowedOrigins.add(APP_URL);
-  }
-  if (LANDING_URL) {
-    allowedOrigins.add(LANDING_URL);
-  }
+  const allowedOrigins = buildAllowedOrigins();
 
   const isDev = process.env.NODE_ENV !== 'production';
 

@@ -26,6 +26,34 @@ const toBrevoDate = (value) => {
   return undefined;
 };
 
+const stripSheetTextPrefix = (value) => {
+  const text = String(value || '').trim();
+  return text.startsWith("'") ? text.slice(1).trim() : text;
+};
+
+/** Brevo SMS exige E.164 (+34600111222). lead.telefono puede llevar prefijo ' de Sheets. */
+const normalizePhoneForBrevo = (value) => {
+  let phone = stripSheetTextPrefix(value).replace(/[\s\-().]/g, '');
+
+  if (!phone) return '';
+
+  if (phone.startsWith('00')) {
+    phone = `+${phone.slice(2)}`;
+  } else if (!phone.startsWith('+')) {
+    if (/^[679]\d{8}$/.test(phone)) {
+      phone = `+34${phone}`;
+    } else if (/^34[679]\d{8}$/.test(phone)) {
+      phone = `+${phone}`;
+    }
+  }
+
+  if (!/^\+[1-9]\d{6,14}$/.test(phone)) {
+    return '';
+  }
+
+  return phone;
+};
+
 const splitFullName = (fullName = '') => {
   const parts = String(fullName).trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) {
@@ -63,18 +91,23 @@ const mapLeadToBrevoContact = (lead = {}, context = {}) => {
 
   const fechaDemo = toBrevoDate(rawLead.fecha_demo || lead.fecha_demo);
   const fechaSolicitud = toBrevoDate(rawLead.fecha_registro || lead.fecha_solicitud || new Date());
+  const telefono = normalizePhoneForBrevo(rawLead.telefono || lead.telefono);
+  const horaDemo = stripSheetTextPrefix(lead.hora_demo || rawLead.hora_demo || '');
 
   const attributes = {
     NOMBRE: nombre,
     APELLIDOS: apellidos,
-    SMS: lead.telefono || '',
     ORIGEN: lead.origen || 'Solitud_demo',
     TIME_TIPO_NEGOCIO: lead.empresa || '',
     TIME_NUM_EMPLEADOS: lead.num_empleados || '',
-    TIME_HORA_DEMO: lead.hora_demo || rawLead.hora_demo || '',
+    TIME_HORA_DEMO: horaDemo,
     TIME_ESTADO_LEAD: lead.estado_lead || 'nuevo',
     TIME_CONSENT_RGPD: lead.consentimiento_rgpd === true ? 'true' : 'false',
   };
+
+  if (telefono) {
+    attributes.SMS = telefono;
+  }
 
   if (fechaDemo) {
     attributes.TIME_FECHA_DEMO = fechaDemo;
@@ -112,4 +145,6 @@ module.exports = {
   mapLeadToBrevoContact,
   mapLeadToDemoSolicitadaEvent,
   toBrevoDate,
+  normalizePhoneForBrevo,
+  stripSheetTextPrefix,
 };
