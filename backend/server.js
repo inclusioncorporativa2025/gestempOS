@@ -14,6 +14,9 @@ const { handleOpenWAWebhook } = require('./controllers/whatsappWebhookController
 const app = express();
 const port = process.env.PORT || 5001;
 
+// Detrás de nginx/proxy: necesario para rate limiting por IP real (X-Forwarded-For)
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS) || 1);
+
 // Webhook Stripe: body raw antes de express.json()
 app.post(
   '/api/billing/webhook',

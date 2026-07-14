@@ -11,22 +11,23 @@ const {
 } = require('../controllers/authLocalController');
 const { registerCompanyPublic } = require('../controllers/companyController');
 const { requireAuth } = require('../middleware/authMiddleware');
+const { authLimiter, registerLimiter } = require('../middleware/rateLimit');
 
-router.post('/login', login);
+router.post('/login', authLimiter, login);
 
-router.post('/reanudar-checkout', reanudarCheckout);
+router.post('/reanudar-checkout', authLimiter, reanudarCheckout);
 
-router.post('/select-empresa', selectEmpresa);
+router.post('/select-empresa', authLimiter, selectEmpresa);
 
 router.get('/mis-empresas', requireAuth, misEmpresas);
 
 router.post('/switch-empresa', requireAuth, switchEmpresa);
 
-router.post('/register-company', registerCompanyPublic);
+router.post('/register-company', registerLimiter, registerCompanyPublic);
 
-router.post('/forgot-password', forgotPassword);
+router.post('/forgot-password', authLimiter, forgotPassword);
 
-router.post('/reset-password', resetPassword);
+router.post('/reset-password', authLimiter, resetPassword);
 
 // Con autenticación por JWT el logout es responsabilidad del cliente
 // (descartar el token). Se mantiene el endpoint por compatibilidad.

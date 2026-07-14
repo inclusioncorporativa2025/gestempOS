@@ -15,6 +15,7 @@ const {
   getFacturaDocumento,
 } = require('../controllers/billingController');
 const { requireAuth, requireRole, ROLES } = require('../middleware/authMiddleware');
+const { billingPublicLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -23,9 +24,9 @@ const requireBillingAccess = [
   requireRole(ROLES.ROOT, ROLES.PLATFORM_ADMIN, ROLES.ADMIN_EMPRESA),
 ];
 
-router.get('/session/:sessionId/verify', getSession);
-router.get('/renovacion/info', getRenovacionInfo);
-router.post('/renovacion/checkout', postRenovacionCheckout);
+router.get('/session/:sessionId/verify', billingPublicLimiter, getSession);
+router.get('/renovacion/info', billingPublicLimiter, getRenovacionInfo);
+router.post('/renovacion/checkout', billingPublicLimiter, postRenovacionCheckout);
 router.get('/estado', ...requireBillingAccess, getEstado);
 router.get('/facturas', ...requireBillingAccess, getFacturas);
 router.get('/facturas/:idFactura/documento', ...requireBillingAccess, getFacturaDocumento);
