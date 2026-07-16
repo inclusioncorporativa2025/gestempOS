@@ -5,6 +5,7 @@ import { crearUsuario } from '../../features/user/usuarioService';
 import { obtenerJornadas } from '../../features/jornada/jornadaService';
 import { mostrarModalLicenciasAgotadas } from '../../features/billing/licenciasAgotadasModal';
 import { opcionesTipoHora, TIPO_HORA_INHERIT } from '../../utils/tipoHora';
+import { tooltipTipoHoraFormItem } from '../../utils/tipoHoraTooltip';
 import JornadaLaboralSelect from './JornadaLaboralSelect';
 
 const { Option } = Select;
@@ -157,7 +158,7 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
         <Form.Item
           label="Tipo de hora (extra / complementaria / bolsa)"
           name="tipoHora"
-          tooltip="Por defecto se usa el configurado en la jornada. Puedes definir uno distinto para este empleado."
+          tooltip={tooltipTipoHoraFormItem({ includeHeredar: true })}
         >
           <Select options={opcionesTipoHora} />
         </Form.Item>

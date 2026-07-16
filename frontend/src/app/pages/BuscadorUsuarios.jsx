@@ -20,6 +20,7 @@ import {
   valorTipoUsuarioForm,
 } from '../../utils/tipoUsuarioLabel';
 import { opcionesTipoHora, tipoHoraFormValue } from '../../utils/tipoHora';
+import { tooltipTipoHoraFormItem } from '../../utils/tipoHoraTooltip';
 import AltaEmpleadoModal from '../components/AltaEmpleadoModal';
 import JornadaLaboralSelect from '../components/JornadaLaboralSelect';
 import { esUsuarioActivo, estaDadoDeBajaEnEmpresa as estaDadoDeBaja } from '../../utils/usuarioActivo';
@@ -592,7 +593,7 @@ const BuscarUsuarios = () => {
                         <Form.Item
                             label="Tipo de hora"
                             name="tipoHora"
-                            tooltip="Heredar usa el tipo configurado en la jornada del empleado."
+                            tooltip={tooltipTipoHoraFormItem({ includeHeredar: true })}
                         >
                             <Select options={opcionesTipoHora} />
                         </Form.Item>

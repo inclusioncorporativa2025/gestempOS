@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Tooltip,Card, Table, Button, Collapse, Modal, Form, Input, TimePicker, message, Checkbox, Select, Row, Col } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
 import GradientButton from '../shared/GradientButton';
-import { EditOutlined, InfoCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import { EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { tooltipTipoHoraFormItem } from '../../../utils/tipoHoraTooltip';
 import { crearJornada, editarJornada, obtenerJornadasByIdEmpresa } from "../../../features/jornada/jornadaService";
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';  
@@ -352,19 +353,9 @@ const GestionTipoUsuariosCard = () => {
                        
                     <Col xs={24} sm={12} md={12} lg={12} xl={8} >
                         <Form.Item
-                            label={
-                                <>
-                                    Tipo de Hora
-                                    <Tooltip title={ <>
-                            <b>Extra:</b> para jornadas completas. <br />
-                            <b>Complementaria:</b> para jornadas en tiempo parcial. <br />
-                            <b>Bolsa:</b> para otros casos.
-                        </>}>
-                                        <InfoCircleOutlined className="gtu-info-icon" />
-                                    </Tooltip>
-                                </>
-                            }
+                            label="Tipo de hora"
                             name="legal"
+                            tooltip={tooltipTipoHoraFormItem()}
                             rules={[{ required: true, message: 'Por favor selecciona el tipo de hora extra/complementaria' }]}
                         >
                             <Select placeholder="Selecciona el tipo de hora extra/complementaria">
@@ -454,6 +445,7 @@ const GestionTipoUsuariosCard = () => {
                     <Form.Item
                         label="Tipo de hora"
                         name="legalEdit"
+                        tooltip={tooltipTipoHoraFormItem()}
                         rules={[{ required: true, message: 'Selecciona el tipo de hora' }]}
                     >
                         <Select placeholder="Tipo de hora">
