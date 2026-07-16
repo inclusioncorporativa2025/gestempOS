@@ -4,7 +4,8 @@ import GradientButton from './shared/GradientButton';
 import { crearUsuario } from '../../features/user/usuarioService';
 import { obtenerJornadas } from '../../features/jornada/jornadaService';
 import { mostrarModalLicenciasAgotadas } from '../../features/billing/licenciasAgotadasModal';
-import { opcionesTipoHora, TIPO_HORA_INHERIT, etiquetaTipoHora } from '../../utils/tipoHora';
+import { opcionesTipoHora, TIPO_HORA_INHERIT } from '../../utils/tipoHora';
+import JornadaLaboralSelect from './JornadaLaboralSelect';
 
 const { Option } = Select;
 
@@ -24,7 +25,7 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
     form.resetFields();
     obtenerJornadas()
       .then(setJornadas)
-      .catch(() => message.error('Error recuperando tipo de jornadas'));
+      .catch(() => message.error('Error recuperando jornadas laborales'));
   }, [open, form]);
 
   const completarAlta = async (values, response) => {
@@ -142,18 +143,15 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
         </Form.Item>
 
         <Form.Item
-          label="Tipo de horario"
+          label="Jornada laboral"
           name="tipoHorario"
-          rules={[{ required: true, message: 'Selecciona un horario' }]}
+          rules={[{ required: true, message: 'Selecciona una jornada laboral' }]}
         >
-          <Select placeholder="Selecciona el horario">
-            {jornadas.map((jornada) => (
-              <Option key={jornada.id_jornada} value={jornada.id_jornada}>
-                {jornada.nombre}
-                {jornada.tipo_hora ? ` (${etiquetaTipoHora(jornada.tipo_hora)})` : ''}
-              </Option>
-            ))}
-          </Select>
+          <JornadaLaboralSelect
+            jornadas={jornadas}
+            showTipoHoraSuffix
+            onNavigateAway={onClose}
+          />
         </Form.Item>
 
         <Form.Item

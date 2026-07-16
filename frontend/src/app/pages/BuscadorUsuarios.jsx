@@ -21,12 +21,12 @@ import {
 } from '../../utils/tipoUsuarioLabel';
 import { opcionesTipoHora, tipoHoraFormValue } from '../../utils/tipoHora';
 import AltaEmpleadoModal from '../components/AltaEmpleadoModal';
+import JornadaLaboralSelect from '../components/JornadaLaboralSelect';
+import { esUsuarioActivo, estaDadoDeBajaEnEmpresa as estaDadoDeBaja } from '../../utils/usuarioActivo';
 import './BuscadorUsuarios.css';
 dayjs.locale('es');
 
 const { Title } = Typography;
-
-const esUsuarioActivo = (usuario) => usuario.activo !== false && usuario.activo !== 0;
 
 const BuscarUsuarios = () => {
     const navigate = useNavigate();
@@ -328,14 +328,14 @@ const BuscarUsuarios = () => {
             title: 'Activo',
             dataIndex: 'activo',
             key: 'activo',
-            render: (activo) => (activo ? 'Sí' : 'No'),
+            render: (activo, record) => (esUsuarioActivo(record) ? 'Sí' : 'No'),
         },
         {
             title: 'Acciones',
             key: 'acciones',
             render: (_, record) => (
                 <div className="bu-acciones">
-                    {tipoUsuario !== 6 && (
+                    {tipoUsuario !== 6 && !estaDadoDeBaja(record) && (
                         <Tooltip title="Editar">
                             <Button
                                 type="text"
@@ -347,8 +347,7 @@ const BuscarUsuarios = () => {
                         </Tooltip>
                     )}
                     {tipoUsuario !== 6
-                        && record.activo !== false
-                        && record.activo !== 0
+                        && esUsuarioActivo(record)
                         && Number(record.id_usuario) !== Number(idUsuarioSesion) && (
                         <Tooltip title="Dar de baja">
                             <Popconfirm
@@ -580,14 +579,15 @@ const BuscarUsuarios = () => {
                         <Form.Item label="Activo" name="activo" valuePropName="checked">
                             <Switch />
                         </Form.Item>
-                        <Form.Item label="Horario" name="horario">
-                            <Select>
-                                {jornadas.map((jornada) => (
-                                    <Select.Option key={jornada.id_jornada} value={jornada.nombre}>
-                                        {jornada.nombre}
-                                    </Select.Option>
-                                ))}
-                            </Select>
+                        <Form.Item label="Jornada laboral" name="horario">
+                            <JornadaLaboralSelect
+                              jornadas={jornadas}
+                              valueKey="nombre"
+                              onNavigateAway={() => {
+                                setIsModalVisible(false);
+                                setEditingRecord(null);
+                              }}
+                            />
                         </Form.Item>
                         <Form.Item
                             label="Tipo de hora"

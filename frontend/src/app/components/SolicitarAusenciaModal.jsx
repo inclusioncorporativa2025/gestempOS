@@ -7,7 +7,7 @@ import { crearAusencia } from '../../features/ausencias/ausenciasService';
 import { getUsuariosEmpresa } from '../../features/user/usuarioService';
 import { getIdEmpresa, getIdUsuario, getTipoUsuario } from '../../utils/authSession';
 import { esInspector, normalizarTipoUsuario } from '../../utils/tipoUsuarioLabel';
-import usePlan from '../../hooks/usePlan';
+import { esUsuarioActivo } from '../../utils/usuarioActivo';
 import {
   esTipoVacaciones,
   getTiposAusenciaSeleccionables,
@@ -68,7 +68,7 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
         const usuarios = await getUsuariosEmpresa();
         if (cancelado) return;
         const lista = (usuarios || []).filter(
-          (u) => u.activo !== false && u.activo !== 0 && !esInspector(u.tipo_usuario),
+          (u) => esUsuarioActivo(u) && !esInspector(u.tipo_usuario),
         );
         setEmpleados(lista);
       } catch {

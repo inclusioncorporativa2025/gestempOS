@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Tooltip,Card, Table, Button, Collapse, Modal, Form, Input, TimePicker, message, Checkbox, Select, Row, Col } from 'antd';
+import { useLocation, useNavigate } from 'react-router-dom';
 import GradientButton from '../shared/GradientButton';
 import { EditOutlined, InfoCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { crearJornada, editarJornada, obtenerJornadasByIdEmpresa } from "../../../features/jornada/jornadaService";
@@ -29,6 +30,8 @@ const parseColumn1 = (tipo) => {
 };
 
 const GestionTipoUsuariosCard = () => {
+    const location = useLocation();
+    const navigate = useNavigate();
     const [tiposJornada, setTiposJornada] = useState([]);  // Cambiado para usar datos obtenidos de la API
     const [isAddModalVisible, setIsAddModalVisible] = useState(false);
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -264,6 +267,13 @@ const GestionTipoUsuariosCard = () => {
 
     const [editForm] = Form.useForm();
     const [addForm] = Form.useForm();
+
+    useEffect(() => {
+        if (!location.state?.openCreateJornada) return;
+        openAddModal();
+        navigate(location.pathname, { replace: true, state: {} });
+    }, [location.state, location.pathname, navigate]);
+
     return (
         <Card >
             <p>Aquí puedes gestionar los tipos de jornada y sus registros asociados.</p>

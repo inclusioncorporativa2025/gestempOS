@@ -243,46 +243,51 @@ const getUsuariosEmpresa = async (req, res) => {
     try {
         const { idEmpresa } = req.body;
 
-        const idUsuarios = await UsuarioEmpresa.findAll({
-            where: { id_empresa: idEmpresa, fecha_baja: null },
-            attributes: ['id_usuario', 'tipo_usuario', 'tipo_hora', 'activo']
+        const membresias = await UsuarioEmpresa.findAll({
+            where: { id_empresa: idEmpresa },
+            attributes: ['id_usuario', 'tipo_usuario', 'tipo_hora', 'activo', 'fecha_baja'],
         });
 
-        const idUsuariosArray = idUsuarios.map(usuario => usuario.id_usuario);
+        const idUsuariosArray = membresias.map((membresia) => membresia.id_usuario);
         const membresiaPorUsuario = new Map(
-            idUsuarios.map((vinculo) => [vinculo.id_usuario, vinculo]),
+            membresias.map((vinculo) => [vinculo.id_usuario, vinculo]),
         );
+
+        if (idUsuariosArray.length === 0) {
+            return res.status(200).json({ message: 'Datos de usuarios con sus jornadas', usuarios: [] });
+        }
 
         const usuarios = await Usuario.findAll({
             where: {
                 id_usuario: {
-                    [Op.in]: idUsuariosArray
+                    [Op.in]: idUsuariosArray,
                 },
-                fecha_baja: null
-            }
+            },
         });
 
         const usuarioJornadas = await UsuarioJornada.findAll({
             where: {
                 empresa_id: idEmpresa,
                 id_usuario: {
-                    [Op.in]: idUsuariosArray
+                    [Op.in]: idUsuariosArray,
                 },
-                fecha_baja: null
-            }
+                fecha_baja: null,
+            },
         });
 
-        const usuariosConJornadas = usuarios.map(usuario => {
-
-            const jornadasUsuario = usuarioJornadas.filter(jornada => jornada.id_usuario === usuario.id_usuario);
+        const usuariosConJornadas = usuarios.map((usuario) => {
+            const jornadasUsuario = usuarioJornadas.filter(
+                (jornada) => jornada.id_usuario === usuario.id_usuario,
+            );
             const membresia = membresiaPorUsuario.get(usuario.id_usuario);
 
             return {
                 ...usuario.toJSON(),
                 activo: membresiaEstaActiva(membresia),
+                fecha_baja_empresa: membresia?.fecha_baja || null,
                 tipo_usuario: membresia?.tipo_usuario ?? usuario.tipo_usuario,
                 tipo_hora: membresia?.tipo_hora ?? null,
-                jornadas: jornadasUsuario
+                jornadas: jornadasUsuario,
             };
         });
 
