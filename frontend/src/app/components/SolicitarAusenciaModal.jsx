@@ -7,6 +7,7 @@ import { crearAusencia } from '../../features/ausencias/ausenciasService';
 import { getUsuariosEmpresa } from '../../features/user/usuarioService';
 import { getIdEmpresa, getIdUsuario, getTipoUsuario } from '../../utils/authSession';
 import { esInspector, normalizarTipoUsuario } from '../../utils/tipoUsuarioLabel';
+import usePlan from '../../hooks/usePlan';
 import { esUsuarioActivo } from '../../utils/usuarioActivo';
 import {
   esTipoVacaciones,
