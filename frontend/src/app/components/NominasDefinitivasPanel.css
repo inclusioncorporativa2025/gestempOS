@@ -17,36 +17,32 @@
   margin-bottom: 16px;
 }
 
-.nominas-def-panel__upload-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
+.nominas-def-panel__form {
+  margin-bottom: 0;
 }
 
-.nominas-def-panel__importes-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 8px;
+.nominas-def-panel__form .ant-form-item {
+  margin-bottom: 16px;
 }
 
 .nominas-def-panel__importes-hint {
   display: block;
+  margin-top: -8px;
   margin-bottom: 16px;
   font-size: 13px;
 }
 
-.nominas-def-panel__importe {
-  display: block;
-  margin-top: 8px;
+.nominas-def-panel__importe,
+.nominas-def-panel__periodo {
   width: 100%;
 }
 
-.nominas-def-panel__select,
-.nominas-def-panel__periodo {
-  display: block;
-  margin-top: 8px;
+.nominas-def-panel__form .ant-input-number {
+  width: 100%;
+}
+
+.nominas-def-panel__form .ant-select,
+.nominas-def-panel__form .ant-picker {
   width: 100%;
 }
 

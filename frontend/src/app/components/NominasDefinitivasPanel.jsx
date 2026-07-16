@@ -2,9 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Card,
+  Col,
   DatePicker,
+  Form,
   InputNumber,
   Popconfirm,
+  Row,
   Select,
   Space,
   Table,
@@ -29,6 +32,7 @@ import {
   subirNomina,
 } from '../../features/nominas/nominasService';
 import { propsInputImporteEs } from '../../utils/importes';
+import './NominasDefinitivasPanel.css';
 
 const { Text, Title } = Typography;
 const { Dragger } = Upload;
@@ -242,66 +246,72 @@ const NominasDefinitivasPanel = () => {
           deducciones y líquido según la nómina oficial (para consulta del empleado).
         </Text>
 
-        <div className="nominas-def-panel__upload-row">
-          <div>
-            <Text strong>Empleado</Text>
-            <Select
-              showSearch
-              placeholder="Selecciona empleado"
-              value={empleadoSeleccionado}
-              onChange={setEmpleadoSeleccionado}
-              optionFilterProp="label"
-              className="nominas-def-panel__select"
-              options={empleados.map((e) => ({
-                value: e.id_usuario,
-                label: `${e.nombre} (${e.dni || e.email})`,
-              }))}
-            />
-          </div>
-          <div>
-            <Text strong>Periodo</Text>
-            <DatePicker
-              picker="month"
-              value={periodo}
-              onChange={(value) => value && setPeriodo(value)}
-              format="MMMM YYYY"
-              className="nominas-def-panel__periodo"
-            />
-          </div>
-        </div>
+        <Form layout="vertical" className="nominas-def-panel__form">
+          <Row gutter={[16, 0]}>
+            <Col xs={24} md={12}>
+              <Form.Item label="Empleado" required>
+                <Select
+                  showSearch
+                  placeholder="Selecciona empleado"
+                  value={empleadoSeleccionado}
+                  onChange={setEmpleadoSeleccionado}
+                  optionFilterProp="label"
+                  options={empleados.map((e) => ({
+                    value: e.id_usuario,
+                    label: `${e.nombre} (${e.dni || e.email})`,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item label="Periodo" required>
+                <DatePicker
+                  picker="month"
+                  value={periodo}
+                  onChange={(value) => value && setPeriodo(value)}
+                  format="MMMM YYYY"
+                  className="nominas-def-panel__periodo"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        <div className="nominas-def-panel__importes-row">
-          <div>
-            <Text strong>Bruto devengado (€)</Text>
-            <InputNumber
-              {...propsInputImporteEs}
-              value={importeBruto}
-              onChange={setImporteBruto}
-              className="nominas-def-panel__importe"
-              placeholder="Ej. 773,36"
-            />
-          </div>
-          <div>
-            <Text strong>Total deducciones (€)</Text>
-            <InputNumber
-              {...propsInputImporteEs}
-              value={importeDeducciones}
-              onChange={setImporteDeducciones}
-              className="nominas-def-panel__importe"
-              placeholder="Ej. 131,94"
-            />
-          </div>
-          <div>
-            <Text strong>Líquido a percibir (€)</Text>
-            <InputNumber
-              {...propsInputImporteEs}
-              value={importeLiquido}
-              onChange={setImporteLiquido}
-              className="nominas-def-panel__importe"
-              placeholder="Ej. 641,42"
-            />
-          </div>
-        </div>
+          <Row gutter={[16, 0]}>
+            <Col xs={24} sm={8}>
+              <Form.Item label="Bruto devengado (€)">
+                <InputNumber
+                  {...propsInputImporteEs}
+                  value={importeBruto}
+                  onChange={setImporteBruto}
+                  className="nominas-def-panel__importe"
+                  placeholder="Ej. 773,36"
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item label="Total deducciones (€)">
+                <InputNumber
+                  {...propsInputImporteEs}
+                  value={importeDeducciones}
+                  onChange={setImporteDeducciones}
+                  className="nominas-def-panel__importe"
+                  placeholder="Ej. 131,94"
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item label="Líquido a percibir (€)">
+                <InputNumber
+                  {...propsInputImporteEs}
+                  value={importeLiquido}
+                  onChange={setImporteLiquido}
+                  className="nominas-def-panel__importe"
+                  placeholder="Ej. 641,42"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
         <Text type="secondary" className="nominas-def-panel__importes-hint">
           Use coma para los decimales, como en la nómina (773,36 — no 77336).
         </Text>
