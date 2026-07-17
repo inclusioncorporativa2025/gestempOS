@@ -24,6 +24,7 @@ const { purgarEmpresaCompleta } = require('../services/empresaPurgeService');
 const {
   findEmpresaActivaPorCif,
   normalizeEmail,
+  isEmailValido,
   resolverUsuarioIdentidad,
   reactivarUsuarioGlobal,
   usuarioEstaActivoGlobal,
@@ -134,6 +135,13 @@ const registerCompany = async (req, res) => {
         if (!emailNormalizado) {
             await transaction.rollback();
             return res.status(400).json({ message: 'El email de contacto es obligatorio' });
+        }
+        if (!isEmailValido(emailNormalizado)) {
+            await transaction.rollback();
+            return res.status(400).json({
+                message: 'El email de contacto no es válido',
+                codigo: 'EMAIL_INVALIDO',
+            });
         }
 
         const direccionFiscal = String(direccion ?? '').trim();

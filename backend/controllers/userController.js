@@ -34,6 +34,7 @@ const { normalizarTipoHoraInput } = require('../utils/tipoHora');
 const {
   findMembresiaActivaEnEmpresa,
   normalizeEmail,
+  isEmailValido,
   resolverUsuarioIdentidad,
   reactivarUsuarioGlobal,
   usuarioEstaActivoGlobal,
@@ -308,6 +309,12 @@ const crearUsuario= async (req, res) => {
             return res.status(400).json({
                 message: 'El email es obligatorio',
                 codigo: 'EMAIL_REQUERIDO',
+            });
+        }
+        if (!isEmailValido(emailNormalizado)) {
+            return res.status(400).json({
+                message: 'El email no es válido',
+                codigo: 'EMAIL_INVALIDO',
             });
         }
 

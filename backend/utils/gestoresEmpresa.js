@@ -1,9 +1,7 @@
 const { QueryTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
 const { ROLES } = require('../middleware/authMiddleware');
-
-const isEmailValido = (email) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+const { isEmailValido } = require('./identityChecks');
 
 /** Admin (3) y supervisor (4) activos en la empresa, con email válido. */
 const obtenerEmailsGestoresEmpresa = async (idEmpresa) => {

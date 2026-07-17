@@ -14,6 +14,9 @@ const normalizeEmail = (value) => {
   return text || null;
 };
 
+const isEmailValido = (email) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+
 const normalizeDni = normalizeIdentificador;
 
 const cifSqlNormalized = fn(
@@ -275,6 +278,7 @@ const resolverUsuarioIdentidad = async (
 module.exports = {
   normalizeIdentificador,
   normalizeEmail,
+  isEmailValido,
   normalizeDni,
   findEmpresaActivaPorCif,
   findUsuarioActivoPorEmail,

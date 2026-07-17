@@ -4,6 +4,7 @@ const nodemailer = require('nodemailer');
 
 const { APP_URL } = require('../config/appUrls');
 const { BRAND_NAME, BRAND_BYLINE, LOGO_PATH } = require('../config/brand');
+const { isEmailValido } = require('./identityChecks');
 const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES) || 60;
 const WELCOME_TOKEN_TTL_DAYS = Number(process.env.WELCOME_TOKEN_TTL_DAYS) || 7;
 const WELCOME_TOKEN_TTL_MINUTES = WELCOME_TOKEN_TTL_DAYS * 24 * 60;
@@ -355,9 +356,6 @@ const escapeHtml = (value) =>
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-
-const isEmailValido = (email) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
 
 const enviarNotificacionGestion = async ({
   destinatarios,
