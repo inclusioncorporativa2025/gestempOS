@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Card, Button, Table, Modal, Menu, Spin,
+  Button, Table, Menu, Spin,
   Typography, message, Tooltip, DatePicker, Popover, Badge, Radio, Tag,
 } from 'antd';
-import { EyeOutlined, FilterOutlined, CalendarOutlined, CloseOutlined, DownloadOutlined } from '@ant-design/icons';
+import { EyeOutlined, FilterOutlined, CalendarOutlined, CloseOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -22,6 +22,7 @@ import { getAusenciasNotificacionesEmpleado, formatDiasAusencia } from '../../fe
 import { getIdUsuario, getNombreUsuario } from '../../utils/authSession';
 import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import { parseFechaFichaje } from '../../utils/fechaFichaje';
+import RegistroMensualModal from '../components/RegistroMensualModal';
 import './Notificaciones.css';
 
 dayjs.locale('es');
@@ -457,13 +458,6 @@ const NotificacionesEmpleado = () => {
     }
   };
 
-  const columnsDetalles = [
-    { title: 'Fecha', dataIndex: 'fecha', key: 'fecha' },
-    { title: 'Hora Entrada', dataIndex: 'hora_entrada', key: 'hora_entrada' },
-    { title: 'Hora Salida', dataIndex: 'hora_salida', key: 'hora_salida' },
-    { title: 'Dif. Tiempo', dataIndex: 'dif_tiempo', key: 'dif_tiempo' },
-  ];
-
   const columnsCorreccion = useMemo(() => {
     const columnas = [
       {
@@ -750,71 +744,25 @@ const NotificacionesEmpleado = () => {
         )}
       </Spin>
 
-      <Modal
+      <RegistroMensualModal
         open={visible}
-        onCancel={() => {
+        onClose={() => {
           setVisible(false);
           setFirmaCierreDetalle(null);
           setDetalleCierreContext(null);
           setResumenHoras(null);
         }}
-        footer={null}
-        width="80%"
-        className="notif-modal"
-        destroyOnClose
-      >
-        <Card
-          title={<Title className="notif-modal-title" level={2}>Registro mensual</Title>}
-          extra={(
-            <Button
-              type="default"
-              icon={<DownloadOutlined />}
-              onClick={descargarPdfCierre}
-              disabled={!detalleCierreContext}
-            >
-              Descargar PDF
-            </Button>
-          )}
-        >
-          <Table
-            columns={columnsDetalles}
-            dataSource={registroHoras}
-            rowKey="fecha"
-            pagination={{ pageSize: 10 }}
-            scroll={{ x: 800 }}
-          />
-          <div className="notif-totales">
-            <span className="notif-total-sep">Total de horas trabajadas: {totalHoras}</span>
-            <span>Total de horas esperadas: {totalHorasEsperadas}</span>
-            {resumenHoras?.tipo_hora_label && (
-              <span>Tipo de hora: {resumenHoras.tipo_hora_label}
-                {resumenHoras.tipo_hora_origen === 'membresia' ? ' (personal)' : resumenHoras.tipo_hora_origen === 'jornada' ? ' (jornada)' : ''}
-              </span>
-            )}
-            {resumenHoras?.desglose && (
-              <span>{resumenHoras.desglose}</span>
-            )}
-            {resumenHoras?.saldo_bolsa && (
-              <span>Saldo bolsa acumulado: {resumenHoras.saldo_bolsa}</span>
-            )}
-          </div>
-          {firmaCierreDetalle?.firmado && (
-            <div className="notif-firma-cierre">
-              <p className="notif-firma-cierre__titulo">Tu firma en esta solicitud</p>
-              {firmaCierreDetalle.firma_imagen && (
-                <img
-                  src={firmaCierreDetalle.firma_imagen}
-                  alt="Tu firma"
-                  className="notif-firma-cierre__img"
-                />
-              )}
-              <p className="notif-firma-cierre__hash">
-                Huella de firma: <code>{firmaCierreDetalle.firma_hash}</code>
-              </p>
-            </div>
-          )}
-        </Card>
-      </Modal>
+        title="Registro mensual"
+        registros={registroHoras}
+        totalHoras={totalHoras}
+        totalHorasEsperadas={totalHorasEsperadas}
+        resumenHoras={resumenHoras}
+        onDescargarPdf={descargarPdfCierre}
+        pdfDisabled={!detalleCierreContext}
+        firmaCierreDetalle={firmaCierreDetalle}
+        nombreEmpleado={detalleCierreContext?.nombreEmpleado}
+        saldoBolsaEtiqueta="Saldo bolsa acumulado"
+      />
     </div>
   );
 };

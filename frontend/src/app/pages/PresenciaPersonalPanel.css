@@ -36,6 +36,49 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  border: 2px solid transparent;
+  background: none;
+  text-align: left;
+  font: inherit;
+  cursor: default;
+}
+
+.presencia-stat--filter {
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.presencia-stat--filter:hover {
+  box-shadow: 0 2px 10px rgba(var(--color-primary-dark-rgb), 0.08);
+}
+
+.presencia-stat--filter:active {
+  transform: scale(0.98);
+}
+
+.presencia-stat--filter.presencia-stat--active {
+  border-color: rgba(var(--color-primary-rgb), 0.45);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.12);
+}
+
+.presencia-stat--filter.presencia-stat--in.presencia-stat--active {
+  border-color: rgba(82, 196, 26, 0.55);
+  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.15);
+}
+
+.presencia-stat--filter.presencia-stat--break.presencia-stat--active {
+  border-color: rgba(250, 173, 20, 0.55);
+  box-shadow: 0 0 0 3px rgba(250, 173, 20, 0.15);
+}
+
+.presencia-stat--filter.presencia-stat--out.presencia-stat--active {
+  border-color: rgba(90, 100, 114, 0.45);
+  box-shadow: 0 0 0 3px rgba(90, 100, 114, 0.12);
+}
+
+.presencia-stat--filter:focus-visible {
+  outline: 2px solid rgba(var(--color-primary-rgb), 0.5);
+  outline-offset: 2px;
 }
 
 .presencia-stat--in {
@@ -203,4 +246,100 @@
 .presencia-pausas-popover__duracion {
   color: #9aa5b1;
   white-space: nowrap;
+}
+
+.presencia-mobile-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.presencia-mobile-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(var(--color-primary-rgb), 0.1);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-dark-rgb), 0.04);
+}
+
+.presencia-mobile-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.presencia-mobile-card__nombre {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.presencia-mobile-card__nombre-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.95rem;
+  font-weight: var(--font-weight-medium);
+  color: #1a2332;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.presencia-mobile-card__estado .ant-tag {
+  margin-inline-end: 0;
+}
+
+.presencia-mobile-card__meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(var(--color-primary-rgb), 0.08);
+}
+
+.presencia-mobile-card__meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.presencia-mobile-card__meta-label {
+  font-size: 0.72rem;
+  color: #8a94a3;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.presencia-mobile-card__meta-value {
+  font-size: 0.92rem;
+  font-weight: var(--font-weight-medium);
+  color: #334155;
+}
+
+.presencia-mobile-pagination {
+  margin-top: 16px;
+  text-align: center;
+}
+
+@media (max-width: 949px) {
+  .presencia-search {
+    max-width: none;
+  }
+
+  .presencia-stat {
+    min-width: 0;
+    padding: 12px 14px;
+  }
+
+  .presencia-stat-value {
+    font-size: 1.25rem;
+  }
+
+  .presencia-stat-label {
+    font-size: 0.75rem;
+  }
 }

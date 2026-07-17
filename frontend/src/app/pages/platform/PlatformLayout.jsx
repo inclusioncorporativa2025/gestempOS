@@ -1,14 +1,25 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, Typography } from 'antd';
+import { Menu, Select, Typography } from 'antd';
 import { APP_ROUTES } from '../../../constants/routes';
 import '../gestor/Configuracion.css';
 
 const { Title, Text } = Typography;
 
+const MOBILE_BREAKPOINT = 950;
+
 const PlatformLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
+
+  useEffect(() => {
+    const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   const submenuItems = useMemo(
     () => [
@@ -19,7 +30,9 @@ const PlatformLayout = () => {
     [],
   );
 
-  const selectedKey = submenuItems.find((item) => item.key === location.pathname)?.key;
+  const selectedKey =
+    submenuItems.find((item) => item.key === location.pathname)?.key
+    || APP_ROUTES.platformEmpresas;
 
   const esAcceder = location.pathname === APP_ROUTES.platformAcceder;
   const esEmpresas = location.pathname === APP_ROUTES.platformEmpresas;
@@ -42,13 +55,25 @@ const PlatformLayout = () => {
         {subtitulo}
       </Text>
 
-      <Menu
-        className="config-layout__menu"
-        mode="horizontal"
-        selectedKeys={selectedKey ? [selectedKey] : []}
-        items={submenuItems}
-        onClick={({ key }) => navigate(key)}
-      />
+      <div className="config-layout__nav">
+        {isMobile ? (
+          <Select
+            className="config-layout__select"
+            value={selectedKey}
+            options={submenuItems.map(({ key, label }) => ({ value: key, label }))}
+            onChange={(key) => navigate(key)}
+            aria-label="Sección de gestión interna"
+          />
+        ) : (
+          <Menu
+            className="config-layout__menu"
+            mode="horizontal"
+            selectedKeys={[selectedKey]}
+            items={submenuItems}
+            onClick={({ key }) => navigate(key)}
+          />
+        )}
+      </div>
 
       <div className="config-layout__content">
         <Outlet />

@@ -40,6 +40,31 @@
   border: 1px solid rgba(var(--color-primary-rgb), 0.1);
 }
 
+.fp-tab-select {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 16px;
+}
+
+.fp-tab-select .ant-select-selector {
+  min-height: 44px !important;
+  padding-inline: 16px !important;
+  border-radius: 999px !important;
+  border: none !important;
+  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.08) !important;
+  align-items: center;
+}
+
+.fp-tab-select .ant-select-selection-item {
+  font-weight: var(--font-weight-medium);
+  color: #5a6472;
+}
+
+.fp-tab-content {
+  width: 100%;
+}
+
 .fp-datos-grid .ant-descriptions-item-label {
   font-weight: 500;
   color: #5a6472;
@@ -73,4 +98,10 @@
   display: flex;
   justify-content: center;
   padding: 48px;
+}
+
+@media (max-width: 949px) {
+  .fp-page {
+    padding: 12px;
+  }
 }

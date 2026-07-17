@@ -70,9 +70,68 @@
   width: 100%;
 }
 
+.gt-layout__nav-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  max-width: 100%;
+}
+
+.gt-layout__nav-row .gt-layout__menu {
+  margin-bottom: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: calc(100% - 52px);
+}
+
+.gt-layout__refresh-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0;
+  flex-shrink: 0;
+  border-radius: 999px;
+  color: #5a6472;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.08);
+}
+
+.gt-layout__refresh-btn:hover {
+  color: var(--color-primary) !important;
+  background: rgba(var(--color-primary-rgb), 0.08) !important;
+}
+
+.gt-layout__select {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  margin-bottom: 0;
+}
+
+.gt-layout__select .ant-select-selector {
+  min-height: 44px !important;
+  padding-inline: 16px !important;
+  border-radius: 999px !important;
+  border: none !important;
+  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.08) !important;
+  align-items: center;
+}
+
+.gt-layout__select .ant-select-selection-item {
+  font-weight: var(--font-weight-medium);
+  color: #5a6472;
+}
+
 .gt-layout__content .presencia-panel,
 .gt-layout__content .tlp-layout,
 .gt-layout__content .ausencias-panel {
   padding: 0;
   min-height: auto;
+}
+
+.gt-layout .presencia-refresh-btn,
+.gt-layout .ausencias-reload {
+  display: none;
 }

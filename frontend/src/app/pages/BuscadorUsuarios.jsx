@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Tag, Card, Table, Input, Button, Modal, Tooltip, Popconfirm, Form, message, Typography, DatePicker, Switch, Select, ConfigProvider, Dropdown } from 'antd';
+import { Tag, Card, Table, Input, Button, Modal, Tooltip, Popconfirm, Form, message, Typography, DatePicker, Switch, Select, ConfigProvider, Dropdown, Pagination } from 'antd';
 import GradientButton from '../components/shared/GradientButton';
 import { SearchOutlined, EditOutlined, StopOutlined, EyeOutlined, DownloadOutlined, UserAddOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -18,6 +18,7 @@ import {
   esAdministradorEmpresa,
   esInspector,
   valorTipoUsuarioForm,
+  etiquetaTipoUsuario,
 } from '../../utils/tipoUsuarioLabel';
 import { opcionesTipoHora, tipoHoraFormValue } from '../../utils/tipoHora';
 import { tooltipTipoHoraFormItem } from '../../utils/tipoHoraTooltip';
@@ -28,6 +29,9 @@ import './BuscadorUsuarios.css';
 dayjs.locale('es');
 
 const { Title } = Typography;
+
+const MOBILE_BREAKPOINT = 950;
+const PAGE_SIZE = 8;
 
 const BuscarUsuarios = () => {
     const navigate = useNavigate();
@@ -52,6 +56,8 @@ const BuscarUsuarios = () => {
     const [exportModalVisible, setExportModalVisible] = useState(false);
     const [exportDateRange, setExportDateRange] = useState(null);
     const [altaEmpleadoOpen, setAltaEmpleadoOpen] = useState(false);
+    const [mobilePage, setMobilePage] = useState(1);
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
 
     const formatDate = (date) => dayjs(date).format('DD/MM/YYYY');
 
@@ -77,6 +83,18 @@ const BuscarUsuarios = () => {
         }
     }, [location.state, location.pathname, navigate]);
 
+    useEffect(() => {
+        const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+        const update = () => setIsMobile(media.matches);
+        update();
+        media.addEventListener('change', update);
+        return () => media.removeEventListener('change', update);
+    }, []);
+
+    useEffect(() => {
+        setMobilePage(1);
+    }, [searchText, filtroActivo, usuarios.length]);
+
     const contadores = useMemo(() => {
         const activos = usuarios.filter(esUsuarioActivo).length;
         return {
@@ -96,6 +114,15 @@ const BuscarUsuarios = () => {
 
         return matchesSearch && matchesActivo;
     });
+
+    const filteredUsuariosMobile = useMemo(() => {
+        const start = (mobilePage - 1) * PAGE_SIZE;
+        return filteredUsuarios.slice(start, start + PAGE_SIZE);
+    }, [filteredUsuarios, mobilePage]);
+
+    const emptyDescription = filtroActivo === 'activos'
+        ? 'No hay personal activo'
+        : 'No hay personal no activo';
 
     const irAAltaUsuarios = (section) => {
         navigate(APP_ROUTES.usersAdd, { state: { section } });
@@ -300,6 +327,70 @@ const BuscarUsuarios = () => {
         
     ];
 
+    const setVisibleModalExportar = (idUsuarioExport) => {
+        setIdUsuario(idUsuarioExport);
+        setExportModalVisible(true);
+    };
+
+    const renderAccionesUsuario = (record) => (
+        <div className="bu-acciones">
+            {tipoUsuario !== 6 && !estaDadoDeBaja(record) && (
+                <Tooltip title="Editar">
+                    <Button
+                        type="text"
+                        icon={<EditOutlined />}
+                        className="bu-accion-btn bu-accion-btn--edit"
+                        onClick={() => handleEdit(record)}
+                        aria-label="Editar"
+                    />
+                </Tooltip>
+            )}
+            {tipoUsuario !== 6
+                && esUsuarioActivo(record)
+                && Number(record.id_usuario) !== Number(idUsuarioSesion) && (
+                <Tooltip title="Dar de baja">
+                    <Popconfirm
+                        title="¿Dar de baja a este personal?"
+                        description="No se borran sus datos ni sus fichajes; solo dejará de estar activo en la empresa."
+                        onConfirm={() => handleDarDeBaja(record.id_usuario)}
+                        okText="Dar de baja"
+                        cancelText="Cancelar"
+                    >
+                        <Button
+                            type="text"
+                            danger
+                            icon={<StopOutlined />}
+                            className="bu-accion-btn"
+                            aria-label="Dar de baja"
+                        />
+                    </Popconfirm>
+                </Tooltip>
+            )}
+            <Tooltip title={verFichaPersonal ? 'Ver ficha' : 'Detalles'}>
+                <Button
+                    type="text"
+                    icon={<EyeOutlined />}
+                    className="bu-accion-btn"
+                    onClick={() => (
+                        verFichaPersonal
+                            ? irAFichaPersonal(record)
+                            : handleViewDetailsDrawer(record)
+                    )}
+                    aria-label={verFichaPersonal ? 'Ver ficha de personal' : 'Detalles'}
+                />
+            </Tooltip>
+            <Tooltip title="Exportar">
+                <Button
+                    type="text"
+                    icon={<DownloadOutlined />}
+                    className="bu-accion-btn"
+                    onClick={() => setVisibleModalExportar(record.id_usuario)}
+                    aria-label="Exportar"
+                />
+            </Tooltip>
+        </div>
+    );
+
     const columns = [
         {
             title: 'Nombre',
@@ -334,72 +425,10 @@ const BuscarUsuarios = () => {
         {
             title: 'Acciones',
             key: 'acciones',
-            render: (_, record) => (
-                <div className="bu-acciones">
-                    {tipoUsuario !== 6 && !estaDadoDeBaja(record) && (
-                        <Tooltip title="Editar">
-                            <Button
-                                type="text"
-                                icon={<EditOutlined />}
-                                className="bu-accion-btn bu-accion-btn--edit"
-                                onClick={() => handleEdit(record)}
-                                aria-label="Editar"
-                            />
-                        </Tooltip>
-                    )}
-                    {tipoUsuario !== 6
-                        && esUsuarioActivo(record)
-                        && Number(record.id_usuario) !== Number(idUsuarioSesion) && (
-                        <Tooltip title="Dar de baja">
-                            <Popconfirm
-                                title="¿Dar de baja a este personal?"
-                                description="No se borran sus datos ni sus fichajes; solo dejará de estar activo en la empresa."
-                                onConfirm={() => handleDarDeBaja(record.id_usuario)}
-                                okText="Dar de baja"
-                                cancelText="Cancelar"
-                            >
-                                <Button
-                                    type="text"
-                                    danger
-                                    icon={<StopOutlined />}
-                                    className="bu-accion-btn"
-                                    aria-label="Dar de baja"
-                                />
-                            </Popconfirm>
-                        </Tooltip>
-                    )}
-                    <Tooltip title={verFichaPersonal ? 'Ver ficha' : 'Detalles'}>
-                        <Button
-                            type="text"
-                            icon={<EyeOutlined />}
-                            className="bu-accion-btn"
-                            onClick={() => (
-                              verFichaPersonal
-                                ? irAFichaPersonal(record)
-                                : handleViewDetailsDrawer(record)
-                            )}
-                            aria-label={verFichaPersonal ? 'Ver ficha de personal' : 'Detalles'}
-                        />
-                    </Tooltip>
-                    <Tooltip title="Exportar">
-                        <Button
-                            type="text"
-                            icon={<DownloadOutlined />}
-                            className="bu-accion-btn"
-                            onClick={() => setVisibleModalExportar(record.id_usuario)}
-                            aria-label="Exportar"
-                        />
-                    </Tooltip>
-                </div>
-            ),
+            render: (_, record) => renderAccionesUsuario(record),
         },
     ];
 
-
-    const setVisibleModalExportar =  (id_usuario)=> {
-        setIdUsuario(id_usuario);
-        setExportModalVisible(true);
-    }
     const handleExport = () => {
         if (!id_usuario) {
             return message.error('Por favor, selecciona un usuario para exportar.');
@@ -530,14 +559,80 @@ const BuscarUsuarios = () => {
                     </Card>
                 </Modal>
 
-                {/* Tabla de usuarios */}
-                <Table
-                    dataSource={filteredUsuarios}
-                    columns={columns}
-                    pagination={{ pageSize: 8, hideOnSinglePage: true }}
-                    scroll={{ x: 800 }}
-                    rowKey="id_usuario"
-                />
+                {/* Listado de usuarios */}
+                {isMobile ? (
+                    <div className="bu-mobile-list">
+                        {filteredUsuarios.length === 0 ? (
+                            <p className="bu-mobile-empty">{emptyDescription}</p>
+                        ) : (
+                            <>
+                                {filteredUsuariosMobile.map((usuario) => {
+                                    const activo = esUsuarioActivo(usuario);
+                                    return (
+                                        <article key={usuario.id_usuario} className="bu-mobile-card">
+                                            <div className="bu-mobile-card__header">
+                                                {verFichaPersonal ? (
+                                                    <button
+                                                        type="button"
+                                                        className="bu-mobile-card__nombre"
+                                                        onClick={() => irAFichaPersonal(usuario)}
+                                                    >
+                                                        {usuario.nombre}
+                                                    </button>
+                                                ) : (
+                                                    <span className="bu-mobile-card__nombre bu-mobile-card__nombre--plain">
+                                                        {usuario.nombre}
+                                                    </span>
+                                                )}
+                                                <div className="bu-mobile-card__badges">
+                                                    <Tag className="bu-mobile-card__cargo">
+                                                        {etiquetaTipoUsuario(usuario.tipo_usuario)}
+                                                    </Tag>
+                                                    <Tag color={activo ? 'green' : 'default'} className="bu-mobile-card__estado">
+                                                        {activo ? 'Activo' : 'No activo'}
+                                                    </Tag>
+                                                </div>
+                                            </div>
+                                            <a
+                                                className="bu-mobile-card__email"
+                                                href={`mailto:${usuario.email}`}
+                                            >
+                                                {usuario.email}
+                                            </a>
+                                            <div className="bu-mobile-card__meta">
+                                                <span>{usuario.dni}</span>
+                                                <span className="bu-mobile-card__sep">·</span>
+                                                <span>Alta {formatDate(usuario.fecha_alta)}</span>
+                                            </div>
+                                            <div className="bu-mobile-card__acciones">
+                                                {renderAccionesUsuario(usuario)}
+                                            </div>
+                                        </article>
+                                    );
+                                })}
+                                {filteredUsuarios.length > PAGE_SIZE && (
+                                    <Pagination
+                                        className="bu-mobile-pagination"
+                                        current={mobilePage}
+                                        pageSize={PAGE_SIZE}
+                                        total={filteredUsuarios.length}
+                                        onChange={setMobilePage}
+                                        showSizeChanger={false}
+                                        hideOnSinglePage
+                                    />
+                                )}
+                            </>
+                        )}
+                    </div>
+                ) : (
+                    <Table
+                        dataSource={filteredUsuarios}
+                        columns={columns}
+                        pagination={{ pageSize: PAGE_SIZE, hideOnSinglePage: true }}
+                        scroll={{ x: 800 }}
+                        rowKey="id_usuario"
+                    />
+                )}
 
                 {/* Modal de edición */}
                 <Modal

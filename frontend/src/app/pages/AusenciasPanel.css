@@ -21,6 +21,13 @@
   margin-bottom: 20px;
 }
 
+.ausencias-toolbar-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
 .ausencias-filtros {
   display: flex;
   flex-wrap: wrap;
@@ -71,4 +78,144 @@
   background: #fff;
   border-radius: 14px;
   overflow: hidden;
+}
+
+/* Tarjetas móviles */
+.aus-mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.aus-mobile-empty {
+  margin: 24px 0;
+  text-align: center;
+  color: #5a6472;
+  font-size: 0.9rem;
+}
+
+.aus-mobile-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(var(--color-primary-rgb), 0.12);
+  box-shadow: 0 2px 8px rgba(26, 35, 50, 0.04);
+}
+
+.aus-mobile-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.aus-mobile-card__title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: var(--font-weight-medium);
+  color: #1a2332;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.aus-mobile-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.aus-mobile-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.aus-mobile-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+}
+
+.aus-mobile-field {
+  min-width: 0;
+}
+
+.aus-mobile-field__label {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #8c95a1;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.aus-mobile-field__value {
+  display: block;
+  font-size: 0.88rem;
+  color: #1a2332;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.aus-mobile-justificante {
+  margin-top: 2px;
+}
+
+.aus-mobile-justificante .ja-acciones {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.aus-mobile-pagination {
+  margin-top: 8px;
+  text-align: center;
+}
+
+@media (max-width: 949px) {
+  .ausencias-toolbar--mobile {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .ausencias-toolbar--mobile .ausencias-toolbar-top:not(:has(.ausencias-search)) {
+    justify-content: flex-end;
+  }
+
+  .ausencias-toolbar--mobile .ausencias-search {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+    width: auto;
+  }
+
+  .ausencias-toolbar--mobile .ausencias-acciones {
+    flex-shrink: 0;
+  }
+
+  .ausencias-toolbar--mobile .ausencias-solicitar-btn {
+    white-space: nowrap;
+  }
+
+  .ausencias-toolbar--mobile .ausencias-filtros {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .ausencias-toolbar--mobile .ausencias-tipo-select,
+  .ausencias-toolbar--mobile .ausencias-rango {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ausencias-toolbar--mobile .ausencias-rango.ant-picker {
+    width: 100%;
+  }
 }

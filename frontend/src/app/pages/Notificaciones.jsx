@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card, Button, Table, Modal, Menu, Spin, Form,
-  Typography, message, Popconfirm, Tooltip, DatePicker, Input, Popover, Badge, Radio, Tag
+  Typography, message, Popconfirm, Tooltip, DatePicker, Input, Popover, Badge, Radio, Tag, Select, Pagination
 } from 'antd';
 import GradientButton from '../components/shared/GradientButton';
-import { EyeOutlined, SearchOutlined, FilterOutlined, CalendarOutlined, CloseOutlined, DownloadOutlined } from '@ant-design/icons';
+import { EyeOutlined, SearchOutlined, FilterOutlined, CalendarOutlined, CloseOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -42,6 +42,7 @@ import {
   formatDiasAusencia,
 } from '../../features/ausencias/ausenciasService';
 import JustificanteAusenciaAcciones from '../components/JustificanteAusenciaAcciones';
+import RegistroMensualModal from '../components/RegistroMensualModal';
 import { requiereJustificanteParaAprobar } from '../../constants/tiposAusencia';
 import './Notificaciones.css';
 
@@ -51,6 +52,23 @@ dayjs.extend(timezone);
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
+
+const MOBILE_BREAKPOINT = 950;
+const PAGE_SIZE = 8;
+
+const NotifMobileField = ({ label, value }) => (
+  <div className="notif-mobile-field">
+    <span className="notif-mobile-field__label">{label}</span>
+    <span className="notif-mobile-field__value">{value ?? '—'}</span>
+  </div>
+);
+
+const NotifMobilePair = ({ left, right }) => (
+  <div className="notif-mobile-pair">
+    <NotifMobileField label={left.label} value={left.value} />
+    <NotifMobileField label={right.label} value={right.value} />
+  </div>
+);
 
 const filtrarPorRango = (items, campoFecha, rango, obtenerFecha) => {
   if (!rango?.[0] || !rango?.[1]) return items;
@@ -182,6 +200,8 @@ const [rangoFechasDraft, setRangoFechasDraft] = useState(null);
 const [estadoFiltroDraft, setEstadoFiltroDraft] = useState('todas');
 const [campoFechaRangoDraft, setCampoFechaRangoDraft] = useState('fecha_alta');
 const [activeTab, setActiveTab] = useState('horarios');
+const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
+const [mobilePage, setMobilePage] = useState(1);
 const [rechazoModalAbierto, setRechazoModalAbierto] = useState(false);
 const [rechazoTarget, setRechazoTarget] = useState(null);
 const [rechazando, setRechazando] = useState(false);
@@ -316,7 +336,31 @@ const [formRechazo] = Form.useForm();
     setActiveTab(key);
     setEstadoFiltro('todas');
     setEstadoFiltroDraft('todas');
+    setMobilePage(1);
   };
+
+  useEffect(() => {
+    const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    setMobilePage(1);
+  }, [activeTab, estadoFiltro, busquedaNombre, rangoFechas]);
+
+  const listaActiva = activeTab === 'horarios'
+    ? correccionesFiltradas
+    : activeTab === 'cierres'
+      ? cierresFiltrados
+      : ausenciasFiltradas;
+
+  const listaActivaMobile = useMemo(() => {
+    const start = (mobilePage - 1) * PAGE_SIZE;
+    return listaActiva.slice(start, start + PAGE_SIZE);
+  }, [listaActiva, mobilePage]);
 
   const handleFiltroOpenChange = (open) => {
     if (open) {
@@ -729,12 +773,259 @@ const setVisibleModalDetalles = async (info) => {
     }
   };
 
-  const columnsDetalles = [
-        { title: 'Fecha', dataIndex: 'fecha', key: 'fecha' },
-        { title: 'Hora Entrada', dataIndex: 'hora_entrada', key: 'hora_entrada' },
-        { title: 'Hora Salida', dataIndex: 'hora_salida', key: 'hora_salida' },
-        { title: 'Dif. Tiempo', dataIndex: 'dif_tiempo', key: 'dif_tiempo' }
-    ];
+  const renderAccionesCorreccion = (record) => {
+    const estado = obtenerEstado(record);
+    if (estado !== 'Pendiente') {
+      return <span className="notif-procesada">—</span>;
+    }
+    if (!puedeAprobarComoGestor) {
+      return (
+        <Tooltip title="Solo un administrador o supervisor puede aprobar">
+          <span className="notif-procesada">Pendiente</span>
+        </Tooltip>
+      );
+    }
+    return (
+      <div className="notif-acciones">
+        <Popconfirm
+          title="¿Aprobar esta petición?"
+          onConfirm={() => handleRespuesta(record, 2)}
+          okText="Sí"
+          cancelText="No"
+        >
+          <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
+        </Popconfirm>
+        <Button
+          danger
+          size="small"
+          className="notif-btn-compact"
+          onClick={() => abrirModalRechazo(record)}
+        >
+          Rechazar
+        </Button>
+      </div>
+    );
+  };
+
+  const renderAccionesCierre = (record) => {
+    const estado = obtenerEstado(record);
+    if (estado !== 'Pendiente') {
+      return <span className="notif-procesada">—</span>;
+    }
+    if (!puedeAprobarComoGestor) {
+      return (
+        <Tooltip title="Solo un administrador o supervisor puede aprobar">
+          <span className="notif-procesada">Pendiente</span>
+        </Tooltip>
+      );
+    }
+    return (
+      <div className="notif-acciones">
+        <Popconfirm
+          title="¿Aprobar este cierre?"
+          onConfirm={() => handleRespuestaCierre(record, 2)}
+          okText="Sí"
+          cancelText="No"
+        >
+          <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
+        </Popconfirm>
+        <Popconfirm
+          title="¿Rechazar este cierre?"
+          onConfirm={() => handleRespuestaCierre(record, 3)}
+          okText="Sí"
+          cancelText="No"
+        >
+          <Button danger size="small" className="notif-btn-compact">
+            Rechazar
+          </Button>
+        </Popconfirm>
+      </div>
+    );
+  };
+
+  const renderAccionesAusencia = (record) => {
+    const estado = obtenerEstado(record);
+    const requiereDoc = record.requiere_justificante
+      ?? requiereJustificanteParaAprobar(record.tipo);
+    const cumpleJustificante = !requiereDoc || record.tiene_justificante;
+
+    if (estado !== 'Pendiente') {
+      return <span className="notif-procesada">—</span>;
+    }
+    if (!puedeAprobarComoGestor) {
+      return (
+        <Tooltip title="Solo un administrador o supervisor puede aprobar">
+          <span className="notif-procesada">Pendiente</span>
+        </Tooltip>
+      );
+    }
+    return (
+      <div className="notif-acciones">
+        {cumpleJustificante ? (
+          <Popconfirm
+            title="¿Aprobar esta ausencia?"
+            onConfirm={() => handleRespuestaAusencia(record, 2)}
+            okText="Sí"
+            cancelText="No"
+          >
+            <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
+          </Popconfirm>
+        ) : (
+          <Tooltip title="El empleado debe subir el justificante antes de aprobar">
+            <span>
+              <GradientButton
+                text="Aprobar"
+                size="small"
+                className="notif-btn-compact"
+                disabled
+              />
+            </span>
+          </Tooltip>
+        )}
+        <Button
+          danger
+          size="small"
+          className="notif-btn-compact"
+          onClick={() => abrirModalRechazoAusencia(record)}
+        >
+          Rechazar
+        </Button>
+      </div>
+    );
+  };
+
+  const renderCorreccionCard = (record) => {
+    const estado = obtenerEstado(record);
+    const justificacion = record.justificacion || '—';
+    return (
+      <article key={record.id_peticion} className="notif-mobile-card">
+        <div className="notif-mobile-card__header">
+          <h3 className="notif-mobile-card__title">{obtenerNombreCorreccion(record) || '—'}</h3>
+          <Tag color={colorEstadoTag(estado)}>{estado}</Tag>
+        </div>
+        <div className="notif-mobile-card__body">
+          <NotifMobilePair
+            left={{ label: 'Solicitud', value: formatearFecha(record.fecha_alta) }}
+            right={{ label: 'Gestor', value: record.gestor?.nombre || '—' }}
+          />
+          <NotifMobilePair
+            left={{ label: 'Entrada orig.', value: formatearFecha(record.entrada_original || record.fichaje?.fecha_entrada) }}
+            right={{ label: 'Salida orig.', value: formatearFecha(record.salida_original || record.fichaje?.fecha_salida) }}
+          />
+          <NotifMobilePair
+            left={{ label: 'Entrada sol.', value: formatearFecha(record.nueva_entrada) }}
+            right={{ label: 'Salida sol.', value: formatearFecha(record.nueva_salida) }}
+          />
+          <NotifMobileField label="Justificación" value={justificacion} />
+          {estado !== 'Pendiente' && (
+            <NotifMobilePair
+              left={{ label: 'Resolución', value: formatearFecha(obtenerFechaResolucion(record)) }}
+              right={{
+                label: 'Motivo rechazo',
+                value: record.motivo_rechazo || '—',
+              }}
+            />
+          )}
+        </div>
+        {estado === 'Pendiente' && (
+          <div className="notif-mobile-card__acciones">
+            {renderAccionesCorreccion(record)}
+          </div>
+        )}
+      </article>
+    );
+  };
+
+  const renderCierreCard = (record) => {
+    const estado = obtenerEstado(record);
+    return (
+      <article
+        key={`${record.empresa_id}-${record.id_mes_cierre}`}
+        className="notif-mobile-card"
+      >
+        <div className="notif-mobile-card__header">
+          <h3 className="notif-mobile-card__title">{record.nombre_usuario_alta || '—'}</h3>
+          <span className="notif-estado-cell">
+            <Tag color={colorEstadoTag(estado)}>{estado}</Tag>
+            {record.firma_hash && <Tag color="blue">Firmado</Tag>}
+          </span>
+        </div>
+        <div className="notif-mobile-card__body">
+          <NotifMobilePair
+            left={{ label: 'Mes', value: dayjs(record.mes).format('MMMM YYYY') }}
+            right={{ label: 'Petición', value: formatearFecha(record.fecha_alta) }}
+          />
+          <NotifMobilePair
+            left={{ label: 'DNI', value: record.dni_usuario_alta || '—' }}
+            right={{ label: 'Resolución', value: formatearFecha(obtenerFechaResolucion(record)) }}
+          />
+        </div>
+        <div className="notif-mobile-card__acciones notif-mobile-card__acciones--mixed">
+          <Button
+            icon={<EyeOutlined />}
+            size="small"
+            className="notif-btn-compact"
+            onClick={() => setVisibleModalDetalles(record)}
+          >
+            Detalle
+          </Button>
+          {estado === 'Pendiente' && renderAccionesCierre(record)}
+        </div>
+      </article>
+    );
+  };
+
+  const renderAusenciaCard = (record) => {
+    const estado = obtenerEstado(record);
+    return (
+      <article
+        key={`${record.empresa_id}-${record.id_ausencia}`}
+        className="notif-mobile-card"
+      >
+        <div className="notif-mobile-card__header">
+          <h3 className="notif-mobile-card__title">{record.nombre_usuario || '—'}</h3>
+          <Tag color={colorEstadoTag(estado)}>{estado}</Tag>
+        </div>
+        <div className="notif-mobile-card__body">
+          <NotifMobilePair
+            left={{ label: 'Tipo', value: record.tipo || '—' }}
+            right={{ label: 'Días', value: formatDiasAusencia(record.dias) }}
+          />
+          <NotifMobilePair
+            left={{ label: 'Desde', value: formatFechaAusencia(record.fecha_desde) }}
+            right={{ label: 'Hasta', value: formatFechaAusencia(record.fecha_hasta) }}
+          />
+          <NotifMobilePair
+            left={{ label: 'Solicitud', value: formatearFecha(record.fecha_alta) }}
+            right={{ label: 'Resolución', value: formatearFecha(obtenerFechaResolucion(record)) }}
+          />
+          <NotifMobileField label="Comentario" value={record.comentarios || '—'} />
+          <div className="notif-mobile-justificante">
+            <JustificanteAusenciaAcciones
+              ausencia={record}
+              compact
+              onActualizado={() => {
+                fetchAusenciasPendientes();
+                fetchHistorialAusencias();
+              }}
+            />
+          </div>
+        </div>
+        {estado === 'Pendiente' && (
+          <div className="notif-mobile-card__acciones">
+            {renderAccionesAusencia(record)}
+          </div>
+        )}
+      </article>
+    );
+  };
+
+  const renderMobileCard = (record) => {
+    if (activeTab === 'horarios') return renderCorreccionCard(record);
+    if (activeTab === 'cierres') return renderCierreCard(record);
+    return renderAusenciaCard(record);
+  };
+
   const colorEstadoTag = (estado) => {
     if (estado === 'Aprobada') return 'green';
     if (estado === 'Rechazada') return 'red';
@@ -823,39 +1114,7 @@ const setVisibleModalDetalles = async (info) => {
         key: 'acciones',
         fixed: 'right',
         width: 190,
-        render: (_, record) => {
-          const estado = obtenerEstado(record);
-          if (estado !== 'Pendiente') {
-            return <span className="notif-procesada">—</span>;
-          }
-          if (!puedeAprobarComoGestor) {
-            return (
-              <Tooltip title="Solo un administrador o supervisor puede aprobar">
-                <span className="notif-procesada">Pendiente</span>
-              </Tooltip>
-            );
-          }
-          return (
-            <div className="notif-acciones">
-              <Popconfirm
-                title="¿Aprobar esta petición?"
-                onConfirm={() => handleRespuesta(record, 2)}
-                okText="Sí"
-                cancelText="No"
-              >
-              <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
-            </Popconfirm>
-            <Button
-              danger
-              size="small"
-              className="notif-btn-compact"
-              onClick={() => abrirModalRechazo(record)}
-            >
-              Rechazar
-            </Button>
-          </div>
-          );
-        },
+        render: (_, record) => renderAccionesCorreccion(record),
       },
     ];
 
@@ -871,7 +1130,7 @@ const setVisibleModalDetalles = async (info) => {
     }
 
     return columnas;
-  }, [estadoFiltro]);
+  }, [estadoFiltro, puedeAprobarComoGestor]);
 
   const columnsCierreMensual = useMemo(() => {
     const columnas = [
@@ -935,44 +1194,7 @@ const setVisibleModalDetalles = async (info) => {
         key: 'acciones',
         width: 190,
         fixed: 'right',
-        render: (_, record) => {
-          const estado = obtenerEstado(record);
-
-          if (estado !== 'Pendiente') {
-            return <span className="notif-procesada">—</span>;
-          }
-
-          if (!puedeAprobarComoGestor) {
-            return (
-              <Tooltip title="Solo un administrador o supervisor puede aprobar">
-                <span className="notif-procesada">Pendiente</span>
-              </Tooltip>
-            );
-          }
-
-          return (
-            <div className="notif-acciones">
-              <Popconfirm
-                title="¿Aprobar este cierre?"
-                onConfirm={() => handleRespuestaCierre(record, 2)}
-                okText="Sí"
-                cancelText="No"
-              >
-                <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
-              </Popconfirm>
-              <Popconfirm
-                title="¿Rechazar este cierre?"
-                onConfirm={() => handleRespuestaCierre(record, 3)}
-                okText="Sí"
-                cancelText="No"
-              >
-                <Button danger size="small" className="notif-btn-compact">
-                  Rechazar
-                </Button>
-              </Popconfirm>
-            </div>
-          );
-        },
+        render: (_, record) => renderAccionesCierre(record),
       },
     ];
 
@@ -988,7 +1210,7 @@ const setVisibleModalDetalles = async (info) => {
     }
 
     return columnas;
-  }, [estadoFiltro]);
+  }, [estadoFiltro, puedeAprobarComoGestor]);
 
   const columnsAusencias = useMemo(() => {
     const columnas = [
@@ -1074,58 +1296,7 @@ const setVisibleModalDetalles = async (info) => {
         key: 'acciones',
         fixed: 'right',
         width: 190,
-        render: (_, record) => {
-          const estado = obtenerEstado(record);
-          const requiereDoc = record.requiere_justificante
-            ?? requiereJustificanteParaAprobar(record.tipo);
-          const cumpleJustificante = !requiereDoc || record.tiene_justificante;
-
-          if (estado !== 'Pendiente') {
-            return <span className="notif-procesada">—</span>;
-          }
-
-          if (!puedeAprobarComoGestor) {
-            return (
-              <Tooltip title="Solo un administrador o supervisor puede aprobar">
-                <span className="notif-procesada">Pendiente</span>
-              </Tooltip>
-            );
-          }
-
-          return (
-            <div className="notif-acciones">
-              {cumpleJustificante ? (
-                <Popconfirm
-                  title="¿Aprobar esta ausencia?"
-                  onConfirm={() => handleRespuestaAusencia(record, 2)}
-                  okText="Sí"
-                  cancelText="No"
-                >
-                  <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
-                </Popconfirm>
-              ) : (
-                <Tooltip title="El empleado debe subir el justificante antes de aprobar">
-                  <span>
-                    <GradientButton
-                      text="Aprobar"
-                      size="small"
-                      className="notif-btn-compact"
-                      disabled
-                    />
-                  </span>
-                </Tooltip>
-              )}
-              <Button
-                danger
-                size="small"
-                className="notif-btn-compact"
-                onClick={() => abrirModalRechazoAusencia(record)}
-              >
-                Rechazar
-              </Button>
-            </div>
-          );
-        },
+        render: (_, record) => renderAccionesAusencia(record),
       },
     ];
 
@@ -1139,7 +1310,7 @@ const setVisibleModalDetalles = async (info) => {
       return columnas.filter((col) => !ocultar.includes(col.key));
     }
     return columnas;
-  }, [estadoFiltro]);
+  }, [estadoFiltro, puedeAprobarComoGestor]);
 
   return (
     <div className="notif-layout">
@@ -1147,13 +1318,25 @@ const setVisibleModalDetalles = async (info) => {
         Notificaciones
       </Title>
 
-      <Menu
-        className="notif-submenu"
-        mode="horizontal"
-        selectedKeys={[activeTab]}
-        items={submenuItems}
-        onClick={handleTabChange}
-      />
+      <div className="notif-nav">
+        {isMobile ? (
+          <Select
+            className="notif-select"
+            value={activeTab}
+            options={submenuItems.map(({ key, label }) => ({ value: key, label }))}
+            onChange={(key) => handleTabChange({ key })}
+            aria-label="Tipo de notificación"
+          />
+        ) : (
+          <Menu
+            className="notif-submenu"
+            mode="horizontal"
+            selectedKeys={[activeTab]}
+            items={submenuItems}
+            onClick={handleTabChange}
+          />
+        )}
+      </div>
 
       <div className="notif-stats-row">
         <div className="notif-stats">
@@ -1218,13 +1401,34 @@ const setVisibleModalDetalles = async (info) => {
             ? (loading || loadingHistorialCierres)
             : (loadingAusencias || loadingHistorialAusencias)
       }>
-        {activeTab === 'horarios' ? (
+        {isMobile ? (
+          <div className="notif-mobile-list">
+            {listaActiva.length === 0 ? (
+              <p className="notif-mobile-empty">No hay notificaciones que coincidan con el filtro</p>
+            ) : (
+              <>
+                {listaActivaMobile.map((record) => renderMobileCard(record))}
+                {listaActiva.length > PAGE_SIZE && (
+                  <Pagination
+                    className="notif-mobile-pagination"
+                    current={mobilePage}
+                    pageSize={PAGE_SIZE}
+                    total={listaActiva.length}
+                    onChange={setMobilePage}
+                    showSizeChanger={false}
+                    hideOnSinglePage
+                  />
+                )}
+              </>
+            )}
+          </div>
+        ) : activeTab === 'horarios' ? (
           <Table
             className="notif-table"
             columns={columnsCorreccion}
             dataSource={correccionesFiltradas}
             rowKey="id_peticion"
-            pagination={{ pageSize: 8, hideOnSinglePage: true }}
+            pagination={{ pageSize: PAGE_SIZE, hideOnSinglePage: true }}
             scroll={{ x: 1300 }}
             size="middle"
           />
@@ -1234,7 +1438,7 @@ const setVisibleModalDetalles = async (info) => {
             columns={columnsCierreMensual}
             dataSource={cierresFiltrados}
             rowKey={(record) => `${record.empresa_id}-${record.id_mes_cierre}`}
-            pagination={{ pageSize: 8, hideOnSinglePage: true }}
+            pagination={{ pageSize: PAGE_SIZE, hideOnSinglePage: true }}
             size="middle"
           />
         ) : (
@@ -1243,71 +1447,31 @@ const setVisibleModalDetalles = async (info) => {
             columns={columnsAusencias}
             dataSource={ausenciasFiltradas}
             rowKey={(record) => `${record.empresa_id}-${record.id_ausencia}`}
-            pagination={{ pageSize: 8, hideOnSinglePage: true }}
+            pagination={{ pageSize: PAGE_SIZE, hideOnSinglePage: true }}
             scroll={{ x: 1200 }}
             size="middle"
           />
         )}
       </Spin>
 
-      <Modal
-            open={visible}
-            onCancel={() => {
-              setVisible(false);
-              setFirmaCierreDetalle(null);
-              setResumenHoras(null);
-              setDetalleCierreContext(null);
-            }}
-            footer={null}
-            width="80%"
-            className="notif-modal"
-            destroyOnClose
-        >
-            <Card
-              title={<Title className="notif-modal-title" level={2}>Registro mensual</Title>}
-              extra={(
-                <Button
-                  type="default"
-                  icon={<DownloadOutlined />}
-                  onClick={descargarPdfCierre}
-                  disabled={!detalleCierreContext}
-                >
-                  Descargar PDF
-                </Button>
-              )}
-            >
-        
-             <Table
-                columns={columnsDetalles}
-                dataSource={registroHoras}
-                rowKey="fecha"
-                pagination={{ pageSize: 10 }}
-                scroll={{ x: 800 }}
-                />
-                <div className="notif-totales">
-                    <span className="notif-total-sep">Total de horas trabajadas: {totalHoras}</span>
-                    <span>Total de horas esperadas: {totalHorasEsperadas}</span>
-                </div>
-                {firmaCierreDetalle?.firmado && (
-                  <div className="notif-firma-cierre">
-                    <p className="notif-firma-cierre__titulo">Solicitud firmada por el personal</p>
-                    {firmaCierreDetalle.firma_imagen && (
-                      <img
-                        src={firmaCierreDetalle.firma_imagen}
-                        alt="Firma del personal"
-                        className="notif-firma-cierre__img"
-                      />
-                    )}
-                    <p className="notif-firma-cierre__hash">
-                      Huella de firma: <code>{firmaCierreDetalle.firma_hash}</code>
-                    </p>
-                    <p className="notif-firma-cierre__hash">
-                      Hash del registro del mes: <code>{firmaCierreDetalle.hash_registro_mes}</code>
-                    </p>
-                  </div>
-                )}
-            </Card>
-        </Modal>
+      <RegistroMensualModal
+        open={visible}
+        onClose={() => {
+          setVisible(false);
+          setFirmaCierreDetalle(null);
+          setResumenHoras(null);
+          setDetalleCierreContext(null);
+        }}
+        title="Registro mensual"
+        registros={registroHoras}
+        totalHoras={totalHoras}
+        totalHorasEsperadas={totalHorasEsperadas}
+        resumenHoras={resumenHoras}
+        onDescargarPdf={descargarPdfCierre}
+        pdfDisabled={!detalleCierreContext}
+        firmaCierreDetalle={firmaCierreDetalle}
+        nombreEmpleado={detalleCierreContext?.nombreEmpleado}
+      />
 
       <Modal
         title="Motivo del rechazo"

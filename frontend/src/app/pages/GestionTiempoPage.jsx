@@ -1,13 +1,17 @@
-import React, { useMemo, useState } from 'react';
-import { Menu, Typography } from 'antd';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Button, Menu, Select, Typography } from 'antd';
+import { ReloadOutlined } from '@ant-design/icons';
 import { getTipoUsuario } from '../../utils/authSession';
 import { usePlan } from '../../hooks/usePlan';
+import { notifyGestionTiempoRefresh } from '../../hooks/useEstadoJornada';
 import PresenciaPersonalPanel from './PresenciaPersonalPanel';
 import TimeLogsPanel from './TimeLogsPanel';
 import AusenciasPanel from './AusenciasPanel';
 import './GestionTiempoPage.css';
 
 const { Title, Text } = Typography;
+
+const MOBILE_BREAKPOINT = 950;
 
 /** Presencia del equipo: gestión de personal, no del propio empleado (tipo 5) */
 const ROLES_PRESENCIA_EQUIPO = [1, 2, 3, 4];
@@ -38,6 +42,15 @@ const GestionTiempoPage = () => {
 
   const defaultKey = puedeVerPresenciaEquipo ? 'presencia' : 'mi-registro';
   const [activeKey, setActiveKey] = useState(defaultKey);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
+
+  useEffect(() => {
+    const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   if (!puedeVerPresenciaEquipo && !puedeVerAusencias) {
     return <TimeLogsPanel />;
@@ -61,13 +74,32 @@ const GestionTiempoPage = () => {
       </Text>
 
       {mostrarSubmenu && (
-        <Menu
-          className="gt-layout__menu"
-          mode="horizontal"
-          selectedKeys={[activeKey]}
-          items={submenuItems}
-          onClick={({ key }) => setActiveKey(key)}
-        />
+        <div className="gt-layout__nav-row">
+          {isMobile ? (
+            <Select
+              className="gt-layout__select"
+              value={activeKey}
+              options={submenuItems.map(({ key, label }) => ({ value: key, label }))}
+              onChange={setActiveKey}
+              aria-label="Sección de gestión de tiempo"
+            />
+          ) : (
+            <Menu
+              className="gt-layout__menu"
+              mode="horizontal"
+              selectedKeys={[activeKey]}
+              items={submenuItems}
+              onClick={({ key }) => setActiveKey(key)}
+            />
+          )}
+          <Button
+            type="text"
+            className="gt-layout__refresh-btn"
+            icon={<ReloadOutlined />}
+            onClick={notifyGestionTiempoRefresh}
+            aria-label="Actualizar"
+          />
+        </div>
       )}
 
       <div className="gt-layout__content">

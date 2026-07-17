@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   Card,
   Tabs,
+  Select,
   Descriptions,
   Table,
   Button,
@@ -12,11 +13,9 @@ import {
   message,
   Spin,
   Empty,
-  Modal,
 } from 'antd';
 import {
   ArrowLeftOutlined,
-  DownloadOutlined,
   EyeOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -57,11 +56,14 @@ import {
 import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import { parseFechaFichaje } from '../../utils/fechaFichaje';
 import RegistroDiaCard from '../components/cards/RegistroDiaCard';
+import RegistroMensualModal from '../components/RegistroMensualModal';
 import './FichaPersonal.css';
 
 dayjs.locale('es');
 
 const { Title, Text } = Typography;
+
+const MOBILE_BREAKPOINT = 950;
 
 const formatearFecha = (fecha) =>
   fecha && dayjs(fecha).isValid() ? dayjs(fecha).format('DD/MM/YYYY HH:mm') : '—';
@@ -98,6 +100,16 @@ const FichaPersonal = () => {
   const [resumenHorasDetalle, setResumenHorasDetalle] = useState(null);
   const [firmaCierreDetalle, setFirmaCierreDetalle] = useState(null);
   const [loadingDetalleCierre, setLoadingDetalleCierre] = useState(false);
+  const [activeTabKey, setActiveTabKey] = useState('datos');
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
+
+  useEffect(() => {
+    const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   const cargarFicha = useCallback(async () => {
     if (!Number.isInteger(idUsuario) || idUsuario <= 0) {
@@ -588,6 +600,11 @@ const FichaPersonal = () => {
     },
   ];
 
+  const currentTabKey = tabItems.some((t) => t.key === activeTabKey)
+    ? activeTabKey
+    : (tabItems[0]?.key ?? 'datos');
+  const currentTab = tabItems.find((t) => t.key === currentTabKey);
+
   return (
     <ConfigProvider locale={esES}>
       <div className="fp-page">
@@ -613,79 +630,51 @@ const FichaPersonal = () => {
         </div>
 
         <Card className="fp-card">
-          <Tabs items={tabItems} destroyInactiveTabPane={false} />
+          {isMobile ? (
+            <>
+              <Select
+                className="fp-tab-select"
+                value={currentTabKey}
+                options={tabItems.map(({ key, label }) => ({ value: key, label }))}
+                onChange={setActiveTabKey}
+                aria-label="Sección del perfil"
+              />
+              <div className="fp-tab-content">
+                {currentTab?.children}
+              </div>
+            </>
+          ) : (
+            <Tabs
+              activeKey={currentTabKey}
+              onChange={setActiveTabKey}
+              items={tabItems}
+              destroyInactiveTabPane={false}
+            />
+          )}
         </Card>
 
-        <Modal
+        <RegistroMensualModal
           open={detalleCierreOpen}
-          onCancel={() => {
+          onClose={() => {
             setDetalleCierreOpen(false);
             setDetalleCierre(null);
             setFirmaCierreDetalle(null);
           }}
-          footer={null}
-          width="80%"
           title={
             detalleCierre
               ? `Cierre de ${dayjs(`${detalleCierre.mes}-01`).format('MMMM [de] YYYY')}`
               : 'Detalle del cierre'
           }
-          destroyOnClose
-        >
-          {loadingDetalleCierre ? (
-            <div className="fp-loading">
-              <Spin />
-            </div>
-          ) : (
-            <>
-              <div style={{ marginBottom: 12, textAlign: 'right' }}>
-                <Button
-                  icon={<DownloadOutlined />}
-                  onClick={descargarPdfCierre}
-                  disabled={!detalleCierre}
-                >
-                  Descargar PDF
-                </Button>
-              </div>
-              <Table
-                columns={columnsRegistro.filter((c) => c.key !== 'tipo')}
-                dataSource={registroDetalleCierre}
-                rowKey="fecha"
-                pagination={{ pageSize: 10 }}
-                scroll={{ x: 600 }}
-              />
-              <div className="fp-totales">
-                <span className="fp-total-sep">
-                  Total horas trabajadas: {totalHorasDetalle}
-                </span>
-                <span>Total horas esperadas: {totalEsperadasDetalle}</span>
-                {resumenHorasDetalle?.tipo_hora_label && (
-                  <span>Tipo de hora: {resumenHorasDetalle.tipo_hora_label}</span>
-                )}
-                {resumenHorasDetalle?.desglose && (
-                  <span>{resumenHorasDetalle.desglose}</span>
-                )}
-                {resumenHorasDetalle?.saldo_bolsa && (
-                  <span>Saldo bolsa: {resumenHorasDetalle.saldo_bolsa}</span>
-                )}
-              </div>
-              {firmaCierreDetalle?.firmado && (
-                <div style={{ marginTop: 16 }}>
-                  <Text strong>Firma del personal</Text>
-                  {firmaCierreDetalle.firma_imagen && (
-                    <div style={{ marginTop: 8 }}>
-                      <img
-                        src={firmaCierreDetalle.firma_imagen}
-                        alt="Firma del personal"
-                        style={{ maxWidth: 280, border: '1px solid #eee', borderRadius: 8 }}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </Modal>
+          loading={loadingDetalleCierre}
+          registros={registroDetalleCierre}
+          totalHoras={totalHorasDetalle}
+          totalHorasEsperadas={totalEsperadasDetalle}
+          resumenHoras={resumenHorasDetalle}
+          onDescargarPdf={descargarPdfCierre}
+          pdfDisabled={!detalleCierre}
+          firmaCierreDetalle={firmaCierreDetalle}
+          nombreEmpleado={usuario?.nombre}
+        />
       </div>
     </ConfigProvider>
   );

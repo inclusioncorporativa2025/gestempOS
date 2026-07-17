@@ -18,6 +18,19 @@
   font-weight: var(--font-weight-medium, 500);
 }
 
+.be-stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.be-stats-grid__split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
 .be-stats-row {
   margin-bottom: 16px;
 }
@@ -205,4 +218,159 @@
 .be-accion-btn--reactivar:hover {
   color: #4096ff !important;
   background: rgba(22, 119, 255, 0.08) !important;
+}
+
+.be-mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.be-mobile-loading {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+.be-mobile-empty {
+  margin: 24px 0;
+  text-align: center;
+  color: #5a6472;
+  font-size: 0.9rem;
+}
+
+.be-mobile-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(var(--color-primary-rgb), 0.12);
+  box-shadow: 0 2px 8px rgba(26, 35, 50, 0.04);
+}
+
+.be-mobile-card--inactive {
+  opacity: 0.85;
+  background: rgba(var(--color-primary-rgb), 0.03);
+}
+
+.be-mobile-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.be-mobile-card__nombre {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: var(--font-weight-medium);
+  color: #1a2332;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.be-mobile-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.be-mobile-card__badges .ant-tag {
+  margin: 0;
+}
+
+.be-mobile-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.be-mobile-card__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+}
+
+.be-mobile-card__field {
+  min-width: 0;
+}
+
+.be-mobile-card__field dt {
+  margin: 0 0 2px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #8c95a1;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.be-mobile-card__field dd {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #1a2332;
+  word-break: break-word;
+}
+
+.be-mobile-card__email {
+  color: #1a2332;
+  text-decoration: none;
+}
+
+.be-mobile-card__email:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.be-mobile-card__pago-btn {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.be-mobile-card__acciones {
+  padding-top: 10px;
+  border-top: 1px solid rgba(var(--color-primary-rgb), 0.1);
+}
+
+.be-mobile-card__acciones .be-acciones {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.be-mobile-card__acciones .be-accion-btn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.be-mobile-pagination {
+  margin-top: 8px;
+  text-align: center;
+}
+
+@media (max-width: 949px) {
+  .be-layout {
+    padding: 12px;
+  }
+
+  .be-layout--embedded {
+    padding: 0;
+  }
+
+  .be-search-toolbar {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .be-alta-btn.gradient-btn {
+    width: auto;
+  }
 }

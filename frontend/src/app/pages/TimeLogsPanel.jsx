@@ -31,6 +31,7 @@ import { DECLARACION_CIERRE_MENSUAL, ETIQUETA_CONFIRMACION_CIERRE } from '../../
 import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import UbicacionMapModal from '../components/UbicacionMapModal';
 import SignaturePad from '../components/shared/SignaturePad';
+import { GESTION_TIEMPO_REFRESH } from '../../hooks/useEstadoJornada';
 import './TimeLogsPanel.css';
 import moment from 'moment';
 
@@ -504,6 +505,12 @@ const confirmarCierreMensual = async () => {
 
     useEffect(() => {
         fetchData();
+    }, []);
+
+    useEffect(() => {
+      const onRefresh = () => { fetchData(); };
+      window.addEventListener(GESTION_TIEMPO_REFRESH, onRefresh);
+      return () => window.removeEventListener(GESTION_TIEMPO_REFRESH, onRefresh);
     }, []);
 
     const showEditModal = (record) => {

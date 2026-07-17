@@ -18,6 +18,8 @@ import {
   Tooltip,
   Select,
   InputNumber,
+  Pagination,
+  Spin,
 } from 'antd';
 import GradientButton from '../../components/shared/GradientButton';
 import {
@@ -50,6 +52,9 @@ import {
 import './BuscadorEmpresa.css';
 
 const { Title, Text } = Typography;
+
+const MOBILE_BREAKPOINT = 950;
+const PAGE_SIZE = 10;
 
 const FILTRO_TODAS = 'todas';
 const FILTRO_ACTIVAS = 'activas';
@@ -148,11 +153,25 @@ const BuscadorEmpresa = ({ embedded = false }) => {
   const [purgeCif, setPurgeCif] = useState('');
   const [purgeLoading, setPurgeLoading] = useState(false);
   const [paymentLinkLoadingId, setPaymentLinkLoadingId] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
+  const [mobilePage, setMobilePage] = useState(1);
   const esRoot = Number(getTipoUsuario()) === 1;
 
   useEffect(() => {
     fetchEmpresas();
   }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    setMobilePage(1);
+  }, [busqueda, filtroEstado, data.length]);
 
   useEffect(() => {
     if (location.state?.abrirAltaEmpresa) {
@@ -194,6 +213,11 @@ const BuscadorEmpresa = ({ embedded = false }) => {
       return coincideBusqueda(empresa, busqueda);
     });
   }, [data, filtroEstado, busqueda]);
+
+  const filteredDataMobile = useMemo(() => {
+    const start = (mobilePage - 1) * PAGE_SIZE;
+    return filteredData.slice(start, start + PAGE_SIZE);
+  }, [filteredData, mobilePage]);
 
   const formatDate = (date) => {
     if (!date) return '';
@@ -353,6 +377,204 @@ const BuscadorEmpresa = ({ embedded = false }) => {
     }
   };
 
+  const renderAccionesEmpresa = (record) => {
+    const activa = empresaEstaActiva(record);
+    const dadaDeBaja = empresaDadaDeBaja(record);
+    return (
+      <div className="be-acciones">
+        {!dadaDeBaja && (
+          <Tooltip title="Editar">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              className="be-accion-btn be-accion-btn--edit"
+              onClick={() => handleEdit(record)}
+              aria-label="Editar"
+            />
+          </Tooltip>
+        )}
+        {dadaDeBaja ? (
+          <Popconfirm
+            title="¿Reactivar esta empresa?"
+            description="Se restaurará el acceso y los vínculos con el administrador."
+            onConfirm={() => handleReactivar(record.id_empresa)}
+            okText="Reactivar"
+            cancelText="Cancelar"
+          >
+            <Tooltip title="Reactivar">
+              <Button
+                type="text"
+                icon={<RedoOutlined />}
+                className="be-accion-btn be-accion-btn--reactivar"
+                aria-label="Reactivar"
+              />
+            </Tooltip>
+          </Popconfirm>
+        ) : activa ? (
+          <Popconfirm
+            title="¿Estás seguro de dar de baja esta empresa?"
+            onConfirm={() => handleDelete(record.id_empresa)}
+            okText="Sí"
+            cancelText="No"
+          >
+            <Tooltip title="Dar de baja">
+              <Button
+                type="text"
+                danger
+                icon={<StopOutlined />}
+                className="be-accion-btn"
+                aria-label="Dar de baja"
+              />
+            </Tooltip>
+          </Popconfirm>
+        ) : null}
+        {esRoot && (
+          <Tooltip title="Borrar permanentemente (pruebas)">
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              className="be-accion-btn"
+              onClick={() => abrirPurga(record)}
+              aria-label="Borrar permanentemente"
+            />
+          </Tooltip>
+        )}
+      </div>
+    );
+  };
+
+  const columns = [
+    { title: 'Nombre Empresa', dataIndex: 'nombre', key: 'nombre' },
+    { title: 'Identificador Fiscal', dataIndex: 'identificador_fiscal', key: 'identificador_fiscal' },
+    { title: 'Email Responsable', dataIndex: 'email', key: 'email', render: (email) => email || '—' },
+    {
+      title: 'Plan',
+      dataIndex: 'plan',
+      key: 'plan',
+      render: (plan) => (
+        <Tag color={getPlanTagColor(plan)}>{getPlanLabel(plan)}</Tag>
+      ),
+    },
+    { title: 'Licencias', dataIndex: 'licencias', key: 'licencias' },
+    {
+      title: 'Fecha Alta',
+      dataIndex: 'fecha_alta',
+      key: 'fecha_alta',
+      render: (fecha_alta) => formatDate(fecha_alta),
+    },
+    {
+      title: 'Estado',
+      key: 'estado',
+      render: (_, record) => renderEstadoEmpresa(record),
+    },
+    {
+      title: 'Pago',
+      key: 'enlace_pago',
+      width: 56,
+      align: 'center',
+      render: (_, record) => {
+        if (!empresaRequiereEnlacePago(record)) {
+          return '—';
+        }
+        return (
+          <Tooltip title="Copiar enlace de pago">
+            <Button
+              type="text"
+              icon={<CopyOutlined />}
+              loading={paymentLinkLoadingId === record.id_empresa}
+              onClick={() => copiarEnlacePagoEmpresa(record)}
+              aria-label="Copiar enlace de pago"
+              className="be-accion-btn be-accion-btn--copy"
+            />
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: 'Acciones',
+      key: 'acciones',
+      render: (_, record) => renderAccionesEmpresa(record),
+    },
+  ];
+
+  const renderEmpresaCard = (record) => (
+    <article
+      key={record.id_empresa}
+      className={[
+        'be-mobile-card',
+        !empresaEstaActiva(record) ? 'be-mobile-card--inactive' : '',
+      ].filter(Boolean).join(' ')}
+    >
+      <div className="be-mobile-card__header">
+        <h3 className="be-mobile-card__nombre">{record.nombre}</h3>
+        <div className="be-mobile-card__badges">
+          {renderEstadoEmpresa(record)}
+          <Tag color={getPlanTagColor(record.plan)}>{getPlanLabel(record.plan)}</Tag>
+        </div>
+      </div>
+      <dl className="be-mobile-card__meta">
+        <div className="be-mobile-card__pair">
+          <div className="be-mobile-card__field">
+            <dt>CIF</dt>
+            <dd>{record.identificador_fiscal || '—'}</dd>
+          </div>
+          <div className="be-mobile-card__field">
+            <dt>Email</dt>
+            <dd>
+              {record.email ? (
+                <a href={`mailto:${record.email}`} className="be-mobile-card__email">
+                  {record.email}
+                </a>
+              ) : '—'}
+            </dd>
+          </div>
+        </div>
+        <div className="be-mobile-card__pair">
+          <div className="be-mobile-card__field">
+            <dt>Licencias</dt>
+            <dd>{record.licencias ?? '—'}</dd>
+          </div>
+          <div className="be-mobile-card__field">
+            <dt>Alta</dt>
+            <dd>{formatDate(record.fecha_alta) || '—'}</dd>
+          </div>
+        </div>
+      </dl>
+      {empresaRequiereEnlacePago(record) && (
+        <Button
+          type="default"
+          size="small"
+          icon={<CopyOutlined />}
+          loading={paymentLinkLoadingId === record.id_empresa}
+          onClick={() => copiarEnlacePagoEmpresa(record)}
+          className="be-mobile-card__pago-btn"
+        >
+          Copiar enlace de pago
+        </Button>
+      )}
+      <div className="be-mobile-card__acciones">
+        {renderAccionesEmpresa(record)}
+      </div>
+    </article>
+  );
+
+  const renderStatCard = ({ key, label, count, licenciasLabel, licencias, className }) => (
+    <button
+      type="button"
+      className={`be-stat-card ${className} ${filtroEstado === key ? 'be-stat-card--selected' : ''}`}
+      onClick={() => setFiltroEstado(key)}
+      aria-pressed={filtroEstado === key}
+    >
+      <Text className="be-stat-label">{label}</Text>
+      <span className="be-stat-count">{count}</span>
+      <span className="be-stat-licencias-block">
+        <span className="be-stat-licencias-label">{licenciasLabel}</span>
+        <span className="be-stat-licencias">{licencias}</span>
+      </span>
+    </button>
+  );
+
   return (
     <Layout className={embedded ? 'be-layout be-layout--embedded' : 'be-layout'}>
       {!embedded && (
@@ -361,25 +583,15 @@ const BuscadorEmpresa = ({ embedded = false }) => {
         </Title>
       )}
 
-      <Row gutter={[16, 16]} className="be-stats-row">
-        {tarjetasResumen.map(({ key, label, count, licenciasLabel, licencias, className }) => (
-          <Col xs={24} sm={8} key={key}>
-            <button
-              type="button"
-              className={`be-stat-card ${className} ${filtroEstado === key ? 'be-stat-card--selected' : ''}`}
-              onClick={() => setFiltroEstado(key)}
-              aria-pressed={filtroEstado === key}
-            >
-              <Text className="be-stat-label">{label}</Text>
-              <span className="be-stat-count">{count}</span>
-              <span className="be-stat-licencias-block">
-                <span className="be-stat-licencias-label">{licenciasLabel}</span>
-                <span className="be-stat-licencias">{licencias}</span>
-              </span>
-            </button>
-          </Col>
-        ))}
-      </Row>
+      <div className="be-stats-grid">
+        <div className="be-stats-grid__total">
+          {renderStatCard(tarjetasResumen[0])}
+        </div>
+        <div className="be-stats-grid__split">
+          {renderStatCard(tarjetasResumen[1])}
+          {renderStatCard(tarjetasResumen[2])}
+        </div>
+      </div>
 
       <Card className="be-search-card">
         <div className="be-search-toolbar">
@@ -403,133 +615,43 @@ const BuscadorEmpresa = ({ embedded = false }) => {
       </Card>
 
       <Card className="be-card-table">
-        <Table
-          dataSource={filteredData}
-          loading={loading}
-          rowKey="id_empresa"
-          pagination={{ pageSize: 10, showSizeChanger: false }}
-          scroll={{ x: 700 }}
-          rowClassName={(record) => (empresaEstaActiva(record) ? '' : 'be-row-inactiva')}
-          locale={{ emptyText: 'No hay empresas que coincidan con el filtro' }}
-          columns={[
-            { title: 'Nombre Empresa', dataIndex: 'nombre', key: 'nombre' },
-            { title: 'Identificador Fiscal', dataIndex: 'identificador_fiscal', key: 'identificador_fiscal' },
-            { title: 'Email Responsable', dataIndex: 'email', key: 'email', render: (email) => email || '—' },
-            {
-              title: 'Plan',
-              dataIndex: 'plan',
-              key: 'plan',
-              render: (plan) => (
-                <Tag color={getPlanTagColor(plan)}>{getPlanLabel(plan)}</Tag>
-              ),
-            },
-            { title: 'Licencias', dataIndex: 'licencias', key: 'licencias' },
-            {
-              title: 'Fecha Alta',
-              dataIndex: 'fecha_alta',
-              key: 'fecha_alta',
-              render: (fecha_alta) => formatDate(fecha_alta),
-            },
-            {
-              title: 'Estado',
-              key: 'estado',
-              render: (_, record) => renderEstadoEmpresa(record),
-            },
-            {
-              title: 'Pago',
-              key: 'enlace_pago',
-              width: 56,
-              align: 'center',
-              render: (_, record) => {
-                if (!empresaRequiereEnlacePago(record)) {
-                  return '—';
-                }
-                return (
-                  <Tooltip title="Copiar enlace de pago">
-                    <Button
-                      type="text"
-                      icon={<CopyOutlined />}
-                      loading={paymentLinkLoadingId === record.id_empresa}
-                      onClick={() => copiarEnlacePagoEmpresa(record)}
-                      aria-label="Copiar enlace de pago"
-                      className="be-accion-btn be-accion-btn--copy"
-                    />
-                  </Tooltip>
-                );
-              },
-            },
-            {
-              title: 'Acciones',
-              key: 'acciones',
-              render: (_, record) => {
-                const activa = empresaEstaActiva(record);
-                const dadaDeBaja = empresaDadaDeBaja(record);
-                return (
-                  <div className="be-acciones">
-                    {!dadaDeBaja && (
-                      <Tooltip title="Editar">
-                        <Button
-                          type="text"
-                          icon={<EditOutlined />}
-                          className="be-accion-btn be-accion-btn--edit"
-                          onClick={() => handleEdit(record)}
-                          aria-label="Editar"
-                        />
-                      </Tooltip>
-                    )}
-                    {dadaDeBaja ? (
-                      <Popconfirm
-                        title="¿Reactivar esta empresa?"
-                        description="Se restaurará el acceso y los vínculos con el administrador."
-                        onConfirm={() => handleReactivar(record.id_empresa)}
-                        okText="Reactivar"
-                        cancelText="Cancelar"
-                      >
-                        <Tooltip title="Reactivar">
-                          <Button
-                            type="text"
-                            icon={<RedoOutlined />}
-                            className="be-accion-btn be-accion-btn--reactivar"
-                            aria-label="Reactivar"
-                          />
-                        </Tooltip>
-                      </Popconfirm>
-                    ) : activa ? (
-                      <Popconfirm
-                        title="¿Estás seguro de dar de baja esta empresa?"
-                        onConfirm={() => handleDelete(record.id_empresa)}
-                        okText="Sí"
-                        cancelText="No"
-                      >
-                        <Tooltip title="Dar de baja">
-                          <Button
-                            type="text"
-                            danger
-                            icon={<StopOutlined />}
-                            className="be-accion-btn"
-                            aria-label="Dar de baja"
-                          />
-                        </Tooltip>
-                      </Popconfirm>
-                    ) : null}
-                    {esRoot && (
-                      <Tooltip title="Borrar permanentemente (pruebas)">
-                        <Button
-                          type="text"
-                          danger
-                          icon={<DeleteOutlined />}
-                          className="be-accion-btn"
-                          onClick={() => abrirPurga(record)}
-                          aria-label="Borrar permanentemente"
-                        />
-                      </Tooltip>
-                    )}
-                  </div>
-                );
-              },
-            },
-          ]}
-        />
+        {isMobile ? (
+          <div className="be-mobile-list">
+            {loading ? (
+              <div className="be-mobile-loading">
+                <Spin />
+              </div>
+            ) : filteredData.length === 0 ? (
+              <p className="be-mobile-empty">No hay empresas que coincidan con el filtro</p>
+            ) : (
+              <>
+                {filteredDataMobile.map((record) => renderEmpresaCard(record))}
+                {filteredData.length > PAGE_SIZE && (
+                  <Pagination
+                    className="be-mobile-pagination"
+                    current={mobilePage}
+                    pageSize={PAGE_SIZE}
+                    total={filteredData.length}
+                    onChange={setMobilePage}
+                    showSizeChanger={false}
+                    hideOnSinglePage
+                  />
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <Table
+            dataSource={filteredData}
+            loading={loading}
+            rowKey="id_empresa"
+            pagination={{ pageSize: PAGE_SIZE, showSizeChanger: false }}
+            scroll={{ x: 700 }}
+            rowClassName={(record) => (empresaEstaActiva(record) ? '' : 'be-row-inactiva')}
+            locale={{ emptyText: 'No hay empresas que coincidan con el filtro' }}
+            columns={columns}
+          />
+        )}
       </Card>
 
       <Modal

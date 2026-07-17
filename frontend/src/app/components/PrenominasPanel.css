@@ -55,16 +55,31 @@
 
 .prenominas-panel__generar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 16px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prenominas-panel__generar-label {
+  display: block;
+}
+
+.prenominas-panel__generar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
 }
 
 .prenominas-panel__periodo {
-  display: block;
-  margin-top: 8px;
-  width: 100%;
-  max-width: 220px;
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+  max-width: none;
+}
+
+.prenominas-panel__generar-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .prenominas-panel__resumen {
@@ -73,4 +88,24 @@
   gap: 16px;
   margin-bottom: 16px;
   align-items: center;
+}
+
+.prenominas-panel__modal--mobile .ant-modal-content {
+  border-radius: 12px 12px 0 0;
+}
+
+.prenominas-panel__modal--mobile .prenominas-panel__resumen {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.prenominas-panel__acciones-mobile {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nominas-def-panel__acciones-mobile {
+  flex-wrap: wrap;
+  gap: 8px;
 }

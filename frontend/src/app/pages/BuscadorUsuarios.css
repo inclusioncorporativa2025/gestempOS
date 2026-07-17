@@ -195,3 +195,167 @@
   color: #e86a6a !important;
   background: rgba(207, 74, 74, 0.1) !important;
 }
+
+.bu-nombre-link {
+  height: auto;
+  padding: 0;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.35;
+  word-break: break-word;
+  color: #1a2332 !important;
+}
+
+.bu-nombre-link:hover {
+  color: #1a2332 !important;
+  text-decoration: underline;
+}
+
+@media (max-width: 949px) {
+  .bu-page {
+    padding: 12px;
+  }
+
+  .bu-stats {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .bu-stat {
+    flex: 1 1 calc(50% - 5px);
+    max-width: none;
+    min-width: 0;
+  }
+
+  .bu-toolbar {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .bu-search.ant-input-affix-wrapper {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    max-width: none;
+  }
+
+  .bu-toolbar-actions {
+    width: auto;
+    flex-shrink: 0;
+    justify-content: flex-end;
+  }
+
+  .bu-mobile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .bu-mobile-empty {
+    margin: 24px 0;
+    text-align: center;
+    color: #5a6472;
+    font-size: 0.9rem;
+  }
+
+  .bu-mobile-card {
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid rgba(var(--color-primary-rgb), 0.12);
+    box-shadow: 0 2px 8px rgba(26, 35, 50, 0.04);
+  }
+
+  .bu-mobile-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .bu-mobile-card__nombre {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: var(--font-weight-medium);
+    color: #1a2332;
+    text-align: left;
+    line-height: 1.35;
+    word-break: break-word;
+    cursor: pointer;
+  }
+
+  .bu-mobile-card__nombre--plain {
+    color: #1a2332;
+    cursor: default;
+  }
+
+  .bu-mobile-card__badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .bu-mobile-card__cargo,
+  .bu-mobile-card__estado {
+    margin: 0;
+  }
+
+  .bu-mobile-card__email {
+    display: block;
+    font-size: 0.88rem;
+    color: #5a6472;
+    word-break: break-all;
+    margin-bottom: 8px;
+    text-decoration: none;
+  }
+
+  .bu-mobile-card__email:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+
+  .bu-mobile-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: #5a6472;
+    margin-bottom: 10px;
+  }
+
+  .bu-mobile-card__sep {
+    opacity: 0.5;
+  }
+
+  .bu-mobile-card__acciones {
+    padding-top: 10px;
+    border-top: 1px solid rgba(var(--color-primary-rgb), 0.1);
+  }
+
+  .bu-mobile-card__acciones .bu-acciones {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .bu-mobile-card__acciones .bu-accion-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+  }
+
+  .bu-mobile-pagination {
+    margin-top: 8px;
+    text-align: center;
+  }
+}

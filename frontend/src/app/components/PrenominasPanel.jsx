@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -11,6 +11,7 @@ import {
   Tag,
   Typography,
   message,
+  Pagination,
 } from 'antd';
 import { DownloadOutlined, EyeOutlined, LockOutlined, ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -23,6 +24,23 @@ import {
 import './PrenominasPanel.css';
 
 const { Text } = Typography;
+
+const MOBILE_BREAKPOINT = 950;
+const PAGE_SIZE = 10;
+
+const NominaMobileField = ({ label, value }) => (
+  <div className="nomina-mobile-field">
+    <span className="nomina-mobile-field__label">{label}</span>
+    <span className="nomina-mobile-field__value">{value ?? '—'}</span>
+  </div>
+);
+
+const NominaMobilePair = ({ left, right }) => (
+  <div className="nomina-mobile-pair">
+    <NominaMobileField label={left.label} value={left.value} />
+    <NominaMobileField label={right.label} value={right.value} />
+  </div>
+);
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -220,6 +238,21 @@ const PrenominasPanel = () => {
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [detalleLoading, setDetalleLoading] = useState(false);
   const [detalle, setDetalle] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
+  const [mobilePage, setMobilePage] = useState(1);
+  const [empleadoExpandido, setEmpleadoExpandido] = useState(null);
+
+  useEffect(() => {
+    const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    setMobilePage(1);
+  }, [prenominas.length]);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -255,6 +288,7 @@ const PrenominasPanel = () => {
     setDetalleOpen(true);
     setDetalleLoading(true);
     setDetalle(null);
+    setEmpleadoExpandido(null);
     try {
       const data = await detallePrenomina(idPrenomina);
       setDetalle(data);
@@ -404,6 +438,103 @@ const PrenominasPanel = () => {
     },
   ];
 
+  const prenominasMobile = useMemo(() => {
+    const start = (mobilePage - 1) * PAGE_SIZE;
+    return prenominas.slice(start, start + PAGE_SIZE);
+  }, [prenominas, mobilePage]);
+
+  const renderAccionesPrenomina = (row) => (
+    <Space wrap className="prenominas-panel__acciones-mobile">
+      <Button
+        type="default"
+        size="small"
+        icon={<EyeOutlined />}
+        onClick={() => abrirDetalle(row.id_prenomina)}
+      >
+        Ver detalle
+      </Button>
+      {row.estado !== 'cerrada' && (
+        <Popconfirm
+          title="¿Cerrar esta previsión?"
+          description="No podrá recalcularse hasta que se vuelva a abrir manualmente en BD."
+          onConfirm={() => handleCerrar(row.id_prenomina)}
+          okText="Cerrar"
+          cancelText="Cancelar"
+        >
+          <Button size="small" icon={<LockOutlined />}>
+            Cerrar
+          </Button>
+        </Popconfirm>
+      )}
+    </Space>
+  );
+
+  const renderPrenominaCard = (row) => (
+    <article
+      key={`${row.empresa_id}-${row.id_prenomina}`}
+      className="nomina-mobile-card"
+    >
+      <div className="nomina-mobile-card__header">
+        <h3 className="nomina-mobile-card__title">
+          {etiquetaPeriodo(row.periodo_mes, row.periodo_anio)}
+        </h3>
+        {etiquetaEstadoCabecera(row.estado)}
+      </div>
+      <NominaMobilePair
+        left={{
+          label: 'Generada',
+          value: row.fecha_generacion && dayjs(row.fecha_generacion).isValid()
+            ? dayjs(row.fecha_generacion).format('DD/MM/YYYY HH:mm')
+            : '—',
+        }}
+        right={{ label: 'Estado', value: String(row.estado || '—') }}
+      />
+      <div className="nomina-mobile-card__acciones">
+        {renderAccionesPrenomina(row)}
+      </div>
+    </article>
+  );
+
+  const renderEmpleadoCard = (record) => {
+    const expandido = empleadoExpandido === record.id_prenomina_empleado;
+    return (
+      <article
+        key={record.id_prenomina_empleado}
+        className="nomina-mobile-card nomina-mobile-card--empleado"
+      >
+        <div className="nomina-mobile-card__header">
+          <h3 className="nomina-mobile-card__title">{record.nombre || '—'}</h3>
+          {etiquetaEstadoEmpleado(record.estado)}
+        </div>
+        <NominaMobilePair
+          left={{ label: 'DNI', value: record.dni || '—' }}
+          right={{ label: 'Coste bruto', value: formatearEuros(record.total_bruto_estimado) }}
+        />
+        <NominaMobilePair
+          left={{ label: 'Salario base', value: formatearEuros(record.salario_base) }}
+          right={{ label: 'Extras', value: formatearEuros(record.importe_extras) }}
+        />
+        <NominaMobilePair
+          left={{ label: 'Compl.', value: formatearEuros(record.importe_complementarias) }}
+          right={{ label: 'Días alta', value: record.dias_trabajados ?? '—' }}
+        />
+        <NominaMobilePair
+          left={{ label: 'Ausencias', value: record.dias_ausencia ?? '—' }}
+          right={{ label: 'Vacaciones', value: record.dias_vacaciones ?? '—' }}
+        />
+        <Button
+          type="link"
+          size="small"
+          className="nomina-mobile-card__toggle"
+          onClick={() => setEmpleadoExpandido(expandido ? null : record.id_prenomina_empleado)}
+        >
+          {expandido ? 'Ocultar detalle' : 'Ver detalle de horas'}
+        </Button>
+        {expandido && <DetalleEmpleadoExpandido record={record} />}
+      </article>
+    );
+  };
+
   return (
     <div className="prenominas-panel">
       <Card className="prenominas-panel__card">
@@ -415,8 +546,10 @@ const PrenominasPanel = () => {
           description="Estimación interna a partir de retribución, fichajes y ausencias. No incluye IRPF, Seguridad Social ni líquido a percibir. La nómina oficial es el PDF en «Nóminas definitivas»."
         />
         <div className="prenominas-panel__generar">
-          <div>
-            <Text strong>Periodo a calcular</Text>
+          <Text strong className="prenominas-panel__generar-label">
+            Periodo a calcular
+          </Text>
+          <div className="prenominas-panel__generar-row">
             <DatePicker
               picker="month"
               value={periodo}
@@ -424,27 +557,51 @@ const PrenominasPanel = () => {
               format="MMMM YYYY"
               className="prenominas-panel__periodo"
             />
+            <Button
+              type="primary"
+              icon={<ReloadOutlined />}
+              loading={generando}
+              onClick={handleGenerar}
+              className="prenominas-panel__generar-btn"
+            >
+              {isMobile ? 'Generar' : 'Generar / recalcular previsión'}
+            </Button>
           </div>
-          <Button
-            type="primary"
-            icon={<ReloadOutlined />}
-            loading={generando}
-            onClick={handleGenerar}
-          >
-            Generar / recalcular previsión
-          </Button>
         </div>
       </Card>
 
       <Card title="Previsiones de coste por periodo" loading={loading}>
-        <Table
-          columns={columnas}
-          dataSource={prenominas}
-          rowKey={(row) => `${row.empresa_id}-${row.id_prenomina}`}
-          pagination={{ pageSize: 10 }}
-          locale={{ emptyText: 'Aún no hay previsiones generadas' }}
-          scroll={{ x: 640 }}
-        />
+        {isMobile ? (
+          <div className="nomina-mobile-list">
+            {prenominas.length === 0 ? (
+              <p className="nomina-mobile-empty">Aún no hay previsiones generadas</p>
+            ) : (
+              <>
+                {prenominasMobile.map((row) => renderPrenominaCard(row))}
+                {prenominas.length > PAGE_SIZE && (
+                  <Pagination
+                    className="nomina-mobile-pagination"
+                    current={mobilePage}
+                    pageSize={PAGE_SIZE}
+                    total={prenominas.length}
+                    onChange={setMobilePage}
+                    showSizeChanger={false}
+                    hideOnSinglePage
+                  />
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <Table
+            columns={columnas}
+            dataSource={prenominas}
+            rowKey={(row) => `${row.empresa_id}-${row.id_prenomina}`}
+            pagination={{ pageSize: PAGE_SIZE }}
+            locale={{ emptyText: 'Aún no hay previsiones generadas' }}
+            scroll={{ x: 640 }}
+          />
+        )}
       </Card>
 
       <Modal
@@ -456,7 +613,8 @@ const PrenominasPanel = () => {
         open={detalleOpen}
         onCancel={() => setDetalleOpen(false)}
         footer={null}
-        width={1080}
+        width={isMobile ? '100%' : 1080}
+        className={isMobile ? 'prenominas-panel__modal--mobile' : undefined}
       >
         {detalleLoading ? (
           <Text type="secondary">Cargando...</Text>
@@ -476,22 +634,29 @@ const PrenominasPanel = () => {
                 icon={<DownloadOutlined />}
                 onClick={() => exportarCsv(detalle)}
                 disabled={!detalle?.empleados?.length}
+                block={isMobile}
               >
                 Exportar CSV (gestoría)
               </Button>
             </div>
-            <Table
-              columns={columnasEmpleados}
-              dataSource={detalle?.empleados || []}
-              rowKey={(row) => row.id_prenomina_empleado}
-              pagination={{ pageSize: 8 }}
-              size="small"
-              scroll={{ x: 1100 }}
-              expandable={{
-                expandedRowRender: (record) => <DetalleEmpleadoExpandido record={record} />,
-                rowExpandable: () => true,
-              }}
-            />
+            {isMobile ? (
+              <div className="nomina-mobile-list">
+                {(detalle?.empleados || []).map((record) => renderEmpleadoCard(record))}
+              </div>
+            ) : (
+              <Table
+                columns={columnasEmpleados}
+                dataSource={detalle?.empleados || []}
+                rowKey={(row) => row.id_prenomina_empleado}
+                pagination={{ pageSize: 8 }}
+                size="small"
+                scroll={{ x: 1100 }}
+                expandable={{
+                  expandedRowRender: (record) => <DetalleEmpleadoExpandido record={record} />,
+                  rowExpandable: () => true,
+                }}
+              />
+            )}
           </>
         )}
       </Modal>

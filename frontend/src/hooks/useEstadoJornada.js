@@ -4,8 +4,14 @@ import { getFechaEuropeMadrid } from '../utils/Helper';
 
 export const JORNADA_ACTUALIZADA = 'gestemp:jornada-actualizada';
 
+export const GESTION_TIEMPO_REFRESH = 'gestemp:gestion-tiempo-refresh';
+
 export const notifyJornadaActualizada = () => {
   window.dispatchEvent(new CustomEvent(JORNADA_ACTUALIZADA));
+};
+
+export const notifyGestionTiempoRefresh = () => {
+  window.dispatchEvent(new CustomEvent(GESTION_TIEMPO_REFRESH));
 };
 
 const calcularHorasDesde = (entrada) => {
