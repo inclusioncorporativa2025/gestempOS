@@ -26,6 +26,7 @@ import Header from './components/Header';
 import SidebarFooter from './components/SidebarFooter';
 import SidebarEmpresaBrand from './components/SidebarEmpresaBrand';
 import SupportModal from './components/SupportModal';
+import PausaBloqueoOverlay from './components/PausaBloqueoOverlay';
 import { OPEN_SUPPORT_EVENT } from './components/Header';
 import { useAuth } from '../config/AuthContext';
 import { puedeVerNotificacionesSesion } from '../utils/tipoUsuarioLabel';
@@ -186,6 +187,7 @@ const AppShell = () => {
   const isMobile = windowWidth < 950;
   const isAuthShellPage = authShellPaths.includes(location.pathname);
   const esRutaFacturacion = FACTURACION_ROUTES.includes(location.pathname);
+  const puedeFichar = [1, 2, 3, 4, 5].includes(Number(tipousuario));
 
   const showDrawer = () => setDrawerVisible(true);
   const closeDrawer = () => setDrawerVisible(false);
@@ -562,6 +564,7 @@ const AppShell = () => {
       </Layout>
 
       <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
+      {user && !isAuthShellPage && puedeFichar && <PausaBloqueoOverlay />}
     </ConfigProvider>
   );
 };

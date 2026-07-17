@@ -23,6 +23,20 @@ const calcularHorasDesde = (entrada) => {
   return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
 };
 
+const calcularTiempoPausa = (inicioMs) => {
+  if (!inicioMs) return '00:00';
+  const diffMs = getFechaEuropeMadrid().getTime() - inicioMs;
+  const totalSeg = Math.max(0, Math.floor(diffMs / 1000));
+  const minutos = Math.floor(totalSeg / 60);
+  const segundos = totalSeg % 60;
+  return `${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+};
+
+const parseFechaRegistro = (fecha) => {
+  if (!fecha) return null;
+  return new Date(new Date(fecha).getTime());
+};
+
 /**
  * Estado de jornada del usuario: out | in | break
  * y acciones de fichaje disponibles según último registro.
@@ -32,6 +46,8 @@ export const useEstadoJornada = () => {
   const [horasTrabajadas, setHorasTrabajadas] = useState('00:00');
   const [tiposRegistros, setTiposRegistros] = useState([]);
   const [entradaMs, setEntradaMs] = useState(null);
+  const [pausaInicioMs, setPausaInicioMs] = useState(null);
+  const [tiempoPausa, setTiempoPausa] = useState('00:00');
 
   const refetch = useCallback(async () => {
     try {
@@ -41,34 +57,37 @@ export const useEstadoJornada = () => {
       if (ultimoRegistro?.info != null) {
         const { fecha_entrada, fecha_salida } = ultimoRegistro.info;
 
-        const parseFecha = (fecha) => {
-          if (!fecha) return null;
-          return new Date(new Date(fecha).getTime());
-        };
-
-        const entrada = parseFecha(fecha_entrada);
-        const salida = parseFecha(fecha_salida);
+        const entrada = parseFechaRegistro(fecha_entrada);
+        const salida = parseFechaRegistro(fecha_salida);
 
         if (entrada && !salida && ultimoRegistro.descanso == null) {
           setEntradaMs(entrada.getTime());
+          setPausaInicioMs(null);
           setHorasTrabajadas(calcularHorasDesde(entrada));
           setEstadoJornada('in');
           registros.push({ id: 2, nombre: 'Salida' });
           registros.push({ id: 3, nombre: 'Descanso' });
         } else if (ultimoRegistro.descanso != null) {
+          const inicioPausa = parseFechaRegistro(ultimoRegistro.descanso.fecha_entrada);
           setEntradaMs(null);
+          setPausaInicioMs(inicioPausa?.getTime() ?? null);
+          setTiempoPausa(calcularTiempoPausa(inicioPausa?.getTime()));
           setEstadoJornada('break');
           registros.push({ id: 4, nombre: 'Fin Descanso' });
         } else {
           setEntradaMs(null);
+          setPausaInicioMs(null);
           setEstadoJornada('out');
           setHorasTrabajadas('00:00');
+          setTiempoPausa('00:00');
           registros.push({ id: 1, nombre: 'Entrada' });
         }
       } else {
         setEntradaMs(null);
+        setPausaInicioMs(null);
         setEstadoJornada('out');
         setHorasTrabajadas('00:00');
+        setTiempoPausa('00:00');
         registros.push({ id: 1, nombre: 'Entrada' });
       }
 
@@ -77,8 +96,10 @@ export const useEstadoJornada = () => {
       console.error('Error al obtener estado de jornada:', error);
       setTiposRegistros([]);
       setHorasTrabajadas('00:00');
+      setTiempoPausa('00:00');
       setEstadoJornada('out');
       setEntradaMs(null);
+      setPausaInicioMs(null);
     }
   }, []);
 
@@ -90,6 +111,18 @@ export const useEstadoJornada = () => {
     const onActualizada = () => refetch();
     window.addEventListener(JORNADA_ACTUALIZADA, onActualizada);
     return () => window.removeEventListener(JORNADA_ACTUALIZADA, onActualizada);
+  }, [refetch]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refetch();
+    };
+    window.addEventListener('focus', refetch);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', refetch);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [refetch]);
 
   // Actualizar contador cada segundo mientras está en jornada
@@ -105,9 +138,23 @@ export const useEstadoJornada = () => {
     return () => clearInterval(id);
   }, [estadoJornada, entradaMs]);
 
+  useEffect(() => {
+    if (estadoJornada !== 'break' || !pausaInicioMs) return undefined;
+
+    const tick = () => {
+      setTiempoPausa(calcularTiempoPausa(pausaInicioMs));
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [estadoJornada, pausaInicioMs]);
+
   return {
     estadoJornada,
     horasTrabajadas,
+    tiempoPausa,
+    pausaInicioMs,
     tiposRegistros,
     refetch,
   };

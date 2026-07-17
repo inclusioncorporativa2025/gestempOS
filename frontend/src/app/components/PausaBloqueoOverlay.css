@@ -1,0 +1,104 @@
+.pausa-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.pausa-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.pausa-overlay__panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  padding: 28px 24px 24px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22);
+  text-align: center;
+}
+
+.pausa-overlay__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background: rgba(249, 115, 22, 0.12);
+  color: #ea580c;
+  font-size: 1.75rem;
+}
+
+.pausa-overlay__title {
+  margin: 0 0 8px !important;
+  color: #1a2332 !important;
+  font-weight: 600 !important;
+}
+
+.pausa-overlay__desc {
+  display: block;
+  margin-bottom: 24px;
+  color: #5a6472;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.pausa-overlay__timer-block {
+  margin-bottom: 24px;
+  padding: 18px 16px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(var(--color-primary-rgb), 0.06) 100%);
+  border: 1px solid rgba(249, 115, 22, 0.16);
+}
+
+.pausa-overlay__timer-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #8c95a1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pausa-overlay__timer {
+  display: block;
+  font-size: 2.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #ea580c;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+}
+
+.pausa-overlay__btn.gradient-btn {
+  min-height: 48px !important;
+}
+
+@media (max-width: 949px) {
+  .pausa-overlay {
+    padding: 16px;
+  }
+
+  .pausa-overlay__panel {
+    max-width: none;
+    padding: 24px 20px 20px;
+  }
+
+  .pausa-overlay__timer {
+    font-size: 2.4rem;
+  }
+}
