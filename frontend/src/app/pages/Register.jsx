@@ -17,7 +17,11 @@ const Register = () => {
     const { acceptTerms: _acceptTerms, ...payload } = values;
     setLoading(true);
     try {
-      const data = await registrarEmpresaPublica(payload);
+      const data = await registrarEmpresaPublica({
+        ...payload,
+        plan: 'rrhh',
+        cicloFacturacion: payload.cicloFacturacion || 'mensual',
+      });
 
       if (data?.checkoutUrl) {
         notification.info({
@@ -94,6 +98,7 @@ const Register = () => {
           onCancel={() => form.resetFields()}
           submitLabel="Registrar empresa"
           className="register-form-glass"
+          showPlanSelect={false}
           planId="rrhh"
           requireTermsAcceptance
           collectFiscalAddress
