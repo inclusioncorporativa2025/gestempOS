@@ -98,8 +98,7 @@ const Register = () => {
           onCancel={() => form.resetFields()}
           submitLabel="Registrar empresa"
           className="register-form-glass"
-          showPlanSelect={false}
-          planId="rrhh"
+          registroPublico
           requireTermsAcceptance
           collectFiscalAddress
         />

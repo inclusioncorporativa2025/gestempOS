@@ -121,17 +121,22 @@ const AltaEmpresaForm = ({
   minLicencias: minLicenciasProp,
   showPlanSelect = false,
   planSelectVariant = 'select',
+  registroPublico = false,
   requireTermsAcceptance = false,
   collectFiscalAddress = false,
 }) => {
-  const planSeleccionado = Form.useWatch('plan', form) || planId;
+  const planEfectivo = registroPublico ? 'rrhh' : planId;
+  const mostrarSelectorPlan = showPlanSelect && !registroPublico;
+  const planSeleccionado = Form.useWatch('plan', form) || planEfectivo;
   const cicloFacturacion = Form.useWatch('cicloFacturacion', form) || 'mensual';
   const minLicencias = minLicenciasProp ?? getPlanMinLicencias(planSeleccionado);
-  const isCompact = planSelectVariant === 'cards';
+  const isCompact = !registroPublico && planSelectVariant === 'cards';
   const rowGutter = isCompact ? [12, 0] : [16, 16];
-  const usuariosExtra = isCompact
-    ? `Mínimo ${minLicencias} usuarios (plan ${getPlanLabel(planSeleccionado)})`
-    : `Mínimo ${minLicencias} usuarios (plan ${getPlanLabel(planSeleccionado)}). ${LICENSE_IS_USER_NOTE}`;
+  const usuariosExtra = registroPublico
+    ? `Mínimo ${minLicencias} usuarios. ${LICENSE_IS_USER_NOTE}`
+    : isCompact
+      ? `Mínimo ${minLicencias} usuarios (plan ${getPlanLabel(planSeleccionado)})`
+      : `Mínimo ${minLicencias} usuarios (plan ${getPlanLabel(planSeleccionado)}). ${LICENSE_IS_USER_NOTE}`;
 
   const handlePlanChange = (nuevoPlan) => {
     const min = getPlanMinLicencias(nuevoPlan);
@@ -156,6 +161,17 @@ const AltaEmpresaForm = ({
       .catch(() => setCanSubmit(false));
   }, [form, watchedValues, requireTermsAcceptance, minLicencias]);
 
+  useEffect(() => {
+    if (!registroPublico) return;
+    const minRrhh = getPlanMinLicencias('rrhh');
+    const actuales = form.getFieldValue('numLicencias');
+    form.setFieldsValue({
+      plan: 'rrhh',
+      cicloFacturacion: 'mensual',
+      ...(actuales == null || Number(actuales) < minRrhh ? { numLicencias: minRrhh } : {}),
+    });
+  }, [form, registroPublico]);
+
   const handleCodigoPostalChange = (event) => {
     const cp = String(event?.target?.value || '').replace(/\s/g, '');
     const provinciaCp = provinciaDesdeCodigoPostal(cp);
@@ -172,13 +188,13 @@ const AltaEmpresaForm = ({
     layout="vertical"
     className={className}
     initialValues={{
-      plan: planId,
+      plan: planEfectivo,
       cicloFacturacion: 'mensual',
-      numLicencias: getPlanMinLicencias(planId),
+      numLicencias: getPlanMinLicencias(planEfectivo),
       ...(requireTermsAcceptance ? { acceptTerms: false } : {}),
     }}
   >
-    {showPlanSelect && planSelectVariant === 'cards' ? (
+    {mostrarSelectorPlan && planSelectVariant === 'cards' ? (
       <>
         <Form.Item name="cicloFacturacion" hidden>
           <Input type="hidden" />
@@ -204,7 +220,7 @@ const AltaEmpresaForm = ({
       </>
     ) : null}
 
-    {!showPlanSelect ? (
+    {!mostrarSelectorPlan ? (
       <>
         <Form.Item name="plan" hidden>
           <Input type="hidden" />
@@ -252,7 +268,7 @@ const AltaEmpresaForm = ({
           <Input placeholder="Nombre Completo" />
         </Form.Item>
       </Col>
-      {showPlanSelect && planSelectVariant === 'select' ? (
+      {mostrarSelectorPlan && planSelectVariant === 'select' ? (
         <Col xs={24} sm={12}>
           <Form.Item
             name="plan"

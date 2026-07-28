@@ -103,7 +103,9 @@ const registerCompany = async (req, res) => {
         const idUsuarioAccion = req.body.idUsuario;
         const schemaName = `empresa_${nombre_empresa.toLowerCase().replace(/\s+/g, '_')}`;
         const fecha = new Date();
-        const planRow = await resolverPlan({ plan: plan || DEFAULT_PLAN });
+        const planRow = await resolverPlan({
+            plan: plan || (esRegistroPublico ? 'rrhh' : DEFAULT_PLAN),
+        });
         const planFields = camposPlanEmpresa(planRow);
         const planId = planFields.plan;
         const minLicencias = getPlanMinLicencias(planId);
