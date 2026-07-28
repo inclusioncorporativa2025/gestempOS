@@ -2,10 +2,10 @@ const TRIAL_DAYS = Number(process.env.TRIAL_DAYS) || 15;
 const TRIAL_WARN_DAYS = Number(process.env.TRIAL_WARN_DAYS) || 3;
 
 const TRIAL_PAYMENT_HEADLINE =
-  'Activa tu prueba gratuita de 15 días añadiendo un método de pago.';
+  'Tu periodo de prueba ha finalizado. Activa una suscripción para seguir usando Timecor.';
 
 const TRIAL_PAYMENT_DETAIL =
-  'Disfrutarás de 15 días gratis. No se realizará ningún cargo hasta que finalice la prueba y puedes cancelar en cualquier momento antes, sin compromiso.';
+  'Elige plan y licencias en Facturación y completa el pago con tarjeta en Stripe.';
 
 module.exports = {
   TRIAL_DAYS,

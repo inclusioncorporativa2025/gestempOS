@@ -23,21 +23,10 @@ const Register = () => {
         cicloFacturacion: payload.cicloFacturacion || 'mensual',
       });
 
-      if (data?.checkoutUrl) {
-        notification.info({
-          message: 'Empresa registrada',
-          description:
-            'Un último paso para activar tus 15 días de prueba gratuita.',
-          duration: 6,
-        });
-        window.location.href = data.checkoutUrl;
-        return;
-      }
-
       if (data?.checkoutError) {
         notification.warning({
           message: 'Empresa registrada',
-          description: `${data.message || 'Registro completado.'} No se pudo abrir el pago: ${data.checkoutError}`,
+          description: `${data.message || 'Registro completado.'} ${data.checkoutError}`,
           duration: 12,
         });
       } else if (data?.emailBienvenidaEnviado === false) {

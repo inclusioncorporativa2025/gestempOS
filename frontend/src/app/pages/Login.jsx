@@ -6,8 +6,6 @@ import { useAuth } from '../../config/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { SUPPORT_EMAIL } from '../../constants/support';
-import { LANDING_URL } from '../../constants/urls';
-import { LANDING_ROUTES } from '../../constants/routes';
 import BrandLogo from '../../components/BrandLogo';
 import { redirectToApp } from '../../utils/appLinks';
 import { getAuthToken } from '../../utils/authSession';
@@ -49,14 +47,21 @@ const Login = () => {
 
     login(data.token);
 
+    const trialCaducado = Boolean(data.trial?.expirada || data.trial?.requierePlan);
+
     notification.success({
-      message: "Inicio de sesión exitoso",
-      description: `Hola, ${data.usuario?.nombre || usuarioPendiente?.nombre || ''}`,
+      message: trialCaducado ? 'Sesión iniciada' : 'Inicio de sesión exitoso',
+      description: trialCaducado
+        ? 'Tu periodo de prueba ha finalizado. Activa una suscripción para seguir usando Timecor.'
+        : `Hola, ${data.usuario?.nombre || usuarioPendiente?.nombre || ''}`,
+      duration: trialCaducado ? 10 : 4,
     });
 
-    if (redirectToApp(APP_ROUTES.home, data.token)) return;
+    if (redirectToApp(trialCaducado ? APP_ROUTES.facturacion : APP_ROUTES.home, data.token)) {
+      return;
+    }
 
-    navigate(APP_ROUTES.home);
+    navigate(trialCaducado ? APP_ROUTES.facturacion : APP_ROUTES.home);
   };
 
   const handleSeleccionEmpresa = async (idEmpresa) => {
@@ -68,29 +73,10 @@ const Login = () => {
       setEmpresasPendientes([]);
       completarAcceso(data);
     } catch (error) {
-      if (error.code === 'TRIAL_EXPIRED') {
-        const pruebaHref = `${LANDING_URL}${LANDING_ROUTES.plans}`;
-        notification.warning({
-          message: 'Periodo de prueba finalizado',
-          description: (
-            <>
-              {error.message || 'Tu periodo de prueba ha finalizado.'}{' '}
-              <a href={pruebaHref} target="_blank" rel="noopener noreferrer">
-                Ver opciones de suscripción
-              </a>
-            </>
-          ),
-          duration: 12,
-        });
-      } else if (error.code === 'PAYMENT_REQUIRED') {
-        setPaymentCheckoutUrl(error.checkoutUrl || null);
-        setPaymentModalOpen(true);
-      } else {
-        notification.error({
-          message: 'Error',
-          description: error.message || 'No se pudo acceder a la empresa seleccionada',
-        });
-      }
+      notification.error({
+        message: 'Error',
+        description: error.message || 'No se pudo acceder a la empresa seleccionada',
+      });
     } finally {
       setSeleccionEmpresaLoading(false);
     }
@@ -115,27 +101,11 @@ const Login = () => {
     } catch (error) {
       if (error.code === 'PASSWORD_RESET_REQUIRED') {
         notification.info({
-          message: "Restablecimiento de contraseña requerido",
-          description: error.message || "Tras mejoras en el sistema, por motivos de seguridad debes restablecer la contraseña. Se te ha enviado un correo con los pasos a seguir.",
+          message: 'Restablecimiento de contraseña requerido',
+          description:
+            error.message
+            || 'Tras mejoras en el sistema, por motivos de seguridad debes restablecer la contraseña. Se te ha enviado un correo con los pasos a seguir.',
           duration: 8,
-        });
-      } else if (error.code === 'PAYMENT_REQUIRED') {
-        setLoginCredentials(values);
-        setPaymentCheckoutUrl(error.checkoutUrl || null);
-        setPaymentModalOpen(true);
-      } else if (error.code === 'TRIAL_EXPIRED') {
-        const pruebaHref = `${LANDING_URL}${LANDING_ROUTES.plans}`;
-        notification.warning({
-          message: 'Periodo de prueba finalizado',
-          description: (
-            <>
-              {error.message || 'Tu periodo de prueba ha finalizado.'}{' '}
-              <a href={pruebaHref} target="_blank" rel="noopener noreferrer">
-                Ver opciones de suscripción
-              </a>
-            </>
-          ),
-          duration: 12,
         });
       } else if (error.code === 'EMPRESA_INACTIVA' || error.code === 'EMPRESA_NO_VINCULADA') {
         const emailSoporte = error.supportEmail || SUPPORT_EMAIL;
@@ -152,8 +122,8 @@ const Login = () => {
         });
       } else {
         notification.error({
-          message: "Error",
-          description: error.message || "Error al iniciar sesión",
+          message: 'Error',
+          description: error.message || 'Error al iniciar sesión',
         });
       }
     } finally {
@@ -343,7 +313,7 @@ const Login = () => {
 
       <Modal
         open={paymentModalOpen}
-        title="Activa tu prueba gratuita"
+        title="Activar suscripción"
         onCancel={() => setPaymentModalOpen(false)}
         footer={[
           <Button key="cerrar" onClick={() => setPaymentModalOpen(false)}>
@@ -355,7 +325,7 @@ const Login = () => {
             loading={paymentLoading}
             onClick={handleActivarPrueba}
           >
-            Activar 15 días gratis
+            Ir a pagar
           </Button>,
         ]}
       >

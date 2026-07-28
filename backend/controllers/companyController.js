@@ -19,7 +19,7 @@ const {
 } = require('../services/planCatalogService');
 const { isValidRegionCode, resolveRegionCode, provinceByCpPrefix } = require('../config/spanishRegions');
 const { calcularFechaFinPrueba } = require('../services/trialService');
-const { crearCheckoutSession, crearCheckoutTrialPendiente } = require('../services/billingService');
+const { crearCheckoutTrialPendiente } = require('../services/billingService');
 const { purgarEmpresaCompleta } = require('../services/empresaPurgeService');
 const {
   findEmpresaActivaPorCif,
@@ -251,7 +251,7 @@ const registerCompany = async (req, res) => {
 
         const modoFacturacion = esRegistroPublico ? 'trial' : 'legacy';
         const trialEndsAt = esRegistroPublico ? calcularFechaFinPrueba(fecha) : null;
-        const estadoSuscripcion = esRegistroPublico ? 'trialing' : null;
+        const estadoSuscripcion = null;
 
         await sequelize.query(
           `INSERT INTO empresa_facturacion (
@@ -280,44 +280,13 @@ const registerCompany = async (req, res) => {
 
         await transaction.commit();
 
-        let checkoutUrl = null;
-        let checkoutErrorMsg = null;
-
-        if (esRegistroPublico) {
-          try {
-            const cicloCheckout = cicloFacturacion === 'anual' ? 'anual' : 'mensual';
-            const checkout = await crearCheckoutSession({
-              idEmpresa: empresa.id_empresa,
-              email: emailNormalizado,
-              nombre: Administrador,
-              planCodigo: planId,
-              ciclo: cicloCheckout,
-              licencias: licenciasSolicitadas,
-              aplicarTrial: true,
-            });
-            checkoutUrl = checkout.url;
-          } catch (checkoutError) {
-            checkoutErrorMsg = checkoutError.message;
-            console.error('Empresa creada pero falló el checkout Stripe:', checkoutErrorMsg);
-          }
-        }
-
         const respuesta = {
           message: adminExistente
-            ? 'Empresa registrada con éxito. Se ha vinculado su cuenta como administrador.'
-            : 'Empresa registrada con éxito.',
+            ? 'Empresa registrada con éxito. Se ha vinculado su cuenta como administrador. Revisa el correo para crear tu contraseña.'
+            : 'Empresa registrada con éxito. Revisa el correo para crear tu contraseña e iniciar sesión.',
           emailBienvenidaEnviado: null,
           adminExistente,
         };
-
-        if (checkoutUrl) {
-          respuesta.checkoutUrl = checkoutUrl;
-          respuesta.message += ' Completa el pago con tarjeta para activar la prueba.';
-        } else if (esRegistroPublico) {
-          respuesta.checkoutError =
-            checkoutErrorMsg
-            || 'No se pudo iniciar el pago con tarjeta. Inicia sesión más tarde para reintentarlo.';
-        }
 
         res.status(201).json(respuesta);
 
@@ -326,7 +295,6 @@ const registerCompany = async (req, res) => {
           licencias: numLicencias,
           alias,
           identificadorFiscal: CIF,
-          enlacePago: checkoutUrl,
         })
           .then((devWelcomeUrl) => {
             if (process.env.NODE_ENV !== 'production' && devWelcomeUrl) {

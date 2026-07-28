@@ -65,14 +65,30 @@ const evaluarEstadoTrial = (facturacion) => {
     facturacion.modo_facturacion === 'trial' &&
     !facturacion.stripe_subscription_id
   ) {
+    const fin = facturacion.trial_ends_at ? new Date(facturacion.trial_ends_at) : null;
+    if (!fin) {
+      return {
+        enPrueba: true,
+        activa: true,
+        expirada: false,
+        diasRestantes: TRIAL_DAYS,
+        fechaFin: null,
+        advertir: false,
+      };
+    }
+
+    const msRestantes = fin.getTime() - Date.now();
+    const diasRestantes = Math.max(0, Math.ceil(msRestantes / MS_DIA));
+    const expirada = msRestantes <= 0;
+
     return {
       enPrueba: true,
-      activa: false,
-      expirada: false,
-      requierePago: true,
-      diasRestantes: TRIAL_DAYS,
-      fechaFin: facturacion.trial_ends_at,
-      advertir: false,
+      activa: !expirada,
+      expirada,
+      requierePlan: expirada,
+      diasRestantes,
+      fechaFin: fin.toISOString(),
+      advertir: !expirada && diasRestantes <= TRIAL_WARN_DAYS,
     };
   }
 

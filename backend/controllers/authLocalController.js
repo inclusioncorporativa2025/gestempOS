@@ -23,8 +23,6 @@ const {
 const { normalizePlanId, planIncluyeFeature } = require('../config/plans');
 const { obtenerPlanEmpresa, assertEmpresaTieneFeature } = require('../services/planService');
 const {
-  assertEmpresaTrialActiva,
-  buildTrialExpiredPayload,
   buildPaymentRequiredPayload,
   obtenerEstadoTrialEmpresa,
 } = require('../services/trialService');
@@ -108,60 +106,7 @@ const validarAccesoEmpresa = (usuario, membresiasActivas) => {
   return null;
 };
 
-const adjuntarCheckoutTrialSiAplica = async (payload, usuario, empresa) => {
-  if (payload.code !== 'PAYMENT_REQUIRED' || !empresa?.id_empresa) {
-    return payload;
-  }
-
-  try {
-    const checkout = await crearCheckoutTrialPendiente(empresa.id_empresa, {
-      email: usuario.email,
-      nombre: usuario.nombre,
-    });
-    return { ...payload, checkoutUrl: checkout.url };
-  } catch (checkoutError) {
-    console.error('No se pudo generar checkout de prueba:', checkoutError.message);
-    return payload;
-  }
-};
-
-const validarTrialParaAcceso = async (usuario, empresa) => {
-  const tipo = Number(usuario.tipo_usuario);
-  if (TIPOS_PLATAFORMA.includes(tipo) || !empresa?.id_empresa) {
-    return null;
-  }
-
-  try {
-    await assertEmpresaTrialActiva(empresa.id_empresa);
-    return null;
-  } catch (error) {
-    if (error.code === 'TRIAL_EXPIRED') {
-      return {
-        status: 403,
-        supportEmail: SUPPORT_EMAIL,
-        ...buildTrialExpiredPayload(error.trial),
-      };
-    }
-
-    if (error.code === 'PAYMENT_REQUIRED') {
-      const base = {
-        status: 403,
-        supportEmail: SUPPORT_EMAIL,
-        ...buildPaymentRequiredPayload(error.trial),
-      };
-      return adjuntarCheckoutTrialSiAplica(base, usuario, empresa);
-    }
-
-    throw error;
-  }
-};
-
 const completarLoginConEmpresa = async (req, res, usuario, membresia, empresa) => {
-  const bloqueoTrial = await validarTrialParaAcceso(usuario, empresa);
-  if (bloqueoTrial) {
-    return res.status(bloqueoTrial.status).json(bloqueoTrial);
-  }
-
   usuario.ultimo_login = new Date();
   await usuario.save();
 
@@ -369,11 +314,6 @@ const switchEmpresa = async (req, res) => {
         message: 'La empresa seleccionada no está disponible en este momento.',
         supportEmail: SUPPORT_EMAIL,
       });
-    }
-
-    const bloqueoTrial = await validarTrialParaAcceso(usuario, empresa);
-    if (bloqueoTrial) {
-      return res.status(bloqueoTrial.status).json(bloqueoTrial);
     }
 
     const token = emitirJwtSesion(usuario, empresa, membresia);
