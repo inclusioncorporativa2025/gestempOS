@@ -81,12 +81,12 @@ const LandingFooter = () => {
       title: 'Funcionalidades de fichaje y control horario',
     },
     {
-      label: 'Planes y precios',
+      label: 'Prueba gratuita',
       href: LANDING_ROUTES.plans,
-      title: 'Planes de control horario para empresas',
+      title: '15 días de prueba gratis con Timecor RRHH',
     },
     {
-      label: 'Prueba gratuita',
+      label: 'Registro',
       href: registerHref,
       external: registerIsExternal,
       title: 'Registro gratuito de empresas',

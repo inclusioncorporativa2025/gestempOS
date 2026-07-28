@@ -69,14 +69,14 @@ const Login = () => {
       completarAcceso(data);
     } catch (error) {
       if (error.code === 'TRIAL_EXPIRED') {
-        const planesHref = `${LANDING_URL}${LANDING_ROUTES.plans}`;
+        const pruebaHref = `${LANDING_URL}${LANDING_ROUTES.plans}`;
         notification.warning({
           message: 'Periodo de prueba finalizado',
           description: (
             <>
               {error.message || 'Tu periodo de prueba ha finalizado.'}{' '}
-              <a href={planesHref} target="_blank" rel="noopener noreferrer">
-                Ver planes
+              <a href={pruebaHref} target="_blank" rel="noopener noreferrer">
+                Ver opciones de suscripción
               </a>
             </>
           ),
@@ -124,14 +124,14 @@ const Login = () => {
         setPaymentCheckoutUrl(error.checkoutUrl || null);
         setPaymentModalOpen(true);
       } else if (error.code === 'TRIAL_EXPIRED') {
-        const planesHref = `${LANDING_URL}${LANDING_ROUTES.plans}`;
+        const pruebaHref = `${LANDING_URL}${LANDING_ROUTES.plans}`;
         notification.warning({
           message: 'Periodo de prueba finalizado',
           description: (
             <>
               {error.message || 'Tu periodo de prueba ha finalizado.'}{' '}
-              <a href={planesHref} target="_blank" rel="noopener noreferrer">
-                Ver planes
+              <a href={pruebaHref} target="_blank" rel="noopener noreferrer">
+                Ver opciones de suscripción
               </a>
             </>
           ),

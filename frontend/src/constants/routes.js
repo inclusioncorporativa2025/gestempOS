@@ -3,7 +3,7 @@ export const LANDING_ROUTES = {
   home: '/',
   /** Anclas en la página de inicio */
   features: '/#funcionalidades',
-  plans: '/#planes',
+  plans: '/#prueba',
   /** Páginas legales públicas */
   legalNotice: '/aviso-legal',
   privacy: '/politica-privacidad',

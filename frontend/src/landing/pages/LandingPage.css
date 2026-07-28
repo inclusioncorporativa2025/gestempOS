@@ -673,6 +673,11 @@
   color: var(--color-secondary);
 }
 
+.landing-plans--single .landing-plan-item {
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
 .landing-plans-grid {
   list-style: none;
   margin: 0;
