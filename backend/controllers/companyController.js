@@ -379,7 +379,9 @@ const getEmpresasUsuarios = async (req, res)=> {
                         (
                           CASE
                             WHEN LOWER(IFNULL(ef.modo_facturacion, '')) = 'trial'
-                              AND ef.stripe_subscription_id IS NULL THEN 1
+                              AND ef.stripe_subscription_id IS NULL
+                              AND ef.trial_ends_at IS NOT NULL
+                              AND ef.trial_ends_at <= UTC_TIMESTAMP() THEN 1
                             ELSE 0
                           END
                         ) AS requiere_enlace_pago,

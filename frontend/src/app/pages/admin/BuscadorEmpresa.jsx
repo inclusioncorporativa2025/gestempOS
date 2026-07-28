@@ -63,12 +63,24 @@ const FILTRO_DESACTIVADAS = 'desactivadas';
 const empresaDadaDeBaja = (record) =>
   Boolean(record.fecha_baja) || record.activo === 0 || record.activo === false;
 
+const trialSinSuscripcion = (record) =>
+  String(record.modo_facturacion || '').toLowerCase() === 'trial'
+  && !record.stripe_subscription_id;
+
+const trialExpiradoSinSuscripcion = (record) => {
+  if (!trialSinSuscripcion(record) || !record.trial_ends_at) return false;
+  return new Date(record.trial_ends_at) <= new Date();
+};
+
+const trialActivoSinTarjeta = (record) =>
+  trialSinSuscripcion(record) && !trialExpiradoSinSuscripcion(record);
+
 const empresaFacturacionBloquea = (record) => {
   const estado = String(record.estado_suscripcion || '').toLowerCase();
   const modo = String(record.modo_facturacion || '').toLowerCase();
 
   if (estado === 'canceled') return true;
-  if (modo === 'trial' && !record.stripe_subscription_id) return true;
+  if (trialExpiradoSinSuscripcion(record)) return true;
 
   if (estado === 'trialing' && record.trial_ends_at) {
     if (new Date(record.trial_ends_at) <= new Date()) return true;
@@ -91,10 +103,7 @@ const empresaEstaActiva = (record) =>
 const empresaRequiereEnlacePago = (record) =>
   record.requiere_enlace_pago === 1
   || record.requiere_enlace_pago === true
-  || (
-    String(record.modo_facturacion || '').toLowerCase() === 'trial'
-    && !record.stripe_subscription_id
-  );
+  || trialExpiradoSinSuscripcion(record);
 
 const renderEstadoEmpresa = (record) => {
   if (empresaDadaDeBaja(record)) {
@@ -107,7 +116,10 @@ const renderEstadoEmpresa = (record) => {
   if (estado === 'canceled') {
     return <Tag color="red">Suscripción cancelada</Tag>;
   }
-  if (modo === 'trial' && !record.stripe_subscription_id) {
+  if (trialActivoSinTarjeta(record)) {
+    return <Tag color="blue">En prueba</Tag>;
+  }
+  if (trialExpiradoSinSuscripcion(record)) {
     return <Tag color="orange">Pendiente de pago</Tag>;
   }
   if (estado === 'trialing') {
