@@ -187,7 +187,7 @@ export const registrarEmpresaPublica = async (values) => {
     body: JSON.stringify({
       values: {
         ...values,
-        plan: values.plan || 'esencial',
+        plan: values.plan || 'rrhh',
       },
     }),
   });

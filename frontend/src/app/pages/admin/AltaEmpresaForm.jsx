@@ -204,6 +204,17 @@ const AltaEmpresaForm = ({
       </>
     ) : null}
 
+    {!showPlanSelect ? (
+      <>
+        <Form.Item name="plan" hidden>
+          <Input type="hidden" />
+        </Form.Item>
+        <Form.Item name="cicloFacturacion" hidden>
+          <Input type="hidden" />
+        </Form.Item>
+      </>
+    ) : null}
+
     <Row gutter={rowGutter}>
       <Col xs={24} sm={12}>
         <Form.Item
