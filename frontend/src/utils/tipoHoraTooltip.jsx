@@ -27,7 +27,7 @@ export const TooltipTipoHoraContent = ({ includeHeredar = false }) => (
     {includeHeredar && (
       <p style={lastLineStyle}>
         <strong>Heredar de la jornada</strong> — Usa el tipo configurado en la plantilla
-        de jornada laboral del empleado (recomendado).
+        de jornada laboral del personal (recomendado).
       </p>
     )}
   </div>

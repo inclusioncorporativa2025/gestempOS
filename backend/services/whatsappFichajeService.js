@@ -228,7 +228,7 @@ const procesarMensajeEntrante = async ({ chatId, body, fromMe }) => {
     return {
       reply:
         'No encontramos tu número en Timecor.\n\n' +
-        'Pide a tu administrador que vincule tu WhatsApp en la ficha de empleado, ' +
+        'Pide a tu administrador que vincule tu WhatsApp en la ficha de personal, ' +
         'o configúralo en *Mi perfil* si tu empresa tiene el plan Completo.',
     };
   }

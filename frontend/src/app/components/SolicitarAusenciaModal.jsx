@@ -218,7 +218,7 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
         <>
       {esGestor && (
         <Select
-          placeholder="Empleado"
+          placeholder="Personal"
           className="sol-ausencia-modal__select"
           value={idEmpleadoDestino}
           onChange={setIdEmpleadoDestino}

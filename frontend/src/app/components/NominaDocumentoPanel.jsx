@@ -138,7 +138,7 @@ const NominaDocumentoPanel = ({ idUsuario }) => {
       render: formatearFecha,
     },
     {
-      title: 'Vista empleado',
+      title: 'Vista personal',
       dataIndex: 'visto_en',
       key: 'visto_en',
       render: (valor) => (valor ? formatearFecha(valor) : 'Pendiente'),
@@ -179,7 +179,7 @@ const NominaDocumentoPanel = ({ idUsuario }) => {
           Subir nómina definitiva (PDF)
         </Title>
         <Text type="secondary" className="nomina-doc-panel__hint">
-          Asigna el PDF al empleado y al mes correspondiente. Si ya existe una nómina
+          Asigna el PDF al personal y al mes correspondiente. Si ya existe una nómina
           para ese periodo, se sustituirá.
         </Text>
 
@@ -240,7 +240,7 @@ const NominaDocumentoPanel = ({ idUsuario }) => {
           dataSource={documentos}
           rowKey={(row) => `${row.empresa_id}-${row.id_documento}`}
           pagination={{ pageSize: 8 }}
-          locale={{ emptyText: 'Sin nóminas subidas para este empleado' }}
+          locale={{ emptyText: 'Sin nóminas subidas para este personal' }}
           scroll={{ x: 720 }}
         />
       </Card>

@@ -104,7 +104,7 @@ const BolsaHorasPanel = ({
               {saldo?.saldo_bolsa ?? '—'}
             </Title>
             <Text type="secondary">
-              Positivo = horas a favor del empleado · Negativo = horas pendientes de compensar
+              Positivo = horas a favor del personal · Negativo = horas pendientes de compensar
             </Text>
           </div>
           {puedeAjustar && (

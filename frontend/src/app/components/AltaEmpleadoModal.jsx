@@ -94,7 +94,7 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
       await completarAlta(values, response);
     } catch (error) {
       notification.error({
-        message: error.message || 'No se pudo dar de alta al empleado',
+        message: error.message || 'No se pudo dar de alta al personal',
         description: error.codigo
           ? undefined
           : `No se pudo completar el alta para ${values.email}.`,

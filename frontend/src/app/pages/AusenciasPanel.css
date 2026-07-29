@@ -80,6 +80,11 @@
   overflow: hidden;
 }
 
+.ausencias-panel .ausencias-col-fecha,
+.ausencias-panel .ausencias-fecha {
+  white-space: nowrap;
+}
+
 /* Tarjetas móviles */
 .aus-mobile-list {
   display: flex;

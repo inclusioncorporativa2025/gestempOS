@@ -22,7 +22,8 @@ const parseFechaAusencia = (valor) =>
 
 const formatFecha = (valor) => {
   const fecha = parseFechaAusencia(valor);
-  return fecha.isValid() ? fecha.format('DD/MM/YYYY') : valor || '—';
+  const texto = fecha.isValid() ? fecha.format('DD/MM/YYYY') : valor || '—';
+  return <span className="ausencias-fecha">{texto}</span>;
 };
 
 const formatHora = (hora) => {
@@ -163,7 +164,7 @@ const AusenciasPanel = () => {
   const columns = [
     ...(verTodaEmpresa
       ? [{
-          title: 'Empleado',
+          title: 'Personal',
           dataIndex: 'nombre_usuario',
           key: 'nombre_usuario',
           render: (nombre) => nombre || '—',
@@ -180,14 +181,16 @@ const AusenciasPanel = () => {
       title: 'Desde',
       dataIndex: 'fecha_desde',
       key: 'fecha_desde',
-      width: 120,
+      width: 118,
+      className: 'ausencias-col-fecha',
       render: formatFecha,
     },
     {
       title: 'Hasta',
       dataIndex: 'fecha_hasta',
       key: 'fecha_hasta',
-      width: 120,
+      width: 118,
+      className: 'ausencias-col-fecha',
       render: formatFecha,
     },
     {
@@ -233,8 +236,13 @@ const AusenciasPanel = () => {
       title: 'Solicitado',
       dataIndex: 'fecha_alta',
       key: 'fecha_alta',
-      width: 110,
-      render: (fecha) => (fecha ? dayjs(fecha).format('DD/MM/YYYY') : '—'),
+      width: 118,
+      className: 'ausencias-col-fecha',
+      render: (fecha) => (
+        <span className="ausencias-fecha">
+          {fecha ? dayjs(fecha).format('DD/MM/YYYY') : '—'}
+        </span>
+      ),
     },
   ];
 
@@ -318,7 +326,7 @@ const AusenciasPanel = () => {
                   <Input
                     allowClear
                     prefix={<SearchOutlined />}
-                    placeholder="Buscar empleado..."
+                    placeholder="Buscar personal..."
                     value={searchText}
                     onChange={(e) => setSearchText(e.target.value)}
                     className="ausencias-search"
@@ -371,7 +379,7 @@ const AusenciasPanel = () => {
                   <Input
                     allowClear
                     prefix={<SearchOutlined />}
-                    placeholder="Buscar empleado o comentario"
+                    placeholder="Buscar personal o comentario"
                     value={searchText}
                     onChange={(e) => setSearchText(e.target.value)}
                     className="ausencias-search"

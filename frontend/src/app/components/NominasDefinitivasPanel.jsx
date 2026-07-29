@@ -127,7 +127,7 @@ const NominasDefinitivasPanel = () => {
 
   const handleSubir = async () => {
     if (!empleadoSeleccionado) {
-      message.warning('Selecciona un empleado');
+      message.warning('Selecciona una persona del personal');
       return;
     }
     if (!archivoPendiente) {
@@ -193,7 +193,7 @@ const NominasDefinitivasPanel = () => {
 
   const columnas = [
     {
-      title: 'Empleado',
+      title: 'Personal',
       key: 'empleado',
       render: (_, row) => mapaEmpleados.get(row.id_usuario)?.nombre || `ID ${row.id_usuario}`,
     },
@@ -226,7 +226,7 @@ const NominasDefinitivasPanel = () => {
       render: formatearFecha,
     },
     {
-      title: 'Vista empleado',
+      title: 'Vista personal',
       dataIndex: 'visto_en',
       key: 'visto_en',
       render: (valor) => (valor ? formatearFecha(valor) : 'Pendiente'),
@@ -326,7 +326,7 @@ const NominasDefinitivasPanel = () => {
         <NominaMobilePair
           left={{ label: 'Publicada', value: formatearFecha(row.fecha_publicacion) }}
           right={{
-            label: 'Vista empleado',
+            label: 'Vista personal',
             value: row.visto_en ? formatearFecha(row.visto_en) : 'Pendiente',
           }}
         />
@@ -344,17 +344,17 @@ const NominasDefinitivasPanel = () => {
           Subir nómina definitiva (PDF)
         </Title>
         <Text type="secondary" className="nominas-def-panel__hint">
-          Asigna el PDF de la nómina cerrada a cada empleado. Opcionalmente registra bruto,
-          deducciones y líquido según la nómina oficial (para consulta del empleado).
+          Asigna el PDF de la nómina cerrada a cada persona del personal. Opcionalmente registra bruto,
+          deducciones y líquido según la nómina oficial (para consulta del personal).
         </Text>
 
         <Form layout="vertical" className="nominas-def-panel__form">
           <Row gutter={[16, 0]}>
             <Col xs={24} md={12}>
-              <Form.Item label="Empleado" required>
+              <Form.Item label="Personal" required>
                 <Select
                   showSearch
-                  placeholder="Selecciona empleado"
+                  placeholder="Selecciona personal"
                   value={empleadoSeleccionado}
                   onChange={setEmpleadoSeleccionado}
                   optionFilterProp="label"

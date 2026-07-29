@@ -90,7 +90,7 @@ const exportarCsv = (detalle) => {
     : 'periodo';
 
   const cabecera = [
-    'Empleado',
+    'Personal',
     'DNI',
     'Estado',
     'Días alta mes',
@@ -378,7 +378,7 @@ const PrenominasPanel = () => {
   ];
 
   const columnasEmpleados = [
-    { title: 'Empleado', dataIndex: 'nombre', key: 'nombre', width: 160 },
+    { title: 'Personal', dataIndex: 'nombre', key: 'nombre', width: 160 },
     { title: 'DNI', dataIndex: 'dni', key: 'dni', width: 100 },
     {
       title: 'Estado',
@@ -628,7 +628,7 @@ const PrenominasPanel = () => {
                 Total coste bruto estimado: {formatearEuros(detalle?.total_bruto)}
               </Text>
               <Text type="secondary">
-                {detalle?.total_empleados || 0} empleado(s)
+                {detalle?.total_empleados || 0} persona(s)
               </Text>
               <Button
                 icon={<DownloadOutlined />}

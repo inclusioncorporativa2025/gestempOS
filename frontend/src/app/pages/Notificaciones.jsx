@@ -871,7 +871,7 @@ const setVisibleModalDetalles = async (info) => {
             <GradientButton text="Aprobar" size="small" className="notif-btn-compact" />
           </Popconfirm>
         ) : (
-          <Tooltip title="El empleado debe subir el justificante antes de aprobar">
+          <Tooltip title="El personal debe subir el justificante antes de aprobar">
             <span>
               <GradientButton
                 text="Aprobar"
@@ -1215,7 +1215,7 @@ const setVisibleModalDetalles = async (info) => {
   const columnsAusencias = useMemo(() => {
     const columnas = [
       {
-        title: 'Empleado',
+        title: 'Personal',
         dataIndex: 'nombre_usuario',
         key: 'nombre_usuario',
         render: (nombre) => nombre || '—',

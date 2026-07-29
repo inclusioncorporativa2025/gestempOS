@@ -199,7 +199,7 @@ const MENSAJE_CONFLICTO_PUBLICO =
   'Ya existe una cuenta en la plataforma con estos datos. Si es su cuenta, inicie sesión o use «Olvidé mi contraseña». Si necesita ayuda, contacte con soporte.';
 
 const MENSAJE_DNI_OTRO_EMAIL_INTERNO =
-  'Este DNI ya está asociado a otra cuenta. Vincule al empleado con el email de esa cuenta o contacte con soporte.';
+  'Este DNI ya está asociado a otra cuenta. Vincule al personal con el email de esa cuenta o contacte con soporte.';
 
 const sanitizarConflictoIdentidadPublico = () => ({
   message: MENSAJE_CONFLICTO_PUBLICO,

@@ -26,7 +26,7 @@ const esTerritorioSinIvaPeninsular = ({ codigo_postal: codigoPostal, provincia }
   );
 };
 
-/** CIF/NIF español de empresa (heurística para autorrepercusión B2B). */
+/** CIF/NIF español (heurística de formato). */
 const pareceIdentificadorFiscalEmpresa = (identificador) => {
   const id = String(identificador || '').trim().toUpperCase().replace(/[\s-]/g, '');
   if (!id || id.length < 9) {
@@ -44,18 +44,12 @@ const pareceIdentificadorFiscalEmpresa = (identificador) => {
 /**
  * Regimen de impuesto para facturación Stripe (manual).
  * - iva_21: península y Baleares
- * - exento: Canarias/Ceuta/Melilla o empresa con CIF (0 % en Stripe)
+ * - exento: Canarias/Ceuta/Melilla (0 % en Stripe)
+ *
+ * El CIF/NIF de la empresa no determina la exención: todas las empresas lo tienen
+ * y en ventas B2B nacionales sigue aplicando IVA según el territorio fiscal.
  */
 const resolverRegimenImpuestoEmpresa = (empresa) => {
-  if (pareceIdentificadorFiscalEmpresa(empresa?.identificador_fiscal)) {
-    return {
-      codigo: 'exento',
-      porcentaje: 0,
-      motivo: 'empresa_con_cif',
-      etiqueta: 'Sin IVA (empresa con CIF)',
-    };
-  }
-
   if (esTerritorioSinIvaPeninsular(empresa)) {
     return {
       codigo: 'exento',

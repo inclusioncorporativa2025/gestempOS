@@ -105,7 +105,7 @@ const complianceItems = [
 const absenceItems = [
   {
     icon: <CalendarOutlined />,
-    text: 'Vacaciones, permisos y bajas en el mismo calendario que la jornada de cada empleado',
+    text: 'Vacaciones, permisos y bajas en el mismo calendario que la jornada del personal',
   },
   {
     icon: <SyncOutlined />,

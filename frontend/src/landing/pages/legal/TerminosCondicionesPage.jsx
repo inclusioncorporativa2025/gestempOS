@@ -79,7 +79,7 @@ const TerminosCondicionesPage = () => (
       <p>
         El tratamiento de datos personales se describe en la{' '}
         <Link to={LANDING_ROUTES.privacy}>Política de privacidad</Link>. Cuando el cliente actúa
-        como responsable del tratamiento de los datos de sus empleados, {LEGAL_ENTITY.razonSocial}{' '}
+        como responsable del tratamiento de los datos de su personal, {LEGAL_ENTITY.razonSocial}{' '}
         actúa como encargado del tratamiento en los términos legalmente aplicables.
       </p>
     </LegalSection>

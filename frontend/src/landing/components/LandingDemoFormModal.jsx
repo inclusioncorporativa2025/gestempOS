@@ -16,7 +16,7 @@ dayjs.extend(updateLocale);
 dayjs.locale('es');
 dayjs.updateLocale('es', { weekStart: 1 });
 const BUSINESS_TYPES = [
-  'Empresa con empleados',
+  'Empresa con personal',
   'Autónomo',
   'Asesoría o gestoría',
   'Startup / PYME',
@@ -199,7 +199,7 @@ const LandingDemoFormModal = ({ open, onClose }) => {
               />
             </Form.Item>
 
-            <Form.Item name="num_empleados" label="¿Cuántos empleados tiene tu empresa?">
+            <Form.Item name="num_empleados" label="¿Cuánto personal tiene tu empresa?">
               <Select
                 placeholder="Selecciona una opción (opcional)"
                 size="large"
