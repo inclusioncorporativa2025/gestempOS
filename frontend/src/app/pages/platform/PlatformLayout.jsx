@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, Select, Typography } from 'antd';
 import { APP_ROUTES } from '../../../constants/routes';
+import { useAuth } from '../../../config/AuthContext';
 import '../gestor/Configuracion.css';
 
 const { Title, Text } = Typography;
@@ -11,6 +12,8 @@ const MOBILE_BREAKPOINT = 950;
 const PlatformLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const esRoot = Number(user?.tipo_usuario) === 1;
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
 
   useEffect(() => {
@@ -22,12 +25,18 @@ const PlatformLayout = () => {
   }, []);
 
   const submenuItems = useMemo(
-    () => [
-      { key: APP_ROUTES.platformEmpresas, label: 'Empresas' },
-      { key: APP_ROUTES.platformAccesos, label: 'Accesos' },
-      { key: APP_ROUTES.platformAcceder, label: 'Acceder a cuenta' },
-    ],
-    [],
+    () => {
+      const items = [
+        { key: APP_ROUTES.platformEmpresas, label: 'Empresas' },
+        { key: APP_ROUTES.platformAccesos, label: 'Accesos' },
+        { key: APP_ROUTES.platformAcceder, label: 'Acceder a cuenta' },
+      ];
+      if (esRoot) {
+        items.splice(1, 0, { key: APP_ROUTES.platformConvenios, label: 'Convenios' });
+      }
+      return items;
+    },
+    [esRoot],
   );
 
   const selectedKey =
@@ -37,9 +46,12 @@ const PlatformLayout = () => {
   const esAcceder = location.pathname === APP_ROUTES.platformAcceder;
   const esEmpresas = location.pathname === APP_ROUTES.platformEmpresas;
   const esAccesos = location.pathname === APP_ROUTES.platformAccesos;
+  const esConvenios = location.pathname === APP_ROUTES.platformConvenios;
 
   const subtitulo = esEmpresas
     ? 'Alta y administración de empresas cliente'
+    : esConvenios
+      ? 'Catálogo global de convenios colectivos'
     : esAcceder
       ? 'Acceso temporal a cuentas de usuario por correo'
       : esAccesos

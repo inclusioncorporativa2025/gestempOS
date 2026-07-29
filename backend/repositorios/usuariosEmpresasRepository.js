@@ -55,6 +55,7 @@ const crearUsuarioEmpresa = async (
   fechaAlta,
   tipoUsuario,
   tipoHora = null,
+  idEmpresaConvenio = null,
 ) => {
   try {
     const existente = await UsuarioEmpresa.findOne({
@@ -77,6 +78,9 @@ const crearUsuarioEmpresa = async (
       if (tipoHora !== undefined) {
         existente.tipo_hora = tipoHora;
       }
+      if (idEmpresaConvenio !== undefined) {
+        existente.id_empresa_convenio = idEmpresaConvenio;
+      }
       await existente.save();
       return existente;
     }
@@ -86,6 +90,7 @@ const crearUsuarioEmpresa = async (
       id_empresa,
       tipo_usuario: tipoUsuario,
       tipo_hora: tipoHora,
+      id_empresa_convenio: idEmpresaConvenio,
       activo: true,
       fecha_alta: fechaAlta,
       usuario_alta: idUsuarioAccion,

@@ -35,6 +35,7 @@ const VacacionesSaldoPanel = ({
   const [anio, setAnio] = useState(anioActual);
   const [loading, setLoading] = useState(true);
   const [saldo, setSaldo] = useState(null);
+  const [convenio, setConvenio] = useState(null);
   const [movimientos, setMovimientos] = useState([]);
   const [soportado, setSoportado] = useState(true);
   const [modalCupo, setModalCupo] = useState(false);
@@ -55,6 +56,7 @@ const VacacionesSaldoPanel = ({
       const data = await getSaldoVacaciones(idUsuario, anio);
       setSoportado(data.soportado !== false);
       setSaldo(data.anio_actual || null);
+      setConvenio(data.convenio || null);
       setMovimientos(data.movimientos || []);
     } catch (error) {
       message.error(error.message || 'No se pudo cargar el saldo de vacaciones');
@@ -200,6 +202,13 @@ const VacacionesSaldoPanel = ({
                 {' · '}
                 Consumidos: {saldo?.dias_consumidos ?? 0}
               </Text>
+              {convenio?.empresa_convenio && (
+                <Text type="secondary" style={{ display: 'block', marginTop: 4 }}>
+                  Convenio: {convenio.empresa_convenio.nombre || convenio.empresa_convenio.catalogo?.nombre || '—'}
+                  {' · '}
+                  Conteo: {convenio.modo_conteo_etiqueta || 'días naturales'}
+                </Text>
+              )}
             </div>
           </div>
           {puedeGestionar && (

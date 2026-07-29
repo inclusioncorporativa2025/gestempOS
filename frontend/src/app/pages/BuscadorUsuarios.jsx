@@ -24,6 +24,7 @@ import { opcionesTipoHora, tipoHoraFormValue } from '../../utils/tipoHora';
 import { tooltipTipoHoraFormItem } from '../../utils/tipoHoraTooltip';
 import AltaEmpleadoModal from '../components/AltaEmpleadoModal';
 import JornadaLaboralSelect from '../components/JornadaLaboralSelect';
+import { listarConveniosEmpresa } from '../../features/convenios/convenioService';
 import { esUsuarioActivo, estaDadoDeBajaEnEmpresa as estaDadoDeBaja } from '../../utils/usuarioActivo';
 import './BuscadorUsuarios.css';
 dayjs.locale('es');
@@ -56,6 +57,7 @@ const BuscarUsuarios = () => {
     const [exportModalVisible, setExportModalVisible] = useState(false);
     const [exportDateRange, setExportDateRange] = useState(null);
     const [altaEmpleadoOpen, setAltaEmpleadoOpen] = useState(false);
+    const [conveniosEmpresa, setConveniosEmpresa] = useState([]);
     const [mobilePage, setMobilePage] = useState(1);
     const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
 
@@ -71,8 +73,17 @@ const BuscarUsuarios = () => {
             const jornadasEmpresa = await obtenerJornadas();
             setJornadas(jornadasEmpresa);
         };
+        const cargarConvenios = async () => {
+            try {
+                const lista = await listarConveniosEmpresa();
+                setConveniosEmpresa(lista.filter((c) => c.activo));
+            } catch {
+                setConveniosEmpresa([]);
+            }
+        };
         fetchUsuarios();
         obtenerJornadasEmpresa();
+        cargarConvenios();
     }, []);
 
     useEffect(() => {
@@ -263,6 +274,7 @@ const BuscarUsuarios = () => {
             tipoUsuario: valorTipoUsuarioForm(record.tipo_usuario),
             horario: jornadaNombre? jornadaNombre:"",
             tipoHora: tipoHoraFormValue(record.tipo_hora),
+            idEmpresaConvenio: record.id_empresa_convenio ?? undefined,
         });
     
         setJornadasCargadas(true);
@@ -692,6 +704,22 @@ const BuscarUsuarios = () => {
                         >
                             <Select options={opcionesTipoHora} />
                         </Form.Item>
+                        {conveniosEmpresa.length > 0 && (
+                            <Form.Item
+                                label="Convenio"
+                                name="idEmpresaConvenio"
+                                tooltip="Si no se indica, se aplicará el convenio por defecto de la empresa."
+                            >
+                                <Select
+                                    allowClear
+                                    placeholder="Convenio por defecto de la empresa"
+                                    options={conveniosEmpresa.map((c) => ({
+                                        value: c.id_empresa_convenio,
+                                        label: c.nombre || c.catalogo?.nombre || `Convenio #${c.id_empresa_convenio}`,
+                                    }))}
+                                />
+                            </Form.Item>
+                        )}
                     </Form>
                 </Modal>
             </Card>

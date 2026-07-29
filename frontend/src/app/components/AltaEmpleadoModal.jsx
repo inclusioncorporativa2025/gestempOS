@@ -3,6 +3,7 @@ import { Modal, Form, Input, Select, notification, message } from 'antd';
 import GradientButton from './shared/GradientButton';
 import { crearUsuario } from '../../features/user/usuarioService';
 import { obtenerJornadas } from '../../features/jornada/jornadaService';
+import { listarConveniosEmpresa } from '../../features/convenios/convenioService';
 import { mostrarModalLicenciasAgotadas } from '../../features/billing/licenciasAgotadasModal';
 import { opcionesTipoHora, TIPO_HORA_INHERIT } from '../../utils/tipoHora';
 import { tooltipTipoHoraFormItem } from '../../utils/tipoHoraTooltip';
@@ -19,6 +20,7 @@ const etiquetaTipoUsuario = (tipoUsuario) => {
 const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
   const [form] = Form.useForm();
   const [jornadas, setJornadas] = useState([]);
+  const [conveniosEmpresa, setConveniosEmpresa] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -27,6 +29,9 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
     obtenerJornadas()
       .then(setJornadas)
       .catch(() => message.error('Error recuperando jornadas laborales'));
+    listarConveniosEmpresa()
+      .then((lista) => setConveniosEmpresa((lista || []).filter((c) => c.activo)))
+      .catch(() => setConveniosEmpresa([]));
   }, [open, form]);
 
   const completarAlta = async (values, response) => {
@@ -58,6 +63,7 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
         values.tipoUsuario,
         values.tipoHorario,
         values.tipoHora,
+        values.idEmpresaConvenio,
       );
 
       if (!response.creada) {
@@ -72,6 +78,7 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
                 values.tipoUsuario,
                 values.tipoHorario,
                 values.tipoHora,
+                values.idEmpresaConvenio,
               );
               if (!reintento.creada) {
                 notification.error({
@@ -173,6 +180,23 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
             <Option value="4">Supervisor</Option>
           </Select>
         </Form.Item>
+
+        {conveniosEmpresa.length > 0 && (
+          <Form.Item
+            label="Convenio"
+            name="idEmpresaConvenio"
+            tooltip="Opcional. Si no se indica, se usará el convenio por defecto de la empresa."
+          >
+            <Select
+              allowClear
+              placeholder="Convenio por defecto de la empresa"
+              options={conveniosEmpresa.map((c) => ({
+                value: c.id_empresa_convenio,
+                label: c.nombre || c.catalogo?.nombre || `Convenio #${c.id_empresa_convenio}`,
+              }))}
+            />
+          </Form.Item>
+        )}
 
         <Form.Item style={{ marginBottom: 0 }}>
           <GradientButton

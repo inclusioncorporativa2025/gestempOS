@@ -33,6 +33,10 @@ const UsuariosEmpresas = sequelize.define('UsuariosEmpresas', {
         type: DataTypes.INTEGER,
         allowNull: true,
     },
+    id_empresa_convenio: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
     activo: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

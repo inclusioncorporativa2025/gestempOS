@@ -5,6 +5,13 @@ const UsuarioVacacionesCupo = require('../models/UsuarioVacacionesCupo');
 const UsuarioVacacionesMovimiento = require('../models/UsuarioVacacionesMovimiento');
 const { createConId } = require('../utils/empresaScope');
 const { vacacionesSoportaSaldo } = require('../utils/vacacionesCompat');
+const {
+  calcularDiasConsumoAusencia: calcularDiasConteo,
+  normalizarFraccion,
+  parseFechaAusencia,
+  redondearDias,
+} = require('./vacacionesConteoService');
+const { resolverConvenioUsuario } = require('./convenioService');
 
 dayjs.extend(customParseFormat);
 
@@ -12,53 +19,15 @@ const TIPO_CONSUMO = 'consumo';
 const TIPO_ANULACION = 'anulacion_consumo';
 const TIPO_AJUSTE = 'ajuste_manual';
 
-const parseFechaAusencia = (valor) =>
-  dayjs(valor, ['DD-MM-YYYY', 'YYYY-MM-DD'], true);
-
-const expandirRangoDias = (fechaDesde, fechaHasta) => {
-  const dias = [];
-  let actual = parseFechaAusencia(fechaDesde).startOf('day');
-  const fin = parseFechaAusencia(fechaHasta).startOf('day');
-  if (!actual.isValid() || !fin.isValid()) return [];
-  while (actual.isSame(fin, 'day') || actual.isBefore(fin, 'day')) {
-    dias.push(actual.format('YYYY-MM-DD'));
-    actual = actual.add(1, 'day');
+/** Días que consume una ausencia de vacaciones según convenio del usuario. */
+const calcularDiasConsumoAusencia = async (ausencia, idEmpresa) => {
+  const empresaId = idEmpresa ?? ausencia?.empresa_id;
+  if (!empresaId || !ausencia?.id_usuario) {
+    return calcularDiasConteo(ausencia, empresaId, null);
   }
-  return dias;
+  const convenio = await resolverConvenioUsuario(empresaId, ausencia.id_usuario);
+  return calcularDiasConteo(ausencia, empresaId, convenio?.reglas || null);
 };
-
-const normalizarFraccion = (ausencia) => {
-  const fraccion = String(ausencia?.fraccion_dia || '').trim().toLowerCase();
-  if (['manana', 'tarde'].includes(fraccion)) return fraccion;
-  if (fraccion === 'completo') return 'completo';
-
-  const desde = ausencia?.hora_ausencia_desde;
-  const hasta = ausencia?.hora_ausencia_hasta;
-  if (desde || hasta) {
-    return 'parcial';
-  }
-  return 'completo';
-};
-
-const diasPorFraccion = (fraccion) => {
-  if (fraccion === 'manana' || fraccion === 'tarde') return 0.5;
-  if (fraccion === 'parcial') return 0.5;
-  return 1;
-};
-
-/** Días que consume una ausencia de vacaciones (puede ser decimal). */
-const calcularDiasConsumoAusencia = (ausencia) => {
-  const diasRango = expandirRangoDias(ausencia.fecha_desde, ausencia.fecha_hasta);
-  if (!diasRango.length) return 0;
-
-  if (diasRango.length === 1) {
-    return diasPorFraccion(normalizarFraccion(ausencia));
-  }
-
-  return diasRango.length;
-};
-
-const redondearDias = (valor) => Math.round(Number(valor) * 10) / 10;
 
 const cupoActivoWhere = (idEmpresa, idUsuario, extras = {}) => ({
   empresa_id: idEmpresa,
@@ -128,14 +97,16 @@ const obtenerResumenVacaciones = async (idEmpresa, idUsuario, anio) => {
       anio_actual: null,
       cupos: [],
       movimientos: [],
+      convenio: null,
     };
   }
 
   const anioConsulta = Number(anio) || dayjs().year();
-  const [saldo, cupos, movimientos] = await Promise.all([
+  const [saldo, cupos, movimientos, convenio] = await Promise.all([
     obtenerSaldoAnio(idEmpresa, idUsuario, anioConsulta),
     listarCuposUsuario(idEmpresa, idUsuario),
     listarMovimientosVacaciones(idEmpresa, idUsuario, anioConsulta),
+    resolverConvenioUsuario(idEmpresa, idUsuario),
   ]);
 
   return {
@@ -143,6 +114,7 @@ const obtenerResumenVacaciones = async (idEmpresa, idUsuario, anio) => {
     anio_actual: saldo,
     cupos,
     movimientos,
+    convenio,
   };
 };
 
@@ -209,7 +181,7 @@ const registrarConsumoPorAusencia = async (
   const yaExiste = await existeConsumoAusencia(idEmpresa, ausencia.id_ausencia);
   if (yaExiste) return null;
 
-  const diasConsumo = calcularDiasConsumoAusencia(ausencia);
+  const diasConsumo = await calcularDiasConsumoAusencia(ausencia, idEmpresa);
   if (!diasConsumo) return null;
 
   const anio = parseFechaAusencia(ausencia.fecha_desde).year();

@@ -13,7 +13,14 @@ const Empresa = require('../models/Empresa');
 const {crearUsuarioRepo,crearUsuarioHorario} = require('../repositorios/usuarioRepository');
 const {
   obtenerDisponibilidadLicencias,
+  crearUsuarioEmpresa,
 } = require('../repositorios/usuariosEmpresasRepository');
+const {
+  resolverIdEmpresaConvenioAlta,
+  validarAsignacionConvenio,
+  resolverConvenioUsuario,
+  listarEmpresaConvenios,
+} = require('../services/convenioService');
 const {
   obtenerFacturacionCompleta,
   puedeAmpliarLicenciasStripe,
@@ -246,8 +253,21 @@ const getUsuariosEmpresa = async (req, res) => {
 
         const membresias = await UsuarioEmpresa.findAll({
             where: { id_empresa: idEmpresa },
-            attributes: ['id_usuario', 'tipo_usuario', 'tipo_hora', 'activo', 'fecha_baja'],
+            attributes: [
+                'id_usuario',
+                'tipo_usuario',
+                'tipo_hora',
+                'activo',
+                'fecha_baja',
+                'id_empresa_convenio',
+            ],
         });
+
+        const conveniosEmpresa = await listarEmpresaConvenios(idEmpresa);
+        const convenioPorId = new Map(
+            conveniosEmpresa.map((c) => [c.id_empresa_convenio, c]),
+        );
+        const convenioDefecto = conveniosEmpresa.find((c) => c.es_defecto && c.activo) || null;
 
         const idUsuariosArray = membresias.map((membresia) => membresia.id_usuario);
         const membresiaPorUsuario = new Map(
@@ -281,6 +301,10 @@ const getUsuariosEmpresa = async (req, res) => {
                 (jornada) => jornada.id_usuario === usuario.id_usuario,
             );
             const membresia = membresiaPorUsuario.get(usuario.id_usuario);
+            const convenioAsignado = membresia?.id_empresa_convenio
+                ? convenioPorId.get(membresia.id_empresa_convenio)
+                : null;
+            const convenioEfectivo = convenioAsignado || convenioDefecto;
 
             return {
                 ...usuario.toJSON(),
@@ -288,6 +312,9 @@ const getUsuariosEmpresa = async (req, res) => {
                 fecha_baja_empresa: membresia?.fecha_baja || null,
                 tipo_usuario: membresia?.tipo_usuario ?? usuario.tipo_usuario,
                 tipo_hora: membresia?.tipo_hora ?? null,
+                id_empresa_convenio: membresia?.id_empresa_convenio ?? null,
+                convenio_nombre: convenioEfectivo?.nombre || null,
+                convenio_modo_conteo: convenioEfectivo?.modo_conteo_vacaciones || 'natural',
                 jornadas: jornadasUsuario,
             };
         });
@@ -303,7 +330,17 @@ const getUsuariosEmpresa = async (req, res) => {
 const crearUsuario= async (req, res) => {
     try{
         const date = new Date()
-        const {email,nombreUsuario,dni, idEmpresa, idUsuarioAccion, tipoUsuario, horario, tipoHora} = req.body;
+        const {
+            email,
+            nombreUsuario,
+            dni,
+            idEmpresa,
+            idUsuarioAccion,
+            tipoUsuario,
+            horario,
+            tipoHora,
+            idEmpresaConvenio,
+        } = req.body;
         const emailNormalizado = normalizeEmail(email);
         if (!emailNormalizado) {
             return res.status(400).json({
@@ -410,6 +447,11 @@ const crearUsuario= async (req, res) => {
                 }
             }
 
+            const idConvenioResuelto = await resolverIdEmpresaConvenioAlta(
+                idEmpresa,
+                idEmpresaConvenio,
+            );
+
             await crearUsuarioEmpresa(
                 usuario.dataValues?.id_usuario ?? usuario.id_usuario,
                 idEmpresa,
@@ -417,6 +459,7 @@ const crearUsuario= async (req, res) => {
                 date,
                 tipoUsuario,
                 tipoHoraNormalizado,
+                idConvenioResuelto,
             );
 
             const idUsuario = usuario.dataValues?.id_usuario ?? usuario.id_usuario;
@@ -548,6 +591,16 @@ const editUsuario= async (req, res) => {
         };
         if (Object.prototype.hasOwnProperty.call(values, 'tipoHora')) {
             updateMembresia.tipo_hora = normalizarTipoHoraInput(values.tipoHora);
+        }
+        if (Object.prototype.hasOwnProperty.call(values, 'idEmpresaConvenio')) {
+            if (values.idEmpresaConvenio == null || values.idEmpresaConvenio === '') {
+                updateMembresia.id_empresa_convenio = null;
+            } else {
+                updateMembresia.id_empresa_convenio = await validarAsignacionConvenio(
+                    idEmpresa,
+                    values.idEmpresaConvenio,
+                );
+            }
         }
 
         await UsuarioEmpresa.update(

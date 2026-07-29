@@ -105,13 +105,21 @@ export const importarUsuariosEmpresa = async (values) => {
     
 
 
-export const crearUsuario = async (email, nombreUsuario, dni, tipoUsuario, horario, tipoHora) =>{
+export const crearUsuario = async (
+  email,
+  nombreUsuario,
+  dni,
+  tipoUsuario,
+  horario,
+  tipoHora,
+  idEmpresaConvenio = null,
+) =>{
 
   try{
     const idEmpresa = getIdEmpresa();
     const idUsuarioAccion = getIdUsuario();
 
-    
+
 
     const response = await fetch(API_BASE_URL+`/crear`, {
       method: 'POST',
@@ -125,6 +133,7 @@ export const crearUsuario = async (email, nombreUsuario, dni, tipoUsuario, horar
         tipoUsuario,
         horario,
         tipoHora: tipoHora === 'inherit' ? null : tipoHora,
+        idEmpresaConvenio: idEmpresaConvenio || null,
       }),
     });
 

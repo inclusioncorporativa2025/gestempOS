@@ -91,6 +91,14 @@ const ConfiguracionLayout = () => {
 
         },
 
+        {
+
+          key: APP_ROUTES.settingsConvenios,
+
+          label: 'Convenios',
+
+        },
+
       );
 
     }
@@ -121,7 +129,7 @@ const ConfiguracionLayout = () => {
 
       !puedeConfigOrg &&
 
-      [APP_ROUTES.settingsEmpresa, APP_ROUTES.settingsJornada].includes(location.pathname)
+      [APP_ROUTES.settingsEmpresa, APP_ROUTES.settingsJornada, APP_ROUTES.settingsConvenios].includes(location.pathname)
 
     ) {
 

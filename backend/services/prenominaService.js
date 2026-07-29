@@ -16,6 +16,8 @@ const { ROLES } = require('../middleware/authMiddleware');
 const { esVacaciones } = require('../utils/tiposAusencia');
 const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/ausenciasCompat');
 const { empresaTieneFeature } = require('./planService');
+const { calcularDiasConsumoAusencia } = require('./vacacionesConteoService');
+const { resolverConvenioUsuario } = require('./convenioService');
 
 const FACTOR_HORA_EXTRA = 1.75;
 const ESTADOS_CABECERA = ['borrador', 'revisada', 'cerrada'];
@@ -27,42 +29,28 @@ const redondearDias = (valor) => Math.round(Number(valor) * 10) / 10;
 const parseFechaAusencia = (valor) =>
   dayjs(valor, ['DD-MM-YYYY', 'YYYY-MM-DD'], true);
 
-const expandirRangoDiasAusencia = (fechaDesde, fechaHasta) => {
-  const dias = [];
-  let actual = parseFechaAusencia(fechaDesde).startOf('day');
-  const fin = parseFechaAusencia(fechaHasta).startOf('day');
-  if (!actual.isValid() || !fin.isValid()) return [];
-  while (actual.isSame(fin, 'day') || actual.isBefore(fin, 'day')) {
-    dias.push(actual.format('YYYY-MM-DD'));
-    actual = actual.add(1, 'day');
+const diasAusenciaEnMes = async (ausencia, inicioMes, finMes, idEmpresa, convenio) => {
+  const desde = parseFechaAusencia(ausencia.fecha_desde).startOf('day');
+  const hasta = parseFechaAusencia(ausencia.fecha_hasta).startOf('day');
+  if (!desde.isValid() || !hasta.isValid()) return 0;
+  if (desde.isAfter(finMes, 'day') || hasta.isBefore(inicioMes, 'day')) return 0;
+
+  const clipDesde = desde.isBefore(inicioMes, 'day') ? inicioMes : desde;
+  const clipHasta = hasta.isAfter(finMes, 'day') ? finMes : hasta;
+
+  const ausenciaClip = {
+    ...ausencia,
+    fecha_desde: clipDesde.format('DD-MM-YYYY'),
+    fecha_hasta: clipHasta.format('DD-MM-YYYY'),
+  };
+
+  if (!desde.isSame(hasta, 'day') || !clipDesde.isSame(clipHasta, 'day')) {
+    ausenciaClip.fraccion_dia = 'completo';
+    ausenciaClip.hora_ausencia_desde = null;
+    ausenciaClip.hora_ausencia_hasta = null;
   }
-  return dias;
-};
 
-const normalizarFraccionAusencia = (ausencia) => {
-  const fraccion = String(ausencia?.fraccion_dia || '').trim().toLowerCase();
-  if (['manana', 'tarde'].includes(fraccion)) return fraccion;
-  if (fraccion === 'completo') return 'completo';
-  if (ausencia?.hora_ausencia_desde || ausencia?.hora_ausencia_hasta) return 'parcial';
-  return 'completo';
-};
-
-const diasPorFraccionAusencia = (fraccion) => {
-  if (fraccion === 'manana' || fraccion === 'tarde' || fraccion === 'parcial') return 0.5;
-  return 1;
-};
-
-const diasAusenciaEnMes = (ausencia, inicioMes, finMes) => {
-  const todosDias = expandirRangoDiasAusencia(ausencia.fecha_desde, ausencia.fecha_hasta);
-  const diasMes = todosDias.filter((d) => {
-    const fecha = dayjs(d);
-    return !fecha.isBefore(inicioMes, 'day') && !fecha.isAfter(finMes, 'day');
-  });
-  if (!diasMes.length) return 0;
-  if (diasMes.length === 1 && todosDias.length === 1) {
-    return diasPorFraccionAusencia(normalizarFraccionAusencia(ausencia));
-  }
-  return diasMes.length;
+  return calcularDiasConsumoAusencia(ausenciaClip, idEmpresa, convenio?.reglas || null);
 };
 
 const ausenciaSolapaMes = (ausencia, inicioMes, finMes) => {
@@ -72,21 +60,31 @@ const ausenciaSolapaMes = (ausencia, inicioMes, finMes) => {
   return !desde.isAfter(finMes, 'day') && !hasta.isBefore(inicioMes, 'day');
 };
 
-const resumirAusenciasMes = (ausenciasUsuario, periodoAnio, periodoMes) => {
+const resumirAusenciasMes = async (
+  ausenciasUsuario,
+  periodoAnio,
+  periodoMes,
+  idEmpresa,
+  idUsuario,
+) => {
   const inicioMes = dayjs(`${periodoAnio}-${String(periodoMes).padStart(2, '0')}-01`).startOf('month');
   const finMes = inicioMes.endOf('month');
   let diasVacaciones = 0;
   let diasAusencia = 0;
 
-  (ausenciasUsuario || []).forEach((ausencia) => {
-    const dias = diasAusenciaEnMes(ausencia, inicioMes, finMes);
-    if (dias <= 0) return;
+  const convenio = idEmpresa && idUsuario
+    ? await resolverConvenioUsuario(idEmpresa, idUsuario)
+    : null;
+
+  for (const ausencia of (ausenciasUsuario || [])) {
+    const dias = await diasAusenciaEnMes(ausencia, inicioMes, finMes, idEmpresa, convenio);
+    if (dias <= 0) continue;
     if (esVacaciones(ausencia.tipo)) {
       diasVacaciones += dias;
     } else {
       diasAusencia += dias;
     }
-  });
+  }
 
   return {
     dias_vacaciones: diasVacaciones > 0 ? redondearDias(diasVacaciones) : null,
@@ -302,10 +300,12 @@ const calcularEmpleado = async (
 
   const otrosDevengos = 0;
   const totalBruto = redondearEuros(salarioBase + importeExtras + importeComplementarias + otrosDevengos);
-  const { dias_vacaciones: diasVacaciones, dias_ausencia: diasAusencia } = resumirAusenciasMes(
+  const { dias_vacaciones: diasVacaciones, dias_ausencia: diasAusencia } = await resumirAusenciasMes(
     ausenciasUsuario,
     periodoAnio,
     periodoMes,
+    idEmpresa,
+    idUsuario,
   );
 
   const lineas = [];

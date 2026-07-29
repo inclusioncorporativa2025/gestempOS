@@ -4,6 +4,7 @@ import {
 } from 'antd';
 import dayjs from 'dayjs';
 import { crearAusencia } from '../../features/ausencias/ausenciasService';
+import { previewDiasAusencia } from '../../features/convenios/convenioService';
 import { getUsuariosEmpresa } from '../../features/user/usuarioService';
 import { getIdEmpresa, getIdUsuario, getTipoUsuario } from '../../utils/authSession';
 import { esInspector, normalizarTipoUsuario } from '../../utils/tipoUsuarioLabel';
@@ -40,6 +41,8 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
   const [horaHasta, setHoraHasta] = useState(null);
   const [comentario, setComentario] = useState('');
   const [ausenciaCreada, setAusenciaCreada] = useState(null);
+  const [previewDias, setPreviewDias] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const entradasAusencia = useMemo(
     () => getTiposAusenciaSeleccionables(planId),
@@ -104,6 +107,7 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
     setHoraHasta(null);
     setComentario('');
     setAusenciaCreada(null);
+    setPreviewDias(null);
   };
 
   useEffect(() => {
@@ -111,6 +115,58 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
       setIdEmpleadoDestino(idUsuarioSesion);
     }
   }, [open, idUsuarioSesion]);
+
+  const idUsuarioPreview = idEmpleadoDestino ?? idUsuarioSesion;
+
+  useEffect(() => {
+    if (!open || !esVacaciones || !fechaDesde) {
+      setPreviewDias(null);
+      return undefined;
+    }
+
+    const fechaHastaPreview = fechaHasta || fechaDesde;
+    let cancelado = false;
+
+    const cargarPreview = async () => {
+      setPreviewLoading(true);
+      try {
+        const usarFraccion = fechaDesde.isSame(fechaHastaPreview, 'day');
+        const data = await previewDiasAusencia({
+          idUsuario: idUsuarioPreview,
+          fecha_desde: fechaDesde.format('DD-MM-YYYY'),
+          fecha_hasta: fechaHastaPreview.format('DD-MM-YYYY'),
+          fraccion_dia: usarFraccion ? fraccionDia : 'completo',
+          hora_ausencia_desde: (!todoElDia && !usarFraccion) ? horaDesde?.format('HH:mm:ss') : null,
+          hora_ausencia_hasta: (!todoElDia && !usarFraccion) ? horaHasta?.format('HH:mm:ss') : null,
+          tipo: selectedEntrada,
+        });
+        if (!cancelado) {
+          setPreviewDias(data);
+        }
+      } catch {
+        if (!cancelado) setPreviewDias(null);
+      } finally {
+        if (!cancelado) setPreviewLoading(false);
+      }
+    };
+
+    const timer = setTimeout(cargarPreview, 350);
+    return () => {
+      cancelado = true;
+      clearTimeout(timer);
+    };
+  }, [
+    open,
+    esVacaciones,
+    fechaDesde,
+    fechaHasta,
+    fraccionDia,
+    todoElDia,
+    horaDesde,
+    horaHasta,
+    idUsuarioPreview,
+    selectedEntrada,
+  ]);
 
   const handleClose = () => {
     resetForm();
@@ -295,6 +351,16 @@ const SolicitarAusenciaModal = ({ open, onClose, onSuccess, puedeRegistrarPerson
       {esRangoVariosDias && (
         <Text type="secondary" className="sol-ausencia-modal__hint">
           Para medio día (mañana o tarde), indica la misma fecha en Desde y Hasta.
+        </Text>
+      )}
+
+      {esVacaciones && fechaDesde && (
+        <Text type="secondary" className="sol-ausencia-modal__hint">
+          {previewLoading
+            ? 'Calculando días…'
+            : previewDias?.dias != null
+              ? `Consumirá ${previewDias.dias} día(s) (${previewDias.modo_conteo_etiqueta || 'días naturales'}).`
+              : null}
         </Text>
       )}
 

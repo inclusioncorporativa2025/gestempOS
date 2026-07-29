@@ -67,7 +67,7 @@ const esAusenciaAprobada = (a, soportaAprobacion) =>
 const esAusenciaPendiente = (a, soportaAprobacion) =>
   soportaAprobacion && !a?.fecha_aceptacion && !a?.fecha_cancelacion;
 
-const enriquecerAusenciasConUsuarios = async (ausencias) => {
+const enriquecerAusenciasConUsuarios = async (ausencias, idEmpresa) => {
   const filas = ausencias.map((a) => (a.toJSON ? a.toJSON() : a));
   const idsUsuarios = [...new Set(filas.flatMap((a) => [a.id_usuario, a.id_usuario_gestor].filter(Boolean)))];
   const usuarios = idsUsuarios.length
@@ -79,12 +79,17 @@ const enriquecerAusenciasConUsuarios = async (ausencias) => {
     : [];
   const nombrePorId = Object.fromEntries(usuarios.map((u) => [u.id_usuario, u.nombre]));
 
-  return filas.map((a) => ({
-    ...a,
-    nombre_usuario: nombrePorId[a.id_usuario] || '',
-    nombre_gestor: a.id_usuario_gestor ? (nombrePorId[a.id_usuario_gestor] || '') : '',
-    dias: calcularDiasConsumoAusencia(a),
+  const enriquecidas = await Promise.all(filas.map(async (a) => {
+    const dias = await calcularDiasConsumoAusencia(a, idEmpresa ?? a.empresa_id);
+    return {
+      ...a,
+      nombre_usuario: nombrePorId[a.id_usuario] || '',
+      nombre_gestor: a.id_usuario_gestor ? (nombrePorId[a.id_usuario_gestor] || '') : '',
+      dias,
+    };
   }));
+
+  return enriquecidas;
 };
 
 const mapAusenciaListado = (a, idUsuarioToken) => ({
@@ -113,7 +118,7 @@ const mapAusenciaListado = (a, idUsuarioToken) => ({
 });
 
 const enriquecerAusenciasCompleto = async (idEmpresa, ausencias) => {
-  const conUsuarios = await enriquecerAusenciasConUsuarios(ausencias);
+  const conUsuarios = await enriquecerAusenciasConUsuarios(ausencias, idEmpresa);
   return adjuntarInfoJustificantes(idEmpresa, conUsuarios);
 };
 

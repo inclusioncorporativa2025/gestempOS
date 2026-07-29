@@ -39,6 +39,7 @@ import ConfiguracionLayout, { ConfiguracionOrgGate } from './pages/gestor/Config
 import ConfiguracionUsuario from './pages/gestor/ConfiguracionUsuario';
 import ConfiguracionEmpresa from './pages/gestor/ConfiguracionEmpresa';
 import ConfiguracionJornada from './pages/gestor/ConfiguracionJornada';
+import ConfiguracionConvenios from './pages/gestor/ConfiguracionConvenios';
 import Calendario from './pages/Calendario';
 import BuscadorEmpresa from './pages/admin/BuscadorEmpresa';
 import BuscadorUsuarios from './pages/BuscadorUsuarios';
@@ -48,6 +49,7 @@ import NavigationTracker from './components/NavigationTracker';
 import Notificaciones from './pages/Notificaciones';
 import PlatformLayout from './pages/platform/PlatformLayout';
 import PlatformAccesos from './pages/platform/PlatformAccesos';
+import PlatformConvenios from './pages/platform/PlatformConvenios';
 import PlatformAcceder from './pages/platform/PlatformAcceder';
 import ImpersonationBanner from './components/ImpersonationBanner';
 import TrialStatusBanner from './components/TrialStatusBanner';
@@ -454,6 +456,14 @@ const AppShell = () => {
                       </ConfiguracionOrgGate>
                     }
                   />
+                  <Route
+                    path="convenios"
+                    element={
+                      <ConfiguracionOrgGate>
+                        <ConfiguracionConvenios />
+                      </ConfiguracionOrgGate>
+                    }
+                  />
                 </Route>
                 <Route
                   path={`${APP_ROUTES.platform}/*`}
@@ -467,6 +477,14 @@ const AppShell = () => {
                   <Route path="empresas" element={<BuscadorEmpresa embedded />} />
                   <Route path="accesos" element={<PlatformAccesos />} />
                   <Route path="acceder" element={<PlatformAcceder />} />
+                  <Route
+                    path="convenios"
+                    element={
+                      <ProtectedRoute allowedTypes={[1]}>
+                        <PlatformConvenios />
+                      </ProtectedRoute>
+                    }
+                  />
                 </Route>
                 <Route
                   path="/companies"
