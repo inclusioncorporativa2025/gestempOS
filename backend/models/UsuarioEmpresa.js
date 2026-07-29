@@ -36,6 +36,8 @@ const UsuariosEmpresas = sequelize.define('UsuariosEmpresas', {
     id_empresa_convenio: {
         type: DataTypes.INTEGER,
         allowNull: true,
+        // En BD puede existir como id_convenio (legacy); apunta a empresa_convenios.id_empresa_convenio
+        field: 'id_convenio',
     },
     activo: {
         type: DataTypes.BOOLEAN,
