@@ -47,7 +47,7 @@ export const useTrialStatus = () => {
   }, [cargarTrial]);
 
   const bloqueado = Boolean(trial?.expirada || trial?.requierePlan);
-  const mostrarAviso = Boolean(trial?.advertir && !bloqueado);
+  const mostrarAviso = Boolean(trial?.enPrueba && trial?.activa && !bloqueado);
 
   return {
     trial,

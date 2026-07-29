@@ -1,7 +1,9 @@
 .trial-status-banner {
-  padding: 0 16px 12px;
+  flex-shrink: 0;
 }
 
-.trial-status-banner .ant-alert {
-  border-radius: 10px;
+.trial-status-banner .ant-alert-banner {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
 }

@@ -3,25 +3,44 @@ import { Alert, Button } from 'antd';
 import { dispatchOpenFacturacion } from '../../constants/facturacion';
 import './TrialStatusBanner.css';
 
+const formatFechaFin = (fechaFin) => {
+  if (!fechaFin) return null;
+  return new Date(fechaFin).toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+};
+
 const TrialStatusBanner = ({ trial }) => {
-  if (!trial?.advertir || trial?.expirada) {
+  if (!trial?.enPrueba || !trial?.activa || trial?.expirada) {
     return null;
   }
 
+  const fechaFinTexto = formatFechaFin(trial.fechaFin);
   const dias = trial.diasRestantes ?? 0;
-  const textoDias =
-    dias === 1 ? 'queda 1 día' : `quedan ${dias} días`;
+  const urgente = Boolean(trial.advertir);
+  const textoDias = dias === 1 ? 'queda 1 día' : `quedan ${dias} días`;
+
+  const message = fechaFinTexto
+    ? `Estás en periodo gratuito hasta el ${fechaFinTexto}`
+    : 'Estás en periodo gratuito';
+
+  const description = urgente
+    ? `Te ${textoDias} de prueba. Activa un plan en Facturación para seguir usando Timecor después.`
+    : 'Puedes usar Timecor sin coste hasta esa fecha. Cuando finalice, podrás activar tu suscripción desde Facturación.';
 
   return (
     <div className="trial-status-banner" role="status">
       <Alert
-        type="warning"
+        type={urgente ? 'warning' : 'info'}
         showIcon
-        message={`Periodo de prueba: ${textoDias}`}
-        description="Cuando finalice deberás activar un plan para seguir usando Timecor."
+        banner
+        message={message}
+        description={description}
         action={
           <Button
-            type="primary"
+            type={urgente ? 'primary' : 'default'}
             size="small"
             onClick={dispatchOpenFacturacion}
           >

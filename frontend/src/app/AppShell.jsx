@@ -376,6 +376,7 @@ const AppShell = () => {
             ].filter(Boolean).join(' ')}
           >
             {!isAuthShellPage && <ImpersonationBanner />}
+            {!isAuthShellPage && mostrarAviso && <TrialStatusBanner trial={trial} />}
             {!isAuthShellPage && <Header />}
 
             <Layout className={!isAuthShellPage ? 'app-main-layout' : undefined}>
@@ -387,7 +388,6 @@ const AppShell = () => {
                 <TrialExpiredGate />
               ) : (
                 <>
-                  {!isAuthShellPage && mostrarAviso && <TrialStatusBanner trial={trial} />}
               <Routes>
                 <Route path={APP_ROUTES.login} element={<Login />} />
                 <Route path={APP_ROUTES.register} element={<Register />} />
