@@ -214,3 +214,58 @@
   color: #64748b;
   font-size: 0.92rem;
 }
+
+.config-convenio-info {
+  margin-left: 6px;
+  color: #64748b;
+  cursor: help;
+  font-size: 14px;
+}
+
+.config-convenio-info:hover {
+  color: var(--color-primary, #6366f1);
+}
+
+.config-convenio-defecto-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.config-convenio-defecto-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.config-convenio-modal .ant-modal-body {
+  padding-top: 20px;
+}
+
+.config-convenio-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.config-convenio-option-title {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.config-convenio-option-meta {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.config-convenio-table-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.config-convenio-table-code {
+  font-size: 12px;
+}

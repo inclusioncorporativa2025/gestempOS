@@ -24,7 +24,8 @@ import esES from 'antd/es/locale/es_ES';
 import { ConfigProvider } from 'antd';
 
 import { APP_ROUTES } from '../../constants/routes';
-import { getUsuariosEmpresa, getHorasTotalesMesByIdUsuario, getMiPerfil } from '../../features/user/usuarioService';
+import { getUsuariosEmpresa, getHorasTotalesMesByIdUsuario, getMiPerfil, editUsuario } from '../../features/user/usuarioService';
+import { listarConveniosEmpresa, obtenerConvenioUsuario } from '../../features/convenios/convenioService';
 import { obtenerJornadas } from '../../features/jornada/jornadaService';
 import { getAusenciasCalendario } from '../../features/ausencias/ausenciasService';
 import { getFestivosCalendario } from '../../features/calendario/CalendarioService';
@@ -102,6 +103,10 @@ const FichaPersonal = () => {
   const [loadingDetalleCierre, setLoadingDetalleCierre] = useState(false);
   const [activeTabKey, setActiveTabKey] = useState('datos');
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
+  const [conveniosEmpresa, setConveniosEmpresa] = useState([]);
+  const [convenioResuelto, setConvenioResuelto] = useState(null);
+  const [convenioSeleccionado, setConvenioSeleccionado] = useState(undefined);
+  const [guardandoConvenio, setGuardandoConvenio] = useState(false);
 
   useEffect(() => {
     const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
@@ -189,6 +194,25 @@ const FichaPersonal = () => {
       }
 
       setUsuario(encontrado);
+      setConvenioSeleccionado(encontrado.id_empresa_convenio ?? undefined);
+
+      try {
+        const convenio = await obtenerConvenioUsuario(idUsuario);
+        setConvenioResuelto(convenio);
+      } catch {
+        setConvenioResuelto(null);
+      }
+
+      if (!esPropio && puedeVerFichaPersonal(Number(getTipoUsuario()))) {
+        try {
+          const lista = await listarConveniosEmpresa();
+          setConveniosEmpresa((lista || []).filter((c) => c.activo));
+        } catch {
+          setConveniosEmpresa([]);
+        }
+      } else {
+        setConveniosEmpresa([]);
+      }
 
       const idJornada = encontrado.jornadas?.[0]?.id_jornada;
       const jornada =
@@ -434,6 +458,46 @@ const FichaPersonal = () => {
   const puedeGestionarVacaciones = puedeAjustarBolsa && puedeVerVacaciones
     && (!esPropio || puedeAutogestionarVacacionesSaldo(tipoUsuarioActual));
   const puedeGestionarNominas = puedeAjustarBolsa && puedeVerNominas && !esPropio;
+  const puedeEditarConvenio = puedeAjustarBolsa && !esPropio && conveniosEmpresa.length > 0;
+
+  const etiquetaModoConteo = (modo) => (
+    modo === 'laboral' ? 'Días laborables' : 'Días naturales'
+  );
+
+  const nombreConvenioVisible = convenioResuelto?.empresa_convenio?.nombre
+    || convenioResuelto?.empresa_convenio?.catalogo?.nombre
+    || usuario.convenio_nombre
+    || 'Convenio por defecto de la empresa';
+
+  const modoConteoVisible = convenioResuelto?.modo_conteo_etiqueta
+    || etiquetaModoConteo(usuario.convenio_modo_conteo || convenioResuelto?.reglas?.modo_conteo_vacaciones);
+
+  const guardarConvenio = async () => {
+    if (!usuario) return;
+    setGuardandoConvenio(true);
+    try {
+      const idJornada = usuario.jornadas?.[0]?.id_jornada ?? jornadaAsignada?.id_jornada;
+      if (!idJornada) {
+        message.error('Asigna una jornada antes de cambiar el convenio');
+        return;
+      }
+      await editUsuario(usuario.id_usuario, {
+        nombre: usuario.nombre,
+        dni: usuario.dni,
+        tipoUsuario: usuario.tipo_usuario,
+        activo: usuario.activo,
+        horario: idJornada,
+        idEmpresaConvenio: convenioSeleccionado ?? null,
+      });
+      message.success('Convenio actualizado');
+      await cargarFicha();
+    } catch (error) {
+      message.error(error.message || 'No se pudo guardar el convenio');
+    } finally {
+      setGuardandoConvenio(false);
+    }
+  };
+
   const tipoHoraEfectivo = usuario.tipo_hora ?? jornadaAsignada?.tipo_hora ?? resumenHoras?.tipo_hora;
   const esBolsa = Number(tipoHoraEfectivo) === TIPO_HORA_BOLSA;
 
@@ -466,6 +530,39 @@ const FichaPersonal = () => {
           </Descriptions.Item>
           <Descriptions.Item label="Activo">
             {usuario.activo ? 'Sí' : 'No'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Convenio" span={2}>
+            {puedeEditarConvenio ? (
+              <div className="fp-convenio-edit">
+                <Select
+                  allowClear
+                  className="fp-convenio-select"
+                  placeholder="Convenio por defecto de la empresa"
+                  value={convenioSeleccionado}
+                  onChange={setConvenioSeleccionado}
+                  options={conveniosEmpresa.map((c) => ({
+                    value: c.id_empresa_convenio,
+                    label: c.nombre || c.catalogo?.nombre || `Convenio #${c.id_empresa_convenio}`,
+                  }))}
+                />
+                <Button
+                  type="primary"
+                  size="small"
+                  loading={guardandoConvenio}
+                  disabled={
+                    (convenioSeleccionado ?? null) === (usuario.id_empresa_convenio ?? null)
+                  }
+                  onClick={guardarConvenio}
+                >
+                  Guardar
+                </Button>
+              </div>
+            ) : (
+              nombreConvenioVisible
+            )}
+          </Descriptions.Item>
+          <Descriptions.Item label="Conteo de vacaciones">
+            {modoConteoVisible}
           </Descriptions.Item>
         </Descriptions>
       ),

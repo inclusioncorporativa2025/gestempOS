@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Button, Card, Form, Input, Modal, Select, Switch, Table, Tag, Typography, message,
+  Button, Card, Form, Input, Modal, Select, Switch, Table, Tag, Tooltip, Typography, message,
 } from 'antd';
+import { InfoCircleOutlined } from '@ant-design/icons';
 import {
   actualizarConvenioEmpresa,
   bajaConvenioEmpresa,
@@ -14,6 +15,44 @@ import './Configuracion.css';
 const { Text, Title } = Typography;
 
 const etiquetaModo = (modo) => (modo === 'laboral' ? 'Días laborables' : 'Días naturales');
+
+const resumenConvenio = (convenio) => {
+  const dias = Number(convenio?.dias_cupo_defecto ?? 30);
+  const modo = convenio?.modo_conteo_vacaciones === 'laboral' ? 'laborables' : 'naturales';
+  return `${dias} días ${modo}`;
+};
+
+const datosCatalogo = (convenio) => ({
+  nombre: convenio?.nombre || '—',
+  codigo: convenio?.codigo || '',
+  resumen: resumenConvenio(convenio),
+  modo: etiquetaModo(convenio?.modo_conteo_vacaciones),
+  dias: Number(convenio?.dias_cupo_defecto ?? 30),
+});
+
+const renderOpcionConvenio = (nombre, codigo, resumen) => (
+  <div className="config-convenio-option">
+    <span className="config-convenio-option-title">{nombre}</span>
+    <span className="config-convenio-option-meta">
+      {resumen}
+      {codigo ? ` · ${codigo}` : ''}
+    </span>
+  </div>
+);
+
+const TOOLTIP_CONVENIO_DEFECTO =
+  'El convenio por defecto se aplica al personal sin convenio asignado: altas nuevas, '
+  + 'fichas sin selección explícita y cálculo de vacaciones. Solo puede haber uno activo '
+  + 'por empresa; al marcar otro, el anterior deja de ser el predeterminado.';
+
+const InfoConvenioDefecto = () => (
+  <Tooltip title={TOOLTIP_CONVENIO_DEFECTO}>
+    <InfoCircleOutlined
+      className="config-convenio-info"
+      aria-label="Información sobre convenio por defecto"
+    />
+  </Tooltip>
+);
 
 const ConfiguracionConvenios = () => {
   const [conveniosEmpresa, setConveniosEmpresa] = useState([]);
@@ -51,10 +90,16 @@ const ConfiguracionConvenios = () => {
   const opcionesCatalogo = useMemo(
     () => catalogo
       .filter((c) => c.activo && !idsIncorporados.has(c.id_convenio))
-      .map((c) => ({
-        value: c.id_convenio,
-        label: `${c.nombre} (${c.codigo})`,
-      })),
+      .map((c) => {
+        const info = datosCatalogo(c);
+        return {
+          value: c.id_convenio,
+          label: `${info.nombre} · ${info.resumen}`,
+          nombre: info.nombre,
+          codigo: info.codigo,
+          resumen: info.resumen,
+        };
+      }),
     [catalogo, idsIncorporados],
   );
 
@@ -100,20 +145,39 @@ const ConfiguracionConvenios = () => {
 
   const columns = [
     {
-      title: 'Nombre',
+      title: 'Convenio',
       key: 'nombre',
-      render: (_, r) => r.nombre || r.catalogo?.nombre || '—',
+      render: (_, r) => {
+        const cat = r.catalogo || r;
+        const info = datosCatalogo({
+          nombre: r.nombre || cat.nombre,
+          codigo: cat.codigo,
+          dias_cupo_defecto: r.dias_cupo_defecto ?? cat.dias_cupo_defecto,
+          modo_conteo_vacaciones: r.modo_conteo_vacaciones ?? cat.modo_conteo_vacaciones,
+        });
+        return (
+          <div className="config-convenio-table-name">
+            <Text strong>{info.nombre}</Text>
+            {info.codigo && (
+              <Text type="secondary" className="config-convenio-table-code">
+                {info.codigo}
+              </Text>
+            )}
+          </div>
+        );
+      },
     },
     {
-      title: 'Conteo vacaciones',
-      key: 'modo',
-      render: (_, r) => etiquetaModo(r.modo_conteo_vacaciones || r.catalogo?.modo_conteo_vacaciones),
-    },
-    {
-      title: 'Cupo defecto',
-      key: 'cupo',
-      width: 120,
-      render: (_, r) => `${Number(r.dias_cupo_defecto ?? r.catalogo?.dias_cupo_defecto ?? 30)} días`,
+      title: 'Vacaciones',
+      key: 'vacaciones',
+      width: 200,
+      render: (_, r) => {
+        const cat = r.catalogo || r;
+        return resumenConvenio({
+          dias_cupo_defecto: r.dias_cupo_defecto ?? cat.dias_cupo_defecto,
+          modo_conteo_vacaciones: r.modo_conteo_vacaciones ?? cat.modo_conteo_vacaciones,
+        });
+      },
     },
     {
       title: 'Estado',
@@ -133,9 +197,12 @@ const ConfiguracionConvenios = () => {
       render: (_, record) => (
         <>
           {record.activo && !record.es_defecto && (
-            <Button type="link" size="small" onClick={() => marcarDefecto(record)}>
-              Marcar defecto
-            </Button>
+            <span className="config-convenio-defecto-action">
+              <Button type="link" size="small" onClick={() => marcarDefecto(record)}>
+                Marcar defecto
+              </Button>
+              <InfoConvenioDefecto />
+            </span>
           )}
           {record.activo && (
             <Button type="link" size="small" danger onClick={() => retirarConvenio(record)}>
@@ -189,6 +256,8 @@ const ConfiguracionConvenios = () => {
         okText="Incorporar"
         cancelText="Cancelar"
         destroyOnClose
+        width={640}
+        className="config-convenio-modal"
       >
         <Form form={form} layout="vertical" initialValues={{ es_defecto: false }}>
           <Form.Item
@@ -196,12 +265,33 @@ const ConfiguracionConvenios = () => {
             name="id_convenio"
             rules={[{ required: true, message: 'Selecciona un convenio' }]}
           >
-            <Select options={opcionesCatalogo} placeholder="Selecciona..." />
+            <Select
+              size="large"
+              showSearch
+              listHeight={360}
+              placeholder="Selecciona un convenio..."
+              options={opcionesCatalogo}
+              optionFilterProp="label"
+              optionRender={(option) => renderOpcionConvenio(
+                option.data.nombre,
+                option.data.codigo,
+                option.data.resumen,
+              )}
+            />
           </Form.Item>
           <Form.Item label="Nombre visible (opcional)" name="nombre_visible">
             <Input placeholder="Nombre personalizado en la empresa" maxLength={120} />
           </Form.Item>
-          <Form.Item label="Marcar como convenio por defecto" name="es_defecto" valuePropName="checked">
+          <Form.Item
+            label={(
+              <span className="config-convenio-defecto-label">
+                Marcar como convenio por defecto
+                <InfoConvenioDefecto />
+              </span>
+            )}
+            name="es_defecto"
+            valuePropName="checked"
+          >
             <Switch />
           </Form.Item>
         </Form>
