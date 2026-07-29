@@ -1,9 +1,49 @@
 .trial-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   flex-shrink: 0;
+  min-height: 40px;
+  padding: 8px 16px;
+  background: color-mix(in srgb, var(--primary) 14%, white);
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 28%, white);
+  color: var(--color-dark);
 }
 
-.trial-status-banner .ant-alert-banner {
-  border-radius: 0;
-  border-left: none;
-  border-right: none;
+.trial-status-banner--urgente {
+  background: color-mix(in srgb, var(--primary) 22%, white);
+  border-bottom-color: color-mix(in srgb, var(--primary) 38%, white);
+}
+
+.trial-status-banner__text {
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trial-status-banner__action {
+  flex-shrink: 0;
+  padding: 0;
+  height: auto;
+  font-weight: 600;
+  color: var(--primary-dark) !important;
+}
+
+.trial-status-banner__action:hover {
+  color: var(--color-secondary-dark) !important;
+}
+
+@media (max-width: 640px) {
+  .trial-status-banner {
+    justify-content: flex-start;
+    padding-inline: 12px;
+  }
+
+  .trial-status-banner__text {
+    white-space: normal;
+    text-align: left;
+  }
 }
