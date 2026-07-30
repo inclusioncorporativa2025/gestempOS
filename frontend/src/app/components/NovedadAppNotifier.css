@@ -61,12 +61,12 @@
   color: #722ed1;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
 }
 
-.novedad-notifier__badge .anticon {
-  font-size: 13px;
+.novedad-notifier__badge-icon {
+  flex-shrink: 0;
+  display: block;
 }
 
 .novedad-notifier__fecha {
@@ -133,7 +133,6 @@
   display: flex;
   justify-content: flex-end;
   padding: 16px 20px 18px;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
   margin-top: 14px;
   background: rgba(246, 242, 250, 0.45);
 }
@@ -166,7 +165,6 @@
 .novedad-notifier-modal .ant-modal-footer {
   padding: 16px 20px 20px;
   margin-top: 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
   background: rgba(246, 242, 250, 0.45);
 }
 

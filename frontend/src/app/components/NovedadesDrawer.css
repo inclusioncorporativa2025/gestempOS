@@ -33,6 +33,11 @@
   color: #722ed1;
 }
 
+.novedades-drawer__sello {
+  flex-shrink: 0;
+  display: block;
+}
+
 .novedades-drawer__item-top .ant-typography {
   flex: 1;
   color: inherit;

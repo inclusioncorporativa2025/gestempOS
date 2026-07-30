@@ -4,7 +4,6 @@ import {
   SearchOutlined,
   MailOutlined,
   BellOutlined,
-  RocketOutlined,
 } from '@ant-design/icons';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
@@ -16,6 +15,7 @@ import { puedeVerFichaPersonal } from '../../utils/tipoUsuarioLabel';
 import { useAuth } from '../../config/AuthContext';
 import HeaderEmpresaMenu from './HeaderEmpresaMenu';
 import NovedadesDrawer from './NovedadesDrawer';
+import NuevoSelloIcon from './NuevoSelloIcon';
 import './Header.css';
 
 const { Header } = Layout;
@@ -122,7 +122,7 @@ const MyHeader = () => {
           aria-label={novedadesPendientes > 0 ? 'Novedades sin leer' : 'Novedades de la app'}
         >
           <Badge dot={novedadesPendientes > 0} color="#722ed1">
-            <RocketOutlined />
+            <NuevoSelloIcon className="app-header-novedades-icon" size={20} />
           </Badge>
         </button>
 

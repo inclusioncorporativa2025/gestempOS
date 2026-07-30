@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, Drawer, Empty, Tag, Typography } from 'antd';
-import { RocketOutlined } from '@ant-design/icons';
 import { listarNovedades, marcarNovedadVista } from '../../features/novedades/novedadesService';
 import { notifyNovedadesActualizadas } from '../../hooks/useNovedadPendiente';
+import NuevoSelloIcon from './NuevoSelloIcon';
 import './NovedadesDrawer.css';
 
 const { Text, Paragraph } = Typography;
@@ -80,7 +80,7 @@ const NovedadesDrawer = ({ open, onClose }) => {
                   onClick={() => setExpandida(abierta ? null : item.id_novedad)}
                 >
                   <div className="novedades-drawer__item-top">
-                    <RocketOutlined aria-hidden />
+                    <NuevoSelloIcon className="novedades-drawer__sello" size={18} />
                     <Text strong>{item.titulo}</Text>
                     {!item.vista && <Tag color="purple">Nueva</Tag>}
                   </div>
