@@ -33,17 +33,18 @@ CREATE TABLE IF NOT EXISTS notificaciones_app_novedades (
 -- 2) Novedades vistas por usuario
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS notificaciones_app_novedades_vistas (
-  id                        INT NOT NULL AUTO_INCREMENT,
+  id_vista                  INT NOT NULL AUTO_INCREMENT,
   id_usuario                INT NOT NULL,
   id_novedad                INT NOT NULL,
   fecha_vista               DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  UNIQUE KEY uq_novedad_usuario (id_usuario, id_novedad),
-  KEY idx_novedad_vista_usuario (id_usuario),
-  CONSTRAINT fk_novedad_vista_usuario
+  PRIMARY KEY (id_vista),
+  UNIQUE KEY uq_notif_app_nov_vista (id_usuario, id_novedad),
+  KEY idx_notif_app_nov_vista_usuario (id_usuario),
+  KEY fk_notif_app_nov_vista_novedad (id_novedad),
+  CONSTRAINT fk_notif_app_nov_vista_usuario
     FOREIGN KEY (id_usuario) REFERENCES m_usuarios (id_usuario)
     ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT fk_novedad_vista_novedad
+  CONSTRAINT fk_notif_app_nov_vista_novedad
     FOREIGN KEY (id_novedad) REFERENCES notificaciones_app_novedades (id_novedad)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

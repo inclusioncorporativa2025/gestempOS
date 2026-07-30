@@ -2,7 +2,7 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
 
 const NotificacionAppNovedadVista = sequelize.define('NotificacionAppNovedadVista', {
-  id: {
+  id_vista: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
