@@ -148,6 +148,11 @@
   font-size: 1.1rem;
 }
 
+.app-header-novedades-icon {
+  display: block;
+  flex-shrink: 0;
+}
+
 /* Iconos de acción */
 
 .app-header-icon-btn {

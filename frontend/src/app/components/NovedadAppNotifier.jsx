@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Button, Modal, Typography } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
 import { useNovedadPendiente } from '../../hooks/useNovedadPendiente';
-import NuevoSelloIcon from './NuevoSelloIcon';
+import NovedadesRocketIcon from './NovedadesRocketIcon';
 import './NovedadAppNotifier.css';
 
 const { Title, Text, Paragraph } = Typography;
@@ -23,7 +23,7 @@ const NovedadContenido = ({ novedad, onClose, showClose = false }) => (
     <div className="novedad-notifier__header">
       <div className="novedad-notifier__header-main">
         <span className="novedad-notifier__badge">
-          <NuevoSelloIcon className="novedad-notifier__badge-icon" size={22} />
+          <NovedadesRocketIcon className="novedad-notifier__badge-icon" size={18} />
           Centro de novedades
         </span>
         {novedad.fecha_publicacion && (
