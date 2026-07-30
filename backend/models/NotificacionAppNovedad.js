@@ -8,6 +8,10 @@ const NotificacionAppNovedad = sequelize.define('NotificacionAppNovedad', {
     autoIncrement: true,
     allowNull: false,
   },
+  codigo: {
+    type: DataTypes.STRING(40),
+    allowNull: false,
+  },
   titulo: {
     type: DataTypes.STRING(120),
     allowNull: false,

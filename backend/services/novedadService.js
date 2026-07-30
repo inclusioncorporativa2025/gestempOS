@@ -13,11 +13,42 @@ const parseCsv = (value) => {
     .filter(Boolean);
 };
 
+const slugifyCodigo = (text) => String(text)
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '')
+  .slice(0, 40);
+
+const normalizarCodigo = (value) => {
+  const codigo = slugifyCodigo(value);
+  return codigo || null;
+};
+
+const generarCodigoUnico = async (baseText, { excludeId = null } = {}) => {
+  const base = normalizarCodigo(baseText) || `novedad-${Date.now()}`;
+  let codigo = base;
+  let suffix = 1;
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const where = { codigo, fecha_baja: null };
+    if (excludeId) where.id_novedad = { [Op.ne]: excludeId };
+    // eslint-disable-next-line no-await-in-loop
+    const exists = await NotificacionAppNovedad.findOne({ where, attributes: ['id_novedad'] });
+    if (!exists) return codigo;
+    suffix += 1;
+    codigo = `${base.slice(0, Math.max(1, 40 - String(suffix).length - 1))}-${suffix}`;
+  }
+};
+
 const mapNovedad = (row, extras = {}) => {
   if (!row) return null;
   const data = row.toJSON ? row.toJSON() : row;
   return {
     id_novedad: data.id_novedad,
+    codigo: data.codigo,
     titulo: data.titulo,
     resumen: data.resumen,
     contenido: data.contenido,
@@ -163,7 +194,25 @@ const crearNovedad = async (datos, idUsuarioAccion) => {
     throw error;
   }
 
+  const codigoExplicito = normalizarCodigo(datos.codigo);
+  let codigo;
+  if (codigoExplicito) {
+    const duplicado = await NotificacionAppNovedad.findOne({
+      where: { codigo: codigoExplicito, fecha_baja: null },
+      attributes: ['id_novedad'],
+    });
+    if (duplicado) {
+      const error = new Error('Ya existe una novedad con ese código');
+      error.status = 409;
+      throw error;
+    }
+    codigo = codigoExplicito;
+  } else {
+    codigo = await generarCodigoUnico(titulo);
+  }
+
   const row = await NotificacionAppNovedad.create({
+    codigo,
     titulo,
     resumen,
     contenido,
@@ -201,7 +250,23 @@ const actualizarNovedad = async (idNovedad, datos, idUsuarioAccion) => {
     throw error;
   }
 
+  let codigo = row.codigo;
+  if (datos.codigo != null) {
+    const codigoNuevo = normalizarCodigo(datos.codigo);
+    if (!codigoNuevo) {
+      const error = new Error('El código no es válido');
+      error.status = 400;
+      throw error;
+    }
+    if (codigoNuevo !== row.codigo) {
+      codigo = await generarCodigoUnico(codigoNuevo, { excludeId: idNovedad });
+    }
+  } else if (!row.codigo) {
+    codigo = await generarCodigoUnico(titulo, { excludeId: idNovedad });
+  }
+
   await row.update({
+    codigo,
     titulo,
     resumen,
     contenido,

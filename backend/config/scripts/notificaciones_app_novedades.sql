@@ -8,6 +8,7 @@
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS notificaciones_app_novedades (
   id_novedad                INT NOT NULL AUTO_INCREMENT,
+  codigo                    VARCHAR(40) NOT NULL,
   titulo                    VARCHAR(120) NOT NULL,
   resumen                   VARCHAR(300) NOT NULL,
   contenido                 TEXT NOT NULL,
@@ -24,6 +25,7 @@ CREATE TABLE IF NOT EXISTS notificaciones_app_novedades (
   fecha_baja                DATETIME NULL,
   usuario_baja              INT NULL,
   PRIMARY KEY (id_novedad),
+  UNIQUE KEY uq_novedades_codigo (codigo),
   KEY idx_novedades_activo_pub (activo, fecha_publicacion DESC, orden DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

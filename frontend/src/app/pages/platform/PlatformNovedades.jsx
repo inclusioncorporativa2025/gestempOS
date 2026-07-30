@@ -35,6 +35,7 @@ const FEATURES_OPCIONES = Object.keys(PLAN_FEATURES).map((key) => ({
 }));
 
 const formInicial = () => ({
+  codigo: '',
   titulo: '',
   resumen: '',
   contenido: '',
@@ -88,6 +89,7 @@ const PlatformNovedades = () => {
     form.setFieldsValue({
       ...formInicial(),
       titulo: record.titulo,
+      codigo: record.codigo || '',
       resumen: record.resumen,
       contenido: record.contenido,
       roles: arrayFromCsv(record.roles_permitidos),
@@ -105,6 +107,7 @@ const PlatformNovedades = () => {
       const values = await form.validateFields();
       setGuardando(true);
       const payload = {
+        codigo: values.codigo?.trim() || undefined,
         titulo: values.titulo,
         resumen: values.resumen,
         contenido: values.contenido,
@@ -144,6 +147,7 @@ const PlatformNovedades = () => {
   };
 
   const columns = [
+    { title: 'Código', dataIndex: 'codigo', key: 'codigo', width: 140, ellipsis: true },
     { title: 'Título', dataIndex: 'titulo', key: 'titulo', ellipsis: true },
     {
       title: 'Audiencia',
@@ -222,6 +226,14 @@ const PlatformNovedades = () => {
         destroyOnClose
       >
         <Form form={form} layout="vertical" preserve={false}>
+          <Form.Item
+            name="codigo"
+            label="Código"
+            extra="Opcional. Si lo dejas vacío se genera desde el título."
+            rules={[{ max: 40 }]}
+          >
+            <Input maxLength={40} placeholder="ej. convenios-vacaciones-2026" />
+          </Form.Item>
           <Form.Item name="titulo" label="Título" rules={[{ required: true, max: 120 }]}>
             <Input maxLength={120} showCount />
           </Form.Item>
