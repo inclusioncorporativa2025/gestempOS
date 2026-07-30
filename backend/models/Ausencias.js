@@ -73,6 +73,11 @@ const Ausencia = sequelize.define('ausencia', {
     allowNull: false,
     defaultValue: false,
   },
+  notificacion_gestor_vista: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true,
+  },
   tipo: {
     type: DataTypes.STRING(100),
     allowNull: true,

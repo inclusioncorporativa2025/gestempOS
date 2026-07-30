@@ -3,7 +3,7 @@ import {
   Button, Table, Menu, Spin,
   Typography, message, Tooltip, DatePicker, Popover, Badge, Radio, Tag,
 } from 'antd';
-import { EyeOutlined, FilterOutlined, CalendarOutlined, CloseOutlined } from '@ant-design/icons';
+import { EyeOutlined, FilterOutlined, CalendarOutlined, CloseOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -23,6 +23,7 @@ import { getIdUsuario, getNombreUsuario } from '../../utils/authSession';
 import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import { parseFechaFichaje } from '../../utils/fechaFichaje';
 import RegistroMensualModal from '../components/RegistroMensualModal';
+import EditarAusenciaModal from '../components/EditarAusenciaModal';
 import './Notificaciones.css';
 
 dayjs.locale('es');
@@ -112,6 +113,7 @@ const NotificacionesEmpleado = () => {
   const [estadoFiltroDraft, setEstadoFiltroDraft] = useState('todas');
   const [campoFechaRangoDraft, setCampoFechaRangoDraft] = useState('fecha_alta');
   const [activeTab, setActiveTab] = useState('horarios');
+  const [ausenciaEditando, setAusenciaEditando] = useState(null);
 
   const todasCorrecciones = useMemo(
     () => combinarCorrecciones(peticiones, historialEdiciones),
@@ -589,12 +591,31 @@ const NotificacionesEmpleado = () => {
         key: 'fecha_resolucion',
         render: (_, record) => formatearFecha(obtenerFechaResolucionItem(record)),
       },
+      {
+        title: 'Acciones',
+        key: 'acciones',
+        fixed: 'right',
+        width: 110,
+        render: (_, record) => {
+          if (!record.fecha_aceptacion || record.fecha_cancelacion) return '—';
+          return (
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              className="notif-btn-compact"
+              onClick={() => setAusenciaEditando(record)}
+            >
+              Editar
+            </Button>
+          );
+        },
+      },
     ];
 
     const ocultarPorEstado = {
-      pendientes: ['fecha_resolucion', 'motivo_rechazo'],
+      pendientes: ['fecha_resolucion', 'motivo_rechazo', 'acciones'],
       aprobadas: ['motivo_rechazo'],
-      rechazadas: [],
+      rechazadas: ['acciones'],
     };
     const ocultar = ocultarPorEstado[estadoFiltro];
     if (ocultar?.length) {
@@ -762,6 +783,16 @@ const NotificacionesEmpleado = () => {
         firmaCierreDetalle={firmaCierreDetalle}
         nombreEmpleado={detalleCierreContext?.nombreEmpleado}
         saldoBolsaEtiqueta="Saldo bolsa acumulado"
+      />
+
+      <EditarAusenciaModal
+        open={Boolean(ausenciaEditando)}
+        ausencia={ausenciaEditando}
+        onClose={() => setAusenciaEditando(null)}
+        onSuccess={() => {
+          fetchDatos();
+          notifyNotificacionesActualizadas();
+        }}
       />
     </div>
   );

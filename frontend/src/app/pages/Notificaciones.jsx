@@ -4,7 +4,7 @@ import {
   Typography, message, Popconfirm, Tooltip, DatePicker, Input, Popover, Badge, Radio, Tag, Select, Pagination
 } from 'antd';
 import GradientButton from '../components/shared/GradientButton';
-import { EyeOutlined, SearchOutlined, FilterOutlined, CalendarOutlined, CloseOutlined } from '@ant-design/icons';
+import { EyeOutlined, SearchOutlined, FilterOutlined, CalendarOutlined, CloseOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -39,9 +39,11 @@ import {
   getAusenciasPendientesEmpresa,
   getHistorialAusenciasEmpresa,
   responderAusencia,
+  marcarAusenciasModificadasVistasGestor,
   formatDiasAusencia,
 } from '../../features/ausencias/ausenciasService';
 import JustificanteAusenciaAcciones from '../components/JustificanteAusenciaAcciones';
+import EditarAusenciaModal from '../components/EditarAusenciaModal';
 import RegistroMensualModal from '../components/RegistroMensualModal';
 import { requiereJustificanteParaAprobar } from '../../constants/tiposAusencia';
 import './Notificaciones.css';
@@ -206,6 +208,7 @@ const [rechazoModalAbierto, setRechazoModalAbierto] = useState(false);
 const [rechazoTarget, setRechazoTarget] = useState(null);
 const [rechazando, setRechazando] = useState(false);
 const [formRechazo] = Form.useForm();
+const [ausenciaEditando, setAusenciaEditando] = useState(null);
 
   const todasCorrecciones = useMemo(
     () => combinarCorrecciones(peticiones, historialEdiciones),
@@ -338,6 +341,14 @@ const [formRechazo] = Form.useForm();
     setEstadoFiltroDraft('todas');
     setMobilePage(1);
   };
+
+  useEffect(() => {
+    if (activeTab === 'ausencias' && puedeVerAusencias) {
+      marcarAusenciasModificadasVistasGestor()
+        .then(() => notifyNotificacionesActualizadas())
+        .catch(() => {});
+    }
+  }, [activeTab, puedeVerAusencias]);
 
   useEffect(() => {
     const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
@@ -843,11 +854,34 @@ const setVisibleModalDetalles = async (info) => {
     );
   };
 
+  const refrescarAusencias = () => {
+    fetchAusenciasPendientes();
+    fetchHistorialAusencias();
+  };
+
+  const handleAusenciaEditada = () => {
+    refrescarAusencias();
+    notifyNotificacionesActualizadas();
+  };
+
   const renderAccionesAusencia = (record) => {
     const estado = obtenerEstado(record);
     const requiereDoc = record.requiere_justificante
       ?? requiereJustificanteParaAprobar(record.tipo);
     const cumpleJustificante = !requiereDoc || record.tiene_justificante;
+
+    if (estado === 'Aprobada') {
+      return (
+        <Button
+          size="small"
+          icon={<EditOutlined />}
+          className="notif-btn-compact"
+          onClick={() => setAusenciaEditando(record)}
+        >
+          Editar
+        </Button>
+      );
+    }
 
     if (estado !== 'Pendiente') {
       return <span className="notif-procesada">—</span>;
@@ -1011,11 +1045,22 @@ const setVisibleModalDetalles = async (info) => {
             />
           </div>
         </div>
-        {estado === 'Pendiente' && (
+        {estado === 'Pendiente' ? (
           <div className="notif-mobile-card__acciones">
             {renderAccionesAusencia(record)}
           </div>
-        )}
+        ) : estado === 'Aprobada' ? (
+          <div className="notif-mobile-card__acciones">
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              className="notif-btn-compact"
+              onClick={() => setAusenciaEditando(record)}
+            >
+              Editar
+            </Button>
+          </div>
+        ) : null}
       </article>
     );
   };
@@ -1302,7 +1347,7 @@ const setVisibleModalDetalles = async (info) => {
 
     const ocultarPorEstado = {
       pendientes: ['fecha_resolucion', 'motivo_rechazo'],
-      aprobadas: ['acciones', 'motivo_rechazo'],
+      aprobadas: ['motivo_rechazo'],
       rechazadas: ['acciones'],
     };
     const ocultar = ocultarPorEstado[estadoFiltro];
@@ -1504,6 +1549,13 @@ const setVisibleModalDetalles = async (info) => {
           </Form.Item>
         </Form>
       </Modal>
+
+      <EditarAusenciaModal
+        open={Boolean(ausenciaEditando)}
+        ausencia={ausenciaEditando}
+        onClose={() => setAusenciaEditando(null)}
+        onSuccess={handleAusenciaEditada}
+      />
     </div>
   );
 };

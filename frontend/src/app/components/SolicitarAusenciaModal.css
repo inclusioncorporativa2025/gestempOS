@@ -1,3 +1,8 @@
+.sol-ausencia-modal__tipo-bloqueado {
+  display: block;
+  margin-bottom: 12px;
+}
+
 .sol-ausencia-modal__justificante {
   display: flex;
   flex-direction: column;

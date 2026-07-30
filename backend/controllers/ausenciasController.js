@@ -44,6 +44,7 @@ const {
   esAusenciaVacaciones,
   registrarConsumoPorAusencia,
   calcularDiasConsumoAusencia,
+  reajustarConsumoVacacionesPorEdicion,
 } = require('../services/vacacionesService');
 const { vacacionesSoportaSaldo } = require('../utils/vacacionesCompat');
 
@@ -110,6 +111,7 @@ const mapAusenciaListado = (a, idUsuarioToken) => ({
   fecha_cancelacion: a.fecha_cancelacion,
   motivo_rechazo: a.motivo_rechazo,
   notificacion_vista: a.notificacion_vista,
+  notificacion_gestor_vista: a.notificacion_gestor_vista,
   dias: a.dias,
   es_propio: a.id_usuario === idUsuarioToken,
   requiere_justificante: a.requiere_justificante,
@@ -851,6 +853,192 @@ const descargarJustificanteAusencia = async (req, res) => {
   }
 };
 
+const editarAusencia = async (req, res) => {
+  const idEmpresa = Number(req.body?.idEmpresa || req.user.id_empresa);
+  const idAusencia = Number(req.body?.idAusencia);
+  const idUsuarioAccion = Number(req.user.id_usuario);
+  const {
+    fecha_desde,
+    fecha_hasta,
+    hora_ausencia_desde,
+    hora_ausencia_hasta,
+    comentario,
+    fraccion_dia,
+  } = req.body;
+
+  if (!idEmpresa || !idAusencia || !fecha_desde || !fecha_hasta) {
+    return res.status(400).json({ error: 'Faltan datos obligatorios' });
+  }
+
+  const desde = parseFechaAusencia(fecha_desde);
+  const hasta = parseFechaAusencia(fecha_hasta);
+  if (!desde.isValid() || !hasta.isValid()) {
+    return res.status(400).json({ error: 'Formato de fecha inválido. Use DD-MM-YYYY' });
+  }
+  if (hasta.isBefore(desde, 'day')) {
+    return res.status(400).json({ error: 'fecha_hasta no puede ser anterior a fecha_desde' });
+  }
+
+  try {
+    await assertEmpresaTieneFeature(idEmpresa, 'ausencias_basicas');
+    const soportaAprobacion = await ausenciasSoportaAprobacion();
+    if (!soportaAprobacion) {
+      return res.status(503).json({ error: 'La edición de ausencias no está disponible' });
+    }
+
+    const ausenciaRow = await Ausencias.findOne({
+      where: { empresa_id: idEmpresa, id_ausencia: idAusencia, fecha_baja: null },
+    });
+    if (!ausenciaRow) {
+      return res.status(404).json({ error: 'Solicitud de ausencia no encontrada' });
+    }
+
+    const ausenciaAntes = ausenciaRow.toJSON ? ausenciaRow.toJSON() : ausenciaRow;
+
+    if (!ausenciaAntes.fecha_aceptacion || ausenciaAntes.fecha_cancelacion) {
+      return res.status(409).json({ error: 'Solo se pueden editar ausencias aprobadas' });
+    }
+
+    if (!usuarioPuedeGestionarAusencia(req.user.tipo_usuario, idUsuarioAccion, ausenciaAntes)) {
+      return res.status(403).json({ error: 'No puedes editar esta ausencia' });
+    }
+
+    const tipoNormalizado = String(ausenciaAntes.tipo || '').trim();
+    if (requiereComentario(tipoNormalizado) && !String(comentario ?? ausenciaAntes.comentarios ?? '').trim()) {
+      return res.status(400).json({ error: 'El comentario es obligatorio para el tipo «Otros»' });
+    }
+
+    const fechaDesdeGuardar = desde.format('DD-MM-YYYY');
+    const fechaHastaGuardar = hasta.format('DD-MM-YYYY');
+
+    const ausenciasActivas = await Ausencias.findAll({
+      where: {
+        empresa_id: idEmpresa,
+        id_usuario: ausenciaAntes.id_usuario,
+        fecha_baja: null,
+        id_ausencia: { [Op.ne]: idAusencia },
+      },
+      raw: true,
+    });
+
+    const conflicto = ausenciasActivas.find((a) => {
+      if (esAusenciaRechazada(a)) return false;
+      if (soportaAprobacion && esAusenciaPendiente(a, soportaAprobacion)) return true;
+      if (soportaAprobacion && !a.fecha_aceptacion) return false;
+      const otroDesde = parseFechaAusencia(a.fecha_desde);
+      const otroHasta = parseFechaAusencia(a.fecha_hasta);
+      if (!otroDesde.isValid() || !otroHasta.isValid()) return false;
+      return rangosSolapan(desde, hasta, otroDesde, otroHasta);
+    });
+
+    if (conflicto) {
+      return res.status(400).json({
+        error: 'La ausencia se superpone con otra existente',
+        detalle: `${conflicto.tipo || 'Ausencia'} (${conflicto.fecha_desde} – ${conflicto.fecha_hasta})`,
+      });
+    }
+
+    const esEmpleadoEditor = idUsuarioAccion === Number(ausenciaAntes.id_usuario);
+    const esGestorEditor = ROLE_GROUPS.COMPANY_STAFF.includes(Number(req.user.tipo_usuario))
+      && !esEmpleadoEditor;
+
+    const updateData = {
+      fecha_desde: fechaDesdeGuardar,
+      fecha_hasta: fechaHastaGuardar,
+      hora_ausencia_desde: hora_ausencia_desde || null,
+      hora_ausencia_hasta: hora_ausencia_hasta || null,
+      fraccion_dia: fraccion_dia ? String(fraccion_dia).trim().toLowerCase() : null,
+      comentarios: comentario != null ? comentario : ausenciaAntes.comentarios,
+      notificacion_vista: esGestorEditor ? false : ausenciaAntes.notificacion_vista,
+      notificacion_gestor_vista: esEmpleadoEditor ? false : (ausenciaAntes.notificacion_gestor_vista ?? true),
+    };
+
+    if (esAusenciaVacaciones(ausenciaAntes)) {
+      try {
+        await reajustarConsumoVacacionesPorEdicion(
+          idEmpresa,
+          ausenciaAntes,
+          { ...ausenciaAntes, ...updateData },
+          idUsuarioAccion,
+        );
+      } catch (error) {
+        if (error.code === 'SALDO_VACACIONES_INSUFICIENTE') {
+          return res.status(400).json({
+            error: error.message,
+            code: error.code,
+            disponibles: error.disponibles,
+            solicitados: error.solicitados,
+          });
+        }
+        throw error;
+      }
+    }
+
+    await Ausencias.update(updateData, {
+      where: { empresa_id: idEmpresa, id_ausencia: idAusencia },
+    });
+
+    if (esEmpleadoEditor) {
+      const solicitante = await Usuario.findOne({
+        where: { id_usuario: ausenciaAntes.id_usuario },
+        attributes: ['nombre'],
+        raw: true,
+      });
+      const destinatarios = await obtenerEmailsGestoresEmpresa(idEmpresa);
+      const detalleAusencia = `${tipoNormalizado}: ${fechaDesdeGuardar} – ${fechaHastaGuardar}`;
+      try {
+        await enviarNotificacionGestion({
+          destinatarios,
+          tipo: 'modificacion_ausencia',
+          nombreSolicitante: solicitante?.nombre,
+          detalleAusencia,
+        });
+      } catch (mailError) {
+        console.error('[editarAusencia] Error enviando correo:', mailError.message);
+      }
+    }
+
+    const enriquecida = await enriquecerAusenciasCompleto(idEmpresa, [{
+      ...ausenciaAntes,
+      ...updateData,
+    }]);
+
+    res.status(200).json({
+      message: 'Ausencia actualizada correctamente',
+      ausencia: mapAusenciaListado(enriquecida[0], idUsuarioAccion),
+    });
+  } catch (error) {
+    console.error('Error al editar ausencia:', error);
+    res.status(500).json({ error: 'Error al editar la ausencia' });
+  }
+};
+
+const marcarAusenciasModificadasVistasGestor = async (req, res) => {
+  const idEmpresa = Number(req.body?.idEmpresa || req.user.id_empresa);
+  if (!idEmpresa) {
+    return res.status(403).json({ error: 'Usuario sin empresa asignada' });
+  }
+
+  try {
+    const [actualizadas] = await Ausencias.update(
+      { notificacion_gestor_vista: true },
+      {
+        where: {
+          empresa_id: idEmpresa,
+          fecha_baja: null,
+          fecha_aceptacion: { [Op.ne]: null },
+          notificacion_gestor_vista: false,
+        },
+      },
+    );
+
+    res.status(200).json({ message: 'Modificaciones marcadas como vistas', actualizadas });
+  } catch (error) {
+    console.error('Error al marcar modificaciones vistas:', error);
+    res.status(500).json({ error: 'Error al marcar modificaciones' });
+  }
+};
+
 module.exports = {
   getAusenciasByIdUsuario,
   crearAusencia,
@@ -861,6 +1049,8 @@ module.exports = {
   getAusenciasNotificacionesEmpleado,
   responderAusencia,
   marcarAusenciasVistas,
+  editarAusencia,
+  marcarAusenciasModificadasVistasGestor,
   subirJustificanteAusencia,
   listarJustificantesAusencia,
   descargarJustificanteAusencia,

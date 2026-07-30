@@ -101,6 +101,56 @@ export const responderAusencia = async (ausencia, estado, motivoRechazo) => {
   return data;
 };
 
+export const editarAusencia = async ({
+  idAusencia,
+  fecha_desde,
+  fecha_hasta,
+  hora_ausencia_desde,
+  hora_ausencia_hasta,
+  comentario,
+  fraccion_dia,
+}) => {
+  const idEmpresa = getIdEmpresa();
+  const response = await fetch(`${API_BASE_URL}/editarAusencia`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      idEmpresa,
+      idAusencia,
+      fecha_desde,
+      fecha_hasta,
+      hora_ausencia_desde,
+      hora_ausencia_hasta,
+      comentario,
+      fraccion_dia,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const err = new Error(data.error || 'Error al editar la ausencia');
+    err.code = data.code;
+    err.disponibles = data.disponibles;
+    err.solicitados = data.solicitados;
+    if (data.detalle) err.detalle = data.detalle;
+    throw err;
+  }
+  return data;
+};
+
+export const marcarAusenciasModificadasVistasGestor = async () => {
+  const idEmpresa = getIdEmpresa();
+  const response = await fetch(`${API_BASE_URL}/marcarAusenciasModificadasVistasGestor`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idEmpresa }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || 'Error al marcar modificaciones vistas');
+  }
+  return data;
+};
+
 // Servicio para crear una ausencia
 export const crearAusencia = async (
   idUsuario,

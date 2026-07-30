@@ -411,6 +411,17 @@ const enviarNotificacionGestion = async ({
         Por favor, revísela desde la aplicación, en la pestaña <strong>Notificaciones</strong>,
         y gestione su aprobación o denegación.
       </p>`;
+  } else if (tipo === 'modificacion_ausencia') {
+    subject = 'Ausencia aprobada modificada';
+    cuerpo = `
+      <p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#333;">
+        <strong>${escapeHtml(nombreSolicitante || 'Un miembro del personal')}</strong>
+        ha modificado una ausencia ya aprobada
+        ${detalleAusencia ? `(<strong>${escapeHtml(detalleAusencia)}</strong>)` : ''}.
+      </p>
+      <p style="margin:0; font-size:15px; line-height:1.6; color:#333;">
+        Revise el cambio en la aplicación, pestaña <strong>Notificaciones → Ausencias</strong>.
+      </p>`;
   } else {
     throw new Error(`Tipo de notificación desconocido: ${tipo}`);
   }

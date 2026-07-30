@@ -41,3 +41,59 @@
 .platform-acceder__form {
   max-width: 400px;
 }
+
+.platform-novedades__acciones .ant-btn {
+  width: 32px;
+  height: 32px;
+}
+
+.platform-novedades-preview__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.platform-novedades-preview__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.platform-novedades-preview__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #722ed1;
+}
+
+.platform-novedades-preview__fecha {
+  font-size: 12px;
+}
+
+.platform-novedades-preview__titulo {
+  margin: 0 !important;
+}
+
+.platform-novedades-preview__resumen {
+  margin-bottom: 0 !important;
+}
+
+.platform-novedades-preview__contenido p {
+  margin: 0 0 8px;
+  line-height: 1.6;
+}
+
+.platform-novedades-preview__contenido p:last-child {
+  margin-bottom: 0;
+}
+
+.platform-novedades-preview__meta {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 12px;
+}

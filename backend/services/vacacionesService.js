@@ -12,6 +12,7 @@ const {
   redondearDias,
 } = require('./vacacionesConteoService');
 const { resolverConvenioUsuario } = require('./convenioService');
+const { empresaTieneFeature } = require('./planService');
 
 dayjs.extend(customParseFormat);
 
@@ -177,9 +178,12 @@ const registrarConsumoPorAusencia = async (
   idEmpresa,
   ausencia,
   idUsuarioGestor,
+  { omitirDuplicado = false } = {},
 ) => {
-  const yaExiste = await existeConsumoAusencia(idEmpresa, ausencia.id_ausencia);
-  if (yaExiste) return null;
+  if (!omitirDuplicado) {
+    const yaExiste = await existeConsumoAusencia(idEmpresa, ausencia.id_ausencia);
+    if (yaExiste) return null;
+  }
 
   const diasConsumo = await calcularDiasConsumoAusencia(ausencia, idEmpresa);
   if (!diasConsumo) return null;
@@ -216,6 +220,62 @@ const registrarConsumoPorAusencia = async (
     usuario_alta: idUsuarioGestor,
     fecha_alta: new Date(),
   });
+};
+
+const obtenerConsumoActivoAusencia = async (idEmpresa, idAusencia) =>
+  UsuarioVacacionesMovimiento.findOne({
+    where: {
+      empresa_id: idEmpresa,
+      id_ausencia: idAusencia,
+      tipo_movimiento: TIPO_CONSUMO,
+      fecha_baja: null,
+    },
+    raw: true,
+  });
+
+const reajustarConsumoVacacionesPorEdicion = async (
+  idEmpresa,
+  ausenciaAnterior,
+  ausenciaNueva,
+  idUsuarioAccion,
+) => {
+  if (!esAusenciaVacaciones(ausenciaNueva)) return;
+
+  const permiteVacaciones = await empresaTieneFeature(idEmpresa, 'vacaciones');
+  const soportaSaldo = await vacacionesSoportaSaldo();
+  if (!permiteVacaciones || !soportaSaldo) return;
+
+  const consumoPrevio = await obtenerConsumoActivoAusencia(idEmpresa, ausenciaAnterior.id_ausencia);
+  const diasAntes = consumoPrevio
+    ? Math.abs(Number(consumoPrevio.dias))
+    : await calcularDiasConsumoAusencia(ausenciaAnterior, idEmpresa);
+  const diasDespues = await calcularDiasConsumoAusencia(ausenciaNueva, idEmpresa);
+
+  if (consumoPrevio && diasAntes > 0) {
+    await createConId(UsuarioVacacionesMovimiento, idEmpresa, 'id_movimiento', {
+      id_usuario: ausenciaNueva.id_usuario,
+      anio: consumoPrevio.anio,
+      dias: redondearDias(diasAntes),
+      tipo_movimiento: TIPO_ANULACION,
+      fraccion_dia: consumoPrevio.fraccion_dia,
+      fecha_disfrute: consumoPrevio.fecha_disfrute,
+      fecha_disfrute_hasta: consumoPrevio.fecha_disfrute_hasta,
+      id_ausencia: ausenciaNueva.id_ausencia,
+      id_usuario_gestor: idUsuarioAccion,
+      motivo: 'Anulación por edición de vacaciones aprobadas',
+      usuario_alta: idUsuarioAccion,
+      fecha_alta: new Date(),
+    });
+  }
+
+  if (diasDespues > 0) {
+    await registrarConsumoPorAusencia(
+      idEmpresa,
+      ausenciaNueva,
+      idUsuarioAccion,
+      { omitirDuplicado: true },
+    );
+  }
 };
 
 const registrarAjusteManual = async (
@@ -278,6 +338,7 @@ module.exports = {
   obtenerResumenVacaciones,
   guardarCupoAnio,
   registrarConsumoPorAusencia,
+  reajustarConsumoVacacionesPorEdicion,
   registrarAjusteManual,
   listarMovimientosVacaciones,
   listarCuposUsuario,

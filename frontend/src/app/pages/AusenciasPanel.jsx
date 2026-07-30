@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, Table, Tag, Input, Select, DatePicker, Empty, Spin, message, Button, Pagination } from 'antd';
-import { SearchOutlined, ReloadOutlined, PlusOutlined } from '@ant-design/icons';
+import { SearchOutlined, ReloadOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { getAusenciasListado, formatDiasAusencia } from '../../features/ausencias/ausenciasService';
@@ -11,6 +11,7 @@ import {
   getOpcionesFiltroAusencias,
 } from '../../constants/tiposAusencia';
 import SolicitarAusenciaModal from '../components/SolicitarAusenciaModal';
+import EditarAusenciaModal from '../components/EditarAusenciaModal';
 import JustificanteAusenciaAcciones from '../components/JustificanteAusenciaAcciones';
 import { GESTION_TIEMPO_REFRESH } from '../../hooks/useEstadoJornada';
 import './AusenciasPanel.css';
@@ -89,6 +90,7 @@ const AusenciasPanel = () => {
     [planId],
   );
   const [modalSolicitud, setModalSolicitud] = useState(false);
+  const [ausenciaEditando, setAusenciaEditando] = useState(null);
   const tipoUsuario = Number(getTipoUsuario());
   const puedeSolicitar = ROLES_PUEDEN_SOLICITAR.includes(tipoUsuario);
   const puedeRegistrarPersonal = ROLES_GESTOR_AUSENCIAS.includes(tipoUsuario);
@@ -244,6 +246,26 @@ const AusenciasPanel = () => {
         </span>
       ),
     },
+    {
+      title: 'Acciones',
+      key: 'acciones',
+      width: 110,
+      fixed: 'right',
+      render: (_, record) => {
+        if (record.fecha_aceptacion && !record.fecha_cancelacion) {
+          return (
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => setAusenciaEditando(record)}
+            >
+              Editar
+            </Button>
+          );
+        }
+        return '—';
+      },
+    },
   ];
 
   const renderAusenciaCard = (record) => {
@@ -310,6 +332,17 @@ const AusenciasPanel = () => {
               onActualizado={cargar}
             />
           </div>
+          {record.fecha_aceptacion && !record.fecha_cancelacion && (
+            <div className="aus-mobile-card__acciones">
+              <Button
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => setAusenciaEditando(record)}
+              >
+                Editar
+              </Button>
+            </div>
+          )}
         </div>
       </article>
     );
@@ -430,6 +463,13 @@ const AusenciasPanel = () => {
           onClose={() => setModalSolicitud(false)}
           onSuccess={() => cargar()}
           puedeRegistrarPersonal={puedeRegistrarPersonal}
+        />
+
+        <EditarAusenciaModal
+          open={Boolean(ausenciaEditando)}
+          ausencia={ausenciaEditando}
+          onClose={() => setAusenciaEditando(null)}
+          onSuccess={() => cargar()}
         />
 
         <Spin spinning={loading}>

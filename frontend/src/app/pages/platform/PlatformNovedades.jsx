@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Button, DatePicker, Form, Input, InputNumber, Modal, Select, Switch, Table, Tag, Typography, message,
+  Button, DatePicker, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tag, Tooltip, Typography, message,
 } from 'antd';
+import { EyeOutlined, EditOutlined, StopOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
   actualizarNovedadAdmin,
@@ -10,9 +11,10 @@ import {
   listarNovedadesAdmin,
 } from '../../../features/novedades/novedadesService';
 import { PLAN_FEATURES, PLAN_IDS } from '../../../constants/plans';
+import NovedadesRocketIcon from '../../components/NovedadesRocketIcon';
 import './Platform.css';
 
-const { Text } = Typography;
+const { Text, Title, Paragraph } = Typography;
 const { TextArea } = Input;
 
 const ROLES_OPCIONES = [
@@ -59,6 +61,7 @@ const PlatformNovedades = () => {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState(null);
+  const [previewNovedad, setPreviewNovedad] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [form] = Form.useForm();
 
@@ -180,18 +183,49 @@ const PlatformNovedades = () => {
     {
       title: 'Acciones',
       key: 'acciones',
-      width: 160,
+      width: 120,
+      fixed: 'right',
       render: (_, record) => (
-        <>
-          <Button type="link" size="small" onClick={() => abrirEditar(record)}>
-            Editar
-          </Button>
+        <Space size={2} className="platform-novedades__acciones">
+          <Tooltip title="Vista previa">
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              aria-label="Vista previa"
+              onClick={() => setPreviewNovedad(record)}
+            />
+          </Tooltip>
+          <Tooltip title="Editar">
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined />}
+              aria-label="Editar"
+              onClick={() => abrirEditar(record)}
+            />
+          </Tooltip>
           {record.activo && (
-            <Button type="link" size="small" danger onClick={() => handleBaja(record)}>
-              Baja
-            </Button>
+            <Popconfirm
+              title="¿Dar de baja esta novedad?"
+              description="Dejará de mostrarse a los usuarios."
+              okText="Dar de baja"
+              cancelText="Cancelar"
+              okButtonProps={{ danger: true }}
+              onConfirm={() => handleBaja(record)}
+            >
+              <Tooltip title="Dar de baja">
+                <Button
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<StopOutlined />}
+                  aria-label="Dar de baja"
+                />
+              </Tooltip>
+            </Popconfirm>
           )}
-        </>
+        </Space>
       ),
     },
   ];
@@ -262,6 +296,76 @@ const PlatformNovedades = () => {
             <Switch />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Vista previa"
+        open={Boolean(previewNovedad)}
+        onCancel={() => setPreviewNovedad(null)}
+        footer={[
+          <Button key="cerrar" onClick={() => setPreviewNovedad(null)}>
+            Cerrar
+          </Button>,
+          previewNovedad?.activo ? (
+            <Button
+              key="editar"
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={() => {
+                const record = previewNovedad;
+                setPreviewNovedad(null);
+                abrirEditar(record);
+              }}
+            >
+              Editar
+            </Button>
+          ) : null,
+        ].filter(Boolean)}
+        width={560}
+        destroyOnClose
+        className="platform-novedades-preview"
+      >
+        {previewNovedad && (
+          <div className="platform-novedades-preview__body">
+            <div className="platform-novedades-preview__header">
+              <span className="platform-novedades-preview__badge">
+                <NovedadesRocketIcon size={18} />
+                Centro de novedades
+              </span>
+              {previewNovedad.fecha_publicacion && (
+                <Text type="secondary" className="platform-novedades-preview__fecha">
+                  {new Date(previewNovedad.fecha_publicacion).toLocaleDateString('es-ES', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </Text>
+              )}
+            </div>
+            <Title level={4} className="platform-novedades-preview__titulo">
+              {previewNovedad.titulo}
+            </Title>
+            <Paragraph type="secondary" className="platform-novedades-preview__resumen">
+              {previewNovedad.resumen}
+            </Paragraph>
+            <div className="platform-novedades-preview__contenido">
+              {String(previewNovedad.contenido || '').split('\n').map((linea, index) => (
+                // eslint-disable-next-line react/no-array-index-key
+                <p key={index}>{linea || '\u00A0'}</p>
+              ))}
+            </div>
+            <div className="platform-novedades-preview__meta">
+              <Text type="secondary">
+                Roles: {previewNovedad.roles_permitidos || 'Todos'}
+                {' · '}
+                Planes: {previewNovedad.planes_permitidos || 'Todos'}
+                {previewNovedad.requiere_feature
+                  ? ` · Feature: ${previewNovedad.requiere_feature}`
+                  : ''}
+              </Text>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

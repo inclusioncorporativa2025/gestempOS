@@ -10,6 +10,8 @@ const {
   getAusenciasNotificacionesEmpleado,
   responderAusencia,
   marcarAusenciasVistas,
+  editarAusencia,
+  marcarAusenciasModificadasVistasGestor,
   subirJustificanteAusencia,
   listarJustificantesAusencia,
   descargarJustificanteAusencia,
@@ -38,6 +40,12 @@ router.post('/getAusenciasPendientesEmpresa', requireRole(ROLE_GROUPS.APROBACION
 router.post('/getHistorialAusenciasEmpresa', requireRole(ROLE_GROUPS.APROBACION_SOLICITUDES), getHistorialAusenciasEmpresa);
 router.post('/getAusenciasNotificacionesEmpleado', requireRole(ROLE_GROUPS.FICHAJE), getAusenciasNotificacionesEmpleado);
 router.post('/responderAusencia', requireRole(ROLE_GROUPS.APROBACION_SOLICITUDES), responderAusencia);
+router.post('/editarAusencia', requireRole(ROLE_GROUPS.FICHAJE), editarAusencia);
+router.post(
+  '/marcarAusenciasModificadasVistasGestor',
+  requireRole(ROLE_GROUPS.APROBACION_SOLICITUDES),
+  marcarAusenciasModificadasVistasGestor,
+);
 router.post('/marcarAusenciasVistas', requireRole(ROLE_GROUPS.FICHAJE), marcarAusenciasVistas);
 router.post('/crearAusencia', requireRole(ROLE_GROUPS.FICHAJE), crearAusencia);
 router.post(

@@ -1125,7 +1125,7 @@ const countNotificacionesPendientes = async (req, res) => {
     const soportaAprobacionAusencias = await ausenciasSoportaAprobacion();
     const permiteAusencias = await empresaTieneFeature(idEmpresa, 'ausencias_basicas');
 
-    const [correcciones, cierres, ausenciasPendientes] = await Promise.all([
+    const [correcciones, cierres, ausenciasPendientes, ausenciasModificadasGestor] = await Promise.all([
       Peticiones.count({
         where: {
           ...filtroEmpresa,
@@ -1151,13 +1151,24 @@ const countNotificacionesPendientes = async (req, res) => {
             },
           })
         : Promise.resolve(0),
+      soportaAprobacionAusencias && permiteAusencias
+        ? Ausencias.count({
+            where: {
+              ...filtroEmpresa,
+              fecha_baja: null,
+              fecha_aceptacion: { [Op.ne]: null },
+              notificacion_gestor_vista: false,
+            },
+          })
+        : Promise.resolve(0),
     ]);
 
     res.status(200).json({
       correcciones,
       cierres,
       ausencias: ausenciasPendientes,
-      total: correcciones + cierres + ausenciasPendientes,
+      ausencias_modificadas: ausenciasModificadasGestor,
+      total: correcciones + cierres + ausenciasPendientes + ausenciasModificadasGestor,
     });
   } catch (error) {
     console.error('Error al contar notificaciones pendientes:', error);
