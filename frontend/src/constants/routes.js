@@ -33,6 +33,7 @@ export const APP_ROUTES = {
   platformAccesos: '/platform/accesos',
   platformAcceder: '/platform/acceder',
   platformConvenios: '/platform/convenios',
+  platformNovedades: '/platform/novedades',
   platformEmpresas: '/platform/empresas',
   notifications: '/notifications',
   miPerfil: '/mi-perfil',

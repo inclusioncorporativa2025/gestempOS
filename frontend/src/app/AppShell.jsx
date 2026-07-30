@@ -50,10 +50,12 @@ import Notificaciones from './pages/Notificaciones';
 import PlatformLayout from './pages/platform/PlatformLayout';
 import PlatformAccesos from './pages/platform/PlatformAccesos';
 import PlatformConvenios from './pages/platform/PlatformConvenios';
+import PlatformNovedades from './pages/platform/PlatformNovedades';
 import PlatformAcceder from './pages/platform/PlatformAcceder';
 import ImpersonationBanner from './components/ImpersonationBanner';
 import TrialStatusBanner from './components/TrialStatusBanner';
 import TrialExpiredGate from './components/TrialExpiredGate';
+import NovedadAppNotifier from './components/NovedadAppNotifier';
 import FacturacionPage from './pages/facturacion/FacturacionPage';
 import FacturacionExito from './pages/facturacion/FacturacionExito';
 import FacturacionCancelado from './pages/facturacion/FacturacionCancelado';
@@ -485,6 +487,14 @@ const AppShell = () => {
                       </ProtectedRoute>
                     }
                   />
+                  <Route
+                    path="novedades"
+                    element={
+                      <ProtectedRoute allowedTypes={[1]}>
+                        <PlatformNovedades />
+                      </ProtectedRoute>
+                    }
+                  />
                 </Route>
                 <Route
                   path="/companies"
@@ -582,6 +592,7 @@ const AppShell = () => {
       </Layout>
 
       <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
+      {user && !isAuthShellPage && <NovedadAppNotifier />}
       {user && !isAuthShellPage && puedeFichar && <PausaBloqueoOverlay />}
     </ConfigProvider>
   );

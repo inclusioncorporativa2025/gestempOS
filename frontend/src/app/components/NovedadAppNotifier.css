@@ -1,0 +1,122 @@
+.novedad-notifier {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1100;
+  width: min(400px, calc(100vw - 48px));
+  padding: 20px 20px 16px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow:
+    0 12px 40px rgba(80, 40, 120, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(168, 92, 224, 0.12);
+  transform: translateY(calc(100% + 32px));
+  opacity: 0;
+  transition:
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.32s ease;
+  pointer-events: none;
+}
+
+.novedad-notifier--visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.novedad-notifier__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.novedad-notifier__close:hover {
+  background: rgba(168, 92, 224, 0.08);
+  color: #722ed1;
+}
+
+.novedad-notifier__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #722ed1;
+}
+
+.novedad-notifier__fecha {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.novedad-notifier__titulo {
+  margin: 0 0 8px !important;
+  padding-right: 24px;
+  font-size: 18px !important;
+  line-height: 1.35 !important;
+}
+
+.novedad-notifier__resumen {
+  margin-bottom: 12px !important;
+  font-size: 14px;
+}
+
+.novedad-notifier__contenido {
+  max-height: 220px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(0, 0, 0, 0.78);
+}
+
+.novedad-notifier__contenido p {
+  margin: 0 0 8px;
+}
+
+.novedad-notifier__contenido p:last-child {
+  margin-bottom: 0;
+}
+
+.novedad-notifier__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.novedad-notifier-modal .ant-modal-content {
+  border-radius: 16px;
+  padding: 20px 20px 16px;
+}
+
+.novedad-notifier-modal .ant-modal-body {
+  padding: 0 0 8px;
+}
+
+.novedad-notifier-modal .novedad-notifier__titulo {
+  padding-right: 0;
+}
+
+.novedad-notifier-modal .novedad-notifier__contenido {
+  max-height: 50vh;
+}
+
+@media (max-width: 949px) {
+  .novedad-notifier {
+    display: none;
+  }
+}

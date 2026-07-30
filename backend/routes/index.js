@@ -13,6 +13,7 @@ const billingRoutes = require('./billingRoutes');
 const whatsappRoutes = require('./whatsappRoutes');
 const landingRoutes = require('./landingRoutes');
 const convenioRoutes = require('./convenioRoutes');
+const novedadRoutes = require('./novedadRoutes');
 const { requireAuth, requireOwnEmpresa } = require('../middleware/authMiddleware');
 
 /** Rutas con ámbito de empresa: el JWT debe coincidir con idEmpresa del body (tipos 3–6) */
@@ -28,6 +29,7 @@ const configureRoutes = (app) => {
   app.use('/api/ausencias', ...empresaScope, ausenciasRoutes);
   app.use('/api/vacaciones', ...empresaScope, vacacionesRoutes);
   app.use('/api/convenios', ...empresaScope, convenioRoutes);
+  app.use('/api/novedades', requireAuth, novedadRoutes);
   app.use('/api/nominas', ...empresaScope, nominasRoutes);
   app.use('/api/support', supportRoutes);
   app.use('/api/platform', requireAuth, platformRoutes);

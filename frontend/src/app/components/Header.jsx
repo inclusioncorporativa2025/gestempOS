@@ -4,15 +4,18 @@ import {
   SearchOutlined,
   MailOutlined,
   BellOutlined,
+  RocketOutlined,
 } from '@ant-design/icons';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { useEstadoJornada } from '../../hooks/useEstadoJornada';
 import { useNotificacionesPendientes } from '../../hooks/useNotificacionesPendientes';
+import { useNovedadPendiente } from '../../hooks/useNovedadPendiente';
 import { getTipoUsuario } from '../../utils/authSession';
 import { puedeVerFichaPersonal } from '../../utils/tipoUsuarioLabel';
 import { useAuth } from '../../config/AuthContext';
 import HeaderEmpresaMenu from './HeaderEmpresaMenu';
+import NovedadesDrawer from './NovedadesDrawer';
 import './Header.css';
 
 const { Header } = Layout;
@@ -31,6 +34,8 @@ const MyHeader = () => {
   const [searchValue, setSearchValue] = useState('');
   const { estadoJornada, horasTrabajadas, refetch } = useEstadoJornada();
   const { pendientes: hayNotificacionesPendientes } = useNotificacionesPendientes();
+  const { pendientes: novedadesPendientes } = useNovedadPendiente({ autoFetch: true });
+  const [novedadesDrawerOpen, setNovedadesDrawerOpen] = useState(false);
 
   const enHome = esRutaFichaje(location.pathname);
   const mostrarJornadaEnHeader =
@@ -110,6 +115,17 @@ const MyHeader = () => {
           <MailOutlined />
         </button>
 
+        <button
+          type="button"
+          className="app-header-icon-btn"
+          onClick={() => setNovedadesDrawerOpen(true)}
+          aria-label={novedadesPendientes > 0 ? 'Novedades sin leer' : 'Novedades de la app'}
+        >
+          <Badge dot={novedadesPendientes > 0} color="#722ed1">
+            <RocketOutlined />
+          </Badge>
+        </button>
+
         <Link
           to={APP_ROUTES.notifications}
           className="app-header-icon-btn app-header-notificaciones"
@@ -124,6 +140,11 @@ const MyHeader = () => {
 
         <HeaderEmpresaMenu label={displayName} />
       </div>
+
+      <NovedadesDrawer
+        open={novedadesDrawerOpen}
+        onClose={() => setNovedadesDrawerOpen(false)}
+      />
     </Header>
   );
 };

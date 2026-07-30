@@ -33,6 +33,7 @@ const PlatformLayout = () => {
       ];
       if (esRoot) {
         items.splice(1, 0, { key: APP_ROUTES.platformConvenios, label: 'Convenios' });
+        items.splice(2, 0, { key: APP_ROUTES.platformNovedades, label: 'Novedades' });
       }
       return items;
     },
@@ -47,11 +48,14 @@ const PlatformLayout = () => {
   const esEmpresas = location.pathname === APP_ROUTES.platformEmpresas;
   const esAccesos = location.pathname === APP_ROUTES.platformAccesos;
   const esConvenios = location.pathname === APP_ROUTES.platformConvenios;
+  const esNovedades = location.pathname === APP_ROUTES.platformNovedades;
 
   const subtitulo = esEmpresas
     ? 'Alta y administración de empresas cliente'
     : esConvenios
       ? 'Catálogo global de convenios colectivos'
+      : esNovedades
+        ? 'Centro de novedades segmentadas por rol y plan'
     : esAcceder
       ? 'Acceso temporal a cuentas de usuario por correo'
       : esAccesos
