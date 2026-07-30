@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, Table, Tag, Input, Select, DatePicker, Empty, Spin, message, Button, Pagination } from 'antd';
+import { Card, Table, Tag, Input, Select, DatePicker, Empty, Spin, message, Button, Pagination, Tooltip } from 'antd';
 import { SearchOutlined, ReloadOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
@@ -15,6 +15,7 @@ import EditarAusenciaModal from '../components/EditarAusenciaModal';
 import JustificanteAusenciaAcciones from '../components/JustificanteAusenciaAcciones';
 import { GESTION_TIEMPO_REFRESH } from '../../hooks/useEstadoJornada';
 import './AusenciasPanel.css';
+import '../components/shared/TableAcciones.css';
 
 dayjs.extend(customParseFormat);
 
@@ -249,18 +250,22 @@ const AusenciasPanel = () => {
     {
       title: 'Acciones',
       key: 'acciones',
-      width: 110,
+      width: 72,
       fixed: 'right',
       render: (_, record) => {
         if (record.fecha_aceptacion && !record.fecha_cancelacion) {
           return (
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => setAusenciaEditando(record)}
-            >
-              Editar
-            </Button>
+            <div className="tbl-acciones">
+              <Tooltip title="Editar">
+                <Button
+                  type="text"
+                  icon={<EditOutlined />}
+                  className="tbl-accion-btn tbl-accion-btn--edit"
+                  aria-label="Editar"
+                  onClick={() => setAusenciaEditando(record)}
+                />
+              </Tooltip>
+            </div>
           );
         }
         return '—';
@@ -334,13 +339,17 @@ const AusenciasPanel = () => {
           </div>
           {record.fecha_aceptacion && !record.fecha_cancelacion && (
             <div className="aus-mobile-card__acciones">
-              <Button
-                size="small"
-                icon={<EditOutlined />}
-                onClick={() => setAusenciaEditando(record)}
-              >
-                Editar
-              </Button>
+              <div className="tbl-acciones">
+                <Tooltip title="Editar">
+                  <Button
+                    type="text"
+                    icon={<EditOutlined />}
+                    className="tbl-accion-btn tbl-accion-btn--edit"
+                    aria-label="Editar"
+                    onClick={() => setAusenciaEditando(record)}
+                  />
+                </Tooltip>
+              </div>
             </div>
           )}
         </div>

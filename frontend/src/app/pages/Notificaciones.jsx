@@ -47,6 +47,7 @@ import EditarAusenciaModal from '../components/EditarAusenciaModal';
 import RegistroMensualModal from '../components/RegistroMensualModal';
 import { requiereJustificanteParaAprobar } from '../../constants/tiposAusencia';
 import './Notificaciones.css';
+import '../components/shared/TableAcciones.css';
 
 dayjs.locale('es');
 dayjs.extend(utc);
@@ -872,14 +873,17 @@ const setVisibleModalDetalles = async (info) => {
 
     if (estado === 'Aprobada') {
       return (
-        <Button
-          size="small"
-          icon={<EditOutlined />}
-          className="notif-btn-compact"
-          onClick={() => setAusenciaEditando(record)}
-        >
-          Editar
-        </Button>
+        <div className="tbl-acciones">
+          <Tooltip title="Editar">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              className="tbl-accion-btn tbl-accion-btn--edit"
+              aria-label="Editar"
+              onClick={() => setAusenciaEditando(record)}
+            />
+          </Tooltip>
+        </div>
       );
     }
 
@@ -1051,14 +1055,17 @@ const setVisibleModalDetalles = async (info) => {
           </div>
         ) : estado === 'Aprobada' ? (
           <div className="notif-mobile-card__acciones">
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              className="notif-btn-compact"
-              onClick={() => setAusenciaEditando(record)}
-            >
-              Editar
-            </Button>
+            <div className="tbl-acciones">
+              <Tooltip title="Editar">
+                <Button
+                  type="text"
+                  icon={<EditOutlined />}
+                  className="tbl-accion-btn tbl-accion-btn--edit"
+                  aria-label="Editar"
+                  onClick={() => setAusenciaEditando(record)}
+                />
+              </Tooltip>
+            </div>
           </div>
         ) : null}
       </article>

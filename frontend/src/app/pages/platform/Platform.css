@@ -42,11 +42,6 @@
   max-width: 400px;
 }
 
-.platform-novedades__acciones .ant-btn {
-  width: 32px;
-  height: 32px;
-}
-
 .platform-novedades-preview__body {
   display: flex;
   flex-direction: column;

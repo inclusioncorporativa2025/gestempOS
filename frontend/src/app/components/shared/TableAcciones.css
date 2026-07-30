@@ -1,0 +1,42 @@
+/* Botones de acción en tablas (mismo patrón que /users) */
+.tbl-acciones {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tbl-accion-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #5a6472;
+  border-radius: 8px;
+}
+
+.tbl-accion-btn:hover {
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.08) !important;
+}
+
+.tbl-accion-btn--edit {
+  color: var(--color-primary);
+}
+
+.tbl-accion-btn--edit:hover {
+  color: var(--color-primary-dark) !important;
+  background: rgba(var(--color-primary-rgb), 0.12) !important;
+}
+
+.tbl-accion-btn.ant-btn-dangerous {
+  color: #cf4a4a;
+}
+
+.tbl-accion-btn.ant-btn-dangerous:hover {
+  color: #e86a6a !important;
+  background: rgba(207, 74, 74, 0.1) !important;
+}

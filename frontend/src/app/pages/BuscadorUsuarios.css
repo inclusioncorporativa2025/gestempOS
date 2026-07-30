@@ -154,48 +154,6 @@
   margin-right: 26px;
 }
 
-.bu-acciones {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.bu-accion-btn {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  color: #5a6472;
-  border-radius: 8px;
-}
-
-.bu-accion-btn:hover {
-  color: var(--color-primary);
-  background: rgba(var(--color-primary-rgb), 0.08) !important;
-}
-
-.bu-accion-btn--edit {
-  color: var(--color-primary);
-}
-
-.bu-accion-btn--edit:hover {
-  color: var(--color-primary-dark) !important;
-  background: rgba(var(--color-primary-rgb), 0.12) !important;
-}
-
-.bu-accion-btn.ant-btn-dangerous {
-  color: #cf4a4a;
-}
-
-.bu-accion-btn.ant-btn-dangerous:hover {
-  color: #e86a6a !important;
-  background: rgba(207, 74, 74, 0.1) !important;
-}
-
 .bu-nombre-link {
   height: auto;
   padding: 0;
@@ -343,12 +301,12 @@
     border-top: 1px solid rgba(var(--color-primary-rgb), 0.1);
   }
 
-  .bu-mobile-card__acciones .bu-acciones {
+  .bu-mobile-card__acciones .tbl-acciones {
     flex-wrap: wrap;
     gap: 6px;
   }
 
-  .bu-mobile-card__acciones .bu-accion-btn {
+  .bu-mobile-card__acciones .tbl-accion-btn {
     width: 40px;
     height: 40px;
     min-width: 40px;

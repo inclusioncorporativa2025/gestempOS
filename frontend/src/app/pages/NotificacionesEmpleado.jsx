@@ -25,6 +25,7 @@ import { parseFechaFichaje } from '../../utils/fechaFichaje';
 import RegistroMensualModal from '../components/RegistroMensualModal';
 import EditarAusenciaModal from '../components/EditarAusenciaModal';
 import './Notificaciones.css';
+import '../components/shared/TableAcciones.css';
 
 dayjs.locale('es');
 dayjs.extend(utc);
@@ -595,18 +596,21 @@ const NotificacionesEmpleado = () => {
         title: 'Acciones',
         key: 'acciones',
         fixed: 'right',
-        width: 110,
+        width: 72,
         render: (_, record) => {
           if (!record.fecha_aceptacion || record.fecha_cancelacion) return '—';
           return (
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              className="notif-btn-compact"
-              onClick={() => setAusenciaEditando(record)}
-            >
-              Editar
-            </Button>
+            <div className="tbl-acciones">
+              <Tooltip title="Editar">
+                <Button
+                  type="text"
+                  icon={<EditOutlined />}
+                  className="tbl-accion-btn tbl-accion-btn--edit"
+                  aria-label="Editar"
+                  onClick={() => setAusenciaEditando(record)}
+                />
+              </Tooltip>
+            </div>
           );
         },
       },

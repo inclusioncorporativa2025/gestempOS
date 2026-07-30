@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Button, DatePicker, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tag, Tooltip, Typography, message,
+  Button, DatePicker, Form, Input, InputNumber, Modal, Popconfirm, Select, Switch, Table, Tag, Tooltip, Typography, message,
 } from 'antd';
 import { EyeOutlined, EditOutlined, StopOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -12,6 +12,7 @@ import {
 } from '../../../features/novedades/novedadesService';
 import { PLAN_FEATURES, PLAN_IDS } from '../../../constants/plans';
 import NovedadesRocketIcon from '../../components/NovedadesRocketIcon';
+import '../../components/shared/TableAcciones.css';
 import './Platform.css';
 
 const { Text, Title, Paragraph } = Typography;
@@ -186,46 +187,46 @@ const PlatformNovedades = () => {
       width: 120,
       fixed: 'right',
       render: (_, record) => (
-        <Space size={2} className="platform-novedades__acciones">
-          <Tooltip title="Vista previa">
-            <Button
-              type="text"
-              size="small"
-              icon={<EyeOutlined />}
-              aria-label="Vista previa"
-              onClick={() => setPreviewNovedad(record)}
-            />
-          </Tooltip>
+        <div className="tbl-acciones">
           <Tooltip title="Editar">
             <Button
               type="text"
-              size="small"
               icon={<EditOutlined />}
+              className="tbl-accion-btn tbl-accion-btn--edit"
               aria-label="Editar"
               onClick={() => abrirEditar(record)}
             />
           </Tooltip>
+          <Tooltip title="Vista previa">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              className="tbl-accion-btn"
+              aria-label="Vista previa"
+              onClick={() => setPreviewNovedad(record)}
+            />
+          </Tooltip>
           {record.activo && (
-            <Popconfirm
-              title="¿Dar de baja esta novedad?"
-              description="Dejará de mostrarse a los usuarios."
-              okText="Dar de baja"
-              cancelText="Cancelar"
-              okButtonProps={{ danger: true }}
-              onConfirm={() => handleBaja(record)}
-            >
-              <Tooltip title="Dar de baja">
+            <Tooltip title="Dar de baja">
+              <Popconfirm
+                title="¿Dar de baja esta novedad?"
+                description="Dejará de mostrarse a los usuarios."
+                okText="Dar de baja"
+                cancelText="Cancelar"
+                okButtonProps={{ danger: true }}
+                onConfirm={() => handleBaja(record)}
+              >
                 <Button
                   type="text"
-                  size="small"
                   danger
                   icon={<StopOutlined />}
+                  className="tbl-accion-btn"
                   aria-label="Dar de baja"
                 />
-              </Tooltip>
-            </Popconfirm>
+              </Popconfirm>
+            </Tooltip>
           )}
-        </Space>
+        </div>
       ),
     },
   ];

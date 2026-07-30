@@ -27,6 +27,7 @@ import JornadaLaboralSelect from '../components/JornadaLaboralSelect';
 import { listarConveniosEmpresa } from '../../features/convenios/convenioService';
 import { esUsuarioActivo, estaDadoDeBajaEnEmpresa as estaDadoDeBaja } from '../../utils/usuarioActivo';
 import './BuscadorUsuarios.css';
+import '../components/shared/TableAcciones.css';
 dayjs.locale('es');
 
 const { Title } = Typography;
@@ -345,13 +346,13 @@ const BuscarUsuarios = () => {
     };
 
     const renderAccionesUsuario = (record) => (
-        <div className="bu-acciones">
+        <div className="tbl-acciones">
             {tipoUsuario !== 6 && !estaDadoDeBaja(record) && (
                 <Tooltip title="Editar">
                     <Button
                         type="text"
                         icon={<EditOutlined />}
-                        className="bu-accion-btn bu-accion-btn--edit"
+                        className="tbl-accion-btn tbl-accion-btn--edit"
                         onClick={() => handleEdit(record)}
                         aria-label="Editar"
                     />
@@ -372,7 +373,7 @@ const BuscarUsuarios = () => {
                             type="text"
                             danger
                             icon={<StopOutlined />}
-                            className="bu-accion-btn"
+                            className="tbl-accion-btn"
                             aria-label="Dar de baja"
                         />
                     </Popconfirm>
@@ -382,7 +383,7 @@ const BuscarUsuarios = () => {
                 <Button
                     type="text"
                     icon={<EyeOutlined />}
-                    className="bu-accion-btn"
+                    className="tbl-accion-btn"
                     onClick={() => (
                         verFichaPersonal
                             ? irAFichaPersonal(record)
@@ -395,7 +396,7 @@ const BuscarUsuarios = () => {
                 <Button
                     type="text"
                     icon={<DownloadOutlined />}
-                    className="bu-accion-btn"
+                    className="tbl-accion-btn"
                     onClick={() => setVisibleModalExportar(record.id_usuario)}
                     aria-label="Exportar"
                 />
