@@ -17,21 +17,36 @@ const formatearFecha = (fecha) => {
   });
 };
 
-const NovedadContenido = ({ novedad }) => (
-  <>
-    <div className="novedad-notifier__meta">
-      <RocketOutlined aria-hidden />
-      <span>Novedad</span>
-      {novedad.fecha_publicacion && (
-        <Text type="secondary" className="novedad-notifier__fecha">
-          {formatearFecha(novedad.fecha_publicacion)}
-        </Text>
+const NovedadContenido = ({ novedad, onClose, showClose = false }) => (
+  <div className="novedad-notifier__body">
+    <div className="novedad-notifier__header">
+      <div className="novedad-notifier__header-main">
+        <span className="novedad-notifier__badge">
+          <RocketOutlined aria-hidden />
+          Novedad
+        </span>
+        {novedad.fecha_publicacion && (
+          <Text type="secondary" className="novedad-notifier__fecha">
+            {formatearFecha(novedad.fecha_publicacion)}
+          </Text>
+        )}
+      </div>
+      {showClose && (
+        <button
+          type="button"
+          className="novedad-notifier__close"
+          onClick={onClose}
+          aria-label="Cerrar novedad"
+        >
+          <CloseOutlined />
+        </button>
       )}
     </div>
-    <Title level={4} className="novedad-notifier__titulo">
+
+    <Title level={4} id="novedad-notifier-titulo" className="novedad-notifier__titulo">
       {novedad.titulo}
     </Title>
-    <Paragraph type="secondary" className="novedad-notifier__resumen">
+    <Paragraph className="novedad-notifier__resumen">
       {novedad.resumen}
     </Paragraph>
     <div className="novedad-notifier__contenido">
@@ -40,7 +55,7 @@ const NovedadContenido = ({ novedad }) => (
         <p key={index}>{linea || '\u00A0'}</p>
       ))}
     </div>
-  </>
+  </div>
 );
 
 const NovedadAppNotifier = () => {
@@ -99,7 +114,13 @@ const NovedadAppNotifier = () => {
         open={visible}
         onCancel={cerrarSinMarcar}
         footer={(
-          <Button type="primary" loading={marcando} onClick={handleEntendido} block>
+          <Button
+            type="primary"
+            loading={marcando}
+            onClick={handleEntendido}
+            block
+            className="novedad-notifier__btn-primary"
+          >
             Entendido
           </Button>
         )}
@@ -109,6 +130,7 @@ const NovedadAppNotifier = () => {
         closable
         destroyOnClose
       >
+        <div className="novedad-notifier__accent" aria-hidden />
         <NovedadContenido novedad={novedad} />
       </Modal>
     );
@@ -124,17 +146,19 @@ const NovedadAppNotifier = () => {
       aria-labelledby="novedad-notifier-titulo"
       aria-live="polite"
     >
-      <button
-        type="button"
-        className="novedad-notifier__close"
-        onClick={cerrarSinMarcar}
-        aria-label="Cerrar novedad"
-      >
-        <CloseOutlined />
-      </button>
-      <NovedadContenido novedad={novedad} />
+      <div className="novedad-notifier__accent" aria-hidden />
+      <NovedadContenido
+        novedad={novedad}
+        showClose
+        onClose={cerrarSinMarcar}
+      />
       <div className="novedad-notifier__actions">
-        <Button type="primary" loading={marcando} onClick={handleEntendido}>
+        <Button
+          type="primary"
+          loading={marcando}
+          onClick={handleEntendido}
+          className="novedad-notifier__btn-primary"
+        >
           Entendido
         </Button>
       </div>

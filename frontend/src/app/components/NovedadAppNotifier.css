@@ -3,14 +3,14 @@
   right: 24px;
   bottom: 24px;
   z-index: 1100;
-  width: min(400px, calc(100vw - 48px));
-  padding: 20px 20px 16px;
-  border-radius: 16px;
+  width: min(420px, calc(100vw - 48px));
+  overflow: hidden;
+  border-radius: 18px;
   background: #fff;
   box-shadow:
-    0 12px 40px rgba(80, 40, 120, 0.18),
-    0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(168, 92, 224, 0.12);
+    0 20px 48px rgba(88, 44, 130, 0.16),
+    0 4px 14px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(168, 92, 224, 0.14);
   transform: translateY(calc(100% + 32px));
   opacity: 0;
   transition:
@@ -25,18 +25,67 @@
   pointer-events: auto;
 }
 
+.novedad-notifier__accent {
+  height: 4px;
+  background: linear-gradient(90deg, #a85ce0 0%, #722ed1 100%);
+}
+
+.novedad-notifier__body {
+  padding: 18px 20px 0;
+}
+
+.novedad-notifier__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.novedad-notifier__header-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.novedad-notifier__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(168, 92, 224, 0.1);
+  color: #722ed1;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.novedad-notifier__badge .anticon {
+  font-size: 13px;
+}
+
+.novedad-notifier__fecha {
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(0, 0, 0, 0.45) !important;
+}
+
 .novedad-notifier__close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
+  margin: -4px -4px 0 0;
   padding: 0;
   border: none;
-  border-radius: 999px;
+  border-radius: 10px;
   background: transparent;
   color: rgba(0, 0, 0, 0.45);
   cursor: pointer;
@@ -48,40 +97,27 @@
   color: #722ed1;
 }
 
-.novedad-notifier__meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #722ed1;
-}
-
-.novedad-notifier__fecha {
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 400;
-}
-
 .novedad-notifier__titulo {
-  margin: 0 0 8px !important;
-  padding-right: 24px;
-  font-size: 18px !important;
+  margin: 0 0 6px !important;
+  font-size: 19px !important;
+  font-weight: 600 !important;
   line-height: 1.35 !important;
+  color: rgba(0, 0, 0, 0.88) !important;
 }
 
 .novedad-notifier__resumen {
   margin-bottom: 12px !important;
   font-size: 14px;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, 0.55) !important;
 }
 
 .novedad-notifier__contenido {
-  max-height: 220px;
+  max-height: 200px;
   overflow-y: auto;
-  margin-bottom: 16px;
+  padding-right: 2px;
   font-size: 14px;
-  line-height: 1.55;
+  line-height: 1.6;
   color: rgba(0, 0, 0, 0.78);
 }
 
@@ -96,23 +132,55 @@
 .novedad-notifier__actions {
   display: flex;
   justify-content: flex-end;
+  padding: 16px 20px 18px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  margin-top: 14px;
+  background: rgba(246, 242, 250, 0.45);
+}
+
+.novedad-notifier__btn-primary {
+  min-width: 120px;
+  border-radius: 999px !important;
+  font-weight: 500;
+  box-shadow: 0 4px 14px rgba(168, 92, 224, 0.28);
 }
 
 .novedad-notifier-modal .ant-modal-content {
-  border-radius: 16px;
-  padding: 20px 20px 16px;
+  overflow: hidden;
+  border-radius: 18px;
+  padding: 0;
 }
 
 .novedad-notifier-modal .ant-modal-body {
-  padding: 0 0 8px;
+  padding: 0;
 }
 
-.novedad-notifier-modal .novedad-notifier__titulo {
-  padding-right: 0;
+.novedad-notifier-modal .novedad-notifier__body {
+  padding: 20px 20px 0;
 }
 
 .novedad-notifier-modal .novedad-notifier__contenido {
   max-height: 50vh;
+}
+
+.novedad-notifier-modal .ant-modal-footer {
+  padding: 16px 20px 20px;
+  margin-top: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(246, 242, 250, 0.45);
+}
+
+.novedad-notifier-modal .ant-modal-close {
+  top: 14px;
+  inset-inline-end: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+
+.novedad-notifier-modal .ant-modal-close:hover {
+  background: rgba(168, 92, 224, 0.08);
+  color: #722ed1;
 }
 
 @media (max-width: 949px) {
