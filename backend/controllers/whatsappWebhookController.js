@@ -1,5 +1,8 @@
 const crypto = require('crypto');
-const { procesarEventoOpenWA } = require('../services/whatsappFichajeService');
+const {
+  procesarEventoOpenWA,
+  procesarEventoMeta,
+} = require('../services/whatsappFichajeService');
 
 const verifyOpenWASignature = (rawBody, signature, secret) => {
   if (!signature || !secret) return false;
@@ -15,28 +18,98 @@ const verifyOpenWASignature = (rawBody, signature, secret) => {
   return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
 };
 
-const handleOpenWAWebhook = async (req, res) => {
-  const secret = process.env.OPENWA_WEBHOOK_SECRET;
-  const signature = req.header('X-OpenWA-Signature');
+const verifyMetaSignature = (rawBody, signature, appSecret) => {
+  if (!signature || !appSecret) return false;
 
-  if (secret && !verifyOpenWASignature(req.body, signature, secret)) {
-    return res.status(401).send('Invalid signature');
+  const expected = crypto
+    .createHmac('sha256', appSecret)
+    .update(rawBody)
+    .digest('hex');
+
+  const received = String(signature).replace(/^sha256=/, '');
+
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(received, 'hex'),
+      Buffer.from(expected, 'hex'),
+    );
+  } catch {
+    return false;
+  }
+};
+
+const handleWhatsappWebhookGet = (req, res) => {
+  const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  if (mode === 'subscribe' && verifyToken && token === verifyToken && challenge) {
+    return res.status(200).send(String(challenge));
   }
 
-  let event;
+  console.warn('[whatsapp/webhook] Verificación Meta rechazada', {
+    mode,
+    tokenMatch: Boolean(verifyToken && token === verifyToken),
+  });
+  return res.sendStatus(403);
+};
+
+const parseWebhookBody = (rawBody) => {
   try {
-    event = JSON.parse(req.body.toString('utf8'));
+    return JSON.parse(rawBody.toString('utf8'));
+  } catch {
+    return null;
+  }
+};
+
+const isMetaPayload = (payload) => payload?.object === 'whatsapp_business_account';
+
+const handleWhatsappWebhookPost = async (req, res) => {
+  const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body || '');
+
+  let payload;
+  try {
+    payload = parseWebhookBody(rawBody);
   } catch {
     return res.status(400).send('Invalid JSON');
   }
 
+  if (!payload) {
+    return res.status(400).send('Invalid JSON');
+  }
+
+  if (isMetaPayload(payload)) {
+    const appSecret = process.env.WHATSAPP_APP_SECRET;
+    const signature = req.header('X-Hub-Signature-256');
+
+    if (appSecret && !verifyMetaSignature(rawBody, signature, appSecret)) {
+      return res.status(401).send('Invalid signature');
+    }
+
+    try {
+      await procesarEventoMeta(payload);
+      return res.status(200).send('OK');
+    } catch (error) {
+      console.error('Error procesando webhook Meta WhatsApp:', error);
+      return res.status(500).send('Error');
+    }
+  }
+
+  const secret = process.env.OPENWA_WEBHOOK_SECRET;
+  const signature = req.header('X-OpenWA-Signature');
+
+  if (secret && !verifyOpenWASignature(rawBody, signature, secret)) {
+    return res.status(401).send('Invalid signature');
+  }
+
   const idempotencyKey =
     req.header('X-OpenWA-Idempotency-Key') ||
-    event?.idempotencyKey ||
+    payload?.idempotencyKey ||
     null;
 
   try {
-    await procesarEventoOpenWA(event, idempotencyKey);
+    await procesarEventoOpenWA(payload, idempotencyKey);
     return res.status(200).send('OK');
   } catch (error) {
     console.error('Error procesando webhook OpenWA:', error);
@@ -45,6 +118,8 @@ const handleOpenWAWebhook = async (req, res) => {
 };
 
 module.exports = {
-  handleOpenWAWebhook,
+  handleWhatsappWebhookGet,
+  handleWhatsappWebhookPost,
   verifyOpenWASignature,
+  verifyMetaSignature,
 };

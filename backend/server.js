@@ -8,7 +8,7 @@ const configureRoutes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
 const { connectToDatabase } = require('./config/db');
 const { handleStripeWebhook } = require('./controllers/billingController');
-const { handleOpenWAWebhook } = require('./controllers/whatsappWebhookController');
+const { handleWhatsappWebhookGet, handleWhatsappWebhookPost } = require('./controllers/whatsappWebhookController');
 // const firebaseAdmin = require('./config/firebase');
 
 const app = express();
@@ -24,10 +24,12 @@ app.post(
   handleStripeWebhook,
 );
 
+app.get('/api/whatsapp/webhook', handleWhatsappWebhookGet);
+
 app.post(
   '/api/whatsapp/webhook',
   express.raw({ type: 'application/json' }),
-  handleOpenWAWebhook,
+  handleWhatsappWebhookPost,
 );
 
 // Ruta básica para comprobar que el backend está vivo

@@ -8,7 +8,8 @@ const Usuario = require('../models/Usuario');
 const { chatIdATelefono } = require('../utils/telefonoWhatsapp');
 const { crearRegistroFichaje, resolverEstadoJornada } = require('./fichajeRegistroService');
 const { empresaTieneFeature } = require('./planService');
-const { sendText } = require('./openwaClient');
+const { sendText } = require('./whatsappMessaging');
+const { telefonoAChatId } = require('../utils/telefonoWhatsapp');
 const { TZ } = require('../utils/registroHash');
 
 dayjs.extend(utc);
@@ -299,6 +300,82 @@ const procesarMensajeEntrante = async ({ chatId, body, fromMe }) => {
   }
 };
 
+const extraerMensajesMeta = (payload) => {
+  const mensajes = [];
+  if (payload?.object !== 'whatsapp_business_account') return mensajes;
+
+  for (const entry of payload.entry || []) {
+    for (const change of entry.changes || []) {
+      if (change.field !== 'messages') continue;
+      const value = change.value || {};
+      for (const msg of value.messages || []) {
+        if (msg.type !== 'text' || !msg.text?.body) continue;
+        mensajes.push({
+          from: msg.from,
+          body: msg.text.body,
+          messageId: msg.id,
+        });
+      }
+    }
+  }
+
+  return mensajes;
+};
+
+const procesarEventoMeta = async (payload) => {
+  const mensajes = extraerMensajesMeta(payload);
+  if (!mensajes.length) {
+    return { ignored: true, reason: 'no_text_messages' };
+  }
+
+  const results = [];
+
+  for (const msg of mensajes) {
+    const idempotencyKey = msg.messageId;
+    if (!idempotencyKey) continue;
+
+    if (await eventoYaProcesado(idempotencyKey)) {
+      results.push({ ignored: true, reason: 'duplicate', messageId: idempotencyKey });
+      continue;
+    }
+
+    const chatId = telefonoAChatId(msg.from) || String(msg.from);
+
+    await marcarEventoWebhook(idempotencyKey, 'received', {
+      eventType: 'messages',
+      chatId: msg.from,
+    });
+
+    try {
+      const resultado = await procesarMensajeEntrante({
+        chatId,
+        body: msg.body,
+        fromMe: false,
+      });
+
+      if (resultado.reply) {
+        await sendText(chatId, resultado.reply);
+      }
+
+      await marcarEventoWebhook(idempotencyKey, 'processed', {
+        eventType: 'messages',
+        chatId: msg.from,
+      });
+
+      results.push(resultado);
+    } catch (error) {
+      await marcarEventoWebhook(idempotencyKey, 'error', {
+        eventType: 'messages',
+        chatId: msg.from,
+        errorMensaje: error.message,
+      });
+      throw error;
+    }
+  }
+
+  return { processed: results.length, results };
+};
+
 const procesarEventoOpenWA = async (event, idempotencyKey) => {
   if (!idempotencyKey) {
     return { ignored: true, reason: 'no_idempotency_key' };
@@ -363,6 +440,7 @@ module.exports = {
   marcarEventoWebhook,
   eventoYaProcesado,
   procesarEventoOpenWA,
+  procesarEventoMeta,
   procesarMensajeEntrante,
   buscarUsuarioPorChatId,
   listarEmpresasWhatsappUsuario,

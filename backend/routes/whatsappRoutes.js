@@ -4,6 +4,7 @@ const { assertEmpresaTieneFeature } = require('../services/planService');
 const { normalizarTelefonoWhatsapp } = require('../utils/telefonoWhatsapp');
 const Usuario = require('../models/Usuario');
 const { Op } = require('sequelize');
+const { useMetaProvider, getProviderStatus } = require('../services/whatsappMessaging');
 const {
   getSessionStatus,
   listWebhooks,
@@ -13,17 +14,24 @@ const {
 const router = express.Router();
 
 const buildWebhookUrl = () => {
-  const explicit = process.env.OPENWA_WEBHOOK_PUBLIC_URL?.replace(/\/$/, '');
+  const explicit = (
+    process.env.WHATSAPP_WEBHOOK_PUBLIC_URL
+    || process.env.OPENWA_WEBHOOK_PUBLIC_URL
+  )?.replace(/\/$/, '');
+
   if (explicit) {
     return `${explicit}/api/whatsapp/webhook`;
   }
+
   const frontend = process.env.FRONTEND_URL?.replace(/\/$/, '');
   if (frontend?.includes('app.')) {
     return `${frontend}/api/whatsapp/webhook`;
   }
+
   if (process.env.NODE_ENV !== 'production') {
     return 'http://127.0.0.1:5000/api/whatsapp/webhook';
   }
+
   return null;
 };
 
@@ -75,24 +83,44 @@ router.get('/estado', requireAuth, requireRole(ROLE_GROUPS.COMPANY_STAFF), async
     const idEmpresa = Number(req.query?.idEmpresa || req.user?.id_empresa);
     await assertEmpresaTieneFeature(idEmpresa, 'whatsapp_fichaje');
 
-    const session = await getSessionStatus();
-    const webhooks = await listWebhooks();
     const webhookUrl = buildWebhookUrl();
 
+    if (useMetaProvider()) {
+      const provider = await getProviderStatus();
+      return res.status(200).json({
+        ...provider,
+        webhookUrlEsperada: webhookUrl,
+        webhookVerifyTokenConfigured: Boolean(process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN),
+      });
+    }
+
+    const session = await getSessionStatus();
+    const webhooks = await listWebhooks();
+
     return res.status(200).json({
+      provider: 'openwa',
       session,
       webhooks,
       webhookUrlEsperada: webhookUrl,
     });
   } catch (error) {
     const status = error.status || 500;
-    return res.status(status).json({ error: error.message || 'No se pudo consultar OpenWA' });
+    return res.status(status).json({ error: error.message || 'No se pudo consultar WhatsApp' });
   }
 });
 
 router.post('/registrar-webhook', requireAuth, requireRole(ROLE_GROUPS.ROOT), async (req, res) => {
   try {
-    const webhookUrl = req.body?.url || buildWebhookUrl();
+    const webhookUrl = buildWebhookUrl();
+
+    if (useMetaProvider()) {
+      return res.status(200).json({
+        message: 'Con Meta Cloud API configura el webhook en developers.facebook.com',
+        webhookUrlEsperada: webhookUrl,
+        verifyTokenEnv: 'WHATSAPP_WEBHOOK_VERIFY_TOKEN',
+      });
+    }
+
     const secret = req.body?.secret || process.env.OPENWA_WEBHOOK_SECRET;
 
     if (!webhookUrl) {
