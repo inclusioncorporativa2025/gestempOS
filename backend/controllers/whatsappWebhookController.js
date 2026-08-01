@@ -83,7 +83,14 @@ const handleWhatsappWebhookPost = async (req, res) => {
     const appSecret = process.env.WHATSAPP_APP_SECRET;
     const signature = req.header('X-Hub-Signature-256');
 
+    console.log('[whatsapp/webhook] POST Meta recibido', {
+      bytes: rawBody.length,
+      hasSignature: Boolean(signature),
+      field: payload?.entry?.[0]?.changes?.[0]?.field,
+    });
+
     if (appSecret && !verifyMetaSignature(rawBody, signature, appSecret)) {
+      console.warn('[whatsapp/webhook] Firma Meta inválida');
       return res.status(401).send('Invalid signature');
     }
 
