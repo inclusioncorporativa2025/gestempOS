@@ -16,7 +16,7 @@ const assertConfigured = () => {
   }
 };
 
-const sendText = async (toPhone, text) => {
+const postMessage = async (toPhone, payload) => {
   assertConfigured();
 
   const to = normalizarTelefonoWhatsapp(toPhone);
@@ -37,8 +37,7 @@ const sendText = async (toPhone, text) => {
       body: JSON.stringify({
         messaging_product: 'whatsapp',
         to,
-        type: 'text',
-        text: { body: String(text || '').slice(0, 4096) },
+        ...payload,
       }),
     },
   );
@@ -55,6 +54,18 @@ const sendText = async (toPhone, text) => {
   return data;
 };
 
+const sendText = async (toPhone, text) =>
+  postMessage(toPhone, {
+    type: 'text',
+    text: { body: String(text || '').slice(0, 4096) },
+  });
+
+const sendInteractive = async (toPhone, interactive) =>
+  postMessage(toPhone, {
+    type: 'interactive',
+    interactive,
+  });
+
 const getConfigStatus = () => ({
   provider: 'meta',
   configured: isConfigured(),
@@ -67,6 +78,7 @@ const getConfigStatus = () => ({
 
 module.exports = {
   sendText,
+  sendInteractive,
   isConfigured,
   getConfigStatus,
 };

@@ -17,6 +17,18 @@ const sendText = async (chatIdOrPhone, text) => {
   return openwaClient.sendText(chatIdOrPhone, text);
 };
 
+/** Envía texto o menú interactivo (botones/lista) según el proveedor. */
+const sendReply = async (chatIdOrPhone, { text, interactive } = {}) => {
+  if (interactive && useMetaProvider()) {
+    const to = chatIdATelefono(chatIdOrPhone) || chatIdOrPhone;
+    return metaClient.sendInteractive(to, interactive);
+  }
+  if (text) {
+    return sendText(chatIdOrPhone, text);
+  }
+  return null;
+};
+
 const getProviderStatus = async () => {
   if (useMetaProvider()) {
     return metaClient.getConfigStatus();
@@ -41,5 +53,6 @@ const getProviderStatus = async () => {
 module.exports = {
   useMetaProvider,
   sendText,
+  sendReply,
   getProviderStatus,
 };

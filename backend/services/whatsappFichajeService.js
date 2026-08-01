@@ -8,7 +8,7 @@ const Usuario = require('../models/Usuario');
 const { chatIdATelefono } = require('../utils/telefonoWhatsapp');
 const { crearRegistroFichaje, resolverEstadoJornada } = require('./fichajeRegistroService');
 const { empresaTieneFeature } = require('./planService');
-const { sendText } = require('./whatsappMessaging');
+const { sendReply } = require('./whatsappMessaging');
 const { telefonoAChatId } = require('../utils/telefonoWhatsapp');
 const { TZ } = require('../utils/registroHash');
 
@@ -128,7 +128,13 @@ const guardarContextoChat = async ({ chatId, idUsuario, idEmpresa = null, paso =
   );
 };
 
-const construirMenu = async (idUsuario, idEmpresa, nombreUsuario) => {
+const ESTADO_LABELS = {
+  out: 'Fuera de jornada',
+  in: 'En jornada',
+  break: 'En pausa',
+};
+
+const construirMenuTexto = async (idUsuario, idEmpresa, nombreUsuario) => {
   const { estado, acciones } = await resolverEstadoJornada(idUsuario, idEmpresa);
   const hora = formatearHora();
 
@@ -137,23 +143,58 @@ const construirMenu = async (idUsuario, idEmpresa, nombreUsuario) => {
     return `${num}️⃣ ${ACCION_LABELS[id]}`;
   });
 
-  const estadoLabel = {
-    out: 'Fuera de jornada',
-    in: 'En jornada',
-    break: 'En pausa',
-  }[estado];
-
   return (
     `*Timecor* · ${hora}\n` +
     `Hola ${nombreUsuario} 👋\n` +
-    `Estado: *${estadoLabel}*\n\n` +
+    `Estado: *${ESTADO_LABELS[estado]}*\n\n` +
     `${lineasAcciones.join('\n')}\n\n` +
     `Responde con el número o escribe: entrada, salida, pausa, fin.\n` +
     `Escribe *menu* para ver las opciones o *empresa* para cambiar de empresa.`
   );
 };
 
-const construirMenuEmpresas = (empresas) => {
+const construirMenuInteractivo = async (idUsuario, idEmpresa, nombreUsuario, { multiEmpresa = false } = {}) => {
+  const { estado, acciones } = await resolverEstadoJornada(idUsuario, idEmpresa);
+  const hora = formatearHora();
+
+  const buttons = acciones.map((id, index) => ({
+    type: 'reply',
+    reply: {
+      id: `fichaje_${index + 1}`,
+      title: ACCION_LABELS[id].slice(0, 20),
+    },
+  }));
+
+  if (multiEmpresa && buttons.length < 3) {
+    buttons.push({
+      type: 'reply',
+      reply: { id: 'cmd_empresa', title: 'Cambiar empresa' },
+    });
+  }
+
+  return {
+    type: 'button',
+    body: {
+      text: (
+        `*Timecor* · ${hora}\n` +
+        `Hola ${nombreUsuario} 👋\n` +
+        `Estado: *${ESTADO_LABELS[estado]}*\n\n` +
+        `Elige una acción:`
+      ).slice(0, 1024),
+    },
+    action: { buttons: buttons.slice(0, 3) },
+  };
+};
+
+const menuResponse = async (idUsuario, idEmpresa, nombreUsuario, opts = {}) => ({
+  replyText: await construirMenuTexto(idUsuario, idEmpresa, nombreUsuario),
+  replyInteractive: await construirMenuInteractivo(idUsuario, idEmpresa, nombreUsuario, opts),
+});
+
+/** @deprecated Usar menuResponse; conservado por compatibilidad. */
+const construirMenu = construirMenuTexto;
+
+const construirMenuEmpresasTexto = (empresas) => {
   const lineas = empresas.map((e, index) => `${index + 1}️⃣ ${e.nombre}`);
   return (
     `Tienes varias empresas con fichaje WhatsApp activo.\n\n` +
@@ -162,6 +203,49 @@ const construirMenuEmpresas = (empresas) => {
   );
 };
 
+const construirMenuEmpresasInteractivo = (empresas) => {
+  if (empresas.length <= 3) {
+    return {
+      type: 'button',
+      body: { text: 'Tienes varias empresas con fichaje WhatsApp activo.\n\nElige una:' },
+      action: {
+        buttons: empresas.map((e) => ({
+          type: 'reply',
+          reply: {
+            id: `empresa_${e.id_empresa}`,
+            title: (e.nombre || `Empresa ${e.id_empresa}`).slice(0, 20),
+          },
+        })),
+      },
+    };
+  }
+
+  return {
+    type: 'list',
+    body: { text: 'Tienes varias empresas con fichaje WhatsApp activo.\n\nElige una de la lista:' },
+    action: {
+      button: 'Ver empresas',
+      sections: [
+        {
+          title: 'Empresas',
+          rows: empresas.slice(0, 10).map((e) => ({
+            id: `empresa_${e.id_empresa}`,
+            title: (e.nombre || `Empresa ${e.id_empresa}`).slice(0, 24),
+            description: 'Fichaje por WhatsApp',
+          })),
+        },
+      ],
+    },
+  };
+};
+
+const empresasResponse = (empresas) => ({
+  replyText: construirMenuEmpresasTexto(empresas),
+  replyInteractive: construirMenuEmpresasInteractivo(empresas),
+});
+
+const construirMenuEmpresas = construirMenuEmpresasTexto;
+
 const parsearAccion = (texto, accionesPermitidas) => {
   const t = String(texto || '').trim().toLowerCase();
   if (!t) return null;
@@ -169,6 +253,14 @@ const parsearAccion = (texto, accionesPermitidas) => {
   const porNumero = Number(t);
   if (Number.isInteger(porNumero) && porNumero >= 1 && porNumero <= accionesPermitidas.length) {
     return accionesPermitidas[porNumero - 1];
+  }
+
+  const matchFichaje = t.match(/^fichaje_(\d+)$/);
+  if (matchFichaje) {
+    const idx = Number(matchFichaje[1]) - 1;
+    if (idx >= 0 && idx < accionesPermitidas.length) {
+      return accionesPermitidas[idx];
+    }
   }
 
   const mapa = {
@@ -205,6 +297,17 @@ const resolverEmpresaActiva = async ({ chatId, idUsuario, empresas, texto }) => 
   }
 
   const t = String(texto || '').trim().toLowerCase();
+
+  const matchEmpresaId = String(texto || '').trim().match(/^empresa_(\d+)$/i);
+  if (matchEmpresaId) {
+    const idEmpresaSel = Number(matchEmpresaId[1]);
+    const elegida = empresas.find((e) => e.id_empresa === idEmpresaSel);
+    if (elegida) {
+      await guardarContextoChat({ chatId, idUsuario, idEmpresa: elegida.id_empresa, paso: 'menu' });
+      return { idEmpresa: elegida.id_empresa, paso: 'menu', recienElegida: true };
+    }
+  }
+
   const seleccion = Number(t);
   if (Number.isInteger(seleccion) && seleccion >= 1 && seleccion <= empresas.length) {
     const elegida = empresas[seleccion - 1];
@@ -243,15 +346,17 @@ const procesarMensajeEntrante = async ({ chatId, body, fromMe }) => {
     };
   }
 
-  if (t === 'empresa' || t === 'cambiar empresa') {
+  if (t === 'empresa' || t === 'cambiar empresa' || t === 'cmd_empresa') {
     await guardarContextoChat({
       chatId,
       idUsuario: usuario.id_usuario,
       idEmpresa: null,
       paso: 'elegir_empresa',
     });
-    return { reply: construirMenuEmpresas(empresas) };
+    return empresasResponse(empresas);
   }
+
+  const multiEmpresa = empresas.length > 1;
 
   const empresaCtx = await resolverEmpresaActiva({
     chatId,
@@ -261,23 +366,29 @@ const procesarMensajeEntrante = async ({ chatId, body, fromMe }) => {
   });
 
   if (empresaCtx.paso === 'elegir_empresa') {
-    return { reply: construirMenuEmpresas(empresas) };
+    return empresasResponse(empresas);
   }
 
   const idEmpresa = empresaCtx.idEmpresa;
+
+  if (empresaCtx.recienElegida) {
+    return menuResponse(usuario.id_usuario, idEmpresa, usuario.nombre, { multiEmpresa });
+  }
+
   const { acciones } = await resolverEstadoJornada(usuario.id_usuario, idEmpresa);
 
   if (!texto || t === 'menu' || t === 'ayuda' || t === 'hola') {
-    return { reply: await construirMenu(usuario.id_usuario, idEmpresa, usuario.nombre) };
+    return menuResponse(usuario.id_usuario, idEmpresa, usuario.nombre, { multiEmpresa });
   }
 
   const tipoRegistro = parsearAccion(texto, acciones);
   if (!tipoRegistro) {
-    return {
-      reply:
-        `No entendí "${texto}".\n\n` +
-        (await construirMenu(usuario.id_usuario, idEmpresa, usuario.nombre)),
-    };
+    const menu = await menuResponse(usuario.id_usuario, idEmpresa, usuario.nombre, { multiEmpresa });
+    menu.replyText = `No entendí "${texto}".\n\n${menu.replyText}`;
+    if (menu.replyInteractive?.body?.text) {
+      menu.replyInteractive.body.text = `No entendí "${texto}".\n\n${menu.replyInteractive.body.text}`;
+    }
+    return menu;
   }
 
   try {
@@ -289,14 +400,19 @@ const procesarMensajeEntrante = async ({ chatId, body, fromMe }) => {
     });
 
     const confirmacion = `✅ *${ACCION_LABELS[tipoRegistro]}* registrada a las ${formatearHora()}.`;
-    const menu = await construirMenu(usuario.id_usuario, idEmpresa, usuario.nombre);
-    return { reply: `${confirmacion}\n\n${menu}`, fichaje: { tipoRegistro, idEmpresa } };
+    const menu = await menuResponse(usuario.id_usuario, idEmpresa, usuario.nombre, { multiEmpresa });
+    menu.replyText = `${confirmacion}\n\n${menu.replyText}`;
+    if (menu.replyInteractive?.body?.text) {
+      menu.replyInteractive.body.text = `${confirmacion}\n\n${menu.replyInteractive.body.text}`;
+    }
+    return { ...menu, fichaje: { tipoRegistro, idEmpresa } };
   } catch (error) {
-    return {
-      reply:
-        `⚠️ ${error.message || 'No se pudo registrar el fichaje'}.\n\n` +
-        (await construirMenu(usuario.id_usuario, idEmpresa, usuario.nombre)),
-    };
+    const menu = await menuResponse(usuario.id_usuario, idEmpresa, usuario.nombre, { multiEmpresa });
+    menu.replyText = `⚠️ ${error.message || 'No se pudo registrar el fichaje'}.\n\n${menu.replyText}`;
+    if (menu.replyInteractive?.body?.text) {
+      menu.replyInteractive.body.text = `⚠️ ${error.message || 'No se pudo registrar el fichaje'}.\n\n${menu.replyInteractive.body.text}`;
+    }
+    return menu;
   }
 };
 
@@ -309,12 +425,27 @@ const extraerMensajesMeta = (payload) => {
       if (change.field !== 'messages') continue;
       const value = change.value || {};
       for (const msg of value.messages || []) {
-        if (msg.type !== 'text' || !msg.text?.body) continue;
-        mensajes.push({
-          from: msg.from,
-          body: msg.text.body,
-          messageId: msg.id,
-        });
+        if (msg.type === 'text' && msg.text?.body) {
+          mensajes.push({
+            from: msg.from,
+            body: msg.text.body,
+            messageId: msg.id,
+          });
+          continue;
+        }
+
+        if (msg.type === 'interactive') {
+          const buttonReply = msg.interactive?.button_reply;
+          const listReply = msg.interactive?.list_reply;
+          const reply = buttonReply || listReply;
+          if (reply?.id) {
+            mensajes.push({
+              from: msg.from,
+              body: reply.id,
+              messageId: msg.id,
+            });
+          }
+        }
       }
     }
   }
@@ -322,10 +453,23 @@ const extraerMensajesMeta = (payload) => {
   return mensajes;
 };
 
+const enviarResultado = async (chatId, resultado) => {
+  if (resultado.replyInteractive || resultado.replyText) {
+    await sendReply(chatId, {
+      interactive: resultado.replyInteractive,
+      text: resultado.replyText,
+    });
+    return;
+  }
+  if (resultado.reply) {
+    await sendReply(chatId, { text: resultado.reply });
+  }
+};
+
 const procesarEventoMeta = async (payload) => {
   const mensajes = extraerMensajesMeta(payload);
   if (!mensajes.length) {
-    return { ignored: true, reason: 'no_text_messages' };
+    return { ignored: true, reason: 'no_messages' };
   }
 
   const results = [];
@@ -353,8 +497,8 @@ const procesarEventoMeta = async (payload) => {
         fromMe: false,
       });
 
-      if (resultado.reply) {
-        await sendText(chatId, resultado.reply);
+      if (resultado.reply || resultado.replyInteractive || resultado.replyText) {
+        await enviarResultado(chatId, resultado);
       }
 
       await marcarEventoWebhook(idempotencyKey, 'processed', {
@@ -414,8 +558,8 @@ const procesarEventoOpenWA = async (event, idempotencyKey) => {
       fromMe: Boolean(data.fromMe),
     });
 
-    if (resultado.reply) {
-      await sendText(chatId, resultado.reply);
+    if (resultado.reply || resultado.replyInteractive || resultado.replyText) {
+      await enviarResultado(chatId, resultado);
     }
 
     await marcarEventoWebhook(idempotencyKey, 'processed', {
