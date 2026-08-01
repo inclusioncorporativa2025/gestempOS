@@ -95,6 +95,9 @@ const crearCatalogo = async (datos, idUsuarioAccion) => {
     dias_semana_laborables: datos.dias_semana_laborables ?? null,
     tipo_jornada: datos.tipo_jornada === 'parcial' ? 'parcial' : 'completa',
     descripcion: datos.descripcion ? String(datos.descripcion).trim() : null,
+    ambito: datos.ambito ? String(datos.ambito).trim() : null,
+    vigencia_inicio: datos.vigencia_inicio || null,
+    vigencia_fin: datos.vigencia_fin || null,
     orden: Number(datos.orden) || 0,
     activo: datos.activo !== false,
     usuario_alta: idUsuarioAccion,
@@ -138,6 +141,15 @@ const actualizarCatalogo = async (idConvenio, datos, idUsuarioAccion) => {
   }
   if (datos.descripcion !== undefined) {
     payload.descripcion = datos.descripcion ? String(datos.descripcion).trim() : null;
+  }
+  if (datos.ambito !== undefined) {
+    payload.ambito = datos.ambito ? String(datos.ambito).trim() : null;
+  }
+  if (datos.vigencia_inicio !== undefined) {
+    payload.vigencia_inicio = datos.vigencia_inicio || null;
+  }
+  if (datos.vigencia_fin !== undefined) {
+    payload.vigencia_fin = datos.vigencia_fin || null;
   }
   if (datos.orden != null) payload.orden = Number(datos.orden) || 0;
   if (datos.activo != null) payload.activo = Boolean(datos.activo);

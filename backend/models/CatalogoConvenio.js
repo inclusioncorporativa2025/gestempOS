@@ -13,7 +13,7 @@ const CatalogoConvenio = sequelize.define('CatalogoConvenio', {
     allowNull: false,
   },
   nombre: {
-    type: DataTypes.STRING(120),
+    type: DataTypes.STRING(255),
     allowNull: false,
   },
   modo_conteo_vacaciones: {
@@ -54,7 +54,19 @@ const CatalogoConvenio = sequelize.define('CatalogoConvenio', {
     defaultValue: 'completa',
   },
   descripcion: {
-    type: DataTypes.STRING(500),
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  ambito: {
+    type: DataTypes.STRING(40),
+    allowNull: true,
+  },
+  vigencia_inicio: {
+    type: DataTypes.DATEONLY,
+    allowNull: true,
+  },
+  vigencia_fin: {
+    type: DataTypes.DATEONLY,
     allowNull: true,
   },
   orden: {

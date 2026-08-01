@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Button, Form, Input, InputNumber, Modal, Select, Switch, Table, Tag, Typography, message,
+  Button, DatePicker, Form, Input, InputNumber, Modal, Select, Switch, Table, Tag, Typography, message,
 } from 'antd';
+import dayjs from 'dayjs';
 import {
   actualizarCatalogoConvenio,
   bajaCatalogoConvenio,
@@ -11,13 +12,29 @@ import {
 import './Platform.css';
 
 const { Text } = Typography;
+const { RangePicker } = DatePicker;
 
 const MODO_OPCIONES = [
   { value: 'natural', label: 'Días naturales' },
   { value: 'laboral', label: 'Días laborables' },
 ];
 
+const AMBITO_OPCIONES = [
+  { value: 'Estatal', label: 'Estatal' },
+  { value: 'Autonómico', label: 'Autonómico' },
+  { value: 'Provincial', label: 'Provincial' },
+  { value: 'Local', label: 'Local' },
+  { value: 'Empresa', label: 'Empresa' },
+];
+
 const etiquetaModo = (modo) => (modo === 'laboral' ? 'Laborables' : 'Naturales');
+
+const formatearVigencia = (inicio, fin) => {
+  if (!inicio && !fin) return '—';
+  const a = inicio && dayjs(inicio).isValid() ? dayjs(inicio).format('DD/MM/YYYY') : '…';
+  const b = fin && dayjs(fin).isValid() ? dayjs(fin).format('DD/MM/YYYY') : '…';
+  return `${a} a ${b}`;
+};
 
 const formInicial = () => ({
   codigo: '',
@@ -28,10 +45,34 @@ const formInicial = () => ({
   permite_medio_dia: true,
   dias_semana_laborables: 5,
   tipo_jornada: 'completa',
+  ambito: 'Estatal',
+  vigencia: null,
   descripcion: '',
   orden: 0,
   activo: true,
 });
+
+const valoresFormDesdeRecord = (record) => ({
+  ...formInicial(),
+  ...record,
+  dias_cupo_defecto: Number(record.dias_cupo_defecto),
+  vigencia: record.vigencia_inicio || record.vigencia_fin
+    ? [
+      record.vigencia_inicio ? dayjs(record.vigencia_inicio) : null,
+      record.vigencia_fin ? dayjs(record.vigencia_fin) : null,
+    ]
+    : null,
+});
+
+const payloadDesdeForm = (values) => {
+  const [inicio, fin] = values.vigencia || [];
+  const { vigencia, ...rest } = values;
+  return {
+    ...rest,
+    vigencia_inicio: inicio && dayjs(inicio).isValid() ? dayjs(inicio).format('YYYY-MM-DD') : null,
+    vigencia_fin: fin && dayjs(fin).isValid() ? dayjs(fin).format('YYYY-MM-DD') : null,
+  };
+};
 
 const PlatformConvenios = () => {
   const [convenios, setConvenios] = useState([]);
@@ -65,26 +106,23 @@ const PlatformConvenios = () => {
 
   const abrirEditar = (record) => {
     setEditando(record);
-    form.setFieldsValue({
-      ...formInicial(),
-      ...record,
-      dias_cupo_defecto: Number(record.dias_cupo_defecto),
-    });
+    form.setFieldsValue(valoresFormDesdeRecord(record));
     setModalOpen(true);
   };
 
   const handleGuardar = async () => {
     try {
       const values = await form.validateFields();
+      const payload = payloadDesdeForm(values);
       setGuardando(true);
       if (editando) {
         await actualizarCatalogoConvenio({
           id_convenio: editando.id_convenio,
-          ...values,
+          ...payload,
         });
         message.success('Convenio actualizado');
       } else {
-        await crearCatalogoConvenio(values);
+        await crearCatalogoConvenio(payload);
         message.success('Convenio creado');
       }
       setModalOpen(false);
@@ -108,20 +146,40 @@ const PlatformConvenios = () => {
   };
 
   const columns = [
-    { title: 'Código', dataIndex: 'codigo', key: 'codigo', width: 120 },
-    { title: 'Nombre', dataIndex: 'nombre', key: 'nombre' },
+    { title: 'Convenio', dataIndex: 'nombre', key: 'nombre', ellipsis: true },
     {
-      title: 'Conteo vacaciones',
+      title: 'Días de vacaciones',
+      dataIndex: 'dias_cupo_defecto',
+      key: 'dias_cupo_defecto',
+      width: 140,
+      render: (v) => `${Number(v)} días`,
+    },
+    {
+      title: 'Tipo de días',
       dataIndex: 'modo_conteo_vacaciones',
       key: 'modo_conteo_vacaciones',
+      width: 120,
       render: etiquetaModo,
     },
     {
-      title: 'Cupo defecto',
-      dataIndex: 'dias_cupo_defecto',
-      key: 'dias_cupo_defecto',
+      title: 'Ámbito',
+      dataIndex: 'ambito',
+      key: 'ambito',
       width: 110,
-      render: (v) => `${Number(v)} días`,
+      render: (v) => v || '—',
+    },
+    {
+      title: 'Vigencia',
+      key: 'vigencia',
+      width: 200,
+      render: (_, record) => formatearVigencia(record.vigencia_inicio, record.vigencia_fin),
+    },
+    {
+      title: 'Explicación',
+      dataIndex: 'descripcion',
+      key: 'descripcion',
+      ellipsis: true,
+      render: (v) => v || '—',
     },
     {
       title: 'Estado',
@@ -168,6 +226,7 @@ const PlatformConvenios = () => {
         dataSource={convenios}
         columns={columns}
         pagination={{ pageSize: 10, hideOnSinglePage: true }}
+        scroll={{ x: 1100 }}
       />
 
       <Modal
@@ -178,21 +237,30 @@ const PlatformConvenios = () => {
         confirmLoading={guardando}
         okText="Guardar"
         cancelText="Cancelar"
-        width={560}
+        width={640}
         destroyOnClose
       >
         <Form form={form} layout="vertical">
           <Form.Item label="Código" name="codigo" rules={[{ required: true, message: 'Obligatorio' }]}>
             <Input maxLength={40} />
           </Form.Item>
-          <Form.Item label="Nombre" name="nombre" rules={[{ required: true, message: 'Obligatorio' }]}>
-            <Input maxLength={120} />
+          <Form.Item label="Convenio" name="nombre" rules={[{ required: true, message: 'Obligatorio' }]}>
+            <Input maxLength={255} />
           </Form.Item>
-          <Form.Item label="Conteo de vacaciones" name="modo_conteo_vacaciones">
+          <Form.Item label="Días de vacaciones" name="dias_cupo_defecto">
+            <InputNumber min={0} max={365} step={0.5} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label="Tipo de días" name="modo_conteo_vacaciones">
             <Select options={MODO_OPCIONES} />
           </Form.Item>
-          <Form.Item label="Días de cupo por defecto" name="dias_cupo_defecto">
-            <InputNumber min={0} max={365} step={0.5} style={{ width: '100%' }} />
+          <Form.Item label="Ámbito" name="ambito">
+            <Select options={AMBITO_OPCIONES} allowClear placeholder="Seleccionar ámbito" />
+          </Form.Item>
+          <Form.Item label="Vigencia" name="vigencia">
+            <RangePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label="Explicación" name="descripcion">
+            <Input.TextArea rows={3} />
           </Form.Item>
           <Form.Item label="Días laborables por semana" name="dias_semana_laborables">
             <InputNumber min={1} max={7} style={{ width: '100%' }} />
@@ -213,9 +281,6 @@ const PlatformConvenios = () => {
           </Form.Item>
           <Form.Item label="Orden" name="orden">
             <InputNumber style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="Descripción" name="descripcion">
-            <Input.TextArea rows={2} maxLength={500} />
           </Form.Item>
           <Form.Item label="Activo" name="activo" valuePropName="checked">
             <Switch />
