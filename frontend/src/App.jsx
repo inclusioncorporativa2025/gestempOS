@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { APP_ROUTES } from './constants/routes';
 import { isAppSubdomain } from './utils/host';
+import { initMetricoolTracker } from './landing/utils/metricoolTracker';
 import LandingPage from './landing/pages/LandingPage';
 import legalRouteElements from './LegalRoutes';
 import AppShell from './app/AppShell';
@@ -12,6 +13,12 @@ import AppShell from './app/AppShell';
  */
 function App() {
   const onAppHost = isAppSubdomain();
+
+  useEffect(() => {
+    if (!onAppHost) {
+      initMetricoolTracker();
+    }
+  }, [onAppHost]);
 
   return (
     <Routes>
