@@ -3,12 +3,6 @@ const bcrypt = require('bcryptjs');
 const UsuarioEmpresa = require('../models/UsuarioEmpresa');
 const UsuarioJornada = require('../models/UsuarioJornada');
 const Jornada = require('../models/Jornada');
-const fichajes = require('../models/Fichajes');
-const mesesCierre = require('../models/MesesCierre');
-const { MESES_CIERRE_ATTRS } = require('../utils/mesesCierreCompat');
-const Ausencias = require('../models/Ausencias');
-const Descansos = require('../models/Descansos');
-const axios = require('axios');
 const Empresa = require('../models/Empresa');
 const {crearUsuarioRepo,crearUsuarioHorario} = require('../repositorios/usuarioRepository');
 const {
@@ -27,7 +21,8 @@ const {
 } = require('../services/billingService');
 const { calcularProrrateoLicencia } = require('../services/legacyRenewalService');
 const { normalizePlanId } = require('../config/plans');
-const { enviarInvitacionEmpleado } = require('../utils/mailService');
+const { enviarInvitacionEmpleado, enviarRegistrosHorariosPorEmail: enviarRegistrosHorariosEmail } = require('../utils/mailService');
+const { generarExcelRegistrosHorarios, FichajesExportError } = require('../services/fichajesExportService');
 const { obtenerMembresiaActiva, resolverTipoSesion, membresiaEstaActiva } = require('../services/usuarioEmpresaService');
 const { calcularResumenHorasMes, resolverTipoHora } = require('../services/horasResumenService');
 const {
@@ -36,7 +31,6 @@ const {
   registrarAjusteManual,
 } = require('../services/bolsaHorasService');
 const { empresaTieneFeature } = require('../services/planService');
-const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/ausenciasCompat');
 const { normalizarTipoHoraInput } = require('../utils/tipoHora');
 const {
   findMembresiaActivaEnEmpresa,
@@ -55,7 +49,6 @@ const FestivoEmpresa = require('../models/FestivoEmpresa');
 const isBetween = require('dayjs/plugin/isBetween');
 const { ROLES } = require('../middleware/authMiddleware');
 dayjs.extend(isoWeek);
-const ExcelJS = require('exceljs');
 dayjs.extend(duration);
 dayjs.extend(customParseFormat);
 dayjs.extend(isBetween);
@@ -64,11 +57,6 @@ const timezone = require('dayjs/plugin/timezone');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-const NodeCache = require('node-cache');
-const locationCache = new NodeCache({ stdTTL: 86400 });
-// const firebaseAdmin = require('firebase-admin');
-
-const ZONA_HORARIA = 'Europe/Madrid';
 const BCRYPT_ROUNDS = 10;
 
 const sanitizePerfil = (usuario) => ({
@@ -907,327 +895,94 @@ const importarUsuariosEmpresa= async (req, res) => {
     }
 };
 
-function parseCoordenadas(coordenadas) {
-    const match = coordenadas.match(/^([0-9\.-]+)--([0-9\.-]+)$/);
-    if (!match) return [null, null];
-    const lat = parseFloat(match[1]);
-    const lon = -Math.abs(parseFloat(match[2]));
-    return [lat, lon];
-}
+const normalizarDestinatariosEmail = (valor) => {
+    if (!valor) return [];
+
+    const lista = Array.isArray(valor)
+        ? valor
+        : String(valor).split(/[,;]+/);
+
+    return [...new Set(
+        lista
+            .map((email) => String(email || '').trim().toLowerCase())
+            .filter(Boolean),
+    )];
+};
 
 const exportarDatosExcel = async (req, res) => {
     try {
-        const { id_usuario, startDate, endDate, idEmpresa } = req.body;
-
-        if (!id_usuario || !startDate || !endDate || !idEmpresa) {
-            return res.status(400).json({ message: 'Faltan parámetros necesarios' });
-        }
-
-        const start = dayjs(startDate).startOf('day');
-        const end = dayjs(endDate).endOf('day');
-
-        const usuario = await Usuario.findOne({ where: { id_usuario } });
-        if (!usuario) {
-            return res.status(404).json({ message: 'Usuario no encontrado' });
-        }
-
-        const incluirAusencias = await empresaTieneFeature(idEmpresa, 'ausencias_basicas');
-        const soportaAprobacionAusencias = incluirAusencias
-            ? await ausenciasSoportaAprobacion()
-            : false;
-
-        const [fichajesData, ausenciasData, descansosData] = await Promise.all([
-            fichajes.findAll({
-                where: {
-                    empresa_id: idEmpresa,
-                    id_usuario,
-                    fecha_baja: null,
-                    fecha_entrada: {
-                        [Op.gte]: start.toDate(),
-                        [Op.lte]: end.toDate(),
-                    },
-                },
-            }),
-            incluirAusencias
-                ? Ausencias.findAll({
-                    where: {
-                        empresa_id: idEmpresa,
-                        id_usuario,
-                        fecha_baja: null,
-                        ...whereSoloAprobadas(soportaAprobacionAusencias),
-                        fecha_desde: {
-                            [Op.lte]: end.toDate(),
-                        },
-                        fecha_hasta: {
-                            [Op.gte]: start.toDate(),
-                        },
-                    },
-                })
-                : Promise.resolve([]),
-            Descansos.findAll({
-                where: {
-                    empresa_id: idEmpresa,
-                    id_usuario,
-                    fecha_baja: null,
-                    fecha_entrada: {
-                        [Op.gte]: start.toDate(),
-                        [Op.lte]: end.toDate(),
-                    },
-                },
-            })
-        ]);
-
-        const expandirRangoDias = (fechaDesde, fechaHasta) => {
-            const dias = [];
-            let actual = dayjs(fechaDesde).startOf('day');
-            const fin = dayjs(fechaHasta).startOf('day');
-
-            while (actual.isSame(fin) || actual.isBefore(fin)) {
-                dias.push(actual.format('YYYY-MM-DD'));
-                actual = actual.add(1, 'day');
-            }
-
-            return dias;
-        };
-
-        const combinarFechaHora = (fecha, hora) => {
-            if (!fecha) return null;
-
-            const fechaBase = dayjs(fecha).format('YYYY-MM-DD');
-
-            if (!hora) {
-                return `${fechaBase}T00:00:00`;
-            }
-
-            return `${fechaBase}T${hora}`;
-        };
-
-        const estaDentroDeRango = (fecha) => {
-            const f = dayjs(fecha).startOf('day');
-            return f.isSame(start, 'day') || f.isSame(end, 'day') || (f.isAfter(start, 'day') && f.isBefore(end, 'day'));
-        };
-
-        const registrosData = [
-            ...fichajesData.map(f => ({
-                ...f.toJSON(),
-                tipo: 'fichaje'
-            })),
-
-            ...ausenciasData.flatMap(a => {
-                const raw = a.toJSON();
-                const dias = expandirRangoDias(raw.fecha_desde, raw.fecha_hasta);
-
-                return dias
-                    .filter(dia => estaDentroDeRango(dia))
-                    .map(dia => ({
-                        ...raw,
-                        tipo: 'ausencia',
-                        fecha_original: dia,
-                        fecha_entrada: combinarFechaHora(dia, raw.hora_ausencia_desde),
-                        fecha_salida: raw.hora_ausencia_hasta
-                            ? combinarFechaHora(dia, raw.hora_ausencia_hasta)
-                            : null,
-                        sin_hora: !raw.hora_ausencia_desde && !raw.hora_ausencia_hasta
-                    }));
-            }),
-
-            ...descansosData.map(d => ({
-                ...d.toJSON(),
-                tipo: 'descanso'
-            })),
-        ].sort((a, b) => new Date(a.fecha_entrada) - new Date(b.fecha_entrada));
-
-        if (registrosData.length === 0) {
-            return res.status(404).json({ message: 'No se encontraron registros para este usuario en el rango de fechas' });
-        }
-
-        const getDireccionDesdeCoordenadas = async (coordenadas) => {
-            if (!coordenadas) return '-';
-            const cached = locationCache.get(coordenadas);
-            if (cached) return cached;
-
-            const [lat, lon] = parseCoordenadas(coordenadas);
-            if (!lat || !lon) return '-';
-
-            try {
-                const response = await axios.get('https://nominatim.openstreetmap.org/reverse', {
-                    params: {
-                        format: 'json',
-                        lat,
-                        lon,
-                    },
-                    headers: {
-                        'User-Agent': 'GeoApp/1.0 (tucorreo@ejemplo.com)'
-                    }
-                });
-
-                const direccion = response.data.display_name || `${lat}, ${lon}`;
-                locationCache.set(coordenadas, direccion);
-                return direccion;
-            } catch (err) {
-                console.error(`Error al obtener dirección para ${coordenadas}:`, err.message);
-                return `${lat}, ${lon}`;
-            }
-        };
-
-        const fichajesPorMes = {};
-        for (const registro of registrosData) {
-            const mes = dayjs(registro.fecha_entrada).format('YYYY-MM');
-            if (!fichajesPorMes[mes]) fichajesPorMes[mes] = [];
-            fichajesPorMes[mes].push(registro);
-        }
-
-        const meses = Object.keys(fichajesPorMes);
-
-        const cierres = await mesesCierre.findAll({
-            attributes: MESES_CIERRE_ATTRS,
-            where: {
-                empresa_id: idEmpresa,
-                usuario_alta: id_usuario,
-                mes: { [Op.in]: meses },
-                usuario_aceptacion: { [Op.not]: null }
-            },
-        });
-
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Fichajes Usuario');
-
-        const datosUser = worksheet.addRow(['Nombre', 'DNI']);
-        const contenidoUser = worksheet.addRow([usuario.nombre || 'Sin nombre', usuario.dni || 'Sin DNI']);
-        worksheet.addRow([]);
-
-        datosUser.eachCell(cell => {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F4E78' } };
-            cell.font = { color: { argb: 'FFFFFF' }, bold: true };
-            cell.alignment = { vertical: 'middle', horizontal: 'center' };
-        });
-
-        contenidoUser.eachCell(cell => {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E6F0FA' } };
-            cell.alignment = { vertical: 'middle', horizontal: 'center' };
-        });
-
-        for (const mes in fichajesPorMes) {
-            const tieneCierre = cierres.some(c => c.mes === mes);
-
-            worksheet.addRow([]);
-            const cabeceraMes = worksheet.addRow([
-                `Fichajes del mes: ${mes}`,
-                `Firmado: ${tieneCierre ? '✔' : '✘'}`
-            ]);
-
-            cabeceraMes.eachCell((cell, colNumber) => {
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F4E78' } };
-
-                if (colNumber === 2) {
-                    cell.font = { color: { argb: tieneCierre ? '00FF00' : 'FF0000' }, bold: true };
-                } else {
-                    cell.font = { color: { argb: 'FFFFFF' }, bold: true };
-                }
-
-                cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            });
-
-            const headerRow = worksheet.addRow([
-                'Fecha Entrada',
-                'Hora Entrada',
-                'Hora Salida',
-                'Ubicación Entrada',
-                'Ubicación Salida',
-                'Tipo',
-                'Descanso',
-                'Diferencia Tiempo',
-            ]);
-
-            headerRow.eachCell(cell => {
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F4E78' } };
-                cell.font = { color: { argb: 'FFFFFF' }, bold: true };
-                cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            });
-
-            let totalMinutes = 0;
-
-            for (const fichaje of fichajesPorMes[mes]) {
-                const entrada = fichaje.fecha_entrada ? dayjs(fichaje.fecha_entrada).tz(ZONA_HORARIA) : null;
-                const salida = fichaje.fecha_salida ? dayjs(fichaje.fecha_salida).tz(ZONA_HORARIA) : null;
-
-                let diferencia = '-';
-
-                if (
-                    fichaje.tipo === 'fichaje' &&
-                    entrada &&
-                    entrada.isValid() &&
-                    salida &&
-                    salida.isValid()
-                ) {
-                    const diffMs = salida.diff(entrada);
-                    const diff = dayjs.duration(diffMs);
-                    diferencia = `${String(diff.hours()).padStart(2, '0')}:${String(diff.minutes()).padStart(2, '0')}`;
-                    totalMinutes += Math.floor(salida.diff(entrada, 'minute'));
-                }
-
-                const ubicacionEntrada = await getDireccionDesdeCoordenadas(fichaje.ubicacion_entrada);
-                const ubicacionSalida = await getDireccionDesdeCoordenadas(fichaje.ubicacion_salida);
-
-                const tipoLabel = {
-                    fichaje: 'Fichaje',
-                    ausencia: 'Ausencia',
-                    descanso: 'Descanso',
-                }[fichaje.tipo] || '-';
-
-                const row = worksheet.addRow([
-                    entrada && entrada.isValid() ? entrada.format('DD/MM/YYYY') : '-',
-                    fichaje.sin_hora ? '-' : (entrada && entrada.isValid() ? entrada.format('HH:mm') : '-'),
-                    fichaje.sin_hora ? '-' : (salida && salida.isValid() ? salida.format('HH:mm') : '-'),
-                    ubicacionEntrada,
-                    ubicacionSalida,
-                    tipoLabel,
-                    fichaje.descanso || '-',
-                    diferencia,
-                ]);
-
-                row.eachCell(cell => {
-                    cell.fill = {
-                        type: 'pattern',
-                        pattern: 'solid',
-                        fgColor: { argb: 'E6F0FA' },
-                    };
-                    cell.alignment = { vertical: 'middle', horizontal: 'center' };
-                });
-            }
-
-            const totalHoras = Math.floor(totalMinutes / 60);
-            const totalRestoMin = totalMinutes % 60;
-            const totalStr = `${String(totalHoras).padStart(2, '0')}:${String(totalRestoMin).padStart(2, '0')}`;
-
-            worksheet.addRow([]);
-            const totalRow = worksheet.addRow(['Total horas trabajadas', totalStr]);
-            totalRow.eachCell(cell => {
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1F4E78' } };
-                cell.font = { color: { argb: 'FFFFFF' }, bold: true };
-                cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            });
-
-            worksheet.addRow([]);
-        }
+        const resultado = await generarExcelRegistrosHorarios(req.body);
 
         res.setHeader(
             'Content-Disposition',
-            `attachment; filename=fichajes_usuario_${id_usuario}_${start.format('YYYYMMDD')}_${end.format('YYYYMMDD')}.xlsx`
+            `attachment; filename=${resultado.filename}`,
         );
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-
-        await workbook.xlsx.write(res);
-        res.end();
-
+        res.send(Buffer.from(resultado.buffer));
     } catch (error) {
+        if (error instanceof FichajesExportError) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
+
         console.error('Error al generar el Excel:', error);
         res.status(500).json({ message: 'Error al generar el archivo', error: error.message });
     }
 };
 
+const enviarRegistrosHorariosPorEmail = async (req, res) => {
+    try {
+        const { id_usuario, startDate, endDate, idEmpresa, destinatarios, email } = req.body;
+        const emails = normalizarDestinatariosEmail(destinatarios ?? email);
+
+        if (!emails.length) {
+            return res.status(400).json({ message: 'Indica al menos un correo de destino' });
+        }
+
+        const invalidos = emails.filter((dest) => !isEmailValido(dest));
+        if (invalidos.length) {
+            return res.status(400).json({
+                message: `Correo${invalidos.length > 1 ? 's' : ''} no válido${invalidos.length > 1 ? 's' : ''}: ${invalidos.join(', ')}`,
+            });
+        }
+
+        const resultado = await generarExcelRegistrosHorarios({
+            id_usuario,
+            startDate,
+            endDate,
+            idEmpresa,
+        });
+
+        await enviarRegistrosHorariosEmail({
+            destinatarios: emails,
+            replyTo: req.user?.email,
+            nombreRemitente: req.user?.nombre || 'Usuario',
+            nombreEmpresa: resultado.meta.nombreEmpresa,
+            nombreUsuario: resultado.meta.nombreUsuario,
+            rangoInicio: resultado.meta.startLabel,
+            rangoFin: resultado.meta.endLabel,
+            attachment: {
+                filename: resultado.filename,
+                content: Buffer.from(resultado.buffer),
+            },
+        });
+
+        return res.status(200).json({
+            message: 'Registros enviados correctamente',
+            destinatarios: emails,
+        });
+    } catch (error) {
+        if (error instanceof FichajesExportError) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
+
+        console.error('Error enviando registros horarios por email:', error);
+        return res.status(500).json({ message: 'No se pudo enviar el correo. Inténtalo más tarde.' });
+    }
+};
+
 module.exports = {
     exportarDatosExcel,
+    enviarRegistrosHorariosPorEmail,
     getUserData,
     getMiPerfil,
     editMiPerfil,

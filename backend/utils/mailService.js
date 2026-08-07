@@ -5,6 +5,7 @@ const nodemailer = require('nodemailer');
 const { APP_URL } = require('../config/appUrls');
 const { BRAND_NAME, BRAND_BYLINE, LOGO_PATH } = require('../config/brand');
 const { isEmailValido } = require('./identityChecks');
+const { etiquetaTipoUsuario } = require('./tipoUsuarioLabel');
 const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES) || 60;
 const WELCOME_TOKEN_TTL_DAYS = Number(process.env.WELCOME_TOKEN_TTL_DAYS) || 7;
 const WELCOME_TOKEN_TTL_MINUTES = WELCOME_TOKEN_TTL_DAYS * 24 * 60;
@@ -230,10 +231,10 @@ const buildWelcomeEmailHtml = ({
     ${bloqueBotonEnlace(enlace, 'Crear mi contraseña')}
   `);
 
-const enviarCorreo = async ({ to, subject, html, replyTo }) => {
+const enviarCorreo = async ({ to, subject, html, replyTo, attachments: extraAttachments = [] }) => {
   const transporter = buildTransporter();
-  const attachments = logoAttachment();
-  const htmlConLogo = attachments.length
+  const attachments = [...logoAttachment(), ...extraAttachments];
+  const htmlConLogo = logoAttachment().length
     ? html
     : html.replace(/<img src="cid:logo"[^>]*>/g, '');
 
@@ -436,11 +437,14 @@ const enviarNotificacionGestion = async ({
   return { enviado: true, destinatarios: validos };
 };
 
-const buildSupportSubject = ({ nombreEmpresa, idEmpresa }) => {
+const formatEmpresaConId = (nombreEmpresa, idEmpresa) => {
   const empresa = nombreEmpresa || 'Sin empresa';
   const id = idEmpresa != null ? idEmpresa : 'N/A';
-  return `[Soporte] ${empresa} (ID: ${id})`;
+  return `${empresa} (${id})`;
 };
+
+const buildSupportSubject = ({ nombreEmpresa, idEmpresa }) =>
+  `[Soporte] ${formatEmpresaConId(nombreEmpresa, idEmpresa)}`;
 
 const buildSupportEmailHtml = ({
   nombreUsuario,
@@ -448,9 +452,14 @@ const buildSupportEmailHtml = ({
   nombreEmpresa,
   idEmpresa,
   idUsuario,
+  tipoUsuario,
   mensaje,
-}) =>
-  emailLayout(`
+}) => {
+  const rol = etiquetaTipoUsuario(tipoUsuario);
+  const empresaLabel = formatEmpresaConId(nombreEmpresa, idEmpresa);
+  const usuarioLabel = `${nombreUsuario} (${idUsuario ?? 'N/A'}) — ${rol}`;
+
+  return emailLayout(`
     <tr>
       <td style="padding:32px 40px 8px 40px; font-family:Arial,Helvetica,sans-serif;">
         <h2 style="margin:0 0 16px 0; font-size:20px; color:#001529;">Nueva consulta de soporte</h2>
@@ -462,11 +471,9 @@ const buildSupportEmailHtml = ({
     <tr>
       <td style="padding:0 40px 16px 40px; font-family:Arial,Helvetica,sans-serif;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px; color:#333;">
-          <tr><td style="padding:6px 0;"><strong>Usuario:</strong> ${escapeHtml(nombreUsuario)}</td></tr>
+          <tr><td style="padding:6px 0;"><strong>Empresa:</strong> ${escapeHtml(empresaLabel)}</td></tr>
+          <tr><td style="padding:6px 0;"><strong>Usuario:</strong> ${escapeHtml(usuarioLabel)}</td></tr>
           <tr><td style="padding:6px 0;"><strong>Email de contacto:</strong> ${escapeHtml(emailUsuario)}</td></tr>
-          <tr><td style="padding:6px 0;"><strong>Empresa:</strong> ${escapeHtml(nombreEmpresa)}</td></tr>
-          <tr><td style="padding:6px 0;"><strong>ID empresa:</strong> ${escapeHtml(idEmpresa)}</td></tr>
-          <tr><td style="padding:6px 0;"><strong>ID usuario:</strong> ${escapeHtml(idUsuario)}</td></tr>
         </table>
       </td>
     </tr>
@@ -477,6 +484,7 @@ const buildSupportEmailHtml = ({
       </td>
     </tr>
   `);
+};
 
 const enviarCorreoSoporte = async ({
   nombreUsuario,
@@ -484,6 +492,7 @@ const enviarCorreoSoporte = async ({
   nombreEmpresa,
   idEmpresa,
   idUsuario,
+  tipoUsuario,
   mensaje,
 }) => {
   await enviarCorreo({
@@ -496,8 +505,59 @@ const enviarCorreoSoporte = async ({
       nombreEmpresa,
       idEmpresa,
       idUsuario,
+      tipoUsuario,
       mensaje,
     }),
+  });
+};
+
+const enviarRegistrosHorariosPorEmail = async ({
+  destinatarios,
+  replyTo,
+  nombreRemitente,
+  nombreEmpresa,
+  nombreUsuario,
+  rangoInicio,
+  rangoFin,
+  attachment,
+}) => {
+  const destino = Array.isArray(destinatarios) ? destinatarios.join(', ') : destinatarios;
+  const subject = `[${BRAND_NAME}] Registro horario — ${nombreUsuario} (${rangoInicio} - ${rangoFin})`;
+
+  const html = emailLayout(`
+    <tr>
+      <td style="padding:32px 40px 8px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <h2 style="margin:0 0 16px 0; font-size:20px; color:#001529;">Registro horario</h2>
+        <p style="margin:0; font-size:14px; color:#444; line-height:1.6;">
+          Se adjunta el registro horario solicitado desde ${BRAND_NAME}.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 40px 16px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px; color:#333;">
+          <tr><td style="padding:6px 0;"><strong>Empresa:</strong> ${escapeHtml(nombreEmpresa)}</td></tr>
+          <tr><td style="padding:6px 0;"><strong>Personal:</strong> ${escapeHtml(nombreUsuario)}</td></tr>
+          <tr><td style="padding:6px 0;"><strong>Periodo:</strong> ${escapeHtml(rangoInicio)} — ${escapeHtml(rangoFin)}</td></tr>
+          <tr><td style="padding:6px 0;"><strong>Enviado por:</strong> ${escapeHtml(nombreRemitente)}</td></tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 40px 32px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <p style="margin:0; font-size:13px; color:#666; line-height:1.6;">
+          El archivo Excel adjunto incluye fichajes, ausencias y descansos del periodo indicado.
+        </p>
+      </td>
+    </tr>
+  `);
+
+  await enviarCorreo({
+    to: destino,
+    replyTo,
+    subject,
+    html,
+    attachments: attachment ? [attachment] : [],
   });
 };
 
@@ -626,6 +686,7 @@ module.exports = {
   enviarInvitacionEmpleado,
   enviarNotificacionGestion,
   enviarCorreoSoporte,
+  enviarRegistrosHorariosPorEmail,
   buildSupportSubject,
   enviarAvisoRenovacionLegacy,
   SUPPORT_EMAIL,

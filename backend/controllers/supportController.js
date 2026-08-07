@@ -15,7 +15,7 @@ const enviarMensajeSoporte = async (req, res) => {
     return res.status(400).json({ message: 'El mensaje no puede superar 2000 caracteres' });
   }
 
-  const { email, nombre, id_empresa, nombre_empresa, id_usuario } = req.user;
+  const { email, nombre, id_empresa, nombre_empresa, id_usuario, tipo_usuario } = req.user;
 
   if (!email) {
     return res.status(400).json({ message: 'No se encontró el correo del usuario en la sesión' });
@@ -28,6 +28,7 @@ const enviarMensajeSoporte = async (req, res) => {
       nombreEmpresa: nombre_empresa || 'Sin empresa',
       idEmpresa: id_empresa ?? 'N/A',
       idUsuario: id_usuario ?? 'N/A',
+      tipoUsuario: tipo_usuario,
       mensaje: mensaje.trim(),
     });
 
