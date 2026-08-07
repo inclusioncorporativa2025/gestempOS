@@ -1,5 +1,6 @@
 const axios = require('axios');
 const ExcelJS = require('exceljs');
+const fs = require('fs');
 const NodeCache = require('node-cache');
 const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
@@ -14,6 +15,8 @@ const mesesCierre = require('../models/MesesCierre');
 const Ausencias = require('../models/Ausencias');
 const Descansos = require('../models/Descansos');
 const { MESES_CIERRE_ATTRS } = require('../utils/mesesCierreCompat');
+const { BRAND_NAME, BRAND_BYLINE, LOGO_PATH } = require('../config/brand');
+const { LANDING_URL } = require('../config/appUrls');
 const { empresaTieneFeature } = require('./planService');
 const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/ausenciasCompat');
 
@@ -23,6 +26,95 @@ dayjs.extend(timezone);
 
 const ZONA_HORARIA = 'Europe/Madrid';
 const locationCache = new NodeCache({ stdTTL: 86400 });
+const BRAND_BLUE = 'FF2BA9E0';
+const BRAND_HEADER = 'FF1F4E78';
+const EXPORT_COLS = 8;
+
+const estiloCeldaMarca = (cell, { bold = false, color = BRAND_HEADER, size = 11 } = {}) => {
+  cell.font = { bold, size, color: { argb: color } };
+  cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+};
+
+const fusionarFilaExport = (worksheet, rowNumber) => {
+  worksheet.mergeCells(rowNumber, 1, rowNumber, EXPORT_COLS);
+};
+
+const anadirCabeceraMarca = (workbook, worksheet, { nombreEmpresa, start, end }) => {
+  workbook.creator = BRAND_NAME;
+  workbook.lastModifiedBy = BRAND_NAME;
+  workbook.company = BRAND_BYLINE;
+  workbook.created = new Date();
+
+  if (fs.existsSync(LOGO_PATH)) {
+    worksheet.addRow([]);
+    worksheet.addRow([]);
+    const imageId = workbook.addImage({ filename: LOGO_PATH, extension: 'png' });
+    worksheet.addImage(imageId, {
+      tl: { col: 0, row: 0 },
+      ext: { width: 170, height: 38 },
+    });
+  }
+
+  const titulo = worksheet.addRow([`${BRAND_NAME} — Registro horario`]);
+  fusionarFilaExport(worksheet, titulo.number);
+  titulo.height = 22;
+  titulo.getCell(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: BRAND_HEADER },
+  };
+  estiloCeldaMarca(titulo.getCell(1), { bold: true, color: 'FFFFFFFF', size: 14 });
+
+  const byline = worksheet.addRow([BRAND_BYLINE]);
+  fusionarFilaExport(worksheet, byline.number);
+  estiloCeldaMarca(byline.getCell(1), { color: 'FF666666', size: 10 });
+
+  const landingHost = LANDING_URL.replace(/^https?:\/\//, '');
+  const enlace = worksheet.addRow([{
+    text: `Control horario digital · ${landingHost}`,
+    hyperlink: LANDING_URL,
+  }]);
+  fusionarFilaExport(worksheet, enlace.number);
+  estiloCeldaMarca(enlace.getCell(1), { bold: true, color: BRAND_BLUE, size: 10 });
+  enlace.getCell(1).font = { ...enlace.getCell(1).font, underline: true };
+
+  const contexto = worksheet.addRow([
+    `Empresa: ${nombreEmpresa} · Periodo: ${start.format('DD/MM/YYYY')} — ${end.format('DD/MM/YYYY')}`,
+  ]);
+  fusionarFilaExport(worksheet, contexto.number);
+  estiloCeldaMarca(contexto.getCell(1), { color: 'FF444444', size: 10 });
+
+  const generado = worksheet.addRow([
+    `Generado el ${dayjs().tz(ZONA_HORARIA).format('DD/MM/YYYY HH:mm')} con ${BRAND_NAME}`,
+  ]);
+  fusionarFilaExport(worksheet, generado.number);
+  estiloCeldaMarca(generado.getCell(1), { color: 'FF888888', size: 9 });
+
+  worksheet.addRow([]);
+};
+
+const anadirPieMarca = (worksheet) => {
+  worksheet.addRow([]);
+  const landingHost = LANDING_URL.replace(/^https?:\/\//, '');
+  const pie = worksheet.addRow([{
+    text: `Documento generado con ${BRAND_NAME}. ¿Tu empresa aún no lo usa? ${landingHost}`,
+    hyperlink: LANDING_URL,
+  }]);
+  fusionarFilaExport(worksheet, pie.number);
+  pie.height = 28;
+  pie.getCell(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFF4F8FB' },
+  };
+  pie.getCell(1).font = {
+    italic: true,
+    size: 10,
+    color: { argb: 'FF555555' },
+    underline: true,
+  };
+  pie.getCell(1).alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+};
 
 class FichajesExportError extends Error {
   constructor(message, statusCode = 500) {
@@ -194,6 +286,12 @@ const generarExcelRegistrosHorarios = async ({ id_usuario, startDate, endDate, i
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Fichajes Usuario');
 
+  anadirCabeceraMarca(workbook, worksheet, {
+    nombreEmpresa: empresa?.nombre || 'Sin empresa',
+    start,
+    end,
+  });
+
   const datosUser = worksheet.addRow(['Nombre', 'DNI']);
   const contenidoUser = worksheet.addRow([usuario.nombre || 'Sin nombre', usuario.dni || 'Sin DNI']);
   worksheet.addRow([]);
@@ -312,6 +410,8 @@ const generarExcelRegistrosHorarios = async ({ id_usuario, startDate, endDate, i
 
     worksheet.addRow([]);
   }
+
+  anadirPieMarca(worksheet);
 
   const buffer = await workbook.xlsx.writeBuffer();
   const filename = `fichajes_usuario_${id_usuario}_${start.format('YYYYMMDD')}_${end.format('YYYYMMDD')}.xlsx`;
