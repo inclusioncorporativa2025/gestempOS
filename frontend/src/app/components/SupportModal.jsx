@@ -4,6 +4,7 @@ import GradientButton from './shared/GradientButton';
 import { useAuth } from '../../config/AuthContext';
 import { SUPPORT_EMAIL } from '../../constants/support';
 import { enviarMensajeSoporte } from '../../features/support/supportService';
+import { etiquetaTipoUsuario } from '../../utils/tipoUsuarioLabel';
 import './SupportModal.css';
 
 const { Text, Paragraph } = Typography;
@@ -17,6 +18,8 @@ const SupportModal = ({ open, onClose }) => {
   const nombreEmpresa = user?.nombre_empresa || 'Sin empresa asignada';
   const idEmpresa = user?.id_empresa ?? 'N/A';
   const emailUsuario = user?.email || '';
+  const nombreUsuario = user?.nombre || 'Usuario';
+  const rolUsuario = etiquetaTipoUsuario(user?.tipo_usuario);
 
   const handleClose = () => {
     if (loading) return;
@@ -63,8 +66,8 @@ const SupportModal = ({ open, onClose }) => {
       </Paragraph>
 
       <Descriptions size="small" column={1} bordered className="support-modal-meta">
-        <Descriptions.Item label="Empresa">{nombreEmpresa}</Descriptions.Item>
-        <Descriptions.Item label="ID empresa">{idEmpresa}</Descriptions.Item>
+        <Descriptions.Item label="Empresa">{`${nombreEmpresa} (${idEmpresa})`}</Descriptions.Item>
+        <Descriptions.Item label="Usuario">{`${nombreUsuario} — ${rolUsuario}`}</Descriptions.Item>
         <Descriptions.Item label="Tu correo">{emailUsuario}</Descriptions.Item>
       </Descriptions>
 

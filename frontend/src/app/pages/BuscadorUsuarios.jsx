@@ -4,7 +4,7 @@ import GradientButton from '../components/shared/GradientButton';
 import { SearchOutlined, EditOutlined, StopOutlined, EyeOutlined, DownloadOutlined, UserAddOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
-import { getUsuariosEmpresa, deleteUsuario, editUsuario, getHorasTotalesMesByIdUsuario, descargarExcelDesdeAPI } from "../../features/user/usuarioService";
+import { getUsuariosEmpresa, deleteUsuario, editUsuario, getHorasTotalesMesByIdUsuario } from "../../features/user/usuarioService";
 import { getDatosUsuarioById } from '../../features/fichaje/fichajeService';
 import { obtenerJornadas } from "../../features/jornada/jornadaService";
 import { parseFechaFichaje } from '../../utils/fechaFichaje';
@@ -23,6 +23,7 @@ import {
 import { opcionesTipoHora, tipoHoraFormValue } from '../../utils/tipoHora';
 import { tooltipTipoHoraFormItem } from '../../utils/tipoHoraTooltip';
 import AltaEmpleadoModal from '../components/AltaEmpleadoModal';
+import ExportRegistrosModal from '../components/ExportRegistrosModal';
 import JornadaLaboralSelect from '../components/JornadaLaboralSelect';
 import { listarConveniosEmpresa } from '../../features/convenios/convenioService';
 import { esUsuarioActivo, estaDadoDeBajaEnEmpresa as estaDadoDeBaja } from '../../utils/usuarioActivo';
@@ -56,7 +57,6 @@ const BuscarUsuarios = () => {
     const [id_usuario, setIdUsuario] = useState(null);
     const [filtroActivo, setFiltroActivo] = useState('activos');
     const [exportModalVisible, setExportModalVisible] = useState(false);
-    const [exportDateRange, setExportDateRange] = useState(null);
     const [altaEmpleadoOpen, setAltaEmpleadoOpen] = useState(false);
     const [conveniosEmpresa, setConveniosEmpresa] = useState([]);
     const [mobilePage, setMobilePage] = useState(1);
@@ -442,28 +442,6 @@ const BuscarUsuarios = () => {
         },
     ];
 
-    const handleExport = () => {
-        if (!id_usuario) {
-            return message.error('Por favor, selecciona un usuario para exportar.');
-        }
-    
-        if (!exportDateRange || exportDateRange.length !== 2) {
-            return message.error('Por favor, selecciona un rango de meses válido.');
-        }
-    
-        const [startMonth, endMonth] = exportDateRange;
-    
-        if (startMonth && endMonth) {
-            const startDate = startMonth.startOf('month').format('YYYY-MM-DD');
-            const endDate = endMonth.endOf('month').format('YYYY-MM-DD');
-    
-            descargarExcelDesdeAPI(startDate, endDate, id_usuario);
-            setExportModalVisible(false);
-        } else {
-            message.error('Los meses seleccionados no son válidos.');
-        }
-    };
-
     return (
         <ConfigProvider locale={esES}>
             <div className="bu-page">
@@ -522,23 +500,12 @@ const BuscarUsuarios = () => {
                     onSuccess={fetchUsuarios}
                 />
 
-                {/* Modal de exportación */}
-                <Modal
-                    title="Exportar datos"
+                <ExportRegistrosModal
                     open={exportModalVisible}
-                    onCancel={() => setExportModalVisible(false)}
-                    onOk={handleExport}
-                    okText="Descargar"
-                    cancelText="Cancelar"
-                >
-                    <DatePicker.RangePicker
-                        picker="month"
-                        className="bu-full-width"
-                        format="MM/YYYY"
-                        onChange={(dates) => setExportDateRange(dates)}
-                        disabledDate={(current) => current && current > dayjs()}
-                    />
-                </Modal>
+                    onClose={() => setExportModalVisible(false)}
+                    idUsuario={id_usuario}
+                    requireUser
+                />
 
                 {/* Modal de detalles */}
                 <Modal

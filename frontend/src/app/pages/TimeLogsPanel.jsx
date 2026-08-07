@@ -11,7 +11,7 @@ import {
 } from '@ant-design/icons';
 import { crearPeticionEdicion, crearPeticionCierreMes, getPeticionesByIdUsuario, getPeticionesByIdEmpresa, marcarPeticionesVistas } from "../../features/fichaje/fichajeService";
 import { getDatosUsuarioById } from "../../features/fichaje/fichajeService";
-import { descargarExcelDesdeAPI, getHorasTotalesMesByIdUsuario } from "../../features/user/usuarioService";
+import { getHorasTotalesMesByIdUsuario } from "../../features/user/usuarioService";
 import { crearAusencia } from "../../features/ausencias/ausenciasService";
 
 import dayjs from 'dayjs';
@@ -30,6 +30,7 @@ import {
 import { DECLARACION_CIERRE_MENSUAL, ETIQUETA_CONFIRMACION_CIERRE } from '../../utils/cierreMensualLegal';
 import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import UbicacionMapModal from '../components/UbicacionMapModal';
+import ExportRegistrosModal from '../components/ExportRegistrosModal';
 import SignaturePad from '../components/shared/SignaturePad';
 import { GESTION_TIEMPO_REFRESH } from '../../hooks/useEstadoJornada';
 import './TimeLogsPanel.css';
@@ -122,7 +123,6 @@ const [mesesCierre, setMesesCierre] = useState([]);
 const [exportModalVisible, setExportModalVisible] = useState(false);
 const [absenceModalVisible, setAbsenceModalVisible] = useState(false);
 
-const [exportDateRange, setExportDateRange] = useState(null);
 const [absenceFechaDesde, setAbsenceFechaDesde] = useState(null);
 const [absenceFechaHasta, setAbsenceFechaHasta] = useState(null);
 const [id_usuario, setIdUsuario] = useState(null);
@@ -166,8 +166,8 @@ const [enviandoCierre, setEnviandoCierre] = useState(false);
       setMapUbicacion(null);
     };
 
-    const setVisibleModalExportar =  (id_usuario)=> {
-        setIdUsuario(id_usuario);
+    const setVisibleModalExportar = () => {
+        setIdUsuario(getIdUsuario());
         setExportModalVisible(true);
     }
 
@@ -241,30 +241,7 @@ const anadirAusencia = async () => {
     message.error((error.message || 'Error al añadir ausencia') + detalle, 6);
   }
 };
-    const handleExport = () => {
-
-        const idUsuario = getIdUsuario(); 
-
-
-    
-        if (!exportDateRange || exportDateRange.length !== 2) {
-            return message.error('Por favor, selecciona un rango de meses válido.');
-        }
-    
-        const [startMonth, endMonth] = exportDateRange;
-    
-        if (startMonth && endMonth) {
-            const startDate = startMonth.startOf('month').format('YYYY-MM-DD');
-            const endDate = endMonth.endOf('month').format('YYYY-MM-DD');
-    
-            descargarExcelDesdeAPI(startDate, endDate, idUsuario);
-            setExportModalVisible(false);
-        } else {
-            message.error('Los meses seleccionados no son válidos.');
-        }
-    };
-
-const fetchData = async () => {
+    const fetchData = async () => {
   try {
     const idUsuario = getIdUsuario();
 
@@ -967,23 +944,11 @@ const handleMonthChange = (date, dateString) => {
                     </Form>
                 </Modal>
             </Card>
-                  {/* Modal de exportación */}
-                <Modal
-                    title="Exportar datos"
+                <ExportRegistrosModal
                     open={exportModalVisible}
-                    onCancel={() => setExportModalVisible(false)}
-                    onOk={handleExport}
-                    okText="Descargar"
-                    cancelText="Cancelar"
-                >
-                    <DatePicker.RangePicker
-                        picker="month"
-                        className="tlp-full-width"
-                        format="MM/YYYY"
-                        onChange={(dates) => setExportDateRange(dates)}
-                        disabledDate={(current) => current && current > dayjs()}
-                    />
-                </Modal>
+                    onClose={() => setExportModalVisible(false)}
+                    idUsuario={id_usuario ?? getIdUsuario()}
+                />
 
                        {/* Modal de ausencia */}
                 {puedeAusencias && (

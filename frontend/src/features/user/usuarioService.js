@@ -67,15 +67,50 @@ export const descargarExcelDesdeAPI = async (startDate, endDate,id_usuario) => {
           })
       });
 
-      if (!response.ok) throw new Error('Error al generar el Excel');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al generar el Excel');
+      }
 
       const blob = await response.blob();
       saveAs(blob, `registro_${id_usuario}_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`);
       message.success('Archivo descargado con éxito');
   } catch (error) {
-      message.error('No se pudo descargar el archivo');
+      message.error(error.message || 'No se pudo descargar el archivo');
       console.error(error);
+      throw error;
   }
+};
+
+export const enviarRegistrosHorariosPorEmail = async ({
+  idUsuario,
+  startDate,
+  endDate,
+  email,
+  destinatarios,
+}) => {
+  const idEmpresa = getIdEmpresa();
+
+  const response = await fetch(`${API_BASE_URL}/exportar/enviar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id_usuario: idUsuario,
+      startDate,
+      endDate,
+      idEmpresa,
+      email,
+      destinatarios,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Error al enviar el correo');
+  }
+
+  return data;
 };
 
     
