@@ -676,6 +676,87 @@ const enviarAvisoRenovacionLegacy = async ({
   });
 };
 
+const buildTrialEndingEmailHtml = ({
+  nombre,
+  nombreEmpresa,
+  diasRestantes,
+  fechaFinLabel,
+  enlaceFacturacion,
+  enStripeTrialing,
+}) => {
+  const diasTexto = diasRestantes === 1 ? '1 día' : `${diasRestantes} días`;
+  const asuntoSoporte = encodeURIComponent(`Ampliar prueba — ${nombreEmpresa}`);
+  const cuerpoSoporte = encodeURIComponent(
+    `Hola,\n\nEstamos probando Timecor con ${nombreEmpresa} y nos gustaría ampliar el periodo de prueba.\n\n¿Podéis ayudarnos?\n\nGracias.`,
+  );
+  const enlaceSoporte = `mailto:${SUPPORT_EMAIL}?subject=${asuntoSoporte}&body=${cuerpoSoporte}`;
+
+  const notaStripe = enStripeTrialing
+    ? `<p style="margin:0 0 16px 0; font-size:14px; line-height:1.6; color:#444;">
+         Ya tienes un método de pago registrado: no se realizará ningún cargo hasta que finalice la prueba.
+       </p>`
+    : '';
+
+  return emailLayout(`
+    <tr>
+      <td style="padding:32px 40px 8px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <h2 style="margin:0 0 16px 0; font-size:20px; color:#001529;">Tu prueba termina pronto</h2>
+        <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">
+          Hola <strong>${escapeHtml(nombre || 'equipo')}</strong>,
+        </p>
+        <p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#444;">
+          El periodo de prueba de <strong>${escapeHtml(nombreEmpresa)}</strong> en ${BRAND_NAME}
+          finaliza el <strong>${escapeHtml(fechaFinLabel)}</strong> (quedan <strong>${escapeHtml(diasTexto)}</strong>).
+        </p>
+        ${notaStripe}
+        <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">
+          ¿Cómo os está yendo con el fichaje y la gestión del equipo? Si necesitáis más tiempo,
+          más licencias o tenéis alguna duda, responded a este correo o escribidnos a soporte.
+        </p>
+      </td>
+    </tr>
+    ${bloqueBotonEnlace(enlaceFacturacion, 'Ver planes y activar suscripción')}
+    <tr>
+      <td style="padding:0 40px 32px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <p style="margin:0 0 8px 0; font-size:14px; line-height:1.6; color:#444;">
+          ¿Necesitáis ampliar la prueba?
+        </p>
+        <p style="margin:0; font-size:14px; line-height:1.6;">
+          <a href="${enlaceSoporte}" style="color:#2BA9E0; font-weight:bold;">Solicitar más tiempo de prueba</a>
+          &nbsp;·&nbsp;
+          <a href="mailto:${SUPPORT_EMAIL}" style="color:#2BA9E0;">${escapeHtml(SUPPORT_EMAIL)}</a>
+        </p>
+      </td>
+    </tr>
+  `);
+};
+
+const enviarAvisoFinPrueba = async ({
+  nombre,
+  email,
+  nombreEmpresa,
+  diasRestantes,
+  fechaFinLabel,
+  enlaceFacturacion,
+  enStripeTrialing,
+}) => {
+  const diasTexto = diasRestantes === 1 ? '1 día' : `${diasRestantes} días`;
+
+  await enviarCorreo({
+    to: email,
+    replyTo: SUPPORT_EMAIL,
+    subject: `${BRAND_NAME} — Te quedan ${diasTexto} de prueba (${nombreEmpresa})`,
+    html: buildTrialEndingEmailHtml({
+      nombre,
+      nombreEmpresa,
+      diasRestantes,
+      fechaFinLabel,
+      enlaceFacturacion,
+      enStripeTrialing,
+    }),
+  });
+};
+
 module.exports = {
   hashToken,
   RESET_TOKEN_TTL_MINUTES,
@@ -689,5 +770,6 @@ module.exports = {
   enviarRegistrosHorariosPorEmail,
   buildSupportSubject,
   enviarAvisoRenovacionLegacy,
+  enviarAvisoFinPrueba,
   SUPPORT_EMAIL,
 };

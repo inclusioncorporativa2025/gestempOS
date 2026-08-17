@@ -1,0 +1,16 @@
+-- Avisos de fin de periodo de prueba (trial)
+-- Reutiliza empresa_renovacion_aviso con tipo = 'trial_3_dias' y period_end = DATE(trial_ends_at).
+-- Si la tabla no existe, ejecutar antes: backend/config/scripts/empresa_renovacion.sql
+--
+-- Cron diario (crontab -e como root):
+--   30 8 * * * cd /root/fichaeneltrabajo/gestempOS/backend && /usr/bin/node scripts/enviar-avisos-fin-prueba.js >> /var/log/timecor-trial-aviso.log 2>&1
+--
+-- Variable opcional: TRIAL_WARN_DAYS (default 3)
+
+-- Ver empresas que recibirían aviso hoy (3 días antes del fin):
+-- SELECT e.id_empresa, e.nombre, ef.trial_ends_at, ef.modo_facturacion, ef.estado_suscripcion
+-- FROM m_empresas e
+-- INNER JOIN empresa_facturacion ef ON ef.id_empresa = e.id_empresa
+-- WHERE e.fecha_baja IS NULL
+--   AND ef.trial_ends_at IS NOT NULL
+--   AND DATE(ef.trial_ends_at) = DATE(DATE_ADD(CURDATE(), INTERVAL 3 DAY));
