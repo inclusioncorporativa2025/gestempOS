@@ -3,7 +3,7 @@ const fs = require('fs');
 const nodemailer = require('nodemailer');
 
 const { APP_URL } = require('../config/appUrls');
-const { BRAND_NAME, BRAND_BYLINE, LOGO_PATH } = require('../config/brand');
+const { BRAND_NAME, LOGO_PATH, buildBrandBylineHtml } = require('../config/brand');
 const { isEmailValido } = require('./identityChecks');
 const { etiquetaTipoUsuario } = require('./tipoUsuarioLabel');
 const RESET_TOKEN_TTL_MINUTES = Number(process.env.RESET_TOKEN_TTL_MINUTES) || 60;
@@ -81,7 +81,7 @@ const emailLayout = (cuerpoHtml) => `
             ${cuerpoHtml}
             <tr>
               <td style="padding:24px 40px; background-color:#f9fafb; border-top:1px solid #eee; font-family:Arial,Helvetica,sans-serif;">
-                <p style="margin:0; font-size:12px; color:#999;">© ${new Date().getFullYear()} ${BRAND_BYLINE}</p>
+                <p style="margin:0; font-size:12px; color:#999;">© ${new Date().getFullYear()} ${buildBrandBylineHtml()}</p>
               </td>
             </tr>
           </table>
