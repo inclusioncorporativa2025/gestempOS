@@ -224,6 +224,24 @@ export const generarEnlacePagoEmpresa = async (idEmpresa) => {
   return data;
 };
 
+export const extenderPeriodoPruebaEmpresa = async (idEmpresa, trialEndsAt) => {
+  const idUsuario = getIdUsuario();
+
+  const response = await fetch(`${API_BASE_URL}/extender-prueba`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idEmpresa, trialEndsAt, idUsuario }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Error al ampliar el periodo de prueba');
+  }
+
+  return data;
+};
+
 // 
 export const editEmpresa = async (idEmpresa,datos) => {
 

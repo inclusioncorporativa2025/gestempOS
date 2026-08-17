@@ -209,18 +209,97 @@ const assertEmpresaTrialActiva = async (idEmpresa) => {
 
 const calcularFechaFinPrueba = (desde = new Date()) => addDays(desde, TRIAL_DAYS);
 
+class TrialExtensionError extends Error {
+  constructor(message, statusCode = 400) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+const empresaPuedeExtenderPrueba = (facturacion) => {
+  if (!facturacion) return false;
+
+  const modo = String(facturacion.modo_facturacion || '').toLowerCase();
+  const estado = String(facturacion.estado_suscripcion || '').toLowerCase();
+
+  if (modo === 'legacy') return false;
+  if (modo === 'trial') return true;
+  if (estado === 'trialing') return true;
+
+  return false;
+};
+
+const extenderPeriodoPruebaEmpresa = async (idEmpresa, nuevaFechaFin) => {
+  const idEmpresaNum = Number(idEmpresa);
+  if (!Number.isFinite(idEmpresaNum)) {
+    throw new TrialExtensionError('Empresa no válida');
+  }
+
+  const fin = nuevaFechaFin ? new Date(nuevaFechaFin) : null;
+  if (!fin || Number.isNaN(fin.getTime())) {
+    throw new TrialExtensionError('Indica una fecha de fin de prueba válida');
+  }
+
+  if (fin.getTime() <= Date.now()) {
+    throw new TrialExtensionError('La nueva fecha debe ser posterior a hoy');
+  }
+
+  const facturacion = await obtenerFacturacionEmpresa(idEmpresaNum);
+  if (!facturacion) {
+    throw new TrialExtensionError('La empresa no tiene datos de facturación', 404);
+  }
+
+  if (!empresaPuedeExtenderPrueba(facturacion)) {
+    throw new TrialExtensionError('Esta empresa no está en periodo de prueba ampliable');
+  }
+
+  const estado = String(facturacion.estado_suscripcion || '').toLowerCase();
+  const fechaAnterior = facturacion.trial_ends_at ? new Date(facturacion.trial_ends_at) : null;
+
+  if (fechaAnterior && fechaAnterior.getTime() > Date.now() && fin.getTime() <= fechaAnterior.getTime()) {
+    throw new TrialExtensionError('La nueva fecha debe ser posterior al fin de prueba actual');
+  }
+
+  if (facturacion.stripe_subscription_id && estado === 'trialing') {
+    const { getStripe, sincronizarSuscripcion } = require('./billingService');
+    const sub = await getStripe().subscriptions.update(facturacion.stripe_subscription_id, {
+      trial_end: Math.floor(fin.getTime() / 1000),
+    });
+    await sincronizarSuscripcion(sub, { motivo: 'extender_prueba_admin' });
+  } else {
+    await sequelize.query(
+      `UPDATE empresa_facturacion
+       SET trial_ends_at = :fin,
+           modo_facturacion = 'trial'
+       WHERE id_empresa = :idEmpresa`,
+      {
+        replacements: { fin, idEmpresa: idEmpresaNum },
+        type: sequelize.QueryTypes.UPDATE,
+      },
+    );
+  }
+
+  return {
+    trial_ends_at: fin.toISOString(),
+    trial_ends_at_anterior: fechaAnterior ? fechaAnterior.toISOString() : null,
+  };
+};
+
 module.exports = {
   TRIAL_DAYS,
   TRIAL_WARN_DAYS,
   TRIAL_PAYMENT_HEADLINE,
   TRIAL_PAYMENT_DETAIL,
   ESTADOS_SUSCRIPCION_ACTIVA,
+  TrialExtensionError,
   obtenerFacturacionEmpresa,
   evaluarEstadoTrial,
   obtenerEstadoTrialEmpresa,
   empresaTieneAccesoSuscripcion,
+  empresaPuedeExtenderPrueba,
   assertEmpresaTrialActiva,
   buildTrialExpiredPayload,
   buildPaymentRequiredPayload,
   calcularFechaFinPrueba,
+  extenderPeriodoPruebaEmpresa,
 };

@@ -13,6 +13,7 @@ const {
   getEmpresaBranding,
   purgaEmpresaPermanente,
   generarEnlacePagoEmpresa,
+  extenderPeriodoPrueba,
 } = require('../controllers/companyController');
 const { requireRole, ROLE_GROUPS, ROLES } = require('../middleware/authMiddleware');
 
@@ -25,6 +26,7 @@ router.post('/edit', requireRole(ROLE_GROUPS.PLATFORM), editEmpresa);
 router.post('/delete', requireRole(ROLE_GROUPS.PLATFORM), eliminarEmpresa);
 router.post('/reactivar', requireRole(ROLE_GROUPS.PLATFORM), reactivarEmpresa);
 router.post('/enlace-pago', requireRole(ROLE_GROUPS.PLATFORM), generarEnlacePagoEmpresa);
+router.post('/extender-prueba', requireRole(ROLE_GROUPS.PLATFORM), extenderPeriodoPrueba);
 router.post('/purge', requireRole(ROLES.ROOT), purgaEmpresaPermanente);
 
 router.post('/getTipoRegistro', requireRole(ROLE_GROUPS.CONFIG), getTipoRegistro);

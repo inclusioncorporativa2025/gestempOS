@@ -20,6 +20,8 @@ import {
   InputNumber,
   Pagination,
   Spin,
+  Dropdown,
+  DatePicker,
 } from 'antd';
 import GradientButton from '../../components/shared/GradientButton';
 import {
@@ -30,7 +32,11 @@ import {
   RedoOutlined,
   DeleteOutlined,
   CopyOutlined,
+  MoreOutlined,
+  FieldTimeOutlined,
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
+import 'dayjs/locale/es';
 import {
   crearEmpresa,
   editEmpresa,
@@ -39,6 +45,7 @@ import {
   generarEnlacePagoEmpresa,
   purgarEmpresaPermanente,
   reactivarEmpresa,
+  extenderPeriodoPruebaEmpresa,
 } from '../../../features/empresas/empresasService';
 import { getTipoUsuario } from '../../../utils/authSession';
 import AltaEmpresaForm from './AltaEmpresaForm';
@@ -105,6 +112,17 @@ const empresaRequiereEnlacePago = (record) =>
   || record.requiere_enlace_pago === true
   || trialExpiradoSinSuscripcion(record);
 
+const empresaPuedeAmpliarPrueba = (record) => {
+  const modo = String(record.modo_facturacion || '').toLowerCase();
+  const estado = String(record.estado_suscripcion || '').toLowerCase();
+
+  if (modo === 'legacy') return false;
+  if (modo === 'trial') return true;
+  if (estado === 'trialing') return true;
+
+  return false;
+};
+
 const renderEstadoEmpresa = (record) => {
   if (empresaDadaDeBaja(record)) {
     return <Tag color="default">De baja</Tag>;
@@ -165,6 +183,9 @@ const BuscadorEmpresa = ({ embedded = false }) => {
   const [purgeCif, setPurgeCif] = useState('');
   const [purgeLoading, setPurgeLoading] = useState(false);
   const [paymentLinkLoadingId, setPaymentLinkLoadingId] = useState(null);
+  const [trialExtendTarget, setTrialExtendTarget] = useState(null);
+  const [trialExtendDate, setTrialExtendDate] = useState(null);
+  const [trialExtendLoading, setTrialExtendLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
   const [mobilePage, setMobilePage] = useState(1);
   const esRoot = Number(getTipoUsuario()) === 1;
@@ -389,6 +410,58 @@ const BuscadorEmpresa = ({ embedded = false }) => {
     }
   };
 
+  const abrirModalAmpliarPrueba = (record) => {
+    const actual = record.trial_ends_at ? dayjs(record.trial_ends_at) : null;
+    setTrialExtendTarget(record);
+    setTrialExtendDate(actual && actual.isAfter(dayjs(), 'day') ? actual.add(7, 'day') : dayjs().add(7, 'day'));
+  };
+
+  const cerrarModalAmpliarPrueba = () => {
+    if (trialExtendLoading) return;
+    setTrialExtendTarget(null);
+    setTrialExtendDate(null);
+  };
+
+  const confirmarAmpliarPrueba = async () => {
+    if (!trialExtendTarget || !trialExtendDate) {
+      message.error('Selecciona la nueva fecha de fin de prueba');
+      return;
+    }
+
+    if (!trialExtendDate.isAfter(dayjs(), 'day')) {
+      message.error('La nueva fecha debe ser posterior a hoy');
+      return;
+    }
+
+    const finActual = trialExtendTarget.trial_ends_at
+      ? dayjs(trialExtendTarget.trial_ends_at)
+      : null;
+
+    if (
+      finActual
+      && finActual.isAfter(dayjs(), 'day')
+      && !trialExtendDate.isAfter(finActual, 'day')
+    ) {
+      message.error('La nueva fecha debe ser posterior al fin de prueba actual');
+      return;
+    }
+
+    setTrialExtendLoading(true);
+    try {
+      await extenderPeriodoPruebaEmpresa(
+        trialExtendTarget.id_empresa,
+        trialExtendDate.endOf('day').toISOString(),
+      );
+      message.success('Periodo de prueba ampliado correctamente');
+      cerrarModalAmpliarPrueba();
+      await fetchEmpresas();
+    } catch (error) {
+      message.error(error.message || 'No se pudo ampliar el periodo de prueba');
+    } finally {
+      setTrialExtendLoading(false);
+    }
+  };
+
   const renderAccionesEmpresa = (record) => {
     const activa = empresaEstaActiva(record);
     const dadaDeBaja = empresaDadaDeBaja(record);
@@ -452,6 +525,33 @@ const BuscadorEmpresa = ({ embedded = false }) => {
             />
           </Tooltip>
         )}
+        <Dropdown
+          menu={{
+            items: [
+              ...(empresaPuedeAmpliarPrueba(record)
+                ? [{
+                    key: 'extender-prueba',
+                    label: 'Aumentar periodo de prueba',
+                    icon: <FieldTimeOutlined />,
+                    onClick: () => abrirModalAmpliarPrueba(record),
+                  }]
+                : []),
+            ],
+          }}
+          trigger={['click']}
+          placement="bottomRight"
+          disabled={!empresaPuedeAmpliarPrueba(record)}
+        >
+          <Tooltip title="Más acciones">
+            <Button
+              type="text"
+              icon={<MoreOutlined className="be-accion-btn__more-vertical" />}
+              className="be-accion-btn"
+              aria-label="Más acciones"
+              disabled={!empresaPuedeAmpliarPrueba(record)}
+            />
+          </Tooltip>
+        </Dropdown>
       </div>
     );
   };
@@ -827,6 +927,55 @@ const BuscadorEmpresa = ({ embedded = false }) => {
           placeholder={purgeTarget?.identificador_fiscal || 'B12345678'}
           autoComplete="off"
         />
+      </Modal>
+
+      <Modal
+        title="Aumentar periodo de prueba"
+        open={Boolean(trialExtendTarget)}
+        onCancel={cerrarModalAmpliarPrueba}
+        onOk={confirmarAmpliarPrueba}
+        okText="Guardar"
+        cancelText="Cancelar"
+        confirmLoading={trialExtendLoading}
+        destroyOnClose
+        centered
+      >
+        {trialExtendTarget && (
+          <>
+            <p>
+              Empresa: <strong>{trialExtendTarget.nombre}</strong>
+            </p>
+            <p>
+              Fin de prueba actual:{' '}
+              <strong>
+                {trialExtendTarget.trial_ends_at
+                  ? formatDate(trialExtendTarget.trial_ends_at)
+                  : 'Sin fecha registrada'}
+              </strong>
+            </p>
+            <Form layout="vertical" className="be-trial-extend-form">
+              <Form.Item label="Nueva fecha de fin de prueba" required>
+                <DatePicker
+                  className="be-full-width"
+                  value={trialExtendDate}
+                  onChange={setTrialExtendDate}
+                  format="DD/MM/YYYY"
+                  disabledDate={(current) => {
+                    if (!current) return false;
+                    const finActual = trialExtendTarget?.trial_ends_at
+                      ? dayjs(trialExtendTarget.trial_ends_at)
+                      : null;
+                    const min = finActual && finActual.isAfter(dayjs(), 'day')
+                      ? finActual.endOf('day')
+                      : dayjs().endOf('day');
+                    return !current.isAfter(min, 'day');
+                  }}
+                  placeholder="Selecciona una fecha"
+                />
+              </Form.Item>
+            </Form>
+          </>
+        )}
       </Modal>
     </Layout>
   );

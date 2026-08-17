@@ -18,7 +18,7 @@ const {
   obtenerCodigoPlanEmpresa,
 } = require('../services/planCatalogService');
 const { isValidRegionCode, resolveRegionCode, provinceByCpPrefix } = require('../config/spanishRegions');
-const { calcularFechaFinPrueba } = require('../services/trialService');
+const { calcularFechaFinPrueba, extenderPeriodoPruebaEmpresa, TrialExtensionError } = require('../services/trialService');
 const { crearCheckoutTrialPendiente } = require('../services/billingService');
 const { purgarEmpresaCompleta } = require('../services/empresaPurgeService');
 const {
@@ -836,6 +836,30 @@ const purgaEmpresaPermanente = async (req, res) => {
   }
 };
 
+const extenderPeriodoPrueba = async (req, res) => {
+  try {
+    const { idEmpresa, trialEndsAt } = req.body;
+
+    if (!idEmpresa || !trialEndsAt) {
+      return res.status(400).json({ message: 'Faltan datos para ampliar la prueba' });
+    }
+
+    const resultado = await extenderPeriodoPruebaEmpresa(idEmpresa, trialEndsAt);
+
+    return res.status(200).json({
+      message: 'Periodo de prueba ampliado correctamente',
+      ...resultado,
+    });
+  } catch (error) {
+    if (error instanceof TrialExtensionError) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    console.error('Error al ampliar periodo de prueba:', error);
+    return res.status(500).json({ message: 'No se pudo ampliar el periodo de prueba' });
+  }
+};
+
 module.exports = {
   registerCompany,
   registerCompanyPublic,
@@ -853,4 +877,5 @@ module.exports = {
   getEmpresaBranding,
   purgaEmpresaPermanente,
   generarEnlacePagoEmpresa,
+  extenderPeriodoPrueba,
 };
