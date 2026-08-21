@@ -624,6 +624,134 @@ const obtenerInvitacionPreview = async ({ token, codigoCorto }) => {
   };
 };
 
+const obtenerMetricasDashboard = async () => {
+  const baseVenta = `v.fecha_baja IS NULL
+    AND EXISTS (
+      SELECT 1 FROM m_empresas e
+      WHERE e.id_empresa = v.id_empresa AND e.fecha_baja IS NULL
+    )`;
+
+  const resumenRows = await sequelize.query(
+    `SELECT v.etapa, COUNT(*) AS total
+     FROM crm_venta v
+     WHERE ${baseVenta}
+     GROUP BY v.etapa`,
+    { type: QueryTypes.SELECT },
+  );
+
+  const resumen = {
+    total: 0,
+    registrada: 0,
+    trial: 0,
+    activa: 0,
+    cancelada: 0,
+  };
+  resumenRows.forEach((row) => {
+    const n = Number(row.total || 0);
+    resumen.total += n;
+    if (row.etapa in resumen) {
+      resumen[row.etapa] = n;
+    }
+  });
+
+  const evolucion = await sequelize.query(
+    `SELECT DATE_FORMAT(v.fecha_venta, '%Y-%m') AS mes,
+            COUNT(*) AS total,
+            SUM(CASE WHEN v.etapa = 'activa' THEN 1 ELSE 0 END) AS activas,
+            SUM(CASE WHEN v.etapa = 'trial' THEN 1 ELSE 0 END) AS trial,
+            SUM(CASE WHEN v.etapa = 'registrada' THEN 1 ELSE 0 END) AS registradas
+     FROM crm_venta v
+     WHERE ${baseVenta}
+       AND v.fecha_venta >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+     GROUP BY DATE_FORMAT(v.fecha_venta, '%Y-%m')
+     ORDER BY mes ASC`,
+    { type: QueryTypes.SELECT },
+  );
+
+  const [mesActual] = await sequelize.query(
+    `SELECT COUNT(*) AS total
+     FROM crm_venta v
+     WHERE ${baseVenta}
+       AND DATE_FORMAT(v.fecha_venta, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')`,
+    { type: QueryTypes.SELECT },
+  );
+
+  const [mesAnterior] = await sequelize.query(
+    `SELECT COUNT(*) AS total
+     FROM crm_venta v
+     WHERE ${baseVenta}
+       AND DATE_FORMAT(v.fecha_venta, '%Y-%m') = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m')`,
+    { type: QueryTypes.SELECT },
+  );
+
+  const productividad = await sequelize.query(
+    `SELECT
+       u.id_usuario,
+       u.nombre,
+       u.email,
+       COUNT(v.id_venta) AS ventas_total,
+       SUM(CASE WHEN v.etapa = 'activa' THEN 1 ELSE 0 END) AS ventas_activas,
+       SUM(CASE WHEN v.etapa = 'trial' THEN 1 ELSE 0 END) AS ventas_trial,
+       SUM(CASE WHEN v.etapa = 'registrada' THEN 1 ELSE 0 END) AS ventas_registradas,
+       SUM(CASE WHEN v.etapa = 'cancelada' THEN 1 ELSE 0 END) AS ventas_canceladas,
+       (
+         SELECT COUNT(*)
+         FROM crm_invitacion_registro i
+         WHERE i.id_usuario_comercial = u.id_usuario
+       ) AS invitaciones_total,
+       (
+         SELECT COUNT(*)
+         FROM crm_invitacion_registro i
+         WHERE i.id_usuario_comercial = u.id_usuario AND i.usado = 1
+       ) AS invitaciones_usadas
+     FROM crm_usuario_puesto_interno upi
+     INNER JOIN crm_puesto_interno p
+       ON p.id_puesto = upi.id_puesto AND p.codigo = 'comercial'
+     INNER JOIN m_usuarios u ON u.id_usuario = upi.id_usuario
+     LEFT JOIN crm_venta v
+       ON v.id_usuario_comercial = u.id_usuario AND v.fecha_baja IS NULL
+     LEFT JOIN m_empresas e
+       ON e.id_empresa = v.id_empresa AND e.fecha_baja IS NULL
+     WHERE upi.fecha_baja IS NULL
+       AND u.fecha_baja IS NULL
+     GROUP BY u.id_usuario, u.nombre, u.email
+     ORDER BY ventas_total DESC, u.nombre ASC`,
+    { type: QueryTypes.SELECT },
+  );
+
+  const productividadConTasa = productividad.map((row) => {
+    const invTotal = Number(row.invitaciones_total || 0);
+    const invUsadas = Number(row.invitaciones_usadas || 0);
+    return {
+      ...row,
+      ventas_total: Number(row.ventas_total || 0),
+      ventas_activas: Number(row.ventas_activas || 0),
+      ventas_trial: Number(row.ventas_trial || 0),
+      ventas_registradas: Number(row.ventas_registradas || 0),
+      ventas_canceladas: Number(row.ventas_canceladas || 0),
+      invitaciones_total: invTotal,
+      invitaciones_usadas: invUsadas,
+      tasa_conversion: invTotal > 0 ? Math.round((invUsadas / invTotal) * 100) : null,
+    };
+  });
+
+  return {
+    resumen,
+    evolucion: evolucion.map((row) => ({
+      mes: row.mes,
+      total: Number(row.total || 0),
+      activas: Number(row.activas || 0),
+      trial: Number(row.trial || 0),
+      registradas: Number(row.registradas || 0),
+    })),
+    comparativa_meses: {
+      actual: Number(mesActual?.total || 0),
+      anterior: Number(mesAnterior?.total || 0),
+    },
+    productividad: productividadConTasa,
+  };
+};
+
 module.exports = {
   PERMISOS_ROOT,
   hashToken,
@@ -645,4 +773,5 @@ module.exports = {
   listarUsuariosInternosElegibles,
   asignarPuestoHub,
   revocarPuestoHub,
+  obtenerMetricasDashboard,
 };

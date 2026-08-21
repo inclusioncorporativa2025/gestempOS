@@ -23,7 +23,7 @@ import {
 } from '../../../features/hub/hubService';
 import './Hub.css';
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 const COLOR_PUESTO = {
   comercial: 'blue',
@@ -105,7 +105,7 @@ const HubAccesos = () => {
 
   const revocarAcceso = (record) => {
     Modal.confirm({
-      title: '¿Revocar acceso al hub?',
+      title: '¿Revocar acceso al panel de ventas?',
       content: (
         <>
           Se quitará el puesto <strong>{record.puesto_nombre}</strong> a{' '}
@@ -172,12 +172,7 @@ const HubAccesos = () => {
 
   return (
     <div className="hub-section">
-      <div className="hub-section__toolbar">
-        <Paragraph type="secondary" className="hub-section__intro">
-          {soloComerciales
-            ? 'Asigna acceso comercial al personal de tu empresa. Tras cada cambio, deben volver a iniciar sesión.'
-            : 'Asigna acceso al hub al personal de la empresa activa en tu sesión (comercial, supervisor o admin). Tras cada cambio, deben volver a iniciar sesión.'}
-        </Paragraph>
+      <div className="hub-section__toolbar hub-section__toolbar--end">
         <Button type="primary" icon={<PlusOutlined />} onClick={abrirModal}>
           Dar acceso
         </Button>
@@ -189,11 +184,11 @@ const HubAccesos = () => {
         columns={columns}
         dataSource={accesos}
         pagination={false}
-        locale={{ emptyText: 'Ningún usuario con acceso al hub' }}
+        locale={{ emptyText: 'Ningún usuario con acceso al panel de ventas' }}
       />
 
       <Modal
-        title="Dar acceso al hub"
+        title="Dar acceso al panel de ventas"
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         onOk={asignarAcceso}

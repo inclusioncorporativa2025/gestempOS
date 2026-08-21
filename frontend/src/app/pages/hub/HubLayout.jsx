@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, Select, Typography } from 'antd';
 import { APP_ROUTES } from '../../../constants/routes';
 import { useAuth } from '../../../config/AuthContext';
-import { puedeGestionarAccesosHub } from '../../../utils/hubAccess';
+import { puedeGestionarAccesosHub, puedeVerDashboardHub } from '../../../utils/hubAccess';
 import '../gestor/Configuracion.css';
 
 const { Title, Text } = Typography;
@@ -15,6 +15,7 @@ const HubLayout = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const puedeGestionarAccesos = puedeGestionarAccesosHub(user);
+  const puedeVerMetricas = puedeVerDashboardHub(user);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
 
   useEffect(() => {
@@ -26,32 +27,37 @@ const HubLayout = () => {
   }, []);
 
   const submenuItems = useMemo(() => {
-    const items = [
-      { key: APP_ROUTES.hubVentas, label: 'Mis clientes' },
-    ];
+    const items = [];
+    if (puedeVerMetricas) {
+      items.push({ key: APP_ROUTES.hubMetricas, label: 'Métricas' });
+    }
+    items.push({ key: APP_ROUTES.hubVentas, label: 'Mis clientes' });
     if (puedeGestionarAccesos) {
       items.push({ key: APP_ROUTES.hubAccesos, label: 'Accesos' });
     }
     return items;
-  }, [puedeGestionarAccesos]);
+  }, [puedeVerMetricas, puedeGestionarAccesos]);
 
   const selectedKey =
     submenuItems.find((item) => item.key === location.pathname)?.key
-    || APP_ROUTES.hubVentas;
+    || (puedeVerMetricas ? APP_ROUTES.hubMetricas : APP_ROUTES.hubVentas);
 
+  const esMetricas = location.pathname === APP_ROUTES.hubMetricas;
   const esVentas = location.pathname === APP_ROUTES.hubVentas;
   const esAccesos = location.pathname === APP_ROUTES.hubAccesos;
 
-  const subtitulo = esVentas
-    ? 'Empresas atribuidas y seguimiento comercial'
-    : esAccesos
-      ? 'Usuarios con acceso al hub comercial'
-      : 'Hub comercial Timecor';
+  const subtitulo = esMetricas
+    ? 'Evolución comercial y productividad del equipo'
+    : esVentas
+      ? 'Empresas atribuidas y seguimiento comercial'
+      : esAccesos
+        ? 'Usuarios con acceso al panel de ventas'
+        : 'Panel de ventas Timecor';
 
   return (
     <div className="config-layout">
       <Title level={3} className="config-layout__title">
-        Hub comercial
+        Panel de ventas
       </Title>
       <Text type="secondary" className="config-layout__subtitle">
         {subtitulo}
@@ -64,7 +70,7 @@ const HubLayout = () => {
             value={selectedKey}
             options={submenuItems.map(({ key, label }) => ({ value: key, label }))}
             onChange={(key) => navigate(key)}
-            aria-label="Sección del hub comercial"
+            aria-label="Sección del panel de ventas"
           />
         ) : (
           <Menu

@@ -12,6 +12,7 @@ const {
   listarUsuariosInternosElegibles,
   asignarPuestoHub,
   revocarPuestoHub,
+  obtenerMetricasDashboard,
 } = require('../services/crmHubService');
 
 const APP_PUBLIC_URL = (
@@ -190,7 +191,7 @@ const asignarAccesoHubHandler = async (req, res) => {
     });
 
     return res.status(201).json({
-      message: 'Acceso al hub asignado correctamente',
+      message: 'Acceso al panel de ventas asignado correctamente',
       id: idAsignacion,
     });
   } catch (error) {
@@ -201,7 +202,7 @@ const asignarAccesoHubHandler = async (req, res) => {
       return res.status(403).json({ message: error.message });
     }
     console.error('[hub] asignarAcceso:', error.message);
-    return res.status(500).json({ message: 'Error al asignar acceso al hub' });
+    return res.status(500).json({ message: 'Error al asignar acceso al panel de ventas' });
   }
 };
 
@@ -223,7 +224,17 @@ const revocarAccesoHubHandler = async (req, res) => {
       return res.status(403).json({ message: error.message });
     }
     console.error('[hub] revocarAcceso:', error.message);
-    return res.status(500).json({ message: 'Error al revocar acceso al hub' });
+    return res.status(500).json({ message: 'Error al revocar acceso al panel de ventas' });
+  }
+};
+
+const obtenerMetricasDashboardHandler = async (_req, res) => {
+  try {
+    const metricas = await obtenerMetricasDashboard();
+    return res.status(200).json(metricas);
+  } catch (error) {
+    console.error('[hub] obtenerMetricas:', error.message);
+    return res.status(500).json({ message: 'Error al cargar métricas del hub' });
   }
 };
 
@@ -239,4 +250,5 @@ module.exports = {
   listarUsuariosInternosHandler,
   asignarAccesoHubHandler,
   revocarAccesoHubHandler,
+  obtenerMetricasDashboardHandler,
 };

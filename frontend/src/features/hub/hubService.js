@@ -14,7 +14,7 @@ export const obtenerContextoHub = async () => {
   const response = await fetch(`${API_BASE_URL}/me`, { headers: authHeaders() });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.message || 'No se pudo cargar el hub');
+    throw new Error(data.message || 'No se pudo cargar el panel de ventas');
   }
   return data;
 };
@@ -80,6 +80,15 @@ export const previewInvitacionHub = async ({ inv, codigo } = {}) => {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(data.message || 'Invitación no válida');
+  }
+  return data;
+};
+
+export const obtenerMetricasHub = async () => {
+  const response = await fetch(`${API_BASE_URL}/metricas`, { headers: authHeaders() });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudieron cargar las métricas');
   }
   return data;
 };

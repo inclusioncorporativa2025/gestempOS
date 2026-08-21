@@ -77,20 +77,20 @@ const SidebarFooter = ({ collapsed = false, onOpenSupport }) => {
     <>
       <div className={`app-sider-footer ${collapsed ? 'app-sider-footer--collapsed' : ''}`}>
         {hubAcceso ? (
-          <Tooltip title={collapsed ? 'Hub comercial' : ''} placement="right">
+          <Tooltip title={collapsed ? 'Panel de ventas' : ''} placement="right">
             <span className="app-sider-footer-btn-wrap">
               <Button
                 type="text"
                 className={[
                   'app-sider-footer-btn',
-                  'app-sider-footer-btn--crm',
+                  'app-sider-footer-btn--ventas-panel',
                   enHub && 'app-sider-footer-btn--active',
                 ].filter(Boolean).join(' ')}
                 icon={<FundProjectionScreenOutlined />}
                 onClick={abrirHub}
                 block={!collapsed}
               >
-                {!collapsed && 'CRM'}
+                {!collapsed && 'Panel de ventas'}
               </Button>
             </span>
           </Tooltip>

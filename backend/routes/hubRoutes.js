@@ -4,6 +4,7 @@ const {
   requireHubAccess,
   requireHubPermiso,
   requireHubGestorAccesos,
+  requireHubPlataforma,
 } = require('../middleware/hubMiddleware');
 const {
   obtenerContexto,
@@ -17,11 +18,13 @@ const {
   listarUsuariosInternosHandler,
   asignarAccesoHubHandler,
   revocarAccesoHubHandler,
+  obtenerMetricasDashboardHandler,
 } = require('../controllers/hubController');
 
 const router = express.Router();
 
 router.get('/me', requireAuth, requireHubAccess, obtenerContexto);
+router.get('/metricas', requireAuth, requireHubAccess, requireHubPlataforma, obtenerMetricasDashboardHandler);
 router.get('/ventas', requireAuth, requireHubAccess, listarVentasHandler);
 router.get('/comerciales', requireAuth, requireHubAccess, requireHubPermiso('asignar_comercial', 'ver_equipo', 'ver_todas'), listarComercialesHandler);
 router.post('/invitaciones', requireAuth, requireHubAccess, requireHubPermiso('crear_invitacion'), crearInvitacionHandler);

@@ -11,6 +11,7 @@ const {
   usuarioPuedeAutenticarse,
   membresiaEstaActiva,
 } = require('../services/usuarioEmpresaService');
+const { obtenerClaimsHub } = require('../services/crmHubService');
 
 const IMPERSONATION_EXPIRES_IN = process.env.IMPERSONATION_JWT_EXPIRES_IN || '1h';
 const TIPOS_PLATAFORMA = ROLE_GROUPS.PLATFORM;
@@ -235,8 +236,11 @@ const accederComoUsuario = async (req, res) => {
     const { membresia, empresa } = seleccion;
     const id_empresa = empresa.id_empresa;
 
+    const hubClaims = await obtenerClaimsHub(usuario);
+
     const token = jwt.sign(
       construirClaimsSesion(usuario, empresa, membresia, {
+        ...hubClaims,
         impersonacion: true,
         impersonado_por: Number(req.user.id_usuario),
         impersonado_por_email: req.user.email,

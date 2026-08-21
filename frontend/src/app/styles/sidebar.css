@@ -257,15 +257,20 @@
   flex: 1;
 }
 
-.app-sider-footer-btn--crm {
+.app-sider-footer-btn--ventas-panel {
+  height: auto !important;
+  min-height: 28px;
+  line-height: 1.25;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
   color: var(--color-primary) !important;
 }
 
-.app-sider-footer-btn--crm:hover {
+.app-sider-footer-btn--ventas-panel:hover {
   background: rgba(var(--color-primary-rgb), 0.08) !important;
 }
 
-.app-sider-footer-btn--crm.app-sider-footer-btn--active {
+.app-sider-footer-btn--ventas-panel.app-sider-footer-btn--active {
   background: rgba(var(--color-primary-rgb), 0.12) !important;
   font-weight: 500;
 }

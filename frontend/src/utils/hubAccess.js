@@ -8,6 +8,9 @@ export const tienePermisoHub = (user, codigo) => {
   return (user?.hub_permisos || []).includes(codigo);
 };
 
+export const puedeVerDashboardHub = (user) =>
+  [1, 2].includes(Number(user?.tipo_usuario));
+
 /** ROOT, admin_hub o supervisor_comercial — pueden ver pestaña Accesos y asignar. */
 export const puedeGestionarAccesosHub = (user) => {
   if (Number(user?.tipo_usuario) === 1) return true;
