@@ -8,6 +8,7 @@ import {
   exitImpersonation,
   consumeAuthTokenFromHash,
 } from '../utils/authSession';
+import { mergeHubClaimsIntoUser } from '../utils/hubClaimsSync';
 
 const AuthContext = createContext();
 
@@ -16,28 +17,40 @@ export const AuthProvider = ({ children }) => {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const hashToken = consumeAuthTokenFromHash();
-    if (hashToken) {
-      const claims = setAuthToken(hashToken);
-      setUser(claimsToUser(claims));
-      setReady(true);
-      return;
-    }
+    let cancelled = false;
 
-    const claims = loadSessionFromStorage();
-    setUser(claimsToUser(claims));
-    setReady(true);
+    const init = async () => {
+      const hashToken = consumeAuthTokenFromHash();
+      const claims = hashToken ? setAuthToken(hashToken) : loadSessionFromStorage();
+      const baseUser = claimsToUser(claims);
+      const nextUser = await mergeHubClaimsIntoUser(baseUser);
+
+      if (!cancelled) {
+        setUser(nextUser);
+        setReady(true);
+      }
+    };
+
+    init();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const login = useCallback((token) => {
+  const login = useCallback(async (token) => {
     const claims = setAuthToken(token);
-    setUser(claimsToUser(claims));
+    const baseUser = claimsToUser(claims);
+    const nextUser = await mergeHubClaimsIntoUser(baseUser);
+    setUser(nextUser);
+    return nextUser;
   }, []);
 
-  const refreshSession = useCallback((token) => {
+  const refreshSession = useCallback(async (token) => {
     const claims = setAuthToken(token);
-    setUser(claimsToUser(claims));
-    return claimsToUser(claims);
+    const baseUser = claimsToUser(claims);
+    const nextUser = await mergeHubClaimsIntoUser(baseUser);
+    setUser(nextUser);
+    return nextUser;
   }, []);
 
   const logout = useCallback(() => {
@@ -45,15 +58,20 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, []);
 
-  const impersonate = useCallback((token) => {
+  const impersonate = useCallback(async (token) => {
     const claims = startImpersonation(token);
-    setUser(claimsToUser(claims));
+    const baseUser = claimsToUser(claims);
+    const nextUser = await mergeHubClaimsIntoUser(baseUser);
+    setUser(nextUser);
+    return nextUser;
   }, []);
 
-  const stopImpersonation = useCallback(() => {
+  const stopImpersonation = useCallback(async () => {
     const claims = exitImpersonation();
-    setUser(claimsToUser(claims));
-    return claims;
+    const baseUser = claimsToUser(claims);
+    const nextUser = await mergeHubClaimsIntoUser(baseUser);
+    setUser(nextUser);
+    return nextUser;
   }, []);
 
   const patchUser = useCallback((partial) => {

@@ -13,8 +13,8 @@ const ImpersonationBanner = () => {
     return null;
   }
 
-  const handleExit = () => {
-    stopImpersonation();
+  const handleExit = async () => {
+    await stopImpersonation();
     navigate(APP_ROUTES.platformEmpresas);
   };
 

@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 import { APP_ROUTES } from '../constants/routes';
 import { useAuth } from '../config/AuthContext';
-import { obtenerContextoHub } from '../features/hub/hubService';
+import { fetchHubClaimsFromApi } from '../utils/hubClaimsSync';
 
 const claimsIguales = (actual, siguiente) => (
   Boolean(actual?.hub_acceso) === Boolean(siguiente.hub_acceso)
@@ -27,12 +27,7 @@ const useHubAccessSync = ({ activo = true, redirigirSiRevocado = false } = {}) =
 
     sincronizandoRef.current = true;
     try {
-      const ctx = await obtenerContextoHub();
-      const claims = {
-        hub_acceso: Boolean(ctx.hub_acceso),
-        hub_puestos: ctx.hub_puestos || [],
-        hub_permisos: ctx.hub_permisos || [],
-      };
+      const claims = await fetchHubClaimsFromApi();
 
       if (!claimsIguales(actual, claims)) {
         patchUser(claims);
@@ -50,7 +45,10 @@ const useHubAccessSync = ({ activo = true, redirigirSiRevocado = false } = {}) =
       avisoRevocadoRef.current = false;
       return claims.hub_acceso;
     } catch (error) {
-      if (error.code === 'HUB_ACCESS_REVOKED' || error.status === 403) {
+      if (
+        redirigirSiRevocado
+        && (error.code === 'HUB_ACCESS_REVOKED' || error.status === 403)
+      ) {
         const claims = {
           hub_acceso: false,
           hub_puestos: [],

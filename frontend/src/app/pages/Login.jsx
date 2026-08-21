@@ -40,12 +40,12 @@ const Login = () => {
     }
   }, [ready, user, navigate]);
 
-  const completarAcceso = (data) => {
+  const completarAcceso = async (data) => {
     if (!data?.token) {
       throw new Error('No se recibió el token de sesión');
     }
 
-    login(data.token);
+    await login(data.token);
 
     const trialCaducado = Boolean(data.trial?.expirada || data.trial?.requierePlan);
 
@@ -71,7 +71,7 @@ const Login = () => {
       setEmpresaModalOpen(false);
       setPreAuthToken(null);
       setEmpresasPendientes([]);
-      completarAcceso(data);
+      await completarAcceso(data);
     } catch (error) {
       notification.error({
         message: 'Error',
@@ -97,7 +97,7 @@ const Login = () => {
         return;
       }
 
-      completarAcceso(data);
+      await completarAcceso(data);
     } catch (error) {
       if (error.code === 'PASSWORD_RESET_REQUIRED') {
         notification.info({
