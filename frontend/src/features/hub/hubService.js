@@ -83,3 +83,55 @@ export const previewInvitacionHub = async ({ inv, codigo } = {}) => {
   }
   return data;
 };
+
+export const listarAccesosHub = async () => {
+  const response = await fetch(`${API_BASE_URL}/accesos`, { headers: authHeaders() });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudieron cargar los accesos');
+  }
+  return data;
+};
+
+export const listarPuestosHub = async () => {
+  const response = await fetch(`${API_BASE_URL}/puestos`, { headers: authHeaders() });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudieron cargar los puestos');
+  }
+  return data;
+};
+
+export const listarUsuariosInternosHub = async () => {
+  const response = await fetch(`${API_BASE_URL}/usuarios-internos`, { headers: authHeaders() });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudieron cargar los usuarios');
+  }
+  return data;
+};
+
+export const asignarAccesoHub = async ({ id_usuario, id_puesto }) => {
+  const response = await fetch(`${API_BASE_URL}/accesos`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ id_usuario, id_puesto }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudo asignar el acceso');
+  }
+  return data;
+};
+
+export const revocarAccesoHub = async (id) => {
+  const response = await fetch(`${API_BASE_URL}/accesos/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || 'No se pudo revocar el acceso');
+  }
+  return data;
+};

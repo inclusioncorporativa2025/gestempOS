@@ -108,6 +108,25 @@ const usuarioTienePermisoHub = (user, ...codigos) => {
   return codigos.some((codigo) => permisos.includes(codigo));
 };
 
+/** ROOT/admin_hub: total. supervisor_comercial: solo puesto comercial. */
+const resolverGestionAccesosHub = (user) => {
+  if (Number(user?.tipo_usuario) === ROLES_ROOT) {
+    return { nivel: 'total' };
+  }
+
+  const puestos = user?.hub_puestos || [];
+  if (puestos.includes('admin_hub')) {
+    return { nivel: 'total' };
+  }
+  if (puestos.includes('supervisor_comercial')) {
+    return { nivel: 'supervisor' };
+  }
+
+  return null;
+};
+
+const usuarioPuedeGestionarAccesosHub = (user) => Boolean(resolverGestionAccesosHub(user));
+
 const resolverScopeVentas = (user) => {
   if (Number(user?.tipo_usuario) === ROLES_ROOT || usuarioTienePermisoHub(user, 'ver_todas')) {
     return { tipo: 'todas' };
@@ -404,6 +423,165 @@ const asignarVentaManual = async ({
   return meta?.insertId ?? null;
 };
 
+const listarPuestosInternos = async (user) => {
+  const gestion = resolverGestionAccesosHub(user);
+  if (!gestion) return [];
+
+  const codigos = gestion.nivel === 'supervisor'
+    ? ['comercial']
+    : ['comercial', 'supervisor_comercial', 'admin_hub'];
+
+  return sequelize.query(
+    `SELECT id_puesto, codigo, nombre
+     FROM crm_puesto_interno
+     WHERE activo = 1
+       AND codigo IN (:codigos)
+     ORDER BY FIELD(codigo, 'comercial', 'supervisor_comercial', 'admin_hub')`,
+    {
+      replacements: { codigos },
+      type: QueryTypes.SELECT,
+    },
+  );
+};
+
+const listarAccesosHub = async (user) => {
+  const gestion = resolverGestionAccesosHub(user);
+  if (!gestion) return [];
+
+  const filtroSupervisor = gestion.nivel === 'supervisor'
+    ? " AND p.codigo = 'comercial'"
+    : '';
+
+  return sequelize.query(
+    `SELECT
+       upi.id,
+       upi.id_usuario,
+       upi.id_puesto,
+       upi.fecha_alta,
+       u.nombre,
+       u.email,
+       u.tipo_usuario,
+       p.codigo AS puesto_codigo,
+       p.nombre AS puesto_nombre
+     FROM crm_usuario_puesto_interno upi
+     INNER JOIN m_usuarios u ON u.id_usuario = upi.id_usuario
+     INNER JOIN crm_puesto_interno p ON p.id_puesto = upi.id_puesto
+     WHERE upi.fecha_baja IS NULL
+       AND u.fecha_baja IS NULL
+       ${filtroSupervisor}
+     ORDER BY u.nombre ASC, p.nombre ASC`,
+    { type: QueryTypes.SELECT },
+  );
+};
+
+const listarUsuariosInternosElegibles = async () =>
+  sequelize.query(
+    `SELECT id_usuario, nombre, email, tipo_usuario
+     FROM m_usuarios
+     WHERE tipo_usuario IN (1, 2)
+       AND fecha_baja IS NULL
+       AND (activo IS NULL OR activo = 1)
+     ORDER BY nombre ASC`,
+    { type: QueryTypes.SELECT },
+  );
+
+const asignarPuestoHub = async ({ idUsuario, idPuesto, usuarioAlta, user }) => {
+  const gestion = resolverGestionAccesosHub(user);
+  if (!gestion) {
+    const error = new Error('No autorizado para gestionar accesos');
+    error.code = 'ACCESO_DENEGADO';
+    throw error;
+  }
+
+  const [puesto] = await sequelize.query(
+    `SELECT codigo FROM crm_puesto_interno WHERE id_puesto = :idPuesto AND activo = 1 LIMIT 1`,
+    {
+      replacements: { idPuesto },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (!puesto) {
+    const error = new Error('Puesto no válido');
+    error.code = 'PUESTO_INVALIDO';
+    throw error;
+  }
+
+  if (gestion.nivel === 'supervisor' && puesto.codigo !== 'comercial') {
+    const error = new Error('Solo puedes asignar el puesto comercial');
+    error.code = 'PUESTO_NO_PERMITIDO';
+    throw error;
+  }
+
+  const [existente] = await sequelize.query(
+    `SELECT id FROM crm_usuario_puesto_interno
+     WHERE id_usuario = :idUsuario AND id_puesto = :idPuesto AND fecha_baja IS NULL
+     LIMIT 1`,
+    {
+      replacements: { idUsuario, idPuesto },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (existente) {
+    const error = new Error('El usuario ya tiene ese puesto activo');
+    error.code = 'PUESTO_YA_ASIGNADO';
+    throw error;
+  }
+
+  const [, meta] = await sequelize.query(
+    `INSERT INTO crm_usuario_puesto_interno (id_usuario, id_puesto, usuario_alta)
+     VALUES (:idUsuario, :idPuesto, :usuarioAlta)`,
+    {
+      replacements: { idUsuario, idPuesto, usuarioAlta },
+    },
+  );
+
+  return meta?.insertId ?? null;
+};
+
+const revocarPuestoHub = async ({ idAsignacion, user }) => {
+  const gestion = resolverGestionAccesosHub(user);
+  if (!gestion) {
+    const error = new Error('No autorizado para gestionar accesos');
+    error.code = 'ACCESO_DENEGADO';
+    throw error;
+  }
+
+  const [asignacion] = await sequelize.query(
+    `SELECT upi.id, p.codigo AS puesto_codigo
+     FROM crm_usuario_puesto_interno upi
+     INNER JOIN crm_puesto_interno p ON p.id_puesto = upi.id_puesto
+     WHERE upi.id = :idAsignacion AND upi.fecha_baja IS NULL
+     LIMIT 1`,
+    {
+      replacements: { idAsignacion },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (!asignacion) {
+    const error = new Error('Asignación no encontrada o ya revocada');
+    error.code = 'ASIGNACION_NO_ENCONTRADA';
+    throw error;
+  }
+
+  if (gestion.nivel === 'supervisor' && asignacion.puesto_codigo !== 'comercial') {
+    const error = new Error('Solo puedes revocar accesos de comerciales');
+    error.code = 'PUESTO_NO_PERMITIDO';
+    throw error;
+  }
+
+  await sequelize.query(
+    `UPDATE crm_usuario_puesto_interno
+     SET fecha_baja = NOW()
+     WHERE id = :idAsignacion`,
+    { replacements: { idAsignacion } },
+  );
+
+  return true;
+};
+
 const obtenerInvitacionPreview = async ({ token, codigoCorto }) => {
   const invitacion = await buscarInvitacionValida({ token, codigoCorto });
   if (!invitacion) return null;
@@ -431,6 +609,8 @@ module.exports = {
   obtenerClaimsHub,
   emitirJwtSesionConHub,
   usuarioTienePermisoHub,
+  usuarioPuedeGestionarAccesosHub,
+  resolverGestionAccesosHub,
   listarVentas,
   listarComerciales,
   crearInvitacionRegistro,
@@ -438,4 +618,9 @@ module.exports = {
   registrarVentaDesdeInvitacion,
   asignarVentaManual,
   obtenerInvitacionPreview,
+  listarPuestosInternos,
+  listarAccesosHub,
+  listarUsuariosInternosElegibles,
+  asignarPuestoHub,
+  revocarPuestoHub,
 };

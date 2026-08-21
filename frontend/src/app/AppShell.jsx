@@ -54,7 +54,9 @@ import PlatformNovedades from './pages/platform/PlatformNovedades';
 import PlatformAcceder from './pages/platform/PlatformAcceder';
 import HubLayout from './pages/hub/HubLayout';
 import HubVentas from './pages/hub/HubVentas';
+import HubAccesos from './pages/hub/HubAccesos';
 import HubProtectedRoute from './components/HubProtectedRoute';
+import HubAccesosRoute from './components/HubAccesosRoute';
 import { tieneAccesoHub } from '../utils/hubAccess';
 import ImpersonationBanner from './components/ImpersonationBanner';
 import TrialStatusBanner from './components/TrialStatusBanner';
@@ -511,6 +513,14 @@ const AppShell = () => {
                 >
                   <Route index element={<Navigate to="ventas" replace />} />
                   <Route path="ventas" element={<HubVentas />} />
+                  <Route
+                    path="accesos"
+                    element={
+                      <HubAccesosRoute>
+                        <HubAccesos />
+                      </HubAccesosRoute>
+                    }
+                  />
                 </Route>
                 <Route
                   path="/companies"

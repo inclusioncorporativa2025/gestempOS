@@ -3,7 +3,7 @@ const {
   requireRole,
   ROLE_GROUPS,
 } = require('./authMiddleware');
-const { usuarioTienePermisoHub } = require('../services/crmHubService');
+const { usuarioTienePermisoHub, usuarioPuedeGestionarAccesosHub } = require('../services/crmHubService');
 
 const ROLES_ROOT = 1;
 
@@ -31,9 +31,24 @@ const requireHubPermiso = (...codigos) => (req, res, next) => {
   return res.status(403).json({ message: 'Acceso denegado: permiso hub insuficiente' });
 };
 
+const requireHubGestorAccesos = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'No autorizado' });
+  }
+
+  if (usuarioPuedeGestionarAccesosHub(req.user)) {
+    return next();
+  }
+
+  return res.status(403).json({
+    message: 'Acceso denegado: no puedes gestionar accesos al hub',
+  });
+};
+
 module.exports = {
   requireHubAccess,
   requireHubPermiso,
+  requireHubGestorAccesos,
   requireAuth,
   requireRole,
   ROLE_GROUPS,

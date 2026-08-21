@@ -24,3 +24,9 @@
   display: block;
   margin-bottom: 12px;
 }
+
+.hub-section__intro {
+  flex: 1 1 280px;
+  margin: 0 !important;
+  max-width: 640px;
+}

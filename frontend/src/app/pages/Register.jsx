@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Typography, notification, Alert } from 'antd';
+import { Form, Typography, notification } from 'antd';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { registrarEmpresaPublica } from '../../features/auth/authService';
@@ -14,8 +14,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const invToken = searchParams.get('inv');
-  const [invitacionInfo, setInvitacionInfo] = useState(null);
-  const [invitacionError, setInvitacionError] = useState(null);
+  const [invTokenActivo, setInvTokenActivo] = useState(invToken);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,13 +22,12 @@ const Register = () => {
 
     previewInvitacionHub({ inv: invToken })
       .then((data) => {
-        setInvitacionInfo(data);
         if (data.email_previsto) {
           form.setFieldsValue({ email: data.email_previsto });
         }
       })
-      .catch((error) => {
-        setInvitacionError(error.message || 'Invitación no válida');
+      .catch(() => {
+        setInvTokenActivo(null);
       });
   }, [invToken, form]);
 
@@ -41,7 +39,7 @@ const Register = () => {
         ...payload,
         plan: 'rrhh',
         cicloFacturacion: payload.cicloFacturacion || 'mensual',
-        invitacionToken: invToken || undefined,
+        invitacionToken: invTokenActivo || undefined,
       });
 
       if (data?.checkoutError) {
@@ -95,24 +93,6 @@ const Register = () => {
           Crea tu empresa en minutos y empieza a registrar la jornada de tu equipo sin coste
           durante la prueba. Recibirás un correo para activar tu cuenta y acceder al panel.
         </Text>
-        {invitacionInfo?.comercial_nombre && (
-          <Alert
-            type="info"
-            showIcon
-            style={{ marginBottom: 16 }}
-            message={`Invitación de ${invitacionInfo.comercial_nombre}`}
-            description="Al completar el registro, tu empresa quedará vinculada a tu asesor comercial."
-          />
-        )}
-        {invitacionError && (
-          <Alert
-            type="warning"
-            showIcon
-            style={{ marginBottom: 16 }}
-            message="Invitación no válida"
-            description={invitacionError}
-          />
-        )}
         <ul className="register-trust" aria-label="Ventajas del registro">
           <li>Sin permanencia</li>
           <li>Control horario conforme a la normativa</li>
