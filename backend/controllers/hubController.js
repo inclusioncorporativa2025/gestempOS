@@ -163,9 +163,9 @@ const listarPuestosHubHandler = async (req, res) => {
   }
 };
 
-const listarUsuariosInternosHandler = async (_req, res) => {
+const listarUsuariosInternosHandler = async (req, res) => {
   try {
-    const usuarios = await listarUsuariosInternosElegibles();
+    const usuarios = await listarUsuariosInternosElegibles(req.user);
     return res.status(200).json({ usuarios });
   } catch (error) {
     console.error('[hub] listarUsuariosInternos:', error.message);

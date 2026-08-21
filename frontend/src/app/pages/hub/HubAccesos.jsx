@@ -13,6 +13,7 @@ import { PlusOutlined, UserDeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAuth } from '../../../config/AuthContext';
 import { esSupervisorComercialHub } from '../../../utils/hubAccess';
+import { etiquetaTipoUsuario } from '../../../utils/tipoUsuarioLabel';
 import {
   asignarAccesoHub,
   listarAccesosHub,
@@ -65,12 +66,12 @@ const HubAccesos = () => {
 
   const usuariosOptions = useMemo(
     () => usuarios
-      .filter((u) => Number(u.tipo_usuario) !== 1)
+      .filter((u) => Number(u.id_usuario) !== Number(user?.id_usuario))
       .map((u) => ({
         value: u.id_usuario,
-        label: `${u.nombre} (${u.email})`,
+        label: `${u.nombre} (${u.email}) — ${etiquetaTipoUsuario(u.tipo_usuario)}`,
       })),
-    [usuarios],
+    [usuarios, user?.id_usuario],
   );
 
   const puestosOptions = useMemo(
@@ -174,8 +175,8 @@ const HubAccesos = () => {
       <div className="hub-section__toolbar">
         <Paragraph type="secondary" className="hub-section__intro">
           {soloComerciales
-            ? 'Asigna acceso comercial a usuarios internos. Tras cada cambio, deben volver a iniciar sesión.'
-            : 'Asigna acceso al hub a usuarios internos (comercial, supervisor o admin). Tras cada cambio, deben volver a iniciar sesión.'}
+            ? 'Asigna acceso comercial al personal de tu empresa. Tras cada cambio, deben volver a iniciar sesión.'
+            : 'Asigna acceso al hub al personal de la empresa activa en tu sesión (comercial, supervisor o admin). Tras cada cambio, deben volver a iniciar sesión.'}
         </Paragraph>
         <Button type="primary" icon={<PlusOutlined />} onClick={abrirModal}>
           Dar acceso

@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const { QueryTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
-const { emitirJwtSesion, TIPOS_PLATAFORMA } = require('./usuarioEmpresaService');
+const { emitirJwtSesion } = require('./usuarioEmpresaService');
 
 const ROLES_ROOT = 1;
 
@@ -55,7 +55,7 @@ const obtenerClaimsHub = async (usuario) => {
     };
   }
 
-  if (!TIPOS_PLATAFORMA.includes(tipo) || !idUsuario) {
+  if (!idUsuario) {
     return { hub_acceso: false, hub_puestos: [], hub_permisos: [] };
   }
 
@@ -474,8 +474,29 @@ const listarAccesosHub = async (user) => {
   );
 };
 
-const listarUsuariosInternosElegibles = async () =>
-  sequelize.query(
+const listarUsuariosInternosElegibles = async (user) => {
+  const idEmpresa = user?.id_empresa ? Number(user.id_empresa) : null;
+
+  if (idEmpresa) {
+    return sequelize.query(
+      `SELECT DISTINCT u.id_usuario, u.nombre, u.email,
+              COALESCE(ue.tipo_usuario, u.tipo_usuario) AS tipo_usuario
+       FROM m_usuarios u
+       INNER JOIN m_usuarios_empresas ue ON ue.id_usuario = u.id_usuario
+       WHERE ue.id_empresa = :idEmpresa
+         AND ue.fecha_baja IS NULL
+         AND (ue.activo IS NULL OR ue.activo = 1)
+         AND u.fecha_baja IS NULL
+         AND (u.activo IS NULL OR u.activo = 1)
+       ORDER BY u.nombre ASC`,
+      {
+        replacements: { idEmpresa },
+        type: QueryTypes.SELECT,
+      },
+    );
+  }
+
+  return sequelize.query(
     `SELECT id_usuario, nombre, email, tipo_usuario
      FROM m_usuarios
      WHERE tipo_usuario IN (1, 2)
@@ -484,6 +505,7 @@ const listarUsuariosInternosElegibles = async () =>
      ORDER BY nombre ASC`,
     { type: QueryTypes.SELECT },
   );
+};
 
 const asignarPuestoHub = async ({ idUsuario, idPuesto, usuarioAlta, user }) => {
   const gestion = resolverGestionAccesosHub(user);
