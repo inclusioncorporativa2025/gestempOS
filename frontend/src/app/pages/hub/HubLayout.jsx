@@ -4,7 +4,6 @@ import { Menu, Select, Typography } from 'antd';
 import { APP_ROUTES } from '../../../constants/routes';
 import { useAuth } from '../../../config/AuthContext';
 import { puedeGestionarAccesosHub, puedeVerDashboardHub } from '../../../utils/hubAccess';
-import useHubAccessSync from '../../../hooks/useHubAccessSync';
 import '../gestor/Configuracion.css';
 
 const { Title, Text } = Typography;
@@ -17,7 +16,6 @@ const HubLayout = () => {
   const { user } = useAuth();
   const puedeGestionarAccesos = puedeGestionarAccesosHub(user);
   const puedeVerMetricas = puedeVerDashboardHub(user);
-  useHubAccessSync({ activo: true, redirigirSiRevocado: true });
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
 
   useEffect(() => {

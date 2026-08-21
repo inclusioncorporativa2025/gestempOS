@@ -10,15 +10,18 @@ const HubProtectedRoute = ({ children }) => {
   const [verificado, setVerificado] = useState(false);
   const [permitido, setPermitido] = useState(false);
 
-  useHubAccessSync({ activo: Boolean(user && verificado && permitido), redirigirSiRevocado: true });
+  useHubAccessSync({
+    activo: Boolean(user && verificado && permitido),
+    redirigirSiRevocado: true,
+  });
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready) return undefined;
 
     if (!user) {
       setVerificado(true);
       setPermitido(false);
-      return;
+      return undefined;
     }
 
     let activo = true;
@@ -26,12 +29,13 @@ const HubProtectedRoute = ({ children }) => {
     obtenerContextoHub()
       .then((ctx) => {
         if (!activo) return;
-        patchUser({
+        const claims = {
           hub_acceso: Boolean(ctx.hub_acceso),
           hub_puestos: ctx.hub_puestos || [],
           hub_permisos: ctx.hub_permisos || [],
-        });
-        setPermitido(Boolean(ctx.hub_acceso));
+        };
+        patchUser(claims);
+        setPermitido(claims.hub_acceso);
         setVerificado(true);
       })
       .catch(() => {
@@ -48,7 +52,7 @@ const HubProtectedRoute = ({ children }) => {
     return () => {
       activo = false;
     };
-  }, [ready, user, patchUser]);
+  }, [ready, user?.id_usuario, patchUser]);
 
   if (!ready || !verificado) {
     return null;

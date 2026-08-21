@@ -57,7 +57,14 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const patchUser = useCallback((partial) => {
-    setUser((prev) => (prev ? { ...prev, ...partial } : null));
+    setUser((prev) => {
+      if (!prev) return null;
+      const sinCambios = Object.entries(partial).every(
+        ([key, value]) => JSON.stringify(prev[key]) === JSON.stringify(value),
+      );
+      if (sinCambios) return prev;
+      return { ...prev, ...partial };
+    });
   }, []);
 
   return (
