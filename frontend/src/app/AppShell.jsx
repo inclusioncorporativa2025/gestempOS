@@ -160,7 +160,7 @@ const AppShell = () => {
   const tipousuario = user?.tipo_usuario ?? null;
   const hubAcceso = tieneAccesoHub(user);
   useHubAccessSync({
-    activo: Boolean(user && hubAcceso && !location.pathname.startsWith(APP_ROUTES.hub)),
+    activo: Boolean(user?.id_usuario && !location.pathname.startsWith(APP_ROUTES.hub)),
   });
   const { trial, bloqueado, mostrarAviso } = useTrialStatus();
   const { tieneFeature } = usePlan();

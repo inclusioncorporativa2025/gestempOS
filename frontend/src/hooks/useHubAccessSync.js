@@ -68,6 +68,7 @@ const useHubAccessSync = ({ activo = true, redirigirSiRevocado = false } = {}) =
         }
         return false;
       }
+      // Error de red u otro: conservar claims actuales (p. ej. JWT recién emitido en login)
       return Boolean(actual?.hub_acceso);
     } finally {
       sincronizandoRef.current = false;
