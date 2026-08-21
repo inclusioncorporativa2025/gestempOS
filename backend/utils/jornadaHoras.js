@@ -91,6 +91,48 @@ const minutosOrdinariosMesJornadaFija = (dias, mes, festivosSet = new Set()) => 
   return totalMinutos;
 };
 
+const DIAS_LABORABLES_DEFECTO = new Set([1, 2, 3, 4, 5]);
+
+const contarDiasLaborablesMes = (mes, diasSemanaLaborables = DIAS_LABORABLES_DEFECTO, festivosSet = new Set()) => {
+  const fechaMes = dayjs(`${mes}-01`);
+  if (!fechaMes.isValid()) return 0;
+
+  let total = 0;
+  for (let day = 1; day <= fechaMes.daysInMonth(); day += 1) {
+    const fecha = fechaMes.date(day);
+    const clave = fecha.format('YYYY-MM-DD');
+    if (!diasSemanaLaborables.has(fecha.day())) continue;
+    if (festivosSet.has(clave)) continue;
+    total += 1;
+  }
+  return total;
+};
+
+const obtenerDiasSemanaLaborablesJornada = (jornada) => {
+  if (!jornada || !esJornadaFija(jornada)) return DIAS_LABORABLES_DEFECTO;
+  const diasConfig = jornada.column1?.dias || [];
+  const diasSemana = new Set();
+  diasConfig.forEach((dia) => {
+    const numero = diaSemanaDesdeNombre(dia?.dia);
+    if (numero != null) diasSemana.add(numero);
+  });
+  return diasSemana.size ? diasSemana : DIAS_LABORABLES_DEFECTO;
+};
+
+const minutosJornadaFijaEnFecha = (fecha, diasJornada, festivosSet = new Set()) => {
+  const clave = fecha.format('YYYY-MM-DD');
+  if (festivosSet.has(clave)) return 0;
+
+  const diaSemana = fecha.day();
+  let minutos = 0;
+  diasJornada.forEach((dia) => {
+    if (diaSemanaDesdeNombre(dia.dia) === diaSemana) {
+      minutos += minutosTramosDia(dia);
+    }
+  });
+  return minutos;
+};
+
 module.exports = {
   diaSemanaDesdeNombre,
   minutosEntreHoras,
@@ -98,4 +140,8 @@ module.exports = {
   minutosSemanalesJornadaFija,
   minutosOrdinariosMesJornadaFija,
   esJornadaFija,
+  contarDiasLaborablesMes,
+  obtenerDiasSemanaLaborablesJornada,
+  minutosJornadaFijaEnFecha,
+  DIAS_LABORABLES_DEFECTO,
 };

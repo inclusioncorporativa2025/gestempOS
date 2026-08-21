@@ -121,6 +121,17 @@
   user-select: none;
 }
 
+.landing-footer-byline-link {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.landing-footer-byline-link:hover,
+.landing-footer-byline-link:focus-visible {
+  color: inherit;
+  opacity: 0.85;
+}
+
 @media (max-width: 900px) {
   .landing-footer-main {
     grid-template-columns: 1fr;

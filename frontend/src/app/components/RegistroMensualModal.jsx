@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Modal, Pagination, Spin, Table } from 'antd';
 import { DownloadOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import ResumenHorasTotales from './ResumenHorasTotales';
 import './RegistroMensualModal.css';
 
 const MOBILE_BREAKPOINT = 950;
@@ -42,7 +43,6 @@ const RegistroMensualModal = ({
   firmaCierreDetalle,
   nombreEmpleado,
   destroyOnClose = true,
-  saldoBolsaEtiqueta = 'Saldo bolsa',
 }) => {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
   const [mobilePage, setMobilePage] = useState(1);
@@ -138,32 +138,12 @@ const RegistroMensualModal = ({
             />
           )}
 
-          <div className="registro-mensual-modal__totales">
-            <div className="registro-mensual-modal__totales-row">
-              <div className="registro-mensual-modal__total-item registro-mensual-modal__total-item--trabajadas">
-                <span className="registro-mensual-modal__total-label">Horas trabajadas</span>
-                <span className="registro-mensual-modal__total-valor">{totalHoras ?? '—'}</span>
-              </div>
-              <div className="registro-mensual-modal__total-item">
-                <span className="registro-mensual-modal__total-label">Horas esperadas</span>
-                <span className="registro-mensual-modal__total-valor">{totalHorasEsperadas ?? '—'}</span>
-              </div>
-            </div>
-            {resumenHoras?.tipo_hora_label && (
-              <span>
-                Tipo de hora: {resumenHoras.tipo_hora_label}
-                {resumenHoras.tipo_hora_origen === 'membresia'
-                  ? ' (personal)'
-                  : resumenHoras.tipo_hora_origen === 'jornada'
-                    ? ' (jornada)'
-                    : ''}
-              </span>
-            )}
-            {resumenHoras?.desglose && <span>{resumenHoras.desglose}</span>}
-            {resumenHoras?.saldo_bolsa && (
-              <span>{saldoBolsaEtiqueta}: {resumenHoras.saldo_bolsa}</span>
-            )}
-          </div>
+          <ResumenHorasTotales
+            totalHoras={totalHoras}
+            totalHorasEsperadas={totalHorasEsperadas}
+            resumenHoras={resumenHoras}
+            className="registro-mensual-modal__totales"
+          />
 
           {firmaCierreDetalle?.firmado && (
             <div className="registro-mensual-modal__firma">

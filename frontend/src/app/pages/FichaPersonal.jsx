@@ -40,6 +40,7 @@ import {
 } from '../../features/fichaje/fichajeService';
 import { etiquetaTipoHora, TIPO_HORA_BOLSA } from '../../utils/tipoHora';
 import BolsaHorasPanel from '../components/BolsaHorasPanel';
+import ResumenHorasTotales from '../components/ResumenHorasTotales';
 import VacacionesSaldoPanel from '../components/VacacionesSaldoPanel';
 import RetribucionPanel from '../components/RetribucionPanel';
 import MisNominasPanel from '../components/MisNominasPanel';
@@ -679,19 +680,12 @@ const FichaPersonal = () => {
             scroll={{ x: 700 }}
             locale={{ emptyText: 'Sin registros en este mes' }}
           />
-          <div className="fp-totales">
-            <span className="fp-total-sep">
-              Total horas trabajadas: {totalHoras}
-            </span>
-            <span>Total horas esperadas: {totalHorasEsperadas}</span>
-            {resumenHoras?.tipo_hora_label && (
-              <span>Tipo de hora: {resumenHoras.tipo_hora_label}</span>
-            )}
-            {resumenHoras?.desglose && <span>{resumenHoras.desglose}</span>}
-            {resumenHoras?.saldo_bolsa && (
-              <span>Saldo bolsa: {resumenHoras.saldo_bolsa}</span>
-            )}
-          </div>
+          <ResumenHorasTotales
+            totalHoras={totalHoras}
+            totalHorasEsperadas={totalHorasEsperadas}
+            resumenHoras={resumenHoras}
+            className="fp-totales"
+          />
         </>
       ),
     },

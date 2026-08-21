@@ -6,8 +6,10 @@ const lastLineStyle = { margin: 0 };
 export const TooltipTipoHoraContent = ({ includeHeredar = false }) => (
   <div style={{ maxWidth: 360, fontSize: 13, lineHeight: 1.55 }}>
     <p style={lineStyle}>
-      Indica cómo se tratan las horas que superan (o no alcanzan) la jornada ordinaria
-      mensual: <strong>horas fichadas − horas pactadas</strong>.
+      Indica cómo se tratan las horas que superan (o no alcanzan) la jornada
+      pactada del mes: <strong>horas fichadas − jornada pactada ajustada</strong>.
+      En jornada flexible, la referencia mensual se prorratea y se descuentan
+      las ausencias aprobadas del mes.
     </p>
     <p style={lineStyle}>
       <strong>Extra</strong> — Para <strong>jornada completa</strong>. El exceso se

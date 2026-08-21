@@ -4,9 +4,9 @@ import { LANDING_ROUTES } from '../../constants/routes';
 import { LANDING_URL } from '../../constants/urls';
 import { SUPPORT_EMAIL, supportMailtoHref } from '../../constants/support';
 import { getAppLoginHref, getAppRegisterHref } from '../../utils/appLinks';
-import { BRAND_NAME, BRAND_BYLINE } from '../../constants/brand';
+import { BRAND_NAME, BRAND_COMPANY_NAME, BRAND_COMPANY_URL } from '../../constants/brand';
+import BrandByline from '../../components/BrandByline';
 import BrandLogo from '../../components/BrandLogo';
-import './LandingFooter.css';
 import './LandingFooter.css';
 
 const FooterLink = ({ href, external, children, title }) =>
@@ -37,13 +37,19 @@ const FooterColumn = ({ title, links, ariaLabel }) => (
 
 const ORGANIZATION_SCHEMA = {
   '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: BRAND_BYLINE,
+  '@type': 'SoftwareApplication',
+  name: BRAND_NAME,
   url: LANDING_URL,
   description:
     'Software de control horario y registro de jornada laboral para empresas en España.',
   email: SUPPORT_EMAIL,
   areaServed: 'ES',
+  applicationCategory: 'BusinessApplication',
+  provider: {
+    '@type': 'Organization',
+    name: BRAND_COMPANY_NAME,
+    url: BRAND_COMPANY_URL,
+  },
   knowsAbout: [
     'Control horario',
     'Registro de jornada',
@@ -178,7 +184,7 @@ const LandingFooter = () => {
 
         <div className="landing-footer-legal">
           <p className="landing-footer-copy">
-            © {year} {BRAND_BYLINE}. Todos los derechos reservados.
+            © {year} <BrandByline linkClassName="landing-footer-byline-link" />. Todos los derechos reservados.
           </p>
           <nav className="landing-footer-legal-nav" aria-label="Enlaces legales">
             {legalLinks.map(({ label, href }, index) => (

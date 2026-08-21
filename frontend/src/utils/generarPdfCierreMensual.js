@@ -5,6 +5,12 @@ import { DECLARACION_CIERRE_MENSUAL } from './cierreMensualLegal';
 import { SUPPORT_EMAIL } from '../constants/support';
 import { TIPO_HORA_BOLSA } from './tipoHora';
 import { LOGO_SRC } from '../constants/brand';
+import {
+  NOTA_COMPARATIVA_HORAS,
+  detalleJornadaPactada,
+  etiquetaJornadaPactada,
+  valorJornadaPactada,
+} from './resumenHorasLabels';
 
 dayjs.locale('es');
 
@@ -320,8 +326,18 @@ export const generarPdfCierreMensual = async ({
   y += LINE_HEIGHT;
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...BRAND.dark);
-  doc.text(`Total horas esperadas: ${totalHorasEsperadas || 'No configurada'}`, MARGIN, y);
+  const etiquetaPactada = etiquetaJornadaPactada(resumenHoras);
+  const valorPactado = valorJornadaPactada(resumenHoras, totalHorasEsperadas || 'No configurada');
+  doc.text(`${etiquetaPactada}: ${valorPactado || 'No configurada'}`, MARGIN, y);
   y += LINE_HEIGHT;
+
+  const detallePactada = detalleJornadaPactada(resumenHoras);
+  if (detallePactada) {
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND.muted);
+    y = escribirParrafo(doc, detallePactada, MARGIN, y, CONTENT_WIDTH);
+    y += 2;
+  }
 
   if (resumenHoras?.desglose && Number(resumenHoras.tipo_hora) !== TIPO_HORA_BOLSA) {
     doc.setFontSize(9);
@@ -331,6 +347,18 @@ export const generarPdfCierreMensual = async ({
   } else {
     y += 4;
   }
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(...BRAND.muted);
+  y = escribirParrafo(
+    doc,
+    resumenHoras?.nota_comparativa || NOTA_COMPARATIVA_HORAS,
+    MARGIN,
+    y,
+    CONTENT_WIDTH,
+  );
+  y += 4;
 
   y = dibujarSeccionBolsaHoras(doc, resumenHoras, y);
   y += 2;

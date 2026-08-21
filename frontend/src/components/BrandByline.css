@@ -1,0 +1,10 @@
+.brand-byline-link {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.brand-byline-link:hover,
+.brand-byline-link:focus-visible {
+  color: inherit;
+  opacity: 0.85;
+}

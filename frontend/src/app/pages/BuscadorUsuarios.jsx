@@ -24,6 +24,7 @@ import { opcionesTipoHora, tipoHoraFormValue } from '../../utils/tipoHora';
 import { tooltipTipoHoraFormItem } from '../../utils/tipoHoraTooltip';
 import AltaEmpleadoModal from '../components/AltaEmpleadoModal';
 import ExportRegistrosModal from '../components/ExportRegistrosModal';
+import ResumenHorasTotales from '../components/ResumenHorasTotales';
 import JornadaLaboralSelect from '../components/JornadaLaboralSelect';
 import { listarConveniosEmpresa } from '../../features/convenios/convenioService';
 import { esUsuarioActivo, estaDadoDeBajaEnEmpresa as estaDadoDeBaja } from '../../utils/usuarioActivo';
@@ -52,6 +53,7 @@ const BuscarUsuarios = () => {
     const [selectedMonth, setSelectedMonth] = useState(dayjs().startOf('month'));
     const [totalHoras, setTotalHoras] = useState(0);
     const [totalHorasEsperadas, setTotalHorasEsperadas] = useState(0);
+    const [resumenHorasModal, setResumenHorasModal] = useState(null);
     const [jornadas, setJornadas] = useState([]);
     const [jornadasCargadas, setJornadasCargadas] = useState(false);
     const [id_usuario, setIdUsuario] = useState(null);
@@ -174,6 +176,7 @@ const BuscarUsuarios = () => {
         setTotalHoras(`${horas}h ${minutos}m`);
         const jornadaUsuario = await getHorasTotalesMesByIdUsuario(selectedMonth.format('YYYY-MM'),id_usuario);
         setTotalHorasEsperadas(jornadaUsuario.horasMensuales);
+        setResumenHorasModal(jornadaUsuario.resumen || null);
     };
 
     const handleMonthChange = (date, dateString) => {
@@ -532,10 +535,12 @@ const BuscarUsuarios = () => {
                             pagination={{ pageSize: 10 }}
                             scroll={{ x: 800 }}
                         />
-                        <div className="bu-totales">
-                            <span className="bu-total-sep">Total de horas trabajadas: {totalHoras}</span>
-                            <span>Total de horas esperadas: {totalHorasEsperadas}</span>
-                        </div>
+                        <ResumenHorasTotales
+                            totalHoras={totalHoras}
+                            totalHorasEsperadas={totalHorasEsperadas}
+                            resumenHoras={resumenHorasModal}
+                            className="bu-totales"
+                        />
                     </Card>
                 </Modal>
 

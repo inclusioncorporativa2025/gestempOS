@@ -2,14 +2,15 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import LegalPageLayout, { LegalSection } from '../../components/LegalPageLayout';
 import { LANDING_ROUTES } from '../../../constants/routes';
-import { BRAND_NAME, BRAND_BYLINE } from '../../../constants/brand';
+import { BRAND_NAME } from '../../../constants/brand';
+import BrandByline from '../../../components/BrandByline';
 import { LEGAL_ENTITY, LEGAL_LAST_UPDATED } from '../../../constants/legal';
 
 const TerminosCondicionesPage = () => (
   <LegalPageLayout title="Términos y condiciones" lastUpdated={LEGAL_LAST_UPDATED}>
     <LegalSection title="Identificación del prestador">
       <p>
-        El servicio {BRAND_NAME} ({BRAND_BYLINE}) es prestado por{' '}
+        El servicio {BRAND_NAME} (<BrandByline />) es prestado por{' '}
         <strong>{LEGAL_ENTITY.razonSocial}</strong> (CIF {LEGAL_ENTITY.cif}), con domicilio en{' '}
         {LEGAL_ENTITY.direccion}. Contacto:{' '}
         <a href={`mailto:${LEGAL_ENTITY.email}`}>{LEGAL_ENTITY.email}</a> ·{' '}

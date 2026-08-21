@@ -1,6 +1,7 @@
 import React from 'react';
 import LegalPageLayout, { LegalSection } from '../../components/LegalPageLayout';
-import { BRAND_NAME, BRAND_BYLINE } from '../../../constants/brand';
+import { BRAND_NAME } from '../../../constants/brand';
+import BrandByline from '../../../components/BrandByline';
 import { LEGAL_ENTITY, LEGAL_LAST_UPDATED } from '../../../constants/legal';
 
 const AvisoLegalPage = () => (
@@ -35,7 +36,7 @@ const AvisoLegalPage = () => (
         </li>
       </ul>
       <p>
-        El servicio {BRAND_NAME} ({BRAND_BYLINE}) es un software de control horario y registro de
+        El servicio {BRAND_NAME} (<BrandByline />) es un software de control horario y registro de
         jornada laboral ofrecido por {LEGAL_ENTITY.razonSocial}.
       </p>
     </LegalSection>
