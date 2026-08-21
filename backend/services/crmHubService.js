@@ -624,18 +624,30 @@ const obtenerInvitacionPreview = async ({ token, codigoCorto }) => {
   };
 };
 
-const obtenerMetricasDashboard = async () => {
-  const baseVenta = `v.fecha_baja IS NULL
-    AND EXISTS (
-      SELECT 1 FROM m_empresas e
-      WHERE e.id_empresa = v.id_empresa AND e.fecha_baja IS NULL
-    )`;
+/** Etapa comercial derivada de empresa_facturacion (alineada con trialService). */
+const SQL_ETAPA_VENTA = `
+  CASE
+    WHEN LOWER(COALESCE(ef.estado_suscripcion, '')) = 'canceled' THEN 'cancelada'
+    WHEN LOWER(COALESCE(ef.modo_facturacion, '')) = 'legacy' THEN 'activa'
+    WHEN LOWER(COALESCE(ef.estado_suscripcion, '')) IN ('active', 'past_due') THEN 'activa'
+    WHEN LOWER(COALESCE(ef.modo_facturacion, '')) = 'trial'
+      AND (ef.trial_ends_at IS NULL OR ef.trial_ends_at > NOW()) THEN 'trial'
+    ELSE 'registrada'
+  END`;
 
+const SQL_FROM_CLIENTES = `
+  FROM m_empresas e
+  LEFT JOIN crm_venta v ON v.id_empresa = e.id_empresa AND v.fecha_baja IS NULL
+  LEFT JOIN empresa_facturacion ef ON ef.id_empresa = e.id_empresa
+  WHERE e.fecha_baja IS NULL`;
+
+const SQL_FECHA_CLIENTE = 'COALESCE(v.fecha_venta, e.fecha_alta)';
+
+const obtenerMetricasDashboard = async () => {
   const resumenRows = await sequelize.query(
-    `SELECT v.etapa, COUNT(*) AS total
-     FROM crm_venta v
-     WHERE ${baseVenta}
-     GROUP BY v.etapa`,
+    `SELECT (${SQL_ETAPA_VENTA}) AS etapa, COUNT(*) AS total
+     ${SQL_FROM_CLIENTES}
+     GROUP BY etapa`,
     { type: QueryTypes.SELECT },
   );
 
@@ -645,6 +657,7 @@ const obtenerMetricasDashboard = async () => {
     trial: 0,
     activa: 0,
     cancelada: 0,
+    sin_comercial: 0,
   };
   resumenRows.forEach((row) => {
     const n = Number(row.total || 0);
@@ -654,46 +667,51 @@ const obtenerMetricasDashboard = async () => {
     }
   });
 
+  const [sinComercialRow] = await sequelize.query(
+    `SELECT COUNT(*) AS total
+     ${SQL_FROM_CLIENTES}
+       AND v.id_venta IS NULL`,
+    { type: QueryTypes.SELECT },
+  );
+  resumen.sin_comercial = Number(sinComercialRow?.total || 0);
+
   const evolucion = await sequelize.query(
-    `SELECT DATE_FORMAT(v.fecha_venta, '%Y-%m') AS mes,
+    `SELECT DATE_FORMAT(${SQL_FECHA_CLIENTE}, '%Y-%m') AS mes,
             COUNT(*) AS total,
-            SUM(CASE WHEN v.etapa = 'activa' THEN 1 ELSE 0 END) AS activas,
-            SUM(CASE WHEN v.etapa = 'trial' THEN 1 ELSE 0 END) AS trial,
-            SUM(CASE WHEN v.etapa = 'registrada' THEN 1 ELSE 0 END) AS registradas
-     FROM crm_venta v
-     WHERE ${baseVenta}
-       AND v.fecha_venta >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
-     GROUP BY DATE_FORMAT(v.fecha_venta, '%Y-%m')
+            SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'activa' THEN 1 ELSE 0 END) AS activas,
+            SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'trial' THEN 1 ELSE 0 END) AS trial,
+            SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'registrada' THEN 1 ELSE 0 END) AS registradas
+     ${SQL_FROM_CLIENTES}
+       AND ${SQL_FECHA_CLIENTE} >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+     GROUP BY DATE_FORMAT(${SQL_FECHA_CLIENTE}, '%Y-%m')
      ORDER BY mes ASC`,
     { type: QueryTypes.SELECT },
   );
 
   const [mesActual] = await sequelize.query(
     `SELECT COUNT(*) AS total
-     FROM crm_venta v
-     WHERE ${baseVenta}
-       AND DATE_FORMAT(v.fecha_venta, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')`,
+     ${SQL_FROM_CLIENTES}
+       AND DATE_FORMAT(${SQL_FECHA_CLIENTE}, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')`,
     { type: QueryTypes.SELECT },
   );
 
   const [mesAnterior] = await sequelize.query(
     `SELECT COUNT(*) AS total
-     FROM crm_venta v
-     WHERE ${baseVenta}
-       AND DATE_FORMAT(v.fecha_venta, '%Y-%m') = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m')`,
+     ${SQL_FROM_CLIENTES}
+       AND DATE_FORMAT(${SQL_FECHA_CLIENTE}, '%Y-%m') = DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), '%Y-%m')`,
     { type: QueryTypes.SELECT },
   );
 
-  const productividad = await sequelize.query(
+  const productividadComerciales = await sequelize.query(
     `SELECT
        u.id_usuario,
        u.nombre,
        u.email,
        COUNT(v.id_venta) AS ventas_total,
-       SUM(CASE WHEN v.etapa = 'activa' THEN 1 ELSE 0 END) AS ventas_activas,
-       SUM(CASE WHEN v.etapa = 'trial' THEN 1 ELSE 0 END) AS ventas_trial,
-       SUM(CASE WHEN v.etapa = 'registrada' THEN 1 ELSE 0 END) AS ventas_registradas,
-       SUM(CASE WHEN v.etapa = 'cancelada' THEN 1 ELSE 0 END) AS ventas_canceladas,
+       SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'activa' THEN 1 ELSE 0 END) AS ventas_activas,
+       SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'trial' THEN 1 ELSE 0 END) AS ventas_trial,
+       SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'registrada' THEN 1 ELSE 0 END) AS ventas_registradas,
+       SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'cancelada' THEN 1 ELSE 0 END) AS ventas_canceladas,
        (
          SELECT COUNT(*)
          FROM crm_invitacion_registro i
@@ -703,15 +721,16 @@ const obtenerMetricasDashboard = async () => {
          SELECT COUNT(*)
          FROM crm_invitacion_registro i
          WHERE i.id_usuario_comercial = u.id_usuario AND i.usado = 1
-       ) AS invitaciones_usadas
+       ) AS invitaciones_usadas,
+       0 AS es_organica
      FROM crm_usuario_puesto_interno upi
      INNER JOIN crm_puesto_interno p
        ON p.id_puesto = upi.id_puesto AND p.codigo = 'comercial'
      INNER JOIN m_usuarios u ON u.id_usuario = upi.id_usuario
      LEFT JOIN crm_venta v
        ON v.id_usuario_comercial = u.id_usuario AND v.fecha_baja IS NULL
-     LEFT JOIN m_empresas e
-       ON e.id_empresa = v.id_empresa AND e.fecha_baja IS NULL
+     LEFT JOIN m_empresas e ON e.id_empresa = v.id_empresa AND e.fecha_baja IS NULL
+     LEFT JOIN empresa_facturacion ef ON ef.id_empresa = e.id_empresa
      WHERE upi.fecha_baja IS NULL
        AND u.fecha_baja IS NULL
      GROUP BY u.id_usuario, u.nombre, u.email
@@ -719,7 +738,25 @@ const obtenerMetricasDashboard = async () => {
     { type: QueryTypes.SELECT },
   );
 
-  const productividadConTasa = productividad.map((row) => {
+  const [productividadOrganica] = await sequelize.query(
+    `SELECT
+       NULL AS id_usuario,
+       'Registro directo / Legacy' AS nombre,
+       NULL AS email,
+       COUNT(e.id_empresa) AS ventas_total,
+       SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'activa' THEN 1 ELSE 0 END) AS ventas_activas,
+       SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'trial' THEN 1 ELSE 0 END) AS ventas_trial,
+       SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'registrada' THEN 1 ELSE 0 END) AS ventas_registradas,
+       SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'cancelada' THEN 1 ELSE 0 END) AS ventas_canceladas,
+       0 AS invitaciones_total,
+       0 AS invitaciones_usadas,
+       1 AS es_organica
+     ${SQL_FROM_CLIENTES}
+       AND v.id_venta IS NULL`,
+    { type: QueryTypes.SELECT },
+  );
+
+  const mapProductividad = (row) => {
     const invTotal = Number(row.invitaciones_total || 0);
     const invUsadas = Number(row.invitaciones_usadas || 0);
     return {
@@ -732,8 +769,16 @@ const obtenerMetricasDashboard = async () => {
       invitaciones_total: invTotal,
       invitaciones_usadas: invUsadas,
       tasa_conversion: invTotal > 0 ? Math.round((invUsadas / invTotal) * 100) : null,
+      es_organica: Boolean(Number(row.es_organica)),
     };
-  });
+  };
+
+  const productividadConTasa = [
+    ...productividadComerciales.map(mapProductividad),
+    ...(Number(productividadOrganica?.ventas_total || 0) > 0
+      ? [mapProductividad(productividadOrganica)]
+      : []),
+  ].sort((a, b) => b.ventas_total - a.ventas_total || String(a.nombre).localeCompare(String(b.nombre)));
 
   return {
     resumen,

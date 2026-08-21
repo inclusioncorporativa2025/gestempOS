@@ -117,3 +117,45 @@
 .hub-dashboard__table-card {
   margin-top: 16px;
 }
+
+.hub-outline-tag.ant-tag {
+  background: transparent;
+  border-color: #d9d9d9;
+  margin-inline-end: 0;
+}
+
+.hub-etapa-tag--activa {
+  color: #52c41a;
+}
+
+.hub-etapa-tag--trial {
+  color: #faad14;
+}
+
+.hub-etapa-tag--registrada {
+  color: #1677ff;
+}
+
+.hub-etapa-tag--cancelada {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.hub-etapa-tag--default {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.hub-puesto-tag--comercial {
+  color: #1677ff;
+}
+
+.hub-puesto-tag--supervisor_comercial {
+  color: #722ed1;
+}
+
+.hub-puesto-tag--admin_hub {
+  color: #d48806;
+}
+
+.hub-puesto-tag--default {
+  color: rgba(0, 0, 0, 0.65);
+}

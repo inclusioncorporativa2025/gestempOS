@@ -17,7 +17,7 @@ import {
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { obtenerMetricasHub } from '../../../features/hub/hubService';
-import { colorEtapaVenta, etiquetaEtapaVenta } from '../../../utils/hubAccess';
+import { etiquetaEtapaVenta } from '../../../utils/hubAccess';
 import './Hub.css';
 
 dayjs.locale('es');
@@ -29,6 +29,12 @@ const formatearMes = (mes) => {
   const parsed = dayjs(`${mes}-01`);
   return parsed.isValid() ? parsed.format('MMM YYYY') : mes;
 };
+
+const TagEtapa = ({ etapa, children }) => (
+  <Tag bordered className={`hub-outline-tag hub-etapa-tag hub-etapa-tag--${etapa}`}>
+    {children ?? etiquetaEtapaVenta(etapa)}
+  </Tag>
+);
 
 const HubDashboard = () => {
   const [loading, setLoading] = useState(false);
@@ -69,8 +75,17 @@ const HubDashboard = () => {
       render: (_, row) => (
         <div>
           <Text strong>{row.nombre}</Text>
-          <br />
-          <Text type="secondary" style={{ fontSize: 12 }}>{row.email}</Text>
+          {row.es_organica ? (
+            <>
+              <br />
+              <TagEtapa etapa="default">Registro directo / legacy</TagEtapa>
+            </>
+          ) : (
+            <>
+              <br />
+              <Text type="secondary" style={{ fontSize: 12 }}>{row.email}</Text>
+            </>
+          )}
         </div>
       ),
     },
@@ -97,7 +112,11 @@ const HubDashboard = () => {
       title: 'Invitaciones',
       key: 'invitaciones',
       width: 120,
-      render: (_, row) => `${row.invitaciones_usadas}/${row.invitaciones_total}`,
+      render: (_, row) => (
+        row.es_organica
+          ? '—'
+          : `${row.invitaciones_usadas}/${row.invitaciones_total}`
+      ),
     },
     {
       title: 'Conversión',
@@ -119,6 +138,9 @@ const HubDashboard = () => {
         <Col xs={12} sm={8} lg={4}>
           <Card loading={loading}>
             <Statistic title="Total clientes" value={resumen?.total ?? 0} />
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {resumen?.sin_comercial ?? 0} sin comercial
+            </Text>
           </Card>
         </Col>
         <Col xs={12} sm={8} lg={4}>
@@ -185,9 +207,9 @@ const HubDashboard = () => {
               </div>
             )}
             <div className="hub-dashboard__legend">
-              <Tag color={colorEtapaVenta('activa')}>{etiquetaEtapaVenta('activa')}</Tag>
-              <Tag color={colorEtapaVenta('trial')}>{etiquetaEtapaVenta('trial')}</Tag>
-              <Tag color={colorEtapaVenta('registrada')}>{etiquetaEtapaVenta('registrada')}</Tag>
+              <TagEtapa etapa="activa" />
+              <TagEtapa etapa="trial" />
+              <TagEtapa etapa="registrada" />
             </div>
           </Card>
         </Col>
@@ -200,7 +222,7 @@ const HubDashboard = () => {
                 const pct = total > 0 ? Math.round((valor / total) * 100) : 0;
                 return (
                   <div key={etapa} className="hub-dashboard__etapa-row">
-                    <Tag color={colorEtapaVenta(etapa)}>{etiquetaEtapaVenta(etapa)}</Tag>
+                    <TagEtapa etapa={etapa} />
                     <div className="hub-dashboard__bar-track hub-dashboard__bar-track--sm">
                       <div
                         className="hub-dashboard__bar-fill"
@@ -222,7 +244,7 @@ const HubDashboard = () => {
         className="hub-dashboard__table-card"
       >
         <Table
-          rowKey="id_usuario"
+          rowKey={(row) => row.id_usuario ?? 'organica'}
           columns={columnasProductividad}
           dataSource={metricas?.productividad || []}
           pagination={false}

@@ -12,7 +12,7 @@ import {
 import { PlusOutlined, UserDeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAuth } from '../../../config/AuthContext';
-import { esSupervisorComercialHub } from '../../../utils/hubAccess';
+import { esSupervisorComercialHub, etiquetaPuestoHub } from '../../../utils/hubAccess';
 import { etiquetaTipoUsuario } from '../../../utils/tipoUsuarioLabel';
 import {
   asignarAccesoHub,
@@ -24,12 +24,6 @@ import {
 import './Hub.css';
 
 const { Text } = Typography;
-
-const COLOR_PUESTO = {
-  comercial: 'blue',
-  supervisor_comercial: 'purple',
-  admin_hub: 'gold',
-};
 
 const HubAccesos = () => {
   const { user } = useAuth();
@@ -77,7 +71,7 @@ const HubAccesos = () => {
   const puestosOptions = useMemo(
     () => puestos.map((p) => ({
       value: p.id_puesto,
-      label: p.nombre,
+      label: etiquetaPuestoHub(p.codigo, p.nombre),
     })),
     [puestos],
   );
@@ -108,7 +102,7 @@ const HubAccesos = () => {
       title: '¿Revocar acceso al panel de ventas?',
       content: (
         <>
-          Se quitará el puesto <strong>{record.puesto_nombre}</strong> a{' '}
+          Se quitará el puesto <strong>{etiquetaPuestoHub(record.puesto_codigo, record.puesto_nombre)}</strong> a{' '}
           <strong>{record.nombre}</strong>. Deberá volver a iniciar sesión para que surta efecto.
         </>
       ),
@@ -141,7 +135,12 @@ const HubAccesos = () => {
       key: 'puesto',
       width: 180,
       render: (nombre, row) => (
-        <Tag color={COLOR_PUESTO[row.puesto_codigo] || 'default'}>{nombre}</Tag>
+        <Tag
+          bordered
+          className={`hub-outline-tag hub-puesto-tag hub-puesto-tag--${row.puesto_codigo || 'default'}`}
+        >
+          {etiquetaPuestoHub(row.puesto_codigo, nombre)}
+        </Tag>
       ),
     },
     {

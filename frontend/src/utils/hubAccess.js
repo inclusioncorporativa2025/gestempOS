@@ -25,6 +25,11 @@ export const esSupervisorComercialHub = (user) => {
   return puestos.includes('supervisor_comercial') && !puestos.includes('admin_hub');
 };
 
+export const etiquetaPuestoHub = (codigo, nombre) => {
+  if (codigo === 'admin_hub') return 'Admin';
+  return nombre;
+};
+
 export const etiquetaEtapaVenta = (etapa) => {
   const map = {
     registrada: 'Registrada',
