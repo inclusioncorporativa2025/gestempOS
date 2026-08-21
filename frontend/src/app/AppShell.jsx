@@ -60,6 +60,7 @@ import HubProtectedRoute from './components/HubProtectedRoute';
 import HubAccesosRoute from './components/HubAccesosRoute';
 import HubPlataformaRoute from './components/HubPlataformaRoute';
 import { tieneAccesoHub } from '../utils/hubAccess';
+import useHubAccessSync from '../hooks/useHubAccessSync';
 import ImpersonationBanner from './components/ImpersonationBanner';
 import TrialStatusBanner from './components/TrialStatusBanner';
 import TrialExpiredGate from './components/TrialExpiredGate';
@@ -158,6 +159,9 @@ const AppShell = () => {
   const { user, ready } = useAuth();
   const tipousuario = user?.tipo_usuario ?? null;
   const hubAcceso = tieneAccesoHub(user);
+  useHubAccessSync({
+    activo: Boolean(user && (hubAcceso || location.pathname.startsWith(APP_ROUTES.hub))),
+  });
   const { trial, bloqueado, mostrarAviso } = useTrialStatus();
   const { tieneFeature } = usePlan();
 

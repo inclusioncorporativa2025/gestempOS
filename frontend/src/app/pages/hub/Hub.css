@@ -144,6 +144,33 @@
   color: rgba(0, 0, 0, 0.65);
 }
 
+.hub-evolucion-chart {
+  width: 100%;
+  min-height: 320px;
+}
+
+.hub-evolucion-tooltip {
+  background: #fff;
+  border: 1px solid #eef0f4;
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.hub-evolucion-tooltip__title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.hub-evolucion-tooltip__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .hub-puesto-tag--comercial {
   color: #1677ff;
 }

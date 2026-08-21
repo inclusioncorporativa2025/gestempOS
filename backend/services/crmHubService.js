@@ -102,6 +102,19 @@ const emitirJwtSesionConHub = async (usuario, empresa, membresia, extras = {}) =
   return emitirJwtSesion(usuario, empresa, membresia, { ...hubClaims, ...extras });
 };
 
+const refrescarClaimsHubEnUsuario = async (user) => {
+  const claims = await obtenerClaimsHub({
+    id_usuario: user?.id_usuario,
+    tipo_usuario: user?.tipo_usuario,
+  });
+
+  user.hub_acceso = Boolean(claims.hub_acceso);
+  user.hub_puestos = claims.hub_puestos || [];
+  user.hub_permisos = claims.hub_permisos || [];
+
+  return user.hub_acceso;
+};
+
 const usuarioTienePermisoHub = (user, ...codigos) => {
   if (Number(user?.tipo_usuario) === ROLES_ROOT) return true;
   const permisos = user?.hub_permisos || [];
@@ -571,7 +584,7 @@ const revocarPuestoHub = async ({ idAsignacion, user }) => {
   }
 
   const [asignacion] = await sequelize.query(
-    `SELECT upi.id, p.codigo AS puesto_codigo
+    `SELECT upi.id, upi.id_usuario, p.codigo AS puesto_codigo
      FROM crm_usuario_puesto_interno upi
      INNER JOIN crm_puesto_interno p ON p.id_puesto = upi.id_puesto
      WHERE upi.id = :idAsignacion AND upi.fecha_baja IS NULL
@@ -601,7 +614,7 @@ const revocarPuestoHub = async ({ idAsignacion, user }) => {
     { replacements: { idAsignacion } },
   );
 
-  return true;
+  return { id_usuario: asignacion.id_usuario };
 };
 
 const obtenerInvitacionPreview = async ({ token, codigoCorto }) => {
@@ -849,4 +862,5 @@ module.exports = {
   asignarPuestoHub,
   revocarPuestoHub,
   obtenerMetricasDashboard,
+  refrescarClaimsHubEnUsuario,
 };

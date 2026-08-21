@@ -1,13 +1,56 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { useAuth } from '../../config/AuthContext';
-import { tieneAccesoHub } from '../../utils/hubAccess';
+import { obtenerContextoHub } from '../../features/hub/hubService';
+import useHubAccessSync from '../../hooks/useHubAccessSync';
 
 const HubProtectedRoute = ({ children }) => {
-  const { user, ready } = useAuth();
+  const { user, ready, patchUser } = useAuth();
+  const [verificado, setVerificado] = useState(false);
+  const [permitido, setPermitido] = useState(false);
 
-  if (!ready) {
+  useHubAccessSync({ activo: Boolean(user && verificado && permitido), redirigirSiRevocado: true });
+
+  useEffect(() => {
+    if (!ready) return;
+
+    if (!user) {
+      setVerificado(true);
+      setPermitido(false);
+      return;
+    }
+
+    let activo = true;
+
+    obtenerContextoHub()
+      .then((ctx) => {
+        if (!activo) return;
+        patchUser({
+          hub_acceso: Boolean(ctx.hub_acceso),
+          hub_puestos: ctx.hub_puestos || [],
+          hub_permisos: ctx.hub_permisos || [],
+        });
+        setPermitido(Boolean(ctx.hub_acceso));
+        setVerificado(true);
+      })
+      .catch(() => {
+        if (!activo) return;
+        patchUser({
+          hub_acceso: false,
+          hub_puestos: [],
+          hub_permisos: [],
+        });
+        setPermitido(false);
+        setVerificado(true);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [ready, user, patchUser]);
+
+  if (!ready || !verificado) {
     return null;
   }
 
@@ -15,7 +58,7 @@ const HubProtectedRoute = ({ children }) => {
     return <Navigate to={APP_ROUTES.login} replace />;
   }
 
-  if (!tieneAccesoHub(user)) {
+  if (!permitido) {
     return <Navigate to={APP_ROUTES.home} replace />;
   }
 

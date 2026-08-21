@@ -10,13 +10,20 @@ const authHeaders = () => {
   };
 };
 
-export const obtenerContextoHub = async () => {
-  const response = await fetch(`${API_BASE_URL}/me`, { headers: authHeaders() });
+const parseHubResponse = async (response, fallbackMessage) => {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.message || 'No se pudo cargar el panel de ventas');
+    const error = new Error(data.message || fallbackMessage);
+    error.code = data.code;
+    error.status = response.status;
+    throw error;
   }
   return data;
+};
+
+export const obtenerContextoHub = async () => {
+  const response = await fetch(`${API_BASE_URL}/me`, { headers: authHeaders() });
+  return parseHubResponse(response, 'No se pudo cargar el panel de ventas');
 };
 
 export const listarVentasHub = async ({ q, etapa, pagina = 1, limite = 50 } = {}) => {
@@ -29,20 +36,12 @@ export const listarVentasHub = async ({ q, etapa, pagina = 1, limite = 50 } = {}
   const response = await fetch(`${API_BASE_URL}/ventas?${params.toString()}`, {
     headers: authHeaders(),
   });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.message || 'No se pudieron cargar las ventas');
-  }
-  return data;
+  return parseHubResponse(response, 'No se pudieron cargar las ventas');
 };
 
 export const listarComercialesHub = async () => {
   const response = await fetch(`${API_BASE_URL}/comerciales`, { headers: authHeaders() });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.message || 'No se pudieron cargar los comerciales');
-  }
-  return data;
+  return parseHubResponse(response, 'No se pudieron cargar los comerciales');
 };
 
 export const crearInvitacionHub = async (payload) => {
@@ -86,38 +85,22 @@ export const previewInvitacionHub = async ({ inv, codigo } = {}) => {
 
 export const obtenerMetricasHub = async () => {
   const response = await fetch(`${API_BASE_URL}/metricas`, { headers: authHeaders() });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.message || 'No se pudieron cargar las métricas');
-  }
-  return data;
+  return parseHubResponse(response, 'No se pudieron cargar las métricas');
 };
 
 export const listarAccesosHub = async () => {
   const response = await fetch(`${API_BASE_URL}/accesos`, { headers: authHeaders() });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.message || 'No se pudieron cargar los accesos');
-  }
-  return data;
+  return parseHubResponse(response, 'No se pudieron cargar los accesos');
 };
 
 export const listarPuestosHub = async () => {
   const response = await fetch(`${API_BASE_URL}/puestos`, { headers: authHeaders() });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.message || 'No se pudieron cargar los puestos');
-  }
-  return data;
+  return parseHubResponse(response, 'No se pudieron cargar los puestos');
 };
 
 export const listarUsuariosInternosHub = async () => {
   const response = await fetch(`${API_BASE_URL}/usuarios-internos`, { headers: authHeaders() });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.message || 'No se pudieron cargar los usuarios');
-  }
-  return data;
+  return parseHubResponse(response, 'No se pudieron cargar los usuarios');
 };
 
 export const asignarAccesoHub = async ({ id_usuario, id_puesto }) => {
@@ -126,11 +109,7 @@ export const asignarAccesoHub = async ({ id_usuario, id_puesto }) => {
     headers: authHeaders(),
     body: JSON.stringify({ id_usuario, id_puesto }),
   });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.message || 'No se pudo asignar el acceso');
-  }
-  return data;
+  return parseHubResponse(response, 'No se pudo asignar el acceso');
 };
 
 export const revocarAccesoHub = async (id) => {
@@ -138,9 +117,5 @@ export const revocarAccesoHub = async (id) => {
     method: 'DELETE',
     headers: authHeaders(),
   });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.message || 'No se pudo revocar el acceso');
-  }
-  return data;
+  return parseHubResponse(response, 'No se pudo revocar el acceso');
 };

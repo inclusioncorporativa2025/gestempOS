@@ -3,20 +3,30 @@ const {
   requireRole,
   ROLE_GROUPS,
 } = require('./authMiddleware');
-const { usuarioTienePermisoHub, usuarioPuedeGestionarAccesosHub } = require('../services/crmHubService');
+const {
+  usuarioTienePermisoHub,
+  usuarioPuedeGestionarAccesosHub,
+  refrescarClaimsHubEnUsuario,
+} = require('../services/crmHubService');
 
-const ROLES_ROOT = 1;
-
-const requireHubAccess = (req, res, next) => {
+const requireHubAccess = async (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ message: 'No autorizado' });
   }
 
-  if (Number(req.user.tipo_usuario) === ROLES_ROOT || req.user.hub_acceso) {
+  try {
+    const tieneAcceso = await refrescarClaimsHubEnUsuario(req.user);
+    if (!tieneAcceso) {
+      return res.status(403).json({
+        message: 'Acceso denegado: no tienes acceso al panel de ventas',
+        code: 'HUB_ACCESS_REVOKED',
+      });
+    }
     return next();
+  } catch (error) {
+    console.error('[hub] requireHubAccess:', error.message);
+    return res.status(500).json({ message: 'Error al comprobar acceso al panel de ventas' });
   }
-
-  return res.status(403).json({ message: 'Acceso denegado: no tienes acceso al panel de ventas' });
 };
 
 const requireHubPermiso = (...codigos) => (req, res, next) => {

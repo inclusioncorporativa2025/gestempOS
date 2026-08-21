@@ -14,21 +14,12 @@ import {
   ArrowUpOutlined,
   MinusOutlined,
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import 'dayjs/locale/es';
 import { obtenerMetricasHub } from '../../../features/hub/hubService';
 import { etiquetaEtapaVenta } from '../../../utils/hubAccess';
+import HubEvolucionChart from './HubEvolucionChart';
 import './Hub.css';
 
-dayjs.locale('es');
-
 const { Text } = Typography;
-
-const formatearMes = (mes) => {
-  if (!mes) return '';
-  const parsed = dayjs(`${mes}-01`);
-  return parsed.isValid() ? parsed.format('MMM YYYY') : mes;
-};
 
 const TagEtapa = ({ etapa, children }) => (
   <Tag bordered className={`hub-outline-tag hub-etapa-tag hub-etapa-tag--${etapa}`}>
@@ -55,11 +46,6 @@ const HubDashboard = () => {
   useEffect(() => {
     cargarMetricas();
   }, [cargarMetricas]);
-
-  const maxEvolucion = useMemo(() => {
-    const items = metricas?.evolucion || [];
-    return Math.max(...items.map((i) => i.total), 1);
-  }, [metricas]);
 
   const variacionMes = useMemo(() => {
     const actual = metricas?.comparativa_meses?.actual ?? 0;
@@ -187,30 +173,7 @@ const HubDashboard = () => {
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={14}>
           <Card title="Evolución de ventas (12 meses)" loading={loading}>
-            {(metricas?.evolucion || []).length === 0 ? (
-              <Text type="secondary">Sin datos en el periodo</Text>
-            ) : (
-              <div className="hub-dashboard__chart">
-                {(metricas?.evolucion || []).map((item) => (
-                  <div key={item.mes} className="hub-dashboard__bar-row">
-                    <span className="hub-dashboard__bar-label">{formatearMes(item.mes)}</span>
-                    <div className="hub-dashboard__bar-track">
-                      <div
-                        className="hub-dashboard__bar-fill"
-                        style={{ width: `${(item.total / maxEvolucion) * 100}%` }}
-                        title={`${item.total} ventas`}
-                      />
-                    </div>
-                    <span className="hub-dashboard__bar-value">{item.total}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="hub-dashboard__legend">
-              <TagEtapa etapa="activa" />
-              <TagEtapa etapa="trial" />
-              <TagEtapa etapa="registrada" />
-            </div>
+            <HubEvolucionChart evolucion={metricas?.evolucion} />
           </Card>
         </Col>
         <Col xs={24} lg={10}>

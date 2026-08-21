@@ -191,7 +191,7 @@ const asignarAccesoHubHandler = async (req, res) => {
     });
 
     return res.status(201).json({
-      message: 'Acceso al panel de ventas asignado correctamente',
+      message: 'Acceso asignado. El usuario ya puede entrar al panel de ventas.',
       id: idAsignacion,
     });
   } catch (error) {

@@ -86,7 +86,7 @@ const HubAccesos = () => {
       const values = await form.validateFields();
       setSubmitting(true);
       await asignarAccesoHub(values);
-      message.success('Acceso asignado. El usuario debe volver a iniciar sesión.');
+      message.success('Acceso asignado. El usuario puede entrar al panel de ventas de inmediato.');
       setModalOpen(false);
       cargarDatos();
     } catch (error) {
@@ -103,7 +103,7 @@ const HubAccesos = () => {
       content: (
         <>
           Se quitará el puesto <strong>{etiquetaPuestoHub(record.puesto_codigo, record.puesto_nombre)}</strong> a{' '}
-          <strong>{record.nombre}</strong>. Deberá volver a iniciar sesión para que surta efecto.
+          <strong>{record.nombre}</strong>. Perderá el acceso al panel de ventas de forma inmediata.
         </>
       ),
       okText: 'Revocar',
