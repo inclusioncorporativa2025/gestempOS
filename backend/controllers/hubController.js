@@ -233,7 +233,7 @@ const obtenerMetricasDashboardHandler = async (_req, res) => {
     const metricas = await obtenerMetricasDashboard();
     return res.status(200).json(metricas);
   } catch (error) {
-    console.error('[hub] obtenerMetricas:', error.message);
+    console.error('[hub] obtenerMetricas:', error.message, error.parent?.sqlMessage || '');
     return res.status(500).json({ message: 'Error al cargar métricas del hub' });
   }
 };

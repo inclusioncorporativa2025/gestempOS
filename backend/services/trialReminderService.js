@@ -44,13 +44,16 @@ const listarEmpresasPruebaEnDias = async (dias = TRIAL_WARN_DAYS) => {
        ef.trial_ends_at,
        ef.modo_facturacion,
        ef.estado_suscripcion,
-       ef.stripe_subscription_id
+       ef.stripe_subscription_id,
+       DATEDIFF(DATE(ef.trial_ends_at), CURDATE()) AS dias_hasta_fin
      FROM m_empresas e
      INNER JOIN empresa_facturacion ef ON ef.id_empresa = e.id_empresa
      WHERE e.fecha_baja IS NULL
        AND IFNULL(e.activo, 1) = 1
        AND ef.trial_ends_at IS NOT NULL
-       AND DATE(ef.trial_ends_at) = DATE(DATE_ADD(CURDATE(), INTERVAL :dias DAY))
+       AND ef.trial_ends_at > NOW()
+       AND DATEDIFF(DATE(ef.trial_ends_at), CURDATE()) <= :dias
+       AND DATEDIFF(DATE(ef.trial_ends_at), CURDATE()) >= 0
        AND (
          LOWER(IFNULL(ef.modo_facturacion, '')) = 'trial'
          OR LOWER(IFNULL(ef.estado_suscripcion, '')) = 'trialing'
@@ -113,11 +116,16 @@ const enviarAvisosFinPrueba = async ({ dias = TRIAL_WARN_DAYS, dryRun = false } 
     );
 
     if (!dryRun) {
+      const diasRestantes = Math.max(
+        0,
+        Number(row.dias_hasta_fin ?? dias),
+      );
+
       await enviarAvisoFinPrueba({
         nombre: admin.nombre,
         email: admin.email,
         nombreEmpresa: row.nombre,
-        diasRestantes: dias,
+        diasRestantes,
         fechaFinLabel: formatFechaEs(row.trial_ends_at),
         enlaceFacturacion,
         enStripeTrialing,
@@ -131,6 +139,7 @@ const enviarAvisosFinPrueba = async ({ dias = TRIAL_WARN_DAYS, dryRun = false } 
       nombre: row.nombre,
       email: admin.email,
       trial_ends_at: row.trial_ends_at,
+      dias_hasta_fin: row.dias_hasta_fin,
       enviado: !dryRun,
       dry_run: dryRun,
     });

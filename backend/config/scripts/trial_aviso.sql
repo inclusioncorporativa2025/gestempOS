@@ -7,10 +7,13 @@
 --
 -- Variable opcional: TRIAL_WARN_DAYS (default 3)
 
--- Ver empresas que recibirían aviso hoy (3 días antes del fin):
--- SELECT e.id_empresa, e.nombre, ef.trial_ends_at, ef.modo_facturacion, ef.estado_suscripcion
+-- Ver empresas que recibirían aviso hoy (≤3 días antes del fin, prueba aún activa):
+-- SELECT e.id_empresa, e.nombre, ef.trial_ends_at, ef.modo_facturacion, ef.estado_suscripcion,
+--        DATEDIFF(DATE(ef.trial_ends_at), CURDATE()) AS dias_hasta_fin
 -- FROM m_empresas e
 -- INNER JOIN empresa_facturacion ef ON ef.id_empresa = e.id_empresa
 -- WHERE e.fecha_baja IS NULL
 --   AND ef.trial_ends_at IS NOT NULL
---   AND DATE(ef.trial_ends_at) = DATE(DATE_ADD(CURDATE(), INTERVAL 3 DAY));
+--   AND ef.trial_ends_at > NOW()
+--   AND DATEDIFF(DATE(ef.trial_ends_at), CURDATE()) <= 3
+--   AND DATEDIFF(DATE(ef.trial_ends_at), CURDATE()) >= 0;
