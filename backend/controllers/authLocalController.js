@@ -16,10 +16,10 @@ const {
   membresiaEstaActiva,
   usuarioActivoPlataforma,
   usuarioPuedeAutenticarse,
-  emitirJwtSesion,
   emitirPreAuthToken,
   verificarPreAuthToken,
 } = require('../services/usuarioEmpresaService');
+const { emitirJwtSesionConHub } = require('../services/crmHubService');
 const { normalizePlanId, planIncluyeFeature } = require('../config/plans');
 const { obtenerPlanEmpresa, assertEmpresaTieneFeature } = require('../services/planService');
 const {
@@ -124,7 +124,7 @@ const completarLoginConEmpresa = async (req, res, usuario, membresia, empresa) =
   const nombre_empresa = operativa ? empresa.nombre : null;
   const alias = operativa ? empresa.alias : null;
 
-  const token = emitirJwtSesion(usuario, empresa, membresia);
+  const token = await emitirJwtSesionConHub(usuario, empresa, membresia);
 
   const trial =
     id_empresa && !TIPOS_PLATAFORMA.includes(Number(usuario.tipo_usuario))
@@ -316,7 +316,7 @@ const switchEmpresa = async (req, res) => {
       });
     }
 
-    const token = emitirJwtSesion(usuario, empresa, membresia);
+    const token = await emitirJwtSesionConHub(usuario, empresa, membresia);
 
     const trial =
       !esPlataforma

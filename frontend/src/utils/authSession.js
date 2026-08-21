@@ -122,6 +122,9 @@ export const claimsToUser = (claims) => {
     impersonado_por_email: claims.impersonado_por_email ?? null,
     impersonado_por_nombre: claims.impersonado_por_nombre ?? null,
     plan_id: claims.plan_id ?? 'esencial',
+    hub_acceso: Boolean(claims.hub_acceso),
+    hub_puestos: claims.hub_puestos ?? [],
+    hub_permisos: claims.hub_permisos ?? [],
   };
 };
 

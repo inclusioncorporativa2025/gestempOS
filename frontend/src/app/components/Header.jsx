@@ -13,6 +13,7 @@ import { useNovedadPendiente } from '../../hooks/useNovedadPendiente';
 import { getTipoUsuario } from '../../utils/authSession';
 import { puedeVerFichaPersonal } from '../../utils/tipoUsuarioLabel';
 import { useAuth } from '../../config/AuthContext';
+import { tieneAccesoHub } from '../../utils/hubAccess';
 import HeaderEmpresaMenu from './HeaderEmpresaMenu';
 import NovedadesDrawer from './NovedadesDrawer';
 import NovedadesRocketIcon from './NovedadesRocketIcon';
@@ -30,6 +31,7 @@ const MyHeader = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const tipoUsuario = getTipoUsuario();
+  const ocultarSoporte = tieneAccesoHub(user);
   const mostrarBuscador = puedeVerFichaPersonal(tipoUsuario);
   const [searchValue, setSearchValue] = useState('');
   const { estadoJornada, horasTrabajadas, refetch } = useEstadoJornada();
@@ -106,6 +108,7 @@ const MyHeader = () => {
       </div>
 
       <div className="app-header__end">
+        {!ocultarSoporte && (
         <button
           type="button"
           className="app-header-icon-btn"
@@ -114,6 +117,7 @@ const MyHeader = () => {
         >
           <MailOutlined />
         </button>
+        )}
 
         <button
           type="button"

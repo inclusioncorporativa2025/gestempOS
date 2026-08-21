@@ -181,15 +181,18 @@ export const doResetPassword = async (email, token, password) => {
 
 /** Registro público de empresa (landing «Empieza gratis»). */
 export const registrarEmpresaPublica = async (values) => {
+  const { invitacionToken, invitacionCodigo, ...formValues } = values;
   const response = await fetch(`${API_BASE_URL}/register-company`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       values: {
-        ...values,
+        ...formValues,
         plan: 'rrhh',
-        cicloFacturacion: values.cicloFacturacion || 'mensual',
+        cicloFacturacion: formValues.cicloFacturacion || 'mensual',
       },
+      invitacionToken,
+      invitacionCodigo,
     }),
   });
 

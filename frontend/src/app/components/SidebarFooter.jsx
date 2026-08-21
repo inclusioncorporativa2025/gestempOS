@@ -1,10 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { Button, Tooltip } from 'antd';
-import { PhoneOutlined, PoweroffOutlined } from '@ant-design/icons';
+import { FundProjectionScreenOutlined, PhoneOutlined, PoweroffOutlined } from '@ant-design/icons';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ConfirmPopup from './shared/ConfirmPopup';
 import { doLogout } from '../../features/auth/authService';
 import { useAuth } from '../../config/AuthContext';
 import { useEstadoJornada } from '../../hooks/useEstadoJornada';
+import { APP_ROUTES } from '../../constants/routes';
+import { tieneAccesoHub } from '../../utils/hubAccess';
 
 const getLogoutCopy = (estadoJornada, horasTrabajadas) => {
   if (estadoJornada === 'in') {
@@ -44,8 +47,12 @@ const getLogoutCopy = (estadoJornada, horasTrabajadas) => {
 
 const SidebarFooter = ({ collapsed = false, onOpenSupport }) => {
   const [logoutOpen, setLogoutOpen] = useState(false);
-  const { logout: clearAuth } = useAuth();
+  const { logout: clearAuth, user } = useAuth();
   const { estadoJornada, horasTrabajadas } = useEstadoJornada();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const hubAcceso = tieneAccesoHub(user);
+  const enHub = location.pathname.startsWith(APP_ROUTES.hub);
 
   const logoutCopy = useMemo(
     () => getLogoutCopy(estadoJornada, horasTrabajadas),
@@ -62,22 +69,46 @@ const SidebarFooter = ({ collapsed = false, onOpenSupport }) => {
     onOpenSupport?.();
   };
 
+  const abrirHub = () => {
+    navigate(APP_ROUTES.hubVentas);
+  };
+
   return (
     <>
       <div className={`app-sider-footer ${collapsed ? 'app-sider-footer--collapsed' : ''}`}>
-        <Tooltip title={collapsed ? 'Contactar soporte' : ''} placement="right">
-          <span className="app-sider-footer-btn-wrap">
-            <Button
-              type="text"
-              className="app-sider-footer-btn"
-              icon={<PhoneOutlined />}
-              onClick={abrirSoporte}
-              block={!collapsed}
-            >
-              {!collapsed && 'Soporte'}
-            </Button>
-          </span>
-        </Tooltip>
+        {hubAcceso ? (
+          <Tooltip title={collapsed ? 'Hub comercial' : ''} placement="right">
+            <span className="app-sider-footer-btn-wrap">
+              <Button
+                type="text"
+                className={[
+                  'app-sider-footer-btn',
+                  'app-sider-footer-btn--crm',
+                  enHub && 'app-sider-footer-btn--active',
+                ].filter(Boolean).join(' ')}
+                icon={<FundProjectionScreenOutlined />}
+                onClick={abrirHub}
+                block={!collapsed}
+              >
+                {!collapsed && 'CRM'}
+              </Button>
+            </span>
+          </Tooltip>
+        ) : (
+          <Tooltip title={collapsed ? 'Contactar soporte' : ''} placement="right">
+            <span className="app-sider-footer-btn-wrap">
+              <Button
+                type="text"
+                className="app-sider-footer-btn"
+                icon={<PhoneOutlined />}
+                onClick={abrirSoporte}
+                block={!collapsed}
+              >
+                {!collapsed && 'Soporte'}
+              </Button>
+            </span>
+          </Tooltip>
+        )}
         <Tooltip title={collapsed ? 'Cerrar sesión' : ''} placement="right">
           <Button
             type="text"

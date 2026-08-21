@@ -52,6 +52,10 @@ import PlatformAccesos from './pages/platform/PlatformAccesos';
 import PlatformConvenios from './pages/platform/PlatformConvenios';
 import PlatformNovedades from './pages/platform/PlatformNovedades';
 import PlatformAcceder from './pages/platform/PlatformAcceder';
+import HubLayout from './pages/hub/HubLayout';
+import HubVentas from './pages/hub/HubVentas';
+import HubProtectedRoute from './components/HubProtectedRoute';
+import { tieneAccesoHub } from '../utils/hubAccess';
 import ImpersonationBanner from './components/ImpersonationBanner';
 import TrialStatusBanner from './components/TrialStatusBanner';
 import TrialExpiredGate from './components/TrialExpiredGate';
@@ -149,6 +153,7 @@ const AppShell = () => {
   const navigate = useNavigate();
   const { user, ready } = useAuth();
   const tipousuario = user?.tipo_usuario ?? null;
+  const hubAcceso = tieneAccesoHub(user);
   const { trial, bloqueado, mostrarAviso } = useTrialStatus();
   const { tieneFeature } = usePlan();
 
@@ -209,7 +214,7 @@ const AppShell = () => {
       : [];
 
   const paginaActual = pages.find((page) => {
-    if (page.path === APP_ROUTES.settings || page.path === APP_ROUTES.platform) {
+    if (page.path === APP_ROUTES.settings || page.path === APP_ROUTES.platform || page.path === APP_ROUTES.hub) {
       return (
         location.pathname === page.path ||
         location.pathname.startsWith(`${page.path}/`)
@@ -497,6 +502,17 @@ const AppShell = () => {
                   />
                 </Route>
                 <Route
+                  path={`${APP_ROUTES.hub}/*`}
+                  element={
+                    <HubProtectedRoute>
+                      <HubLayout />
+                    </HubProtectedRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="ventas" replace />} />
+                  <Route path="ventas" element={<HubVentas />} />
+                </Route>
+                <Route
                   path="/companies"
                   element={<Navigate to={APP_ROUTES.platformEmpresas} replace />}
                 />
@@ -591,7 +607,9 @@ const AppShell = () => {
         </Layout>
       </Layout>
 
-      <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
+      {!hubAcceso && (
+        <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
+      )}
       {user && !isAuthShellPage && <NovedadAppNotifier />}
       {user && !isAuthShellPage && puedeFichar && <PausaBloqueoOverlay />}
     </ConfigProvider>

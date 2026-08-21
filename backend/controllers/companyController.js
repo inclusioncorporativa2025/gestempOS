@@ -22,6 +22,11 @@ const { calcularFechaFinPrueba, extenderPeriodoPruebaEmpresa, TrialExtensionErro
 const { crearCheckoutTrialPendiente } = require('../services/billingService');
 const { purgarEmpresaCompleta } = require('../services/empresaPurgeService');
 const {
+  buscarInvitacionValida,
+  registrarVentaDesdeInvitacion,
+  crmTablasDisponibles,
+} = require('../services/crmHubService');
+const {
   findEmpresaActivaPorCif,
   normalizeEmail,
   isEmailValido,
@@ -277,6 +282,34 @@ const registerCompany = async (req, res) => {
             transaction,
           },
         );
+
+        let invitacionRegistro = null;
+        if (esRegistroPublico && (await crmTablasDisponibles())) {
+          const invToken = req.body.invitacionToken || req.body.inv;
+          const invCodigo = req.body.invitacionCodigo || req.body.codigoInvitacion;
+          if (invToken || invCodigo) {
+            invitacionRegistro = await buscarInvitacionValida({
+              token: invToken,
+              codigoCorto: invCodigo,
+            });
+            if (!invitacionRegistro) {
+              await transaction.rollback();
+              return res.status(400).json({
+                message: 'La invitación de registro no es válida o ha expirado',
+                codigo: 'INVITACION_INVALIDA',
+              });
+            }
+          }
+        }
+
+        if (invitacionRegistro) {
+          await registrarVentaDesdeInvitacion({
+            idEmpresa: empresa.id_empresa,
+            invitacion: invitacionRegistro,
+            usuarioAlta: invitacionRegistro.id_usuario_comercial,
+            transaction,
+          });
+        }
 
         await transaction.commit();
 
