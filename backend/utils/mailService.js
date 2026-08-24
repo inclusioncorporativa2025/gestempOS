@@ -236,7 +236,6 @@ const buildInvitacionRegistroHubHtml = ({
   codigoCorto,
   fechaExpiracionLabel,
   comercialNombre,
-  comercialEmail,
   urlApp,
 }) =>
   emailLayout(`
@@ -254,11 +253,6 @@ const buildInvitacionRegistroHubHtml = ({
               <p style="margin:0 0 8px 0;"><strong>Código de invitación:</strong> ${escapeHtml(codigoCorto)}</p>
               <p style="margin:0 0 8px 0;"><strong>Válido hasta:</strong> ${escapeHtml(fechaExpiracionLabel)}</p>
               <p style="margin:0 0 8px 0;"><strong>Tu contacto comercial:</strong> ${escapeHtml(comercialNombre)}</p>
-              ${
-                comercialEmail
-                  ? `<p style="margin:0 0 8px 0;"><strong>Email comercial:</strong> ${escapeHtml(comercialEmail)}</p>`
-                  : ''
-              }
               <p style="margin:0;"><strong>URL de la aplicación:</strong> <a href="${urlApp}" style="color:#2BA9E0;">${urlApp}</a></p>
             </td>
           </tr>
@@ -286,7 +280,6 @@ const enviarInvitacionRegistroHub = async ({
   codigoCorto,
   fechaExpiracionLabel,
   comercialNombre,
-  comercialEmail,
 }) => {
   const destino = String(to || '').trim().toLowerCase();
   if (!isEmailValido(destino)) {
@@ -306,7 +299,6 @@ const enviarInvitacionRegistroHub = async ({
         codigoCorto,
         fechaExpiracionLabel,
         comercialNombre: comercialNombre || 'Tu comercial Timecor',
-        comercialEmail: comercialEmail || '',
         urlApp: APP_URL,
       }),
     });

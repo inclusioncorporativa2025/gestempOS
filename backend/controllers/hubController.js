@@ -6,6 +6,10 @@ const {
   listarInvitaciones,
   asignarVentaManual,
   obtenerInvitacionPreview,
+  eliminarVentaHub,
+  transferirVentaHub,
+  eliminarInvitacionHub,
+  transferirInvitacionHub,
   crmTablasDisponibles,
   usuarioPuedeGestionarAccesosHub,
   listarPuestosInternos,
@@ -93,9 +97,10 @@ const listarInvitacionesHandler = async (req, res) => {
   }
 };
 
-const listarComercialesHandler = async (_req, res) => {
+const listarComercialesHandler = async (req, res) => {
   try {
-    const comerciales = await listarComerciales();
+    const soloComercial = req.query.solo_comercial === '1';
+    const comerciales = await listarComerciales({ soloComercial });
     return res.status(200).json({ comerciales });
   } catch (error) {
     console.error('[hub] listarComerciales:', error.message);
@@ -163,7 +168,6 @@ const crearInvitacionHandler = async (req, res) => {
           codigoCorto: invitacion.codigo_corto,
           fechaExpiracionLabel,
           comercialNombre: req.user.nombre,
-          comercialEmail: req.user.email,
         });
         emailEnviado = true;
       } catch (mailErr) {
@@ -339,6 +343,113 @@ const obtenerMetricasDashboardHandler = async (_req, res) => {
   }
 };
 
+const mapHubCarteraError = (error, res, contexto) => {
+  if (error.code === 'ACCESO_DENEGADO' || error.code === 'COMERCIAL_FUERA_DE_ALCANCE') {
+    return res.status(403).json({ message: error.message, code: error.code });
+  }
+  if (
+    error.code === 'VENTA_NO_ENCONTRADA'
+    || error.code === 'INVITACION_NO_ENCONTRADA'
+  ) {
+    return res.status(404).json({ message: error.message, code: error.code });
+  }
+  if (
+    error.code === 'COMERCIAL_DESTINO_INVALIDO'
+    || error.code === 'COMERCIAL_IGUAL'
+    || error.code === 'INVITACION_USADA'
+  ) {
+    return res.status(400).json({ message: error.message, code: error.code });
+  }
+  console.error(`[hub] ${contexto}:`, error.message);
+  return res.status(500).json({ message: `Error al ${contexto}` });
+};
+
+const eliminarVentaHandler = async (req, res) => {
+  try {
+    const idVenta = Number(req.params.id);
+    if (!idVenta) {
+      return res.status(400).json({ message: 'Id de cliente inválido' });
+    }
+
+    const result = await eliminarVentaHub({ idVenta, user: req.user });
+    return res.status(200).json({
+      message: 'Cliente eliminado del panel de ventas',
+      ...result,
+    });
+  } catch (error) {
+    return mapHubCarteraError(error, res, 'eliminar cliente');
+  }
+};
+
+const transferirVentaHandler = async (req, res) => {
+  try {
+    const idVenta = Number(req.params.id);
+    const idComercial = Number(req.body?.id_usuario_comercial);
+
+    if (!idVenta || !idComercial) {
+      return res.status(400).json({
+        message: 'Id de cliente e id_usuario_comercial son obligatorios',
+      });
+    }
+
+    const result = await transferirVentaHub({
+      idVenta,
+      idUsuarioComercial: idComercial,
+      user: req.user,
+    });
+
+    return res.status(200).json({
+      message: 'Cliente transferido correctamente',
+      ...result,
+    });
+  } catch (error) {
+    return mapHubCarteraError(error, res, 'transferir cliente');
+  }
+};
+
+const eliminarInvitacionHandler = async (req, res) => {
+  try {
+    const idInvitacion = Number(req.params.id);
+    if (!idInvitacion) {
+      return res.status(400).json({ message: 'Id de invitación inválido' });
+    }
+
+    const result = await eliminarInvitacionHub({ idInvitacion, user: req.user });
+    return res.status(200).json({
+      message: 'Invitación eliminada',
+      ...result,
+    });
+  } catch (error) {
+    return mapHubCarteraError(error, res, 'eliminar invitación');
+  }
+};
+
+const transferirInvitacionHandler = async (req, res) => {
+  try {
+    const idInvitacion = Number(req.params.id);
+    const idComercial = Number(req.body?.id_usuario_comercial);
+
+    if (!idInvitacion || !idComercial) {
+      return res.status(400).json({
+        message: 'Id de invitación e id_usuario_comercial son obligatorios',
+      });
+    }
+
+    const result = await transferirInvitacionHub({
+      idInvitacion,
+      idUsuarioComercial: idComercial,
+      user: req.user,
+    });
+
+    return res.status(200).json({
+      message: 'Invitación transferida correctamente',
+      ...result,
+    });
+  } catch (error) {
+    return mapHubCarteraError(error, res, 'transferir invitación');
+  }
+};
+
 module.exports = {
   obtenerContexto,
   listarVentasHandler,
@@ -353,4 +464,8 @@ module.exports = {
   asignarAccesoHubHandler,
   revocarAccesoHubHandler,
   obtenerMetricasDashboardHandler,
+  eliminarVentaHandler,
+  transferirVentaHandler,
+  eliminarInvitacionHandler,
+  transferirInvitacionHandler,
 };

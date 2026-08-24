@@ -4,6 +4,7 @@ import {
   Button,
   Input,
   Modal,
+  Popconfirm,
   Select,
   Space,
   Table,
@@ -12,19 +13,32 @@ import {
   Typography,
   message,
 } from 'antd';
-import { CopyOutlined, LinkOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import {
+  CopyOutlined,
+  DeleteOutlined,
+  LinkOutlined,
+  PlusOutlined,
+  SearchOutlined,
+  SwapOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAuth } from '../../../config/AuthContext';
 import {
   crearInvitacionHub,
+  eliminarInvitacionHub,
+  eliminarVentaHub,
+  listarComercialesHub,
   listarInvitacionesHub,
   listarVentasHub,
+  transferirInvitacionHub,
+  transferirVentaHub,
 } from '../../../features/hub/hubService';
 import {
   colorEstadoInvitacion,
   colorEtapaVenta,
   etiquetaEstadoInvitacion,
   etiquetaEtapaVenta,
+  puedeGestionarAccesosHub,
   tienePermisoHub,
 } from '../../../utils/hubAccess';
 import {
@@ -85,9 +99,14 @@ const HubVentas = () => {
     email_previsto: '',
     telefono_previsto: '',
   });
+  const [comerciales, setComerciales] = useState([]);
+  const [transferModal, setTransferModal] = useState(null);
+  const [transferComercialId, setTransferComercialId] = useState(null);
+  const [transferLoading, setTransferLoading] = useState(false);
 
   const puedeCrearInvitacion = tienePermisoHub(user, 'crear_invitacion');
   const puedeVerImportes = tienePermisoHub(user, 'ver_importes');
+  const puedeGestionarCartera = puedeGestionarAccesosHub(user);
   const mostrarComercialInv = Number(user?.tipo_usuario) === 1
     || tienePermisoHub(user, 'ver_equipo')
     || tienePermisoHub(user, 'ver_todas');
@@ -147,6 +166,139 @@ const HubVentas = () => {
     setPagina(1);
     setPaginaInvitaciones(1);
   }, [busquedaDebounced, etapaFiltro, estadoInvitacionFiltro]);
+
+  useEffect(() => {
+    if (!puedeGestionarCartera) return undefined;
+
+    let cancelado = false;
+    listarComercialesHub({ soloComercial: true })
+      .then((data) => {
+        if (!cancelado) setComerciales(data.comerciales || []);
+      })
+      .catch(() => {
+        if (!cancelado) message.error('No se pudieron cargar los comerciales');
+      });
+
+    return () => { cancelado = true; };
+  }, [puedeGestionarCartera]);
+
+  const opcionesComerciales = useMemo(
+    () => (comerciales || []).map((c) => ({
+      value: c.id_usuario,
+      label: `${c.nombre} (${c.email})`,
+    })),
+    [comerciales],
+  );
+
+  const abrirTransferModal = (tipo, registro) => {
+    setTransferModal({ tipo, registro });
+    setTransferComercialId(null);
+  };
+
+  const cerrarTransferModal = () => {
+    setTransferModal(null);
+    setTransferComercialId(null);
+  };
+
+  const confirmarTransferencia = async () => {
+    if (!transferModal || !transferComercialId) {
+      message.warning('Selecciona un comercial de destino');
+      return;
+    }
+
+    setTransferLoading(true);
+    try {
+      if (transferModal.tipo === 'venta') {
+        await transferirVentaHub(transferModal.registro.id_venta, transferComercialId);
+        message.success('Cliente transferido');
+        await cargarVentas();
+      } else {
+        await transferirInvitacionHub(transferModal.registro.id_invitacion, transferComercialId);
+        message.success('Invitación transferida');
+        await cargarInvitaciones();
+        if (transferModal.registro.usado) {
+          await cargarVentas();
+        }
+      }
+      cerrarTransferModal();
+    } catch (error) {
+      message.error(error.message || 'No se pudo completar la transferencia');
+    } finally {
+      setTransferLoading(false);
+    }
+  };
+
+  const eliminarCliente = async (idVenta) => {
+    try {
+      await eliminarVentaHub(idVenta);
+      message.success('Cliente eliminado del panel');
+      await cargarVentas();
+    } catch (error) {
+      message.error(error.message || 'No se pudo eliminar el cliente');
+    }
+  };
+
+  const eliminarInvitacion = async (idInvitacion) => {
+    try {
+      await eliminarInvitacionHub(idInvitacion);
+      message.success('Invitación eliminada');
+      await cargarInvitaciones();
+    } catch (error) {
+      message.error(error.message || 'No se pudo eliminar la invitación');
+    }
+  };
+
+  const renderAccionesCartera = (tipo, row) => {
+    if (!puedeGestionarCartera) return null;
+
+    const esInvitacionUsada = tipo === 'invitacion' && row.estado === 'registrada';
+
+    return (
+      <Space size="small">
+        <Button
+          type="link"
+          size="small"
+          icon={<SwapOutlined />}
+          onClick={() => abrirTransferModal(tipo === 'venta' ? 'venta' : 'invitacion', row)}
+        >
+          Transferir
+        </Button>
+        <Popconfirm
+          title={
+            tipo === 'venta'
+              ? '¿Eliminar este cliente del panel de ventas?'
+              : '¿Eliminar esta invitación?'
+          }
+          description={
+            tipo === 'venta'
+              ? 'La empresa seguirá existiendo; solo se quita la atribución comercial.'
+              : esInvitacionUsada
+                ? 'No se pueden eliminar invitaciones ya utilizadas.'
+                : 'Esta acción no se puede deshacer.'
+          }
+          okText="Eliminar"
+          cancelText="Cancelar"
+          okButtonProps={{ danger: true, disabled: esInvitacionUsada }}
+          onConfirm={() => (
+            tipo === 'venta'
+              ? eliminarCliente(row.id_venta)
+              : eliminarInvitacion(row.id_invitacion)
+          )}
+          disabled={esInvitacionUsada}
+        >
+          <Button
+            type="link"
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+            disabled={esInvitacionUsada}
+          >
+            Eliminar
+          </Button>
+        </Popconfirm>
+      </Space>
+    );
+  };
 
   const copiarTexto = async (texto, okMsg) => {
     try {
@@ -314,6 +466,16 @@ const HubVentas = () => {
     });
   }
 
+  if (puedeGestionarCartera) {
+    columns.push({
+      title: 'Acciones',
+      key: 'acciones',
+      width: 180,
+      fixed: 'right',
+      render: (_, row) => renderAccionesCartera('venta', row),
+    });
+  }
+
   const columnasInvitaciones = [
     {
       title: 'Contacto',
@@ -423,6 +585,16 @@ const HubVentas = () => {
       render: (fecha) => (fecha ? dayjs(fecha).format('DD/MM/YYYY') : '—'),
     },
   );
+
+  if (puedeGestionarCartera) {
+    columnasInvitaciones.push({
+      title: 'Acciones',
+      key: 'acciones',
+      width: 180,
+      fixed: 'right',
+      render: (_, row) => renderAccionesCartera('invitacion', row),
+    });
+  }
 
   const filtrosToolbar = (
     <Space wrap className="hub-section__filters">
@@ -647,6 +819,39 @@ const HubVentas = () => {
             </Text>
           </Space>
         )}
+      </Modal>
+
+      <Modal
+        title={
+          transferModal?.tipo === 'venta'
+            ? 'Transferir cliente a otro comercial'
+            : 'Transferir invitación a otro comercial'
+        }
+        open={Boolean(transferModal)}
+        onCancel={cerrarTransferModal}
+        onOk={confirmarTransferencia}
+        okText="Transferir"
+        confirmLoading={transferLoading}
+        destroyOnClose
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <Paragraph type="secondary">
+            {transferModal?.tipo === 'venta'
+              ? 'El cliente seguirá en el panel, pero quedará atribuido al comercial seleccionado.'
+              : 'La invitación pasará al comercial seleccionado. Si ya generó un registro, también se actualizará la venta vinculada.'}
+          </Paragraph>
+          <Select
+            showSearch
+            placeholder="Selecciona comercial"
+            value={transferComercialId}
+            onChange={setTransferComercialId}
+            options={opcionesComerciales.filter(
+              (opt) => opt.value !== transferModal?.registro?.comercial_id,
+            )}
+            optionFilterProp="label"
+            style={{ width: '100%' }}
+          />
+        </Space>
       </Modal>
     </div>
   );

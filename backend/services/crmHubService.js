@@ -140,6 +140,67 @@ const resolverGestionAccesosHub = (user) => {
 
 const usuarioPuedeGestionarAccesosHub = (user) => Boolean(resolverGestionAccesosHub(user));
 
+const usuarioPuedeGestionarCarteraHub = usuarioPuedeGestionarAccesosHub;
+
+const assertGestionCarteraHub = (user) => {
+  const gestion = resolverGestionAccesosHub(user);
+  if (!gestion) {
+    const error = new Error('No autorizado para gestionar clientes e invitaciones');
+    error.code = 'ACCESO_DENEGADO';
+    throw error;
+  }
+  return gestion;
+};
+
+const assertComercialEnAlcanceGestion = async (user, idUsuarioComercial) => {
+  const gestion = assertGestionCarteraHub(user);
+  if (gestion.nivel === 'total') return;
+
+  const [row] = await sequelize.query(
+    `SELECT 1 AS ok
+     FROM crm_usuario_puesto_interno upi
+     INNER JOIN crm_puesto_interno p ON p.id_puesto = upi.id_puesto
+     WHERE upi.id_usuario = :idUsuario
+       AND upi.fecha_baja IS NULL
+       AND p.codigo = 'comercial'
+     LIMIT 1`,
+    {
+      replacements: { idUsuario: Number(idUsuarioComercial) },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (!row) {
+    const error = new Error('Solo puedes gestionar registros de comerciales');
+    error.code = 'COMERCIAL_FUERA_DE_ALCANCE';
+    throw error;
+  }
+};
+
+const assertComercialDestinoValido = async (idUsuarioComercial) => {
+  const [row] = await sequelize.query(
+    `SELECT u.id_usuario
+     FROM m_usuarios u
+     INNER JOIN crm_usuario_puesto_interno upi ON upi.id_usuario = u.id_usuario
+     INNER JOIN crm_puesto_interno p ON p.id_puesto = upi.id_puesto
+     WHERE u.id_usuario = :idUsuario
+       AND u.fecha_baja IS NULL
+       AND upi.fecha_baja IS NULL
+       AND p.codigo = 'comercial'
+     LIMIT 1`,
+    {
+      replacements: { idUsuario: Number(idUsuarioComercial) },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (!row) {
+    const error = new Error('El comercial de destino no es válido');
+    error.code = 'COMERCIAL_DESTINO_INVALIDO';
+    throw error;
+  }
+};
+
 const resolverScopeVentas = (user) => {
   if (Number(user?.tipo_usuario) === ROLES_ROOT || usuarioTienePermisoHub(user, 'ver_todas')) {
     return { tipo: 'todas' };
@@ -335,17 +396,21 @@ const listarInvitaciones = async (user, { q, estado, pagina = 1, limite = 50 } =
   return { invitaciones, total: Number(countRow?.total || 0) };
 };
 
-const listarComerciales = async () => {
+const listarComerciales = async ({ soloComercial = false } = {}) => {
+  const codigos = soloComercial
+    ? ['comercial']
+    : ['comercial', 'supervisor_comercial', 'admin_hub'];
+
   return sequelize.query(
     `SELECT DISTINCT u.id_usuario, u.nombre, u.email
      FROM crm_usuario_puesto_interno upi
      INNER JOIN crm_puesto_interno p ON p.id_puesto = upi.id_puesto
      INNER JOIN m_usuarios u ON u.id_usuario = upi.id_usuario
      WHERE upi.fecha_baja IS NULL
-       AND p.codigo IN ('comercial', 'supervisor_comercial', 'admin_hub')
+       AND p.codigo IN (:codigos)
        AND u.fecha_baja IS NULL
      ORDER BY u.nombre ASC`,
-    { type: QueryTypes.SELECT },
+    { replacements: { codigos }, type: QueryTypes.SELECT },
   );
 };
 
@@ -525,6 +590,196 @@ const asignarVentaManual = async ({
   );
 
   return meta?.insertId ?? null;
+};
+
+const eliminarVentaHub = async ({ idVenta, user }) => {
+  assertGestionCarteraHub(user);
+
+  const [venta] = await sequelize.query(
+    `SELECT id_venta, id_usuario_comercial
+     FROM crm_venta
+     WHERE id_venta = :idVenta AND fecha_baja IS NULL
+     LIMIT 1`,
+    {
+      replacements: { idVenta: Number(idVenta) },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (!venta) {
+    const error = new Error('Cliente no encontrado o ya eliminado');
+    error.code = 'VENTA_NO_ENCONTRADA';
+    throw error;
+  }
+
+  await assertComercialEnAlcanceGestion(user, venta.id_usuario_comercial);
+
+  await sequelize.query(
+    `UPDATE crm_venta
+     SET fecha_baja = NOW(), fecha_modificacion = NOW()
+     WHERE id_venta = :idVenta`,
+    { replacements: { idVenta: Number(idVenta) } },
+  );
+
+  return { id_venta: Number(idVenta) };
+};
+
+const transferirVentaHub = async ({ idVenta, idUsuarioComercial, user }) => {
+  assertGestionCarteraHub(user);
+  const idComercial = Number(idUsuarioComercial);
+  if (!idComercial) {
+    const error = new Error('id_usuario_comercial es obligatorio');
+    error.code = 'COMERCIAL_DESTINO_INVALIDO';
+    throw error;
+  }
+
+  await assertComercialDestinoValido(idComercial);
+
+  const [venta] = await sequelize.query(
+    `SELECT id_venta, id_usuario_comercial
+     FROM crm_venta
+     WHERE id_venta = :idVenta AND fecha_baja IS NULL
+     LIMIT 1`,
+    {
+      replacements: { idVenta: Number(idVenta) },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (!venta) {
+    const error = new Error('Cliente no encontrado o ya eliminado');
+    error.code = 'VENTA_NO_ENCONTRADA';
+    throw error;
+  }
+
+  await assertComercialEnAlcanceGestion(user, venta.id_usuario_comercial);
+
+  if (Number(venta.id_usuario_comercial) === idComercial) {
+    const error = new Error('El cliente ya está asignado a ese comercial');
+    error.code = 'COMERCIAL_IGUAL';
+    throw error;
+  }
+
+  await sequelize.query(
+    `UPDATE crm_venta
+     SET id_usuario_comercial = :idComercial,
+         fecha_modificacion = NOW(),
+         usuario_alta = :usuarioAlta
+     WHERE id_venta = :idVenta`,
+    {
+      replacements: {
+        idComercial,
+        idVenta: Number(idVenta),
+        usuarioAlta: Number(user.id_usuario),
+      },
+    },
+  );
+
+  return { id_venta: Number(idVenta), id_usuario_comercial: idComercial };
+};
+
+const eliminarInvitacionHub = async ({ idInvitacion, user }) => {
+  assertGestionCarteraHub(user);
+
+  const [invitacion] = await sequelize.query(
+    `SELECT id_invitacion, id_usuario_comercial, usado
+     FROM crm_invitacion_registro
+     WHERE id_invitacion = :idInvitacion
+     LIMIT 1`,
+    {
+      replacements: { idInvitacion: Number(idInvitacion) },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (!invitacion) {
+    const error = new Error('Invitación no encontrada');
+    error.code = 'INVITACION_NO_ENCONTRADA';
+    throw error;
+  }
+
+  await assertComercialEnAlcanceGestion(user, invitacion.id_usuario_comercial);
+
+  if (Number(invitacion.usado) === 1) {
+    const error = new Error('No se puede eliminar una invitación ya utilizada; puedes transferirla');
+    error.code = 'INVITACION_USADA';
+    throw error;
+  }
+
+  await sequelize.query(
+    `DELETE FROM crm_invitacion_registro WHERE id_invitacion = :idInvitacion`,
+    { replacements: { idInvitacion: Number(idInvitacion) } },
+  );
+
+  return { id_invitacion: Number(idInvitacion) };
+};
+
+const transferirInvitacionHub = async ({ idInvitacion, idUsuarioComercial, user }) => {
+  assertGestionCarteraHub(user);
+  const idComercial = Number(idUsuarioComercial);
+  if (!idComercial) {
+    const error = new Error('id_usuario_comercial es obligatorio');
+    error.code = 'COMERCIAL_DESTINO_INVALIDO';
+    throw error;
+  }
+
+  await assertComercialDestinoValido(idComercial);
+
+  const [invitacion] = await sequelize.query(
+    `SELECT id_invitacion, id_usuario_comercial, id_venta, usado
+     FROM crm_invitacion_registro
+     WHERE id_invitacion = :idInvitacion
+     LIMIT 1`,
+    {
+      replacements: { idInvitacion: Number(idInvitacion) },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  if (!invitacion) {
+    const error = new Error('Invitación no encontrada');
+    error.code = 'INVITACION_NO_ENCONTRADA';
+    throw error;
+  }
+
+  await assertComercialEnAlcanceGestion(user, invitacion.id_usuario_comercial);
+
+  if (Number(invitacion.id_usuario_comercial) === idComercial) {
+    const error = new Error('La invitación ya pertenece a ese comercial');
+    error.code = 'COMERCIAL_IGUAL';
+    throw error;
+  }
+
+  await sequelize.query(
+    `UPDATE crm_invitacion_registro
+     SET id_usuario_comercial = :idComercial
+     WHERE id_invitacion = :idInvitacion`,
+    {
+      replacements: {
+        idComercial,
+        idInvitacion: Number(idInvitacion),
+      },
+    },
+  );
+
+  if (invitacion.id_venta) {
+    await sequelize.query(
+      `UPDATE crm_venta
+       SET id_usuario_comercial = :idComercial,
+           fecha_modificacion = NOW(),
+           usuario_alta = :usuarioAlta
+       WHERE id_venta = :idVenta AND fecha_baja IS NULL`,
+      {
+        replacements: {
+          idComercial,
+          idVenta: Number(invitacion.id_venta),
+          usuarioAlta: Number(user.id_usuario),
+        },
+      },
+    );
+  }
+
+  return { id_invitacion: Number(idInvitacion), id_usuario_comercial: idComercial };
 };
 
 const listarPuestosInternos = async (user) => {
@@ -939,7 +1194,12 @@ module.exports = {
   emitirJwtSesionConHub,
   usuarioTienePermisoHub,
   usuarioPuedeGestionarAccesosHub,
+  usuarioPuedeGestionarCarteraHub,
   resolverGestionAccesosHub,
+  eliminarVentaHub,
+  transferirVentaHub,
+  eliminarInvitacionHub,
+  transferirInvitacionHub,
   listarVentas,
   listarInvitaciones,
   listarComerciales,

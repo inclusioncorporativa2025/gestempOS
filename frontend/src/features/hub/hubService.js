@@ -52,8 +52,14 @@ export const listarInvitacionesHub = async ({ q, estado, pagina = 1, limite = 50
   return parseHubResponse(response, 'No se pudieron cargar las invitaciones');
 };
 
-export const listarComercialesHub = async () => {
-  const response = await fetch(`${API_BASE_URL}/comerciales`, { headers: authHeaders() });
+export const listarComercialesHub = async ({ soloComercial = false } = {}) => {
+  const params = new URLSearchParams();
+  if (soloComercial) params.set('solo_comercial', '1');
+  const query = params.toString();
+  const response = await fetch(
+    `${API_BASE_URL}/comerciales${query ? `?${query}` : ''}`,
+    { headers: authHeaders() },
+  );
   return parseHubResponse(response, 'No se pudieron cargar los comerciales');
 };
 
@@ -131,4 +137,38 @@ export const revocarAccesoHub = async (id) => {
     headers: authHeaders(),
   });
   return parseHubResponse(response, 'No se pudo revocar el acceso');
+};
+
+export const eliminarVentaHub = async (idVenta) => {
+  const response = await fetch(`${API_BASE_URL}/ventas/${idVenta}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  return parseHubResponse(response, 'No se pudo eliminar el cliente');
+};
+
+export const transferirVentaHub = async (idVenta, idUsuarioComercial) => {
+  const response = await fetch(`${API_BASE_URL}/ventas/${idVenta}/transferir`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ id_usuario_comercial: idUsuarioComercial }),
+  });
+  return parseHubResponse(response, 'No se pudo transferir el cliente');
+};
+
+export const eliminarInvitacionHub = async (idInvitacion) => {
+  const response = await fetch(`${API_BASE_URL}/invitaciones/${idInvitacion}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  return parseHubResponse(response, 'No se pudo eliminar la invitación');
+};
+
+export const transferirInvitacionHub = async (idInvitacion, idUsuarioComercial) => {
+  const response = await fetch(`${API_BASE_URL}/invitaciones/${idInvitacion}/transferir`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ id_usuario_comercial: idUsuarioComercial }),
+  });
+  return parseHubResponse(response, 'No se pudo transferir la invitación');
 };
