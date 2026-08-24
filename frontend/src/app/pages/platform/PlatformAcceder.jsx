@@ -29,7 +29,7 @@ const PlatformAcceder = () => {
         throw new Error('No se pudo iniciar el acceso temporal');
       }
 
-      await impersonate(data.token);
+      impersonate(data.token);
       message.success(
         `Acceso temporal a ${data.usuario?.nombre || email} (${data.expiraEn || '1h'})`,
       );

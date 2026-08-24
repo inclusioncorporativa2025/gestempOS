@@ -76,7 +76,7 @@ const SidebarFooter = ({ collapsed = false, onOpenSupport }) => {
   return (
     <>
       <div className={`app-sider-footer ${collapsed ? 'app-sider-footer--collapsed' : ''}`}>
-        {hubAcceso ? (
+        {hubAcceso && (
           <Tooltip title={collapsed ? 'Panel de ventas' : ''} placement="right">
             <span className="app-sider-footer-btn-wrap">
               <Button
@@ -94,21 +94,20 @@ const SidebarFooter = ({ collapsed = false, onOpenSupport }) => {
               </Button>
             </span>
           </Tooltip>
-        ) : (
-          <Tooltip title={collapsed ? 'Contactar soporte' : ''} placement="right">
-            <span className="app-sider-footer-btn-wrap">
-              <Button
-                type="text"
-                className="app-sider-footer-btn"
-                icon={<PhoneOutlined />}
-                onClick={abrirSoporte}
-                block={!collapsed}
-              >
-                {!collapsed && 'Soporte'}
-              </Button>
-            </span>
-          </Tooltip>
         )}
+        <Tooltip title={collapsed ? 'Contactar soporte' : ''} placement="right">
+          <span className="app-sider-footer-btn-wrap">
+            <Button
+              type="text"
+              className="app-sider-footer-btn"
+              icon={<PhoneOutlined />}
+              onClick={abrirSoporte}
+              block={!collapsed}
+            >
+              {!collapsed && 'Soporte'}
+            </Button>
+          </span>
+        </Tooltip>
         <Tooltip title={collapsed ? 'Cerrar sesión' : ''} placement="right">
           <Button
             type="text"

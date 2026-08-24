@@ -59,7 +59,6 @@ import HubDashboard from './pages/hub/HubDashboard';
 import HubProtectedRoute from './components/HubProtectedRoute';
 import HubAccesosRoute from './components/HubAccesosRoute';
 import HubPlataformaRoute from './components/HubPlataformaRoute';
-import { tieneAccesoHub } from '../utils/hubAccess';
 import useHubAccessSync from '../hooks/useHubAccessSync';
 import ImpersonationBanner from './components/ImpersonationBanner';
 import TrialStatusBanner from './components/TrialStatusBanner';
@@ -158,7 +157,6 @@ const AppShell = () => {
   const navigate = useNavigate();
   const { user, ready } = useAuth();
   const tipousuario = user?.tipo_usuario ?? null;
-  const hubAcceso = tieneAccesoHub(user);
   useHubAccessSync({
     activo: Boolean(user?.id_usuario && !location.pathname.startsWith(APP_ROUTES.hub)),
   });
@@ -639,9 +637,7 @@ const AppShell = () => {
         </Layout>
       </Layout>
 
-      {!hubAcceso && (
-        <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
-      )}
+      <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
       {user && !isAuthShellPage && <NovedadAppNotifier />}
       {user && !isAuthShellPage && puedeFichar && <PausaBloqueoOverlay />}
     </ConfigProvider>

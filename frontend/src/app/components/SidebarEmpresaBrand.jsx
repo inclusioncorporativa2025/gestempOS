@@ -90,7 +90,7 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
     setCambiandoEmpresa(true);
     try {
       const data = await doSwitchEmpresa(idEmpresa);
-      await refreshSession(data.token);
+      refreshSession(data.token);
       notification.success({
         message: 'Empresa cambiada',
         description: `Ahora estás en ${data.empresa?.nombre || 'la empresa seleccionada'}`,

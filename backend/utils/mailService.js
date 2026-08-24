@@ -231,7 +231,103 @@ const buildWelcomeEmailHtml = ({
     ${bloqueBotonEnlace(enlace, 'Crear mi contraseña')}
   `);
 
-const enviarCorreo = async ({ to, subject, html, replyTo, attachments: extraAttachments = [] }) => {
+const buildInvitacionRegistroHubHtml = ({
+  registerUrl,
+  codigoCorto,
+  fechaExpiracionLabel,
+  comercialNombre,
+  comercialEmail,
+  urlApp,
+}) =>
+  emailLayout(`
+    <tr>
+      <td style="padding:36px 40px 8px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <h1 style="margin:0 0 16px 0; font-size:22px; color:#0f1020;">Invitación para registrar tu empresa</h1>
+        <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">Hola,</p>
+        <p style="margin:0 0 20px 0; font-size:15px; line-height:1.6; color:#444;">
+          <strong>${escapeHtml(comercialNombre)}</strong> te invita a dar de alta tu empresa en
+          <strong>${BRAND_NAME}</strong>, la plataforma de gestión de tiempo y RRHH.
+        </p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px 0; background:#f9fafb; border-radius:8px; font-family:Arial,Helvetica,sans-serif;">
+          <tr>
+            <td style="padding:16px 20px; font-size:14px; color:#444;">
+              <p style="margin:0 0 8px 0;"><strong>Código de invitación:</strong> ${escapeHtml(codigoCorto)}</p>
+              <p style="margin:0 0 8px 0;"><strong>Válido hasta:</strong> ${escapeHtml(fechaExpiracionLabel)}</p>
+              <p style="margin:0 0 8px 0;"><strong>Tu contacto comercial:</strong> ${escapeHtml(comercialNombre)}</p>
+              ${
+                comercialEmail
+                  ? `<p style="margin:0 0 8px 0;"><strong>Email comercial:</strong> ${escapeHtml(comercialEmail)}</p>`
+                  : ''
+              }
+              <p style="margin:0;"><strong>URL de la aplicación:</strong> <a href="${urlApp}" style="color:#2BA9E0;">${urlApp}</a></p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:0 0 28px 0; font-size:15px; line-height:1.6; color:#444;">
+          Pulsa el botón para acceder al formulario de registro. Si te lo solicitan, introduce el código
+          <strong>${escapeHtml(codigoCorto)}</strong> durante el alta.
+        </p>
+      </td>
+    </tr>
+    ${bloqueBotonEnlace(registerUrl, 'Completar registro')}
+    <tr>
+      <td style="padding:0 40px 24px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <p style="margin:0; font-size:13px; color:#777;">
+          Si no esperabas este correo, puedes ignorarlo. Para dudas, escribe a
+          <a href="mailto:${SUPPORT_EMAIL}" style="color:#2BA9E0;">${SUPPORT_EMAIL}</a>.
+        </p>
+      </td>
+    </tr>
+  `);
+
+const enviarInvitacionRegistroHub = async ({
+  to,
+  registerUrl,
+  codigoCorto,
+  fechaExpiracionLabel,
+  comercialNombre,
+  comercialEmail,
+}) => {
+  const destino = String(to || '').trim().toLowerCase();
+  if (!isEmailValido(destino)) {
+    const error = new Error('Email de destino no válido');
+    error.code = 'EMAIL_INVALIDO';
+    throw error;
+  }
+
+  try {
+    await enviarCorreo({
+      to: destino,
+      from: process.env.NOREPLY_EMAIL || process.env.SMTP_USER,
+      replyTo: SUPPORT_EMAIL,
+      subject: `${BRAND_NAME} — Completa el registro de tu empresa`,
+      html: buildInvitacionRegistroHubHtml({
+        registerUrl,
+        codigoCorto,
+        fechaExpiracionLabel,
+        comercialNombre: comercialNombre || 'Tu comercial Timecor',
+        comercialEmail: comercialEmail || '',
+        urlApp: APP_URL,
+      }),
+    });
+  } catch (mailError) {
+    console.error('Error enviando email de invitación hub:', mailError.message);
+    const error = new Error(mailError.message || 'No se pudo enviar el correo de invitación');
+    error.code = mailError.code === 'SMTP_NO_CONFIGURADO'
+      ? 'SMTP_NO_CONFIGURADO'
+      : 'EMAIL_SEND_FAILED';
+    throw error;
+  }
+};
+
+const enviarCorreo = async ({
+  to,
+  subject,
+  html,
+  replyTo,
+  from,
+  attachments: extraAttachments = [],
+}) => {
   const transporter = buildTransporter();
   const attachments = [...logoAttachment(), ...extraAttachments];
   const htmlConLogo = logoAttachment().length
@@ -239,7 +335,7 @@ const enviarCorreo = async ({ to, subject, html, replyTo, attachments: extraAtta
     : html.replace(/<img src="cid:logo"[^>]*>/g, '');
 
   await transporter.sendMail({
-    from: process.env.SMTP_USER,
+    from: from || process.env.SMTP_USER,
     to,
     subject,
     html: htmlConLogo,
