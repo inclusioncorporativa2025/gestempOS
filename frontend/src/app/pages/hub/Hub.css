@@ -199,3 +199,8 @@
 .hub-puesto-tag--default {
   color: rgba(0, 0, 0, 0.65);
 }
+
+.hub-acciones-more {
+  transform: rotate(90deg);
+  font-size: 16px;
+}

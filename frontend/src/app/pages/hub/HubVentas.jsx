@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
+  Dropdown,
   Input,
   Modal,
-  Popconfirm,
   Select,
   Space,
   Table,
@@ -17,6 +17,7 @@ import {
   CopyOutlined,
   DeleteOutlined,
   LinkOutlined,
+  MoreOutlined,
   PlusOutlined,
   SearchOutlined,
   SwapOutlined,
@@ -253,50 +254,49 @@ const HubVentas = () => {
 
     const esInvitacionUsada = tipo === 'invitacion' && row.estado === 'registrada';
 
-    return (
-      <Space size="small">
-        <Button
-          type="link"
-          size="small"
-          icon={<SwapOutlined />}
-          onClick={() => abrirTransferModal(tipo === 'venta' ? 'venta' : 'invitacion', row)}
-        >
-          Transferir
-        </Button>
-        <Popconfirm
-          title={
-            tipo === 'venta'
+    const menuItems = [
+      {
+        key: 'transferir',
+        label: 'Transferir',
+        icon: <SwapOutlined />,
+        onClick: () => abrirTransferModal(tipo === 'venta' ? 'venta' : 'invitacion', row),
+      },
+      {
+        key: 'eliminar',
+        label: 'Eliminar',
+        icon: <DeleteOutlined />,
+        danger: true,
+        disabled: esInvitacionUsada,
+        onClick: () => {
+          Modal.confirm({
+            title: tipo === 'venta'
               ? '¿Eliminar este cliente del panel de ventas?'
-              : '¿Eliminar esta invitación?'
-          }
-          description={
-            tipo === 'venta'
+              : '¿Eliminar esta invitación?',
+            content: tipo === 'venta'
               ? 'La empresa seguirá existiendo; solo se quita la atribución comercial.'
-              : esInvitacionUsada
-                ? 'No se pueden eliminar invitaciones ya utilizadas.'
-                : 'Esta acción no se puede deshacer.'
-          }
-          okText="Eliminar"
-          cancelText="Cancelar"
-          okButtonProps={{ danger: true, disabled: esInvitacionUsada }}
-          onConfirm={() => (
-            tipo === 'venta'
-              ? eliminarCliente(row.id_venta)
-              : eliminarInvitacion(row.id_invitacion)
-          )}
-          disabled={esInvitacionUsada}
-        >
-          <Button
-            type="link"
-            size="small"
-            danger
-            icon={<DeleteOutlined />}
-            disabled={esInvitacionUsada}
-          >
-            Eliminar
-          </Button>
-        </Popconfirm>
-      </Space>
+              : 'Esta acción no se puede deshacer.',
+            okText: 'Eliminar',
+            cancelText: 'Cancelar',
+            okButtonProps: { danger: true },
+            onOk: () => (
+              tipo === 'venta'
+                ? eliminarCliente(row.id_venta)
+                : eliminarInvitacion(row.id_invitacion)
+            ),
+          });
+        },
+      },
+    ];
+
+    return (
+      <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
+        <Button
+          type="text"
+          size="small"
+          icon={<MoreOutlined className="hub-acciones-more" />}
+          aria-label="Acciones"
+        />
+      </Dropdown>
     );
   };
 
@@ -470,7 +470,8 @@ const HubVentas = () => {
     columns.push({
       title: 'Acciones',
       key: 'acciones',
-      width: 180,
+      width: 72,
+      align: 'center',
       fixed: 'right',
       render: (_, row) => renderAccionesCartera('venta', row),
     });
@@ -590,7 +591,8 @@ const HubVentas = () => {
     columnasInvitaciones.push({
       title: 'Acciones',
       key: 'acciones',
-      width: 180,
+      width: 72,
+      align: 'center',
       fixed: 'right',
       render: (_, row) => renderAccionesCartera('invitacion', row),
     });
