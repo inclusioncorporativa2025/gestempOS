@@ -179,6 +179,19 @@
   color: #722ed1;
 }
 
+.hub-btn-whatsapp,
+.hub-btn-whatsapp:hover,
+.hub-btn-whatsapp:focus {
+  background: #25d366 !important;
+  border-color: #25d366 !important;
+  color: #fff !important;
+}
+
+.hub-btn-whatsapp:hover {
+  background: #1fb855 !important;
+  border-color: #1fb855 !important;
+}
+
 .hub-puesto-tag--admin_hub {
   color: #d48806;
 }

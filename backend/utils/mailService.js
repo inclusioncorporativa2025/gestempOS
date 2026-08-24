@@ -861,6 +861,7 @@ module.exports = {
   generarYEnviarReset,
   enviarBienvenidaEmpresa,
   enviarInvitacionEmpleado,
+  enviarInvitacionRegistroHub,
   enviarNotificacionGestion,
   enviarCorreoSoporte,
   enviarRegistrosHorariosPorEmail,

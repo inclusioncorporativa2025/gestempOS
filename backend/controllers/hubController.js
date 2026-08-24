@@ -14,6 +14,31 @@ const {
   revocarPuestoHub,
   obtenerMetricasDashboard,
 } = require('../services/crmHubService');
+const { isEmailValido } = require('../utils/identityChecks');
+const { enviarInvitacionRegistroHub } = require('../utils/mailService');
+
+const normalizarTelefonoInvitacion = (raw) => {
+  let digits = String(raw || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.length === 9 && /^[6789]/.test(digits)) {
+    digits = `34${digits}`;
+  }
+  return digits;
+};
+
+const telefonoInvitacionValido = (raw) => {
+  const digits = normalizarTelefonoInvitacion(raw);
+  return digits.length >= 10 && digits.length <= 15;
+};
+
+const formatearFechaExpiracion = (fecha) => {
+  if (!fecha) return '';
+  const d = new Date(fecha);
+  if (Number.isNaN(d.getTime())) return String(fecha);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 const APP_PUBLIC_URL = (
   process.env.APP_PUBLIC_URL ||
@@ -67,26 +92,86 @@ const crearInvitacionHandler = async (req, res) => {
     const {
       email_previsto: emailPrevisto,
       telefono_previsto: telefonoPrevisto,
-      canal = 'telefono',
       dias_validez: diasValidez,
     } = req.body || {};
 
+    const email = String(emailPrevisto || '').trim().toLowerCase();
+    const telefono = String(telefonoPrevisto || '').trim();
+    const tieneEmail = email.length > 0;
+    const tieneTelefono = telefono.length > 0 && telefonoInvitacionValido(telefono);
+
+    if (!tieneEmail && !tieneTelefono) {
+      return res.status(400).json({
+        message: 'Indica al menos un email o un teléfono válido del cliente',
+        code: 'CONTACTO_REQUERIDO',
+      });
+    }
+
+    if (tieneEmail && !isEmailValido(email)) {
+      return res.status(400).json({
+        message: 'El email del cliente no es válido',
+        code: 'EMAIL_INVALIDO',
+      });
+    }
+
+    if (telefono.length > 0 && !telefonoInvitacionValido(telefono)) {
+      return res.status(400).json({
+        message: 'El teléfono del cliente no es válido (mínimo 9 dígitos)',
+        code: 'TELEFONO_INVALIDO',
+      });
+    }
+
+    let canal = 'telefono';
+    if (tieneEmail && tieneTelefono) canal = 'mixto';
+    else if (tieneEmail) canal = 'email';
+
     const invitacion = await crearInvitacionRegistro({
       idUsuarioComercial: Number(req.user.id_usuario),
-      emailPrevisto,
-      telefonoPrevisto,
+      emailPrevisto: tieneEmail ? email : null,
+      telefonoPrevisto: tieneTelefono ? telefono : null,
       canal,
       diasValidez: diasValidez || 30,
     });
 
     const registerUrl = `${APP_PUBLIC_URL}/register?inv=${encodeURIComponent(invitacion.token)}`;
+    const fechaExpiracionLabel = formatearFechaExpiracion(invitacion.fecha_expiracion);
+
+    let emailEnviado = false;
+    let emailError = null;
+
+    if (tieneEmail) {
+      try {
+        await enviarInvitacionRegistroHub({
+          to: email,
+          registerUrl,
+          codigoCorto: invitacion.codigo_corto,
+          fechaExpiracionLabel,
+          comercialNombre: req.user.nombre,
+          comercialEmail: req.user.email,
+        });
+        emailEnviado = true;
+      } catch (mailErr) {
+        console.error('[hub] enviar email invitacion:', mailErr.message);
+        emailError = mailErr.code === 'SMTP_NO_CONFIGURADO'
+          ? 'El envío de correos no está configurado en el servidor'
+          : 'No se pudo enviar el correo al cliente';
+      }
+    }
 
     return res.status(201).json({
-      message: 'Invitación creada',
+      message: emailEnviado
+        ? 'Invitación creada y enviada por correo'
+        : emailError
+          ? 'Invitación creada, pero no se pudo enviar el correo'
+          : 'Invitación creada',
       id_invitacion: invitacion.id_invitacion,
       codigo_corto: invitacion.codigo_corto,
       register_url: registerUrl,
       fecha_expiracion: invitacion.fecha_expiracion,
+      email_enviado: emailEnviado,
+      email_destino: tieneEmail ? email : null,
+      email_error: emailError,
+      telefono_previsto: tieneTelefono ? telefono : null,
     });
   } catch (error) {
     console.error('[hub] crearInvitacion:', error.message);
