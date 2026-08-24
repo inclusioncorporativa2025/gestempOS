@@ -123,6 +123,17 @@ const empresaPuedeAmpliarPrueba = (record) => {
   return false;
 };
 
+const renderEnPrueba = (record) => (
+  <div>
+    <Tag color="blue">En prueba</Tag>
+    {record.trial_ends_at && (
+      <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
+        Finaliza el {dayjs(record.trial_ends_at).format('DD/MM/YYYY')}
+      </Text>
+    )}
+  </div>
+);
+
 const renderEstadoEmpresa = (record) => {
   if (empresaDadaDeBaja(record)) {
     return <Tag color="default">De baja</Tag>;
@@ -135,13 +146,13 @@ const renderEstadoEmpresa = (record) => {
     return <Tag color="red">Suscripción cancelada</Tag>;
   }
   if (trialActivoSinTarjeta(record)) {
-    return <Tag color="blue">En prueba</Tag>;
+    return renderEnPrueba(record);
   }
   if (trialExpiradoSinSuscripcion(record)) {
     return <Tag color="orange">Pendiente de pago</Tag>;
   }
   if (estado === 'trialing') {
-    return <Tag color="blue">En prueba</Tag>;
+    return renderEnPrueba(record);
   }
   if (estado === 'past_due') {
     return <Tag color="orange">Pago pendiente</Tag>;

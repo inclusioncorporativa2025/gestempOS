@@ -277,8 +277,15 @@ const HubVentas = () => {
       dataIndex: 'etapa',
       key: 'etapa',
       width: 120,
-      render: (etapa) => (
-        <Tag color={colorEtapaVenta(etapa)}>{etiquetaEtapaVenta(etapa)}</Tag>
+      render: (etapa, row) => (
+        <div>
+          <Tag color={colorEtapaVenta(etapa)}>{etiquetaEtapaVenta(etapa)}</Tag>
+          {etapa === 'trial' && row.trial_ends_at && (
+            <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
+              Finaliza el {dayjs(row.trial_ends_at).format('DD/MM/YYYY')}
+            </Text>
+          )}
+        </div>
       ),
     },
     {
@@ -302,17 +309,7 @@ const HubVentas = () => {
       key: 'facturacion',
       width: 160,
       render: (_, row) => (
-        <div>
-          <Text>{row.plan_nombre || row.modo_facturacion || '—'}</Text>
-          {row.trial_ends_at && (
-            <>
-              <br />
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                Trial hasta {dayjs(row.trial_ends_at).format('DD/MM/YYYY')}
-              </Text>
-            </>
-          )}
-        </div>
+        <Text>{row.plan_nombre || row.modo_facturacion || '—'}</Text>
       ),
     });
   }
