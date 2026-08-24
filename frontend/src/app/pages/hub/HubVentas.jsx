@@ -7,6 +7,7 @@ import {
   Select,
   Space,
   Table,
+  Tabs,
   Tag,
   Typography,
   message,
@@ -16,10 +17,13 @@ import dayjs from 'dayjs';
 import { useAuth } from '../../../config/AuthContext';
 import {
   crearInvitacionHub,
+  listarInvitacionesHub,
   listarVentasHub,
 } from '../../../features/hub/hubService';
 import {
+  colorEstadoInvitacion,
   colorEtapaVenta,
+  etiquetaEstadoInvitacion,
   etiquetaEtapaVenta,
   tienePermisoHub,
 } from '../../../utils/hubAccess';
@@ -52,8 +56,15 @@ const ETAPAS = [
   { value: 'cancelada', label: 'Cancelada' },
 ];
 
+const ESTADOS_INVITACION = [
+  { value: 'enviada', label: 'Enviada' },
+  { value: 'registrada', label: 'Registrada' },
+  { value: 'expirada', label: 'Expirada' },
+];
+
 const HubVentas = () => {
   const { user } = useAuth();
+  const [vistaActiva, setVistaActiva] = useState('clientes');
   const [ventas, setVentas] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -62,6 +73,11 @@ const HubVentas = () => {
   const [busqueda, setBusqueda] = useState('');
   const [busquedaDebounced, setBusquedaDebounced] = useState('');
   const [etapaFiltro, setEtapaFiltro] = useState(null);
+  const [invitaciones, setInvitaciones] = useState([]);
+  const [totalInvitaciones, setTotalInvitaciones] = useState(0);
+  const [loadingInvitaciones, setLoadingInvitaciones] = useState(false);
+  const [paginaInvitaciones, setPaginaInvitaciones] = useState(1);
+  const [estadoInvitacionFiltro, setEstadoInvitacionFiltro] = useState(null);
   const [invitacionOpen, setInvitacionOpen] = useState(false);
   const [invitacionLoading, setInvitacionLoading] = useState(false);
   const [invitacionResultado, setInvitacionResultado] = useState(null);
@@ -72,6 +88,9 @@ const HubVentas = () => {
 
   const puedeCrearInvitacion = tienePermisoHub(user, 'crear_invitacion');
   const puedeVerImportes = tienePermisoHub(user, 'ver_importes');
+  const mostrarComercialInv = Number(user?.tipo_usuario) === 1
+    || tienePermisoHub(user, 'ver_equipo')
+    || tienePermisoHub(user, 'ver_todas');
 
   useEffect(() => {
     const timer = setTimeout(() => setBusquedaDebounced(busqueda.trim()), 400);
@@ -100,9 +119,34 @@ const HubVentas = () => {
     cargarVentas();
   }, [cargarVentas]);
 
+  const cargarInvitaciones = useCallback(async () => {
+    setLoadingInvitaciones(true);
+    try {
+      const data = await listarInvitacionesHub({
+        pagina: paginaInvitaciones,
+        limite,
+        q: busquedaDebounced || undefined,
+        estado: estadoInvitacionFiltro || undefined,
+      });
+      setInvitaciones(data.invitaciones || []);
+      setTotalInvitaciones(data.total || 0);
+    } catch (error) {
+      message.error(error.message || 'Error al cargar invitaciones');
+    } finally {
+      setLoadingInvitaciones(false);
+    }
+  }, [paginaInvitaciones, limite, busquedaDebounced, estadoInvitacionFiltro]);
+
+  useEffect(() => {
+    if (vistaActiva === 'invitaciones') {
+      cargarInvitaciones();
+    }
+  }, [vistaActiva, cargarInvitaciones]);
+
   useEffect(() => {
     setPagina(1);
-  }, [busquedaDebounced, etapaFiltro]);
+    setPaginaInvitaciones(1);
+  }, [busquedaDebounced, etapaFiltro, estadoInvitacionFiltro]);
 
   const copiarTexto = async (texto, okMsg) => {
     try {
@@ -152,6 +196,21 @@ const HubVentas = () => {
         message.warning(data.email_error);
       } else {
         message.success('Invitación creada');
+      }
+
+      setVistaActiva('invitaciones');
+      setPaginaInvitaciones(1);
+      try {
+        const invData = await listarInvitacionesHub({
+          pagina: 1,
+          limite,
+          q: busquedaDebounced || undefined,
+          estado: estadoInvitacionFiltro || undefined,
+        });
+        setInvitaciones(invData.invitaciones || []);
+        setTotalInvitaciones(invData.total || 0);
+      } catch {
+        /* el useEffect recargará al cambiar de pestaña */
       }
     } catch (error) {
       message.error(error.message || 'No se pudo crear la invitación');
@@ -258,51 +317,219 @@ const HubVentas = () => {
     });
   }
 
+  const columnasInvitaciones = [
+    {
+      title: 'Contacto',
+      key: 'contacto',
+      render: (_, row) => (
+        <div>
+          {row.email_previsto && <Text>{row.email_previsto}</Text>}
+          {row.telefono_previsto && (
+            <>
+              {row.email_previsto && <br />}
+              <Text type="secondary" style={{ fontSize: 12 }}>{row.telefono_previsto}</Text>
+            </>
+          )}
+          {!row.email_previsto && !row.telefono_previsto && '—'}
+        </div>
+      ),
+    },
+    {
+      title: 'Código',
+      dataIndex: 'codigo_corto',
+      key: 'codigo_corto',
+      width: 120,
+    },
+    {
+      title: 'Estado',
+      dataIndex: 'estado',
+      key: 'estado',
+      width: 120,
+      render: (estado) => (
+        <Tag color={colorEstadoInvitacion(estado)}>{etiquetaEstadoInvitacion(estado)}</Tag>
+      ),
+    },
+    {
+      title: 'Canal',
+      dataIndex: 'canal',
+      key: 'canal',
+      width: 90,
+      render: (canal) => {
+        const map = { email: 'Email', telefono: 'Teléfono', mixto: 'Email + WA' };
+        return map[canal] || canal;
+      },
+    },
+  ];
+
+  if (mostrarComercialInv) {
+    columnasInvitaciones.push({
+      title: 'Comercial',
+      key: 'comercial',
+      render: (_, row) => (
+        <div>
+          <Text>{row.comercial_nombre}</Text>
+          <br />
+          <Text type="secondary" style={{ fontSize: 12 }}>{row.comercial_email}</Text>
+        </div>
+      ),
+    });
+  }
+
+  columnasInvitaciones.push(
+    {
+      title: 'Empresa',
+      key: 'empresa',
+      render: (_, row) => (
+        row.empresa_nombre ? (
+          <div>
+            <Text>{row.empresa_nombre}</Text>
+            {row.empresa_alias && (
+              <>
+                <br />
+                <Text type="secondary" style={{ fontSize: 12 }}>{row.empresa_alias}</Text>
+              </>
+            )}
+          </div>
+        ) : '—'
+      ),
+    },
+    {
+      title: 'Etapa venta',
+      dataIndex: 'venta_etapa',
+      key: 'venta_etapa',
+      width: 120,
+      render: (etapa) => (
+        etapa ? (
+          <Tag color={colorEtapaVenta(etapa)}>{etiquetaEtapaVenta(etapa)}</Tag>
+        ) : '—'
+      ),
+    },
+    {
+      title: 'Enviada',
+      dataIndex: 'fecha_creacion',
+      key: 'fecha_creacion',
+      width: 110,
+      render: (fecha) => dayjs(fecha).format('DD/MM/YYYY'),
+    },
+    {
+      title: 'Válida hasta',
+      dataIndex: 'fecha_expiracion',
+      key: 'fecha_expiracion',
+      width: 120,
+      render: (fecha) => (fecha ? dayjs(fecha).format('DD/MM/YYYY') : '—'),
+    },
+    {
+      title: 'Registrada',
+      dataIndex: 'fecha_uso',
+      key: 'fecha_uso',
+      width: 110,
+      render: (fecha) => (fecha ? dayjs(fecha).format('DD/MM/YYYY') : '—'),
+    },
+  );
+
+  const filtrosToolbar = (
+    <Space wrap className="hub-section__filters">
+      <Input
+        allowClear
+        prefix={<SearchOutlined />}
+        placeholder={
+          vistaActiva === 'clientes'
+            ? 'Buscar empresa, CIF, comercial...'
+            : 'Buscar email, teléfono, código...'
+        }
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+        className="hub-section__search"
+      />
+      {vistaActiva === 'clientes' ? (
+        <Select
+          allowClear
+          placeholder="Etapa"
+          value={etapaFiltro}
+          onChange={setEtapaFiltro}
+          options={ETAPAS}
+          className="hub-section__etapa"
+        />
+      ) : (
+        <Select
+          allowClear
+          placeholder="Estado invitación"
+          value={estadoInvitacionFiltro}
+          onChange={setEstadoInvitacionFiltro}
+          options={ESTADOS_INVITACION}
+          className="hub-section__etapa"
+        />
+      )}
+    </Space>
+  );
+
   return (
     <div className="hub-section">
       <div className="hub-section__toolbar">
-        <Space wrap className="hub-section__filters">
-          <Input
-            allowClear
-            prefix={<SearchOutlined />}
-            placeholder="Buscar empresa, CIF, comercial..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="hub-section__search"
-          />
-          <Select
-            allowClear
-            placeholder="Etapa"
-            value={etapaFiltro}
-            onChange={setEtapaFiltro}
-            options={ETAPAS}
-            className="hub-section__etapa"
-          />
-        </Space>
+        {filtrosToolbar}
         {puedeCrearInvitacion && (
           <Button type="primary" icon={<PlusOutlined />} onClick={abrirInvitacion}>
-            Invitación register
+            Nueva invitación
           </Button>
         )}
       </div>
 
-      <Text type="secondary" className="hub-section__count">
-        {total} cliente{total === 1 ? '' : 's'} atribuido{total === 1 ? '' : 's'}
-      </Text>
-
-      <Table
-        rowKey="id_venta"
-        loading={loading}
-        columns={columns}
-        dataSource={ventas}
-        pagination={{
-          current: pagina,
-          pageSize: limite,
-          total,
-          showSizeChanger: false,
-          onChange: setPagina,
-        }}
-        scroll={{ x: 900 }}
+      <Tabs
+        activeKey={vistaActiva}
+        onChange={setVistaActiva}
+        items={[
+          {
+            key: 'clientes',
+            label: 'Mis clientes',
+            children: (
+              <>
+                <Text type="secondary" className="hub-section__count">
+                  {total} cliente{total === 1 ? '' : 's'} atribuido{total === 1 ? '' : 's'}
+                </Text>
+                <Table
+                  rowKey="id_venta"
+                  loading={loading}
+                  columns={columns}
+                  dataSource={ventas}
+                  pagination={{
+                    current: pagina,
+                    pageSize: limite,
+                    total,
+                    showSizeChanger: false,
+                    onChange: setPagina,
+                  }}
+                  scroll={{ x: 900 }}
+                />
+              </>
+            ),
+          },
+          {
+            key: 'invitaciones',
+            label: 'Invitaciones',
+            children: (
+              <>
+                <Text type="secondary" className="hub-section__count">
+                  {totalInvitaciones} invitación{totalInvitaciones === 1 ? '' : 'es'}
+                </Text>
+                <Table
+                  rowKey="id_invitacion"
+                  loading={loadingInvitaciones}
+                  columns={columnasInvitaciones}
+                  dataSource={invitaciones}
+                  pagination={{
+                    current: paginaInvitaciones,
+                    pageSize: limite,
+                    total: totalInvitaciones,
+                    showSizeChanger: false,
+                    onChange: setPaginaInvitaciones,
+                  }}
+                  scroll={{ x: 1000 }}
+                  locale={{ emptyText: 'Sin invitaciones enviadas' }}
+                />
+              </>
+            ),
+          },
+        ]}
       />
 
       <Modal

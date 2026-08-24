@@ -9,6 +9,7 @@ const {
 const {
   obtenerContexto,
   listarVentasHandler,
+  listarInvitacionesHandler,
   listarComercialesHandler,
   crearInvitacionHandler,
   asignarVentaHandler,
@@ -27,6 +28,7 @@ const router = express.Router();
 router.get('/me', requireAuth, obtenerContexto);
 router.get('/metricas', requireAuth, requireHubAccess, requireHubPlataforma, obtenerMetricasDashboardHandler);
 router.get('/ventas', requireAuth, requireHubAccess, listarVentasHandler);
+router.get('/invitaciones', requireAuth, requireHubAccess, listarInvitacionesHandler);
 router.get('/comerciales', requireAuth, requireHubAccess, requireHubPermiso('asignar_comercial', 'ver_equipo', 'ver_todas'), listarComercialesHandler);
 router.post('/invitaciones', requireAuth, requireHubAccess, requireHubPermiso('crear_invitacion'), crearInvitacionHandler);
 router.post('/ventas/asignar', requireAuth, requireHubAccess, requireHubPermiso('asignar_comercial'), asignarVentaHandler);

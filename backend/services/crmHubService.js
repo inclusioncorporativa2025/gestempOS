@@ -244,6 +244,97 @@ const listarVentas = async (user, { q, etapa, pagina = 1, limite = 50 } = {}) =>
   return { ventas, total: Number(countRow?.total || 0) };
 };
 
+const resolverEstadoInvitacionSql = `
+  CASE
+    WHEN i.usado = 1 THEN 'registrada'
+    WHEN i.fecha_expiracion IS NOT NULL AND i.fecha_expiracion < NOW() THEN 'expirada'
+    ELSE 'enviada'
+  END`;
+
+const listarInvitaciones = async (user, { q, estado, pagina = 1, limite = 50 } = {}) => {
+  const scope = resolverScopeVentas(user);
+  if (scope.tipo === 'ninguno') {
+    return { invitaciones: [], total: 0 };
+  }
+
+  const offset = (Math.max(1, pagina) - 1) * limite;
+  const replacements = {
+    limite: Number(limite),
+    offset: Number(offset),
+  };
+
+  let where = '1=1';
+
+  if (scope.tipo === 'propias') {
+    where += ' AND i.id_usuario_comercial = :idComercial';
+    replacements.idComercial = scope.idUsuario;
+  } else if (scope.tipo === 'equipo') {
+    where += ` AND i.id_usuario_comercial IN (
+      SELECT upi2.id_usuario
+      FROM crm_usuario_puesto_interno upi2
+      INNER JOIN crm_puesto_interno p2 ON p2.id_puesto = upi2.id_puesto
+      WHERE upi2.fecha_baja IS NULL AND p2.codigo = 'comercial'
+    )`;
+  }
+
+  if (estado === 'enviada') {
+    where += ' AND i.usado = 0 AND (i.fecha_expiracion IS NULL OR i.fecha_expiracion >= NOW())';
+  } else if (estado === 'registrada') {
+    where += ' AND i.usado = 1';
+  } else if (estado === 'expirada') {
+    where += ' AND i.usado = 0 AND i.fecha_expiracion IS NOT NULL AND i.fecha_expiracion < NOW()';
+  }
+
+  if (q) {
+    where += ` AND (
+      i.email_previsto LIKE :q OR i.telefono_previsto LIKE :q
+      OR i.codigo_corto LIKE :q OR u.nombre LIKE :q OR u.email LIKE :q
+      OR e.nombre LIKE :q OR e.alias LIKE :q
+    )`;
+    replacements.q = `%${String(q).trim()}%`;
+  }
+
+  const invitaciones = await sequelize.query(
+    `SELECT
+       i.id_invitacion,
+       i.codigo_corto,
+       i.email_previsto,
+       i.telefono_previsto,
+       i.canal,
+       i.usado,
+       i.fecha_creacion,
+       i.fecha_expiracion,
+       i.fecha_uso,
+       i.id_empresa_uso,
+       ${resolverEstadoInvitacionSql} AS estado,
+       u.id_usuario AS comercial_id,
+       u.nombre AS comercial_nombre,
+       u.email AS comercial_email,
+       e.nombre AS empresa_nombre,
+       e.alias AS empresa_alias,
+       v.etapa AS venta_etapa
+     FROM crm_invitacion_registro i
+     INNER JOIN m_usuarios u ON u.id_usuario = i.id_usuario_comercial
+     LEFT JOIN m_empresas e ON e.id_empresa = i.id_empresa_uso
+     LEFT JOIN crm_venta v ON v.id_venta = i.id_venta
+     WHERE ${where}
+     ORDER BY i.fecha_creacion DESC
+     LIMIT :limite OFFSET :offset`,
+    { replacements, type: QueryTypes.SELECT },
+  );
+
+  const [countRow] = await sequelize.query(
+    `SELECT COUNT(*) AS total
+     FROM crm_invitacion_registro i
+     INNER JOIN m_usuarios u ON u.id_usuario = i.id_usuario_comercial
+     LEFT JOIN m_empresas e ON e.id_empresa = i.id_empresa_uso
+     WHERE ${where}`,
+    { replacements, type: QueryTypes.SELECT },
+  );
+
+  return { invitaciones, total: Number(countRow?.total || 0) };
+};
+
 const listarComerciales = async () => {
   return sequelize.query(
     `SELECT DISTINCT u.id_usuario, u.nombre, u.email
@@ -850,6 +941,7 @@ module.exports = {
   usuarioPuedeGestionarAccesosHub,
   resolverGestionAccesosHub,
   listarVentas,
+  listarInvitaciones,
   listarComerciales,
   crearInvitacionRegistro,
   buscarInvitacionValida,

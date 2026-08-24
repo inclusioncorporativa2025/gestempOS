@@ -49,3 +49,21 @@ export const colorEtapaVenta = (etapa) => {
   };
   return map[etapa] || 'default';
 };
+
+export const etiquetaEstadoInvitacion = (estado) => {
+  const map = {
+    enviada: 'Enviada',
+    registrada: 'Registrada',
+    expirada: 'Expirada',
+  };
+  return map[estado] || estado;
+};
+
+export const colorEstadoInvitacion = (estado) => {
+  const map = {
+    enviada: 'gold',
+    registrada: 'green',
+    expirada: 'default',
+  };
+  return map[estado] || 'default';
+};

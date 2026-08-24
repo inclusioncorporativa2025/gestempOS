@@ -39,6 +39,19 @@ export const listarVentasHub = async ({ q, etapa, pagina = 1, limite = 50 } = {}
   return parseHubResponse(response, 'No se pudieron cargar las ventas');
 };
 
+export const listarInvitacionesHub = async ({ q, estado, pagina = 1, limite = 50 } = {}) => {
+  const params = new URLSearchParams();
+  params.set('pagina', String(pagina));
+  params.set('limite', String(limite));
+  if (q) params.set('q', q);
+  if (estado) params.set('estado', estado);
+
+  const response = await fetch(`${API_BASE_URL}/invitaciones?${params.toString()}`, {
+    headers: authHeaders(),
+  });
+  return parseHubResponse(response, 'No se pudieron cargar las invitaciones');
+};
+
 export const listarComercialesHub = async () => {
   const response = await fetch(`${API_BASE_URL}/comerciales`, { headers: authHeaders() });
   return parseHubResponse(response, 'No se pudieron cargar los comerciales');

@@ -3,6 +3,7 @@ const {
   listarVentas,
   listarComerciales,
   crearInvitacionRegistro,
+  listarInvitaciones,
   asignarVentaManual,
   obtenerInvitacionPreview,
   crmTablasDisponibles,
@@ -74,6 +75,21 @@ const listarVentasHandler = async (req, res) => {
   } catch (error) {
     console.error('[hub] listarVentas:', error.message);
     return res.status(500).json({ message: 'Error al listar ventas del hub' });
+  }
+};
+
+const listarInvitacionesHandler = async (req, res) => {
+  try {
+    const data = await listarInvitaciones(req.user, {
+      q: req.query.q,
+      estado: req.query.estado,
+      pagina: Number(req.query.pagina) || 1,
+      limite: Number(req.query.limite) || 50,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error('[hub] listarInvitaciones:', error.message);
+    return res.status(500).json({ message: 'Error al listar invitaciones' });
   }
 };
 
@@ -326,6 +342,7 @@ const obtenerMetricasDashboardHandler = async (_req, res) => {
 module.exports = {
   obtenerContexto,
   listarVentasHandler,
+  listarInvitacionesHandler,
   listarComercialesHandler,
   crearInvitacionHandler,
   asignarVentaHandler,
