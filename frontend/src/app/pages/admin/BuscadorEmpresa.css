@@ -19,16 +19,16 @@
 }
 
 .be-stats-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-bottom: 16px;
 }
 
-.be-stats-grid__split {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+@media (max-width: 950px) {
+  .be-stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .be-stats-row {

@@ -67,3 +67,52 @@ export const colorEstadoInvitacion = (estado) => {
   };
   return map[estado] || 'default';
 };
+
+const trialSinSuscripcionHub = (row) =>
+  String(row?.modo_facturacion || '').toLowerCase() === 'trial'
+  && !row?.stripe_subscription_id;
+
+const trialExpiradoSinSuscripcionHub = (row) => {
+  if (!trialSinSuscripcionHub(row) || !row?.trial_ends_at) return false;
+  return new Date(row.trial_ends_at) <= new Date();
+};
+
+/** Estado de licencia/facturación para filas del hub de ventas. */
+export const resolverEstadoLicenciaHub = (row) => {
+  const estado = String(row?.estado_suscripcion || '').toLowerCase();
+  const modo = String(row?.modo_facturacion || '').toLowerCase();
+
+  if (estado === 'canceled') {
+    return { codigo: 'cancelada', etiqueta: 'Cancelada', color: 'default', fechaFin: row?.trial_ends_at };
+  }
+
+  if (trialExpiradoSinSuscripcionHub(row)) {
+    return { codigo: 'pte_pago', etiqueta: 'Pte. de pago', color: 'orange', fechaFin: row?.trial_ends_at };
+  }
+
+  if (trialSinSuscripcionHub(row) && !trialExpiradoSinSuscripcionHub(row)) {
+    return { codigo: 'en_prueba', etiqueta: 'En prueba', color: 'blue', fechaFin: row?.trial_ends_at };
+  }
+
+  if (estado === 'trialing') {
+    return { codigo: 'en_prueba', etiqueta: 'En prueba', color: 'blue', fechaFin: row?.trial_ends_at };
+  }
+
+  if (estado === 'past_due') {
+    return { codigo: 'pte_pago', etiqueta: 'Pte. de pago', color: 'orange', fechaFin: row?.trial_ends_at };
+  }
+
+  if (row?.cancel_at_period_end) {
+    return { codigo: 'cancelacion_programada', etiqueta: 'Cancelación programada', color: 'gold', fechaFin: row?.trial_ends_at };
+  }
+
+  if (modo === 'legacy' || estado === 'active') {
+    return { codigo: 'activa', etiqueta: 'Activa', color: 'green', fechaFin: null };
+  }
+
+  if (!modo && !estado) {
+    return { codigo: 'activa', etiqueta: 'Activa', color: 'green', fechaFin: null };
+  }
+
+  return { codigo: 'pte_pago', etiqueta: 'Pte. de pago', color: 'orange', fechaFin: row?.trial_ends_at };
+};

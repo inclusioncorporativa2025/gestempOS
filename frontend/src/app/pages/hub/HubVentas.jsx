@@ -40,6 +40,7 @@ import {
   etiquetaEstadoInvitacion,
   etiquetaEtapaVenta,
   puedeGestionarAccesosHub,
+  resolverEstadoLicenciaHub,
   tienePermisoHub,
 } from '../../../utils/hubAccess';
 import {
@@ -428,17 +429,26 @@ const HubVentas = () => {
       title: 'Etapa',
       dataIndex: 'etapa',
       key: 'etapa',
-      width: 120,
-      render: (etapa, row) => (
-        <div>
-          <Tag color={colorEtapaVenta(etapa)}>{etiquetaEtapaVenta(etapa)}</Tag>
-          {etapa === 'trial' && row.trial_ends_at && (
-            <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
-              Finaliza el {dayjs(row.trial_ends_at).format('DD/MM/YYYY')}
-            </Text>
-          )}
-        </div>
-      ),
+      width: 150,
+      render: (etapa, row) => {
+        const licencia = resolverEstadoLicenciaHub(row);
+        const mostrarFechaLicencia = licencia.fechaFin
+          && ['en_prueba', 'pte_pago', 'cancelada', 'cancelacion_programada'].includes(licencia.codigo);
+
+        return (
+          <div className="hub-etapa-cell">
+            <Tag color={colorEtapaVenta(etapa)}>{etiquetaEtapaVenta(etapa)}</Tag>
+            <Tag color={licencia.color} className="hub-licencia-tag">
+              {licencia.etiqueta}
+            </Tag>
+            {mostrarFechaLicencia && (
+              <Text type="secondary" className="hub-licencia-fecha">
+                Finaliza el {dayjs(licencia.fechaFin).format('DD/MM/YYYY')}
+              </Text>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: 'Canal',

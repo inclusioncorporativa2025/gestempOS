@@ -707,13 +707,7 @@ const BuscadorEmpresa = ({ embedded = false }) => {
       )}
 
       <div className="be-stats-grid">
-        <div className="be-stats-grid__total">
-          {renderStatCard(tarjetasResumen[0])}
-        </div>
-        <div className="be-stats-grid__split">
-          {renderStatCard(tarjetasResumen[1])}
-          {renderStatCard(tarjetasResumen[2])}
-        </div>
+        {tarjetasResumen.map((tarjeta) => renderStatCard(tarjeta))}
       </div>
 
       <Card className="be-search-card">

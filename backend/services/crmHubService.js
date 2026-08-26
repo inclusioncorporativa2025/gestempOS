@@ -256,13 +256,11 @@ const listarVentas = async (user, { q, etapa, pagina = 1, limite = 50 } = {}) =>
   const incluirImportes = usuarioTienePermisoHub(user, 'ver_importes');
 
   const selectImportes = incluirImportes
-    ? `, ef.modo_facturacion, ef.estado_suscripcion, ef.trial_ends_at,
-       ef.licencias_facturadas, p.nombre AS plan_nombre`
+    ? ', ef.licencias_facturadas, p.nombre AS plan_nombre'
     : '';
 
   const joinImportes = incluirImportes
-    ? `LEFT JOIN empresa_facturacion ef ON ef.id_empresa = e.id_empresa
-       LEFT JOIN planes p ON p.id_plan = ef.id_plan`
+    ? 'LEFT JOIN planes p ON p.id_plan = ef.id_plan'
     : '';
 
   const ventas = await sequelize.query(
@@ -281,11 +279,17 @@ const listarVentas = async (user, { q, etapa, pagina = 1, limite = 50 } = {}) =>
        e.fecha_alta AS empresa_fecha_alta,
        u.id_usuario AS comercial_id,
        u.nombre AS comercial_nombre,
-       u.email AS comercial_email
+       u.email AS comercial_email,
+       ef.modo_facturacion,
+       ef.estado_suscripcion,
+       ef.trial_ends_at,
+       ef.stripe_subscription_id,
+       ef.cancel_at_period_end
        ${selectImportes}
      FROM crm_venta v
      INNER JOIN m_empresas e ON e.id_empresa = v.id_empresa
      INNER JOIN m_usuarios u ON u.id_usuario = v.id_usuario_comercial
+     LEFT JOIN empresa_facturacion ef ON ef.id_empresa = e.id_empresa
      ${joinImportes}
      WHERE ${where}
      ORDER BY v.fecha_venta DESC
