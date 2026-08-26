@@ -73,13 +73,19 @@ const textoTooltipEstadoEdicion = (historial) => {
   const nuevaEntrada = formatearFechaHoraHistorial(historial.nueva_entrada);
   const nuevaSalida = formatearFechaHoraHistorial(historial.nueva_salida);
   if (historial.fecha_aceptacion) {
-    return `Solicitud aprobada\nEntrada: ${origEntrada} → ${nuevaEntrada}\nSalida: ${origSalida} → ${nuevaSalida}`;
+    const salidaTxt = historial.nueva_salida
+      ? `\nSalida: ${origSalida} → ${nuevaSalida}`
+      : '\nSalida: sin cambio (registro abierto)';
+    return `Solicitud aprobada\nEntrada: ${origEntrada} → ${nuevaEntrada}${salidaTxt}`;
   }
   if (historial.fecha_cancelacion) {
     const motivo = historial.motivo_rechazo
       ? `\nMotivo: ${historial.motivo_rechazo}`
       : '';
-    return `Solicitud rechazada\nSe solicitó:\nEntrada: ${origEntrada} → ${nuevaEntrada}\nSalida: ${origSalida} → ${nuevaSalida}${motivo}`;
+    const salidaTxt = historial.nueva_salida
+      ? `\nSalida: ${origSalida} → ${nuevaSalida}`
+      : '\nSalida: sin cambio (registro abierto)';
+    return `Solicitud rechazada\nSe solicitó:\nEntrada: ${origEntrada} → ${nuevaEntrada}${salidaTxt}${motivo}`;
   }
   return '';
 };
@@ -94,6 +100,18 @@ const colorEstadoSolicitud = (estado) => {
   if (estado === 'Aprobada') return 'green';
   if (estado === 'Rechazada') return 'red';
   return 'orange';
+};
+
+const claveRegistroHorario = (item) => {
+  if (item?.tipo === 'descanso' && item?.id_descanso) return `descanso-${item.id_descanso}`;
+  if (item?.tipo === 'fichaje' && item?.id_fichaje) return `fichaje-${item.id_fichaje}`;
+  return null;
+};
+
+const claveRegistroPeticion = (peticion) => {
+  if (peticion?.id_descanso) return `descanso-${peticion.id_descanso}`;
+  if (peticion?.id_fichaje) return `fichaje-${peticion.id_fichaje}`;
+  return null;
 };
 
 const mesTieneCierreActivo = (mesesCierre, mesFormateado) =>
@@ -250,7 +268,8 @@ const anadirAusencia = async () => {
     const peticionesResp = await getPeticionesByIdUsuario();
     const mapHistorial = {};
     (peticionesResp?.historialEdiciones || []).forEach((p) => {
-      const key = p.id_fichaje;
+      const key = claveRegistroPeticion(p);
+      if (!key) return;
       const existente = mapHistorial[key];
       if (
         !existente
@@ -268,7 +287,7 @@ const anadirAusencia = async () => {
    const mergedData = (registros.info || []).map((item, index) => {
   const fechaEntrada = item.fecha_entrada ? parseFechaFichaje(item.fecha_entrada) : null;
   const fechaSalida = item.fecha_salida ? parseFechaFichaje(item.fecha_salida) : null;
-  const historial = item.id_fichaje ? mapHistorial[item.id_fichaje] : null;
+  const historial = claveRegistroHorario(item) ? mapHistorial[claveRegistroHorario(item)] : null;
   const fechaOriginalHistorial = historial?.entrada_original
     ? parseFechaFichaje(historial.entrada_original)
     : null;
@@ -285,8 +304,13 @@ const anadirAusencia = async () => {
       : '';
 
   return {
-    key: `${item.tipo || "registro"}-${item.id_fichaje || item.id_ausencia || item.id_descanso || index}`,
+    key: claveRegistroHorario(item) || `${item.tipo || 'registro'}-${index}`,
     idFichaje: item.id_fichaje ?? null,
+    idDescanso: item.id_descanso ?? null,
+    tieneSalida: Boolean(
+      item.fecha_salida
+      && parseFechaFichaje(item.fecha_salida).isValid(),
+    ),
     tipo:
       item.tipo === "fichaje"
         ? "Fichaje"
@@ -349,9 +373,9 @@ const anadirAusencia = async () => {
       setFilteredData(sortedData);
     }
 
-    const pendingKeys = (peticionesResp?.peticiones || []).map(
-      (p) => `fichaje-${p.id_fichaje}`,
-    );
+    const pendingKeys = (peticionesResp?.peticiones || [])
+      .map((p) => claveRegistroPeticion(p))
+      .filter(Boolean);
     setFichajesConPeticion(pendingKeys);
     setHistorialPorFichaje(mapHistorial);
     setSolicitudesHorario(todasSolicitudes);
@@ -512,47 +536,58 @@ const confirmarCierreMensual = async () => {
  const handleEditSubmit = async () => {
     try {
         const values = await form.validateFields();
+        const requiereSalida = Boolean(editingRecord?.tieneSalida);
 
         if (!values.checkIn) {
             throw new Error('Hora de entrada no válida');
         }
-        if (!values.checkOut) {
+        if (requiereSalida && !values.checkOut) {
             throw new Error('Hora de salida no válida');
         }
 
         const fechaEntrada = dayjs(values.date);
-        const fechaSalida = dayjs(values.dateOut);
         const entrada = fechaEntrada
             .hour(values.checkIn.hour())
             .minute(values.checkIn.minute())
             .second(0);
-        const salida = fechaSalida
+
+        let salida = null;
+        if (requiereSalida) {
+          const fechaSalida = dayjs(values.dateOut);
+          salida = fechaSalida
             .hour(values.checkOut.hour())
             .minute(values.checkOut.minute())
             .second(0);
+        }
 
-        if (!entrada.isValid() || !salida.isValid()) {
+        if (!entrada.isValid() || (requiereSalida && !salida?.isValid())) {
             message.error('Fecha u hora no válida');
             return;
         }
 
-        if (entrada.isAfter(salida)) {
+        if (requiereSalida && entrada.isAfter(salida)) {
             message.error('La fecha y hora de entrada deben ser anteriores a la de salida');
             return;
         }
 
-        if (entrada.isAfter(dayjs()) || salida.isAfter(dayjs())) {
+        if (entrada.isAfter(dayjs()) || (salida && salida.isAfter(dayjs()))) {
             message.error('Las fechas no pueden ser futuras');
             return;
         }
 
         const peticionPayload = {
-            id_fichaje: editingRecord.key.replace('fichaje-', ''),
+            ...(editingRecord.tipo === 'Descanso'
+              ? { id_descanso: editingRecord.idDescanso }
+              : { id_fichaje: editingRecord.idFichaje }),
             fecha_entrada: fechaEntrada.format('YYYY-MM-DD'),
-            fecha_salida: fechaSalida.format('YYYY-MM-DD'),
             hora_entrada: values.checkIn.format('HH:mm'),
-            hora_salida: values.checkOut.format('HH:mm'),
             justificacion: values.justificacion,
+            ...(requiereSalida
+              ? {
+                fecha_salida: dayjs(values.dateOut).format('YYYY-MM-DD'),
+                hora_salida: values.checkOut.format('HH:mm'),
+              }
+              : {}),
         };
 
         await crearPeticionEdicion(peticionPayload);
@@ -613,13 +648,14 @@ const handleMonthChange = (date, dateString) => {
       const mesCerrado = mesTieneCierreActivo(mesesCierre, mesSeleccionadoFormateado);
 
       const isEditable =
-        record.tipo === 'Fichaje' &&
+        (record.tipo === 'Fichaje' || record.tipo === 'Descanso') &&
         !fichajesConPeticion.includes(record.key) &&
-        !!record.checkOut &&
+        !!record.checkIn &&
         (!mesSeleccionadoFormateado || !mesCerrado);
 
       const pendienteAprobacion =
-        record.tipo === 'Fichaje' && fichajesConPeticion.includes(record.key);
+        (record.tipo === 'Fichaje' || record.tipo === 'Descanso')
+        && fichajesConPeticion.includes(record.key);
 
       const ubicaciones = [];
       const coordsEntrada = parseUbicacionCoords(record.ubicacionEntrada);
@@ -640,15 +676,15 @@ const handleMonthChange = (date, dateString) => {
               />
             </Tooltip>
           ))}
-          {record.tipo === 'Fichaje' && (
-            <Tooltip title={isEditable ? 'Editar fichaje' : 'No se puede editar este registro'}>
+          {(record.tipo === 'Fichaje' || record.tipo === 'Descanso') && (
+            <Tooltip title={isEditable ? 'Solicitar corrección' : 'No se puede editar este registro'}>
               <Button
                 type="text"
                 className="tlp-edit-btn"
                 icon={<EditOutlined />}
                 disabled={!isEditable}
                 onClick={() => showEditModal(record)}
-                aria-label="Editar fichaje"
+                aria-label="Solicitar corrección de horario"
               />
             </Tooltip>
           )}
@@ -694,6 +730,9 @@ const handleMonthChange = (date, dateString) => {
         title: 'Salida solicitada',
         key: 'nueva_salida',
         render: (_, record) => {
+          if (!record.salida_original && !record.nueva_salida) {
+            return 'Sin salida registrada';
+          }
           const orig = formatearFechaHoraHistorial(record.salida_original);
           const nueva = formatearFechaHoraHistorial(record.nueva_salida);
           return `${orig} → ${nueva}`;
@@ -893,7 +932,11 @@ const handleMonthChange = (date, dateString) => {
                 )}
 
                 <Modal
-                    title="Solicitar corrección de horario"
+                    title={
+                      editingRecord?.tipo === 'Descanso'
+                        ? 'Solicitar corrección de descanso'
+                        : 'Solicitar corrección de horario'
+                    }
                     open={isModalOpen}
                     onOk={handleEditSubmit}
                     onCancel={() => setIsModalOpen(false)}
@@ -903,6 +946,11 @@ const handleMonthChange = (date, dateString) => {
                     <p className="tlp-solicitud-hint">
                       Los cambios no se aplican al instante: un administrador o supervisor deberá aprobar la solicitud.
                     </p>
+                    {!editingRecord?.tieneSalida && (
+                      <p className="tlp-solicitud-hint">
+                        Este registro aún no tiene salida: solo puedes corregir la hora de inicio.
+                      </p>
+                    )}
                     <Form form={form} layout="vertical">
                         <Form.Item label="Fecha Entrada" name="date"
                          rules={[{ required: true, message: 'Por favor, ingresa la fecha de entrada' }]}>
@@ -919,6 +967,8 @@ const handleMonthChange = (date, dateString) => {
                         >
                             <TimePicker format="HH:mm" />
                         </Form.Item>
+                        {editingRecord?.tieneSalida && (
+                          <>
                         <Form.Item label="Fecha Salida" name="dateOut" rules={[{ required: true, message: 'Por favor, ingresa la fecha de salida' }]} >
                         <DatePicker
                             format="DD/MM/YYYY"
@@ -934,6 +984,8 @@ const handleMonthChange = (date, dateString) => {
                         >
                             <TimePicker format="HH:mm" />
                         </Form.Item>
+                          </>
+                        )}
                         <Form.Item
                             label="Justificación"
                             name="justificacion"

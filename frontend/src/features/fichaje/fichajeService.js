@@ -603,32 +603,44 @@ export const getEstadoPersonalEmpresa = async () => {
 
 export const editarRegistro = async (values) => {
   try {
-    const usuarioAccion = getIdUsuario(); 
-    const idEmpresa = getIdEmpresa(); 
+    const usuarioAccion = getIdUsuario();
+    const idEmpresa = getIdEmpresa();
 
-      const horaEntrada = dayjs(values.nueva_entrada)
+    const horaEntrada = dayjs(values.nueva_entrada)
       .tz('Europe/Madrid', true)
       .format('YYYY-MM-DD HH:mm:ss');
 
-      const horaSalida = dayjs(values.nueva_salida)
-      .tz('Europe/Madrid', true)
-      .format('YYYY-MM-DD HH:mm:ss');   
+    const horaSalida = values.nueva_salida
+      ? dayjs(values.nueva_salida)
+        .tz('Europe/Madrid', true)
+        .format('YYYY-MM-DD HH:mm:ss')
+      : null;
 
-    const response = await fetch(API_BASE_URL+`/edit`, {
+    const response = await fetch(`${API_BASE_URL}/edit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ values, usuarioAccion,idEmpresa,horaEntrada,horaSalida }),
+      body: JSON.stringify({
+        values: {
+          ...values,
+          id_usuario_gestor: usuarioAccion,
+        },
+        usuarioAccion,
+        idEmpresa,
+        horaEntrada,
+        horaSalida,
+      }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || 'Error editando datos');
+      throw new Error(errorData.message || errorData.error || 'Error editando datos');
     }
 
     const data = await response.json();
 
-    return data;  // Retorna la respuesta del servidor 
+    return data;
   } catch (error) {
     console.error('Error editando registro:', error);
-  }   
+    throw error;
+  }
 };

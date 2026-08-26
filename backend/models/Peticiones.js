@@ -24,6 +24,10 @@ const Peticiones = sequelize.define('Peticiones', {
         type: DataTypes.INTEGER,
         allowNull: true,
     },
+    id_descanso: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
     nueva_entrada: {
         type: DataTypes.DATE,
         allowNull: true,

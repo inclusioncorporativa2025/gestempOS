@@ -77,46 +77,71 @@ const enriquecerPeticionesConDetalle = async (peticiones) => {
 
   const peticionRows = peticiones.map((p) => (p.toJSON ? p.toJSON() : p));
 
-  const fichajes = await Fichajes.findAll({
-    where: {
-      [Op.or]: peticionRows.map((p) => ({
-        empresa_id: p.empresa_id,
-        id_fichaje: p.id_fichaje,
-      })),
-    },
-  });
+  const fichajeFilters = peticionRows
+    .filter((p) => p.id_fichaje)
+    .map((p) => ({ empresa_id: p.empresa_id, id_fichaje: p.id_fichaje }));
+
+  const descansoFilters = peticionRows
+    .filter((p) => p.id_descanso)
+    .map((p) => ({ empresa_id: p.empresa_id, id_descanso: p.id_descanso }));
+
+  const [fichajes, descansos] = await Promise.all([
+    fichajeFilters.length
+      ? Fichajes.findAll({ where: { [Op.or]: fichajeFilters } })
+      : Promise.resolve([]),
+    descansoFilters.length
+      ? Descansos.findAll({ where: { [Op.or]: descansoFilters } })
+      : Promise.resolve([]),
+  ]);
 
   const usuarioIds = new Set();
   fichajes.forEach((f) => usuarioIds.add(f.id_usuario));
+  descansos.forEach((d) => usuarioIds.add(d.id_usuario));
   peticionRows.forEach((p) => {
     if (p.id_usuario_peticion) usuarioIds.add(p.id_usuario_peticion);
     if (p.id_usuario_gestor) usuarioIds.add(p.id_usuario_gestor);
   });
 
-  const usuarios = await Usuario.findAll({
-    where: {
-      id_usuario: { [Op.in]: [...usuarioIds] },
-      fecha_baja: null,
-    },
-  });
+  const usuarios = usuarioIds.size
+    ? await Usuario.findAll({
+      where: {
+        id_usuario: { [Op.in]: [...usuarioIds] },
+        fecha_baja: null,
+      },
+    })
+    : [];
 
   const fichajesMap = Object.fromEntries(
     fichajes.map((f) => [`${f.empresa_id}-${f.id_fichaje}`, f.toJSON()]),
   );
+  const descansosMap = Object.fromEntries(
+    descansos.map((d) => [`${d.empresa_id}-${d.id_descanso}`, d.toJSON()]),
+  );
   const usuariosMap = Object.fromEntries(usuarios.map((u) => [u.id_usuario, u.toJSON()]));
 
   return peticionRows.map((peticion) => {
-    const fichaje = fichajesMap[`${peticion.empresa_id}-${peticion.id_fichaje}`] || null;
+    const fichaje = peticion.id_fichaje
+      ? fichajesMap[`${peticion.empresa_id}-${peticion.id_fichaje}`] || null
+      : null;
+    const descanso = peticion.id_descanso
+      ? descansosMap[`${peticion.empresa_id}-${peticion.id_descanso}`] || null
+      : null;
+    const registro = fichaje || descanso;
     const solicitante = usuariosMap[peticion.id_usuario_peticion] || null;
     const gestor = peticion.id_usuario_gestor
       ? usuariosMap[peticion.id_usuario_gestor] || null
       : null;
-    const empleado = fichaje ? usuariosMap[fichaje.id_usuario] || solicitante : solicitante;
+    const empleado = registro
+      ? usuariosMap[registro.id_usuario] || solicitante
+      : solicitante;
 
     return {
       ...peticion,
       fichaje: fichaje
         ? { ...fichaje, usuario: empleado || null }
+        : null,
+      descanso: descanso
+        ? { ...descanso, usuario: empleado || null }
         : null,
       solicitante,
       gestor,
@@ -502,20 +527,58 @@ const crearPeticionEdicion = async (req, res) => {
     const fechaConOffset = new Date();
     const tz = 'Europe/Madrid';
 
-    const fichaje = await Fichajes.findOne({
-      where: {
-        empresa_id: idEmpresa,
-        id_fichaje: values.id_fichaje,
-        fecha_baja: null,
-      },
-    });
+    const idFichaje = values.id_fichaje ? Number(values.id_fichaje) : null;
+    const idDescanso = values.id_descanso ? Number(values.id_descanso) : null;
 
-    if (!fichaje) {
-      return res.status(404).json({ error: 'Fichaje no encontrado' });
+    if ((!idFichaje && !idDescanso) || (idFichaje && idDescanso)) {
+      return res.status(400).json({ error: 'Indica un fichaje o un descanso, no ambos' });
     }
 
-    const entrada_original = fichaje.fecha_entrada;
-    const salida_original = fichaje.fecha_salida || fichaje.fecha_entrada;
+    let registro = null;
+    let tipoRegistro = null;
+
+    if (idFichaje) {
+      registro = await Fichajes.findOne({
+        where: {
+          empresa_id: idEmpresa,
+          id_fichaje: idFichaje,
+          id_usuario: idUsuario,
+          fecha_baja: null,
+        },
+      });
+      tipoRegistro = 'fichaje';
+    } else {
+      registro = await Descansos.findOne({
+        where: {
+          empresa_id: idEmpresa,
+          id_descanso: idDescanso,
+          id_usuario: idUsuario,
+          fecha_baja: null,
+        },
+      });
+      tipoRegistro = 'descanso';
+    }
+
+    if (!registro) {
+      return res.status(404).json({ error: 'Registro no encontrado' });
+    }
+
+    const wherePendiente = {
+      empresa_id: idEmpresa,
+      fecha_aceptacion: null,
+      fecha_cancelacion: null,
+      ...(idFichaje ? { id_fichaje: idFichaje } : { id_descanso: idDescanso }),
+    };
+
+    const peticionPendiente = await Peticiones.findOne({ where: wherePendiente });
+    if (peticionPendiente) {
+      return res.status(409).json({ error: 'Ya existe una solicitud pendiente para este registro' });
+    }
+
+    const entrada_original = registro.fecha_entrada;
+    const salida_original = registro.fecha_salida || null;
+    const tieneSalidaOriginal = Boolean(salida_original);
+    const incluyeSalida = Boolean(values.hora_salida);
 
     const resolverFechaBase = (fechaPropuesta, fallback) => {
       if (fechaPropuesta) {
@@ -523,39 +586,55 @@ const crearPeticionEdicion = async (req, res) => {
         if (!parsed.isValid()) return null;
         return parsed.format('YYYY-MM-DD');
       }
-      return dayjs(fallback).tz(tz).format('YYYY-MM-DD');
+      if (fallback) {
+        return dayjs(fallback).tz(tz).format('YYYY-MM-DD');
+      }
+      return null;
     };
 
-    const fechaEntradaBase = resolverFechaBase(values.fecha_entrada, entrada_original);
-    const fechaSalidaBase = resolverFechaBase(values.fecha_salida, salida_original);
-
-    if (!fechaEntradaBase || !fechaSalidaBase) {
-      return res.status(400).json({ error: 'Fecha de entrada o salida no válida' });
+    if (!values.hora_entrada) {
+      return res.status(400).json({ error: 'Hora de entrada obligatoria' });
     }
 
-    if (!values.hora_entrada || !values.hora_salida) {
-      return res.status(400).json({ error: 'Hora de entrada y salida obligatorias' });
+    const fechaEntradaBase = resolverFechaBase(values.fecha_entrada, entrada_original);
+    if (!fechaEntradaBase) {
+      return res.status(400).json({ error: 'Fecha de entrada no válida' });
     }
 
     const nueva_entrada = combinarFechaConHoraMadrid(fechaEntradaBase, values.hora_entrada);
-    const nueva_salida = combinarFechaConHoraMadrid(fechaSalidaBase, values.hora_salida);
-
     const entradaDt = dayjs(nueva_entrada).tz(tz);
-    const salidaDt = dayjs(nueva_salida).tz(tz);
     const ahora = dayjs().tz(tz);
 
-    if (!entradaDt.isBefore(salidaDt)) {
-      return res.status(400).json({ error: 'La entrada debe ser anterior a la salida' });
+    if (entradaDt.isAfter(ahora)) {
+      return res.status(400).json({ error: 'La entrada no puede ser futura' });
     }
 
-    if (entradaDt.isAfter(ahora) || salidaDt.isAfter(ahora)) {
-      return res.status(400).json({ error: 'Las fechas no pueden ser futuras' });
+    let nueva_salida = null;
+    if (incluyeSalida) {
+      const fechaSalidaBase = resolverFechaBase(
+        values.fecha_salida,
+        salida_original || entrada_original,
+      );
+      if (!fechaSalidaBase) {
+        return res.status(400).json({ error: 'Fecha de salida no válida' });
+      }
+      nueva_salida = combinarFechaConHoraMadrid(fechaSalidaBase, values.hora_salida);
+      const salidaDt = dayjs(nueva_salida).tz(tz);
+      if (!entradaDt.isBefore(salidaDt)) {
+        return res.status(400).json({ error: 'La entrada debe ser anterior a la salida' });
+      }
+      if (salidaDt.isAfter(ahora)) {
+        return res.status(400).json({ error: 'La salida no puede ser futura' });
+      }
+    } else if (tieneSalidaOriginal) {
+      return res.status(400).json({ error: 'Hora de salida obligatoria para este registro' });
     }
 
     const info = await createConId(Peticiones, idEmpresa, 'id_peticion', {
       id_usuario_peticion: idUsuario,
       fecha_alta: fechaConOffset,
-      id_fichaje: values.id_fichaje,
+      id_fichaje: idFichaje,
+      id_descanso: idDescanso,
       nueva_entrada,
       nueva_salida,
       entrada_original,
@@ -571,7 +650,7 @@ const crearPeticionEdicion = async (req, res) => {
 
     const destinatarios = await obtenerEmailsGestoresEmpresa(idEmpresa);
     console.log(
-      `[crearPeticionEdicion] empresa=${idEmpresa} destinatarios=${destinatarios.length}`,
+      `[crearPeticionEdicion] empresa=${idEmpresa} tipo=${tipoRegistro} destinatarios=${destinatarios.length}`,
       destinatarios,
     );
 
@@ -1056,13 +1135,17 @@ const getHorasTrabajadasHoy = async (req, res)=> {
 
 const editarHoras = async (req, res) => {
   try {
-    const { id_fichaje,
-      id_usuario_gestor, id_peticion } = req.body.values;
-    const idEmpresa = req.body.idEmpresa
-    const fecha = new Date().getTime() ;
+    const {
+      id_fichaje: idFichajeBody,
+      id_descanso: idDescansoBody,
+      id_usuario_gestor,
+      id_peticion,
+    } = req.body.values;
+    const idEmpresa = req.body.idEmpresa;
+    const fecha = new Date().getTime();
 
     const peticiones = await Peticiones.findAll({
-      where: { empresa_id: idEmpresa, id_peticion }
+      where: { empresa_id: idEmpresa, id_peticion },
     });
 
     if (!peticiones || peticiones.length === 0) {
@@ -1070,25 +1153,53 @@ const editarHoras = async (req, res) => {
     }
 
     const peticion = peticiones[0];
-
     const horaEntrada = peticion.nueva_entrada;
     const horaSalida = peticion.nueva_salida;
     const origEntrada = peticion.entrada_original;
     const origSalida = peticion.salida_original;
+    const idDescanso = peticion.id_descanso || idDescansoBody || null;
+    const idFichaje = peticion.id_fichaje || idFichajeBody || null;
+
+    const updateData = {
+      fecha_entrada: horaEntrada,
+      fecha_modificacion: fecha,
+      usuario_modificacion: id_usuario_gestor,
+    };
+    if (horaSalida != null) {
+      updateData.fecha_salida = horaSalida;
+    }
 
     const result = await sequelize.transaction(async (transaction) => {
-      const [filas] = await Fichajes.update(
-        {
-          fecha_entrada: horaEntrada,
-          fecha_salida: horaSalida,
-          fecha_modificacion: fecha,
-          usuario_modificacion: id_usuario_gestor,
-        },
-        {
-          where: { empresa_id: idEmpresa, id_fichaje },
+      if (idDescanso) {
+        const [filas] = await Descansos.update(updateData, {
+          where: { empresa_id: idEmpresa, id_descanso: idDescanso },
           transaction,
-        }
-      );
+        });
+
+        await registrarEventoFichaje({
+          empresaId: idEmpresa,
+          idUsuario: peticion.id_usuario_peticion,
+          tipo: 'edicion_descanso_autorizada',
+          fechaInput: horaEntrada,
+          observaciones: [
+            `id_peticion=${id_peticion}`,
+            `orig_entrada=${origEntrada ? dayjs(origEntrada).toISOString() : 'null'}`,
+            `orig_salida=${origSalida ? dayjs(origSalida).toISOString() : 'null'}`,
+            `nueva_entrada=${dayjs(horaEntrada).toISOString()}`,
+            `nueva_salida=${horaSalida ? dayjs(horaSalida).toISOString() : 'null'}`,
+          ].join(';'),
+          idDescanso,
+          usuarioAlta: id_usuario_gestor,
+          transaction,
+        });
+
+        return filas;
+      }
+
+      const [filas] = await Fichajes.update(updateData, {
+        where: { empresa_id: idEmpresa, id_fichaje: idFichaje },
+        transaction,
+      });
 
       await registrarEventoFichaje({
         empresaId: idEmpresa,
@@ -1100,9 +1211,9 @@ const editarHoras = async (req, res) => {
           `orig_entrada=${origEntrada ? dayjs(origEntrada).toISOString() : 'null'}`,
           `orig_salida=${origSalida ? dayjs(origSalida).toISOString() : 'null'}`,
           `nueva_entrada=${dayjs(horaEntrada).toISOString()}`,
-          `nueva_salida=${dayjs(horaSalida).toISOString()}`,
+          `nueva_salida=${horaSalida ? dayjs(horaSalida).toISOString() : 'null'}`,
         ].join(';'),
-        idFichaje: id_fichaje,
+        idFichaje,
         usuarioAlta: id_usuario_gestor,
         transaction,
       });
@@ -1112,8 +1223,8 @@ const editarHoras = async (req, res) => {
 
     res.status(200).json({ message: 'Datos actualizados correctamente', result });
   } catch (error) {
-    console.error('Error al actualizar tipos de acceso:', error);
-    res.status(500).json({ error: 'Error al actualizar tipos de acceso' });
+    console.error('Error al actualizar registro horario:', error);
+    res.status(500).json({ error: 'Error al actualizar registro horario' });
   }
 };
 const countNotificacionesPendientes = async (req, res) => {
