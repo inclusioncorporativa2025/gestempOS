@@ -18,20 +18,17 @@ let crmTablasCache = null;
 let crmCampanasCache = null;
 
 const crmCampanasDisponibles = async () => {
-  if (crmCampanasCache != null) return crmCampanasCache;
-  if (!(await crmTablasDisponibles())) {
-    crmCampanasCache = false;
-    return false;
-  }
+  if (crmCampanasCache === true) return true;
+  if (!(await crmTablasDisponibles())) return false;
   try {
     await sequelize.query('SELECT 1 FROM crm_campana LIMIT 1', {
       type: QueryTypes.SELECT,
     });
     crmCampanasCache = true;
+    return true;
   } catch {
-    crmCampanasCache = false;
+    return false;
   }
-  return crmCampanasCache;
 };
 
 const slugificarCampana = (nombre) => {
@@ -81,8 +78,7 @@ const listarCampanas = async () => {
      FROM crm_campana c
      LEFT JOIN m_usuarios u ON u.id_usuario = c.id_usuario_creador
      WHERE c.activo = 1
-       AND c.tipo = 'campana'
-     ORDER BY c.nombre ASC, c.fecha_alta DESC`,
+     ORDER BY c.tipo = 'campana' DESC, c.nombre ASC, c.fecha_alta DESC`,
     { type: QueryTypes.SELECT },
   );
 };
@@ -145,7 +141,6 @@ const resolverCampanaActiva = async (idCampana) => {
      FROM crm_campana
      WHERE id_campana = :idCampana
        AND activo = 1
-       AND tipo = 'campana'
      LIMIT 1`,
     { replacements: { idCampana: Number(idCampana) }, type: QueryTypes.SELECT },
   );

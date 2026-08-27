@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  AutoComplete,
   Button,
   Dropdown,
   Input,
@@ -330,45 +329,55 @@ const HubVentas = () => {
       id_campana: null,
     });
     setInvitacionOpen(true);
-    if (puedeCrearInvitacion) {
-      setCampanasLoading(true);
-      try {
-        const data = await listarCampanasHub();
-        setCampanas(data.campanas || []);
-      } catch {
-        setCampanas([]);
-      } finally {
-        setCampanasLoading(false);
-      }
+    if (!puedeCrearInvitacion) return;
+
+    setCampanasLoading(true);
+    try {
+      const data = await listarCampanasHub();
+      setCampanas(data.campanas || []);
+    } catch (error) {
+      setCampanas([]);
+      message.error(error.message || 'No se pudieron cargar las campañas');
+    } finally {
+      setCampanasLoading(false);
     }
   };
 
-  const opcionesCampana = useMemo(
-    () => campanas.map((c) => ({ value: c.nombre, id: c.id_campana })),
+  const opcionesSelectCampana = useMemo(
+    () => campanas.map((c) => ({
+      value: Number(c.id_campana),
+      label: c.nombre,
+    })),
     [campanas],
   );
 
+  const renderDropdownCampana = (menu) => (
+    <>
+      {menu}
+      {puedeGestionarCampanas && (
+        <div className="hub-campana-select-footer">
+          <Button
+            type="text"
+            icon={<PlusOutlined />}
+            block
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              setCampanaNuevaNombre('');
+              setCampanaModalOpen(true);
+            }}
+          >
+            Nueva campaña
+          </Button>
+        </div>
+      )}
+    </>
+  );
+
   const resolverCampanaInvitacion = () => {
-    const nombre = invitacionForm.campana_nombre.trim();
-    if (!nombre && !invitacionForm.id_campana) {
+    if (!invitacionForm.id_campana) {
       return { id_campana: undefined, nombre_campana: undefined };
     }
-
-    const existente = campanas.find(
-      (c) => c.nombre.localeCompare(nombre, undefined, { sensitivity: 'accent' }) === 0,
-    );
-    if (invitacionForm.id_campana || existente) {
-      return {
-        id_campana: invitacionForm.id_campana || existente?.id_campana,
-        nombre_campana: undefined,
-      };
-    }
-
-    if (!puedeGestionarCampanas) {
-      return { id_campana: undefined, nombre_campana: undefined };
-    }
-
-    return { id_campana: undefined, nombre_campana: nombre };
+    return { id_campana: invitacionForm.id_campana, nombre_campana: undefined };
   };
 
   const crearCampanaDesdeModal = async () => {
@@ -388,7 +397,7 @@ const HubVentas = () => {
       setInvitacionForm((prev) => ({
         ...prev,
         campana_nombre: campana.nombre,
-        id_campana: campana.id_campana,
+        id_campana: Number(campana.id_campana),
       }));
       setCampanaNuevaNombre('');
       setCampanaModalOpen(false);
@@ -867,60 +876,29 @@ const HubVentas = () => {
               <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
                 Campaña comercial
               </Text>
-              {puedeGestionarCampanas ? (
-                <Space.Compact style={{ width: '100%' }}>
-                  <AutoComplete
-                    style={{ flex: 1 }}
-                    options={opcionesCampana}
-                    placeholder="Escribe o elige una campaña"
-                    value={invitacionForm.campana_nombre}
-                    onSelect={(value, option) => setInvitacionForm((prev) => ({
-                      ...prev,
-                      campana_nombre: value,
-                      id_campana: option.id ?? null,
-                    }))}
-                    onChange={(value) => setInvitacionForm((prev) => ({
-                      ...prev,
-                      campana_nombre: value,
-                      id_campana: null,
-                    }))}
-                    disabled={campanasLoading}
-                  />
-                  <Button
-                    icon={<PlusOutlined />}
-                    onClick={() => {
-                      setCampanaNuevaNombre(invitacionForm.campana_nombre.trim());
-                      setCampanaModalOpen(true);
-                    }}
-                    title="Nueva campaña"
-                  />
-                </Space.Compact>
-              ) : (
-                <Select
-                  showSearch
-                  allowClear
-                  placeholder="Selecciona una campaña"
-                  value={invitacionForm.id_campana}
-                  onChange={(id) => {
-                    const campana = campanas.find((c) => c.id_campana === id);
-                    setInvitacionForm((prev) => ({
-                      ...prev,
-                      id_campana: id ?? null,
-                      campana_nombre: campana?.nombre ?? '',
-                    }));
-                  }}
-                  options={campanas.map((c) => ({
-                    value: c.id_campana,
-                    label: c.nombre,
-                  }))}
-                  optionFilterProp="label"
-                  loading={campanasLoading}
-                  style={{ width: '100%' }}
-                />
-              )}
+              <Select
+                showSearch
+                allowClear
+                placeholder="Selecciona una campaña"
+                value={invitacionForm.id_campana ?? undefined}
+                onChange={(id) => {
+                  const campana = campanas.find((c) => Number(c.id_campana) === Number(id));
+                  setInvitacionForm((prev) => ({
+                    ...prev,
+                    id_campana: id ?? null,
+                    campana_nombre: campana?.nombre ?? '',
+                  }));
+                }}
+                options={opcionesSelectCampana}
+                optionFilterProp="label"
+                loading={campanasLoading}
+                style={{ width: '100%' }}
+                notFoundContent={campanasLoading ? 'Cargando…' : 'Sin campañas'}
+                dropdownRender={renderDropdownCampana}
+              />
               <Text type="secondary" style={{ fontSize: 12 }}>
                 {puedeGestionarCampanas
-                  ? 'Opcional. Puedes crear una campaña nueva o reutilizar una existente.'
+                  ? 'Opcional. Usa el botón + del desplegable para crear una campaña nueva.'
                   : 'Opcional. Elige una campaña creada por tu responsable.'}
               </Text>
             </div>
