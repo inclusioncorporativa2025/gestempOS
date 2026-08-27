@@ -4,6 +4,9 @@ const {
   listarComerciales,
   crearInvitacionRegistro,
   listarInvitaciones,
+  listarCampanas,
+  crearCampana,
+  resolverCampanaActiva,
   asignarVentaManual,
   obtenerInvitacionPreview,
   eliminarVentaHub,
@@ -114,6 +117,8 @@ const crearInvitacionHandler = async (req, res) => {
       email_previsto: emailPrevisto,
       telefono_previsto: telefonoPrevisto,
       dias_validez: diasValidez,
+      id_campana: idCampanaBody,
+      nombre_campana: nombreCampanaBody,
     } = req.body || {};
 
     const email = String(emailPrevisto || '').trim().toLowerCase();
@@ -142,6 +147,34 @@ const crearInvitacionHandler = async (req, res) => {
       });
     }
 
+    let idCampana = idCampanaBody ? Number(idCampanaBody) : null;
+    const nombreCampana = String(nombreCampanaBody || '').trim();
+    const puedeGestionarCampanas = usuarioPuedeGestionarAccesosHub(req.user);
+
+    if (!idCampana && nombreCampana) {
+      if (!puedeGestionarCampanas) {
+        return res.status(403).json({
+          message: 'Solo ROOT, admin o jefe comercial pueden crear campañas',
+          code: 'CAMPANA_SIN_PERMISO',
+        });
+      }
+      const campanaNueva = await crearCampana({
+        nombre: nombreCampana,
+        idUsuario: Number(req.user.id_usuario),
+        usuarioAlta: Number(req.user.id_usuario),
+      });
+      idCampana = campanaNueva?.id_campana ?? null;
+    } else if (idCampana) {
+      const campana = await resolverCampanaActiva(idCampana);
+      if (!campana) {
+        return res.status(400).json({
+          message: 'La campaña seleccionada no es válida',
+          code: 'CAMPANA_INVALIDA',
+        });
+      }
+      idCampana = campana.id_campana;
+    }
+
     let canal = 'telefono';
     if (tieneEmail && tieneTelefono) canal = 'mixto';
     else if (tieneEmail) canal = 'email';
@@ -152,6 +185,7 @@ const crearInvitacionHandler = async (req, res) => {
       telefonoPrevisto: tieneTelefono ? telefono : null,
       canal,
       diasValidez: diasValidez || 30,
+      idCampana,
     });
 
     const registerUrl = `${APP_PUBLIC_URL}/register?inv=${encodeURIComponent(invitacion.token)}`;
@@ -194,8 +228,49 @@ const crearInvitacionHandler = async (req, res) => {
       telefono_previsto: tieneTelefono ? telefono : null,
     });
   } catch (error) {
+    if (error.code === 'CAMPANA_INVALIDA' || error.code === 'NOMBRE_INVALIDO') {
+      return res.status(400).json({ message: error.message, code: error.code });
+    }
+    if (error.code === 'CAMPANAS_NO_DISPONIBLES') {
+      return res.status(503).json({ message: error.message, code: error.code });
+    }
     console.error('[hub] crearInvitacion:', error.message);
     return res.status(500).json({ message: 'Error al crear la invitación' });
+  }
+};
+
+const listarCampanasHandler = async (req, res) => {
+  try {
+    const campanas = await listarCampanas();
+    return res.status(200).json({ campanas });
+  } catch (error) {
+    console.error('[hub] listarCampanas:', error.message);
+    return res.status(500).json({ message: 'Error al listar campañas' });
+  }
+};
+
+const crearCampanaHandler = async (req, res) => {
+  try {
+    const { nombre, descripcion } = req.body || {};
+    const campana = await crearCampana({
+      nombre,
+      descripcion,
+      idUsuario: Number(req.user.id_usuario),
+      usuarioAlta: Number(req.user.id_usuario),
+    });
+    return res.status(201).json({
+      message: 'Campaña creada correctamente',
+      campana,
+    });
+  } catch (error) {
+    if (error.code === 'NOMBRE_INVALIDO') {
+      return res.status(400).json({ message: error.message, code: error.code });
+    }
+    if (error.code === 'CAMPANAS_NO_DISPONIBLES') {
+      return res.status(503).json({ message: error.message, code: error.code });
+    }
+    console.error('[hub] crearCampana:', error.message);
+    return res.status(500).json({ message: 'Error al crear la campaña' });
   }
 };
 
@@ -456,6 +531,8 @@ module.exports = {
   listarInvitacionesHandler,
   listarComercialesHandler,
   crearInvitacionHandler,
+  listarCampanasHandler,
+  crearCampanaHandler,
   asignarVentaHandler,
   previewInvitacionHandler,
   listarAccesosHubHandler,

@@ -15,6 +15,143 @@ const PERMISOS_ROOT = [
 ];
 
 let crmTablasCache = null;
+let crmCampanasCache = null;
+
+const crmCampanasDisponibles = async () => {
+  if (crmCampanasCache != null) return crmCampanasCache;
+  if (!(await crmTablasDisponibles())) {
+    crmCampanasCache = false;
+    return false;
+  }
+  try {
+    await sequelize.query('SELECT 1 FROM crm_campana LIMIT 1', {
+      type: QueryTypes.SELECT,
+    });
+    crmCampanasCache = true;
+  } catch {
+    crmCampanasCache = false;
+  }
+  return crmCampanasCache;
+};
+
+const slugificarCampana = (nombre) => {
+  let base = String(nombre || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 50);
+  if (!base) base = `campana-${Date.now()}`;
+  return base;
+};
+
+const generarCodigoCampanaUnico = async (nombre) => {
+  const reservados = new Set(['organico', 'legacy', 'comercial', 'admin', 'sistema']);
+  let base = slugificarCampana(nombre);
+  if (reservados.has(base)) base = `${base}-custom`;
+  let codigo = base;
+  let sufijo = 2;
+
+  while (true) {
+    const [existente] = await sequelize.query(
+      `SELECT id_campana FROM crm_campana WHERE codigo = :codigo LIMIT 1`,
+      { replacements: { codigo }, type: QueryTypes.SELECT },
+    );
+    if (!existente) return codigo;
+    codigo = `${base}-${sufijo}`;
+    sufijo += 1;
+  }
+};
+
+const listarCampanas = async () => {
+  if (!(await crmCampanasDisponibles())) return [];
+
+  return sequelize.query(
+    `SELECT
+       c.id_campana,
+       c.codigo,
+       c.nombre,
+       c.descripcion,
+       c.tipo,
+       c.activo,
+       c.id_usuario_creador,
+       c.fecha_alta,
+       u.nombre AS creador_nombre
+     FROM crm_campana c
+     LEFT JOIN m_usuarios u ON u.id_usuario = c.id_usuario_creador
+     WHERE c.activo = 1
+       AND c.tipo = 'campana'
+     ORDER BY c.nombre ASC, c.fecha_alta DESC`,
+    { type: QueryTypes.SELECT },
+  );
+};
+
+const crearCampana = async ({ nombre, descripcion = null, idUsuario, usuarioAlta }) => {
+  if (!(await crmCampanasDisponibles())) {
+    const error = new Error('Las campañas comerciales no están disponibles en el servidor');
+    error.code = 'CAMPANAS_NO_DISPONIBLES';
+    throw error;
+  }
+
+  const nombreLimpio = String(nombre || '').trim();
+  if (nombreLimpio.length < 2) {
+    const error = new Error('El nombre de la campaña debe tener al menos 2 caracteres');
+    error.code = 'NOMBRE_INVALIDO';
+    throw error;
+  }
+  if (nombreLimpio.length > 120) {
+    const error = new Error('El nombre de la campaña no puede superar 120 caracteres');
+    error.code = 'NOMBRE_INVALIDO';
+    throw error;
+  }
+
+  const codigo = await generarCodigoCampanaUnico(nombreLimpio);
+
+  const [, meta] = await sequelize.query(
+    `INSERT INTO crm_campana (
+       codigo, nombre, descripcion, tipo, activo, id_usuario_creador, usuario_alta
+     ) VALUES (
+       :codigo, :nombre, :descripcion, 'campana', 1, :idUsuarioCreador, :usuarioAlta
+     )`,
+    {
+      replacements: {
+        codigo,
+        nombre: nombreLimpio,
+        descripcion: descripcion ? String(descripcion).trim() : null,
+        idUsuarioCreador: idUsuario || null,
+        usuarioAlta: usuarioAlta || idUsuario || null,
+      },
+    },
+  );
+
+  const idCampana = meta?.insertId ?? null;
+  const [campana] = await sequelize.query(
+    `SELECT id_campana, codigo, nombre, descripcion, tipo, activo, id_usuario_creador, fecha_alta
+     FROM crm_campana
+     WHERE id_campana = :idCampana
+     LIMIT 1`,
+    { replacements: { idCampana }, type: QueryTypes.SELECT },
+  );
+
+  return campana;
+};
+
+const resolverCampanaActiva = async (idCampana) => {
+  if (!idCampana || !(await crmCampanasDisponibles())) return null;
+
+  const [campana] = await sequelize.query(
+    `SELECT id_campana, codigo, nombre, tipo, activo
+     FROM crm_campana
+     WHERE id_campana = :idCampana
+       AND activo = 1
+       AND tipo = 'campana'
+     LIMIT 1`,
+    { replacements: { idCampana: Number(idCampana) }, type: QueryTypes.SELECT },
+  );
+
+  return campana || null;
+};
 
 const hashToken = (token) =>
   crypto.createHash('sha256').update(String(token)).digest('hex');
@@ -263,6 +400,10 @@ const listarVentas = async (user, { q, etapa, pagina = 1, limite = 50 } = {}) =>
     ? 'LEFT JOIN planes p ON p.id_plan = ef.id_plan'
     : '';
 
+  const campanasOk = await crmCampanasDisponibles();
+  const selectCampana = campanasOk ? ', v.id_campana, c.nombre AS campana_nombre' : '';
+  const joinCampana = campanasOk ? 'LEFT JOIN crm_campana c ON c.id_campana = v.id_campana' : '';
+
   const ventas = await sequelize.query(
     `SELECT
        v.id_venta,
@@ -285,11 +426,13 @@ const listarVentas = async (user, { q, etapa, pagina = 1, limite = 50 } = {}) =>
        ef.trial_ends_at,
        ef.stripe_subscription_id,
        ef.cancel_at_period_end
+       ${selectCampana}
        ${selectImportes}
      FROM crm_venta v
      INNER JOIN m_empresas e ON e.id_empresa = v.id_empresa
      INNER JOIN m_usuarios u ON u.id_usuario = v.id_usuario_comercial
      LEFT JOIN empresa_facturacion ef ON ef.id_empresa = e.id_empresa
+     ${joinCampana}
      ${joinImportes}
      WHERE ${where}
      ORDER BY v.fecha_venta DESC
@@ -359,6 +502,10 @@ const listarInvitaciones = async (user, { q, estado, pagina = 1, limite = 50 } =
     replacements.q = `%${String(q).trim()}%`;
   }
 
+  const campanasOk = await crmCampanasDisponibles();
+  const selectCampanaInv = campanasOk ? ', i.id_campana, c.nombre AS campana_nombre' : '';
+  const joinCampanaInv = campanasOk ? 'LEFT JOIN crm_campana c ON c.id_campana = i.id_campana' : '';
+
   const invitaciones = await sequelize.query(
     `SELECT
        i.id_invitacion,
@@ -378,10 +525,12 @@ const listarInvitaciones = async (user, { q, estado, pagina = 1, limite = 50 } =
        e.nombre AS empresa_nombre,
        e.alias AS empresa_alias,
        v.etapa AS venta_etapa
+       ${selectCampanaInv}
      FROM crm_invitacion_registro i
      INNER JOIN m_usuarios u ON u.id_usuario = i.id_usuario_comercial
      LEFT JOIN m_empresas e ON e.id_empresa = i.id_empresa_uso
      LEFT JOIN crm_venta v ON v.id_venta = i.id_venta
+     ${joinCampanaInv}
      WHERE ${where}
      ORDER BY i.fecha_creacion DESC
      LIMIT :limite OFFSET :offset`,
@@ -424,6 +573,7 @@ const crearInvitacionRegistro = async ({
   telefonoPrevisto,
   canal = 'telefono',
   diasValidez = 30,
+  idCampana = null,
 }) => {
   const token = generarTokenInvitacion();
   const tokenHash = hashToken(token);
@@ -431,13 +581,30 @@ const crearInvitacionRegistro = async ({
   const fechaExpiracion = new Date();
   fechaExpiracion.setDate(fechaExpiracion.getDate() + diasValidez);
 
+  const campanasOk = await crmCampanasDisponibles();
+  let idCampanaValida = null;
+  if (campanasOk && idCampana) {
+    const campana = await resolverCampanaActiva(idCampana);
+    if (!campana) {
+      const error = new Error('La campaña seleccionada no es válida');
+      error.code = 'CAMPANA_INVALIDA';
+      throw error;
+    }
+    idCampanaValida = campana.id_campana;
+  }
+
+  const campanaSql = idCampanaValida ? ', id_campana' : '';
+  const campanaVal = idCampanaValida ? ', :idCampana' : '';
+
   const [, meta] = await sequelize.query(
     `INSERT INTO crm_invitacion_registro (
        token_hash, codigo_corto, id_usuario_comercial,
        email_previsto, telefono_previsto, canal, fecha_expiracion
+       ${campanaSql}
      ) VALUES (
        :tokenHash, :codigoCorto, :idUsuarioComercial,
        :emailPrevisto, :telefonoPrevisto, :canal, :fechaExpiracion
+       ${campanaVal}
      )`,
     {
       replacements: {
@@ -448,6 +615,7 @@ const crearInvitacionRegistro = async ({
         telefonoPrevisto: telefonoPrevisto || null,
         canal,
         fechaExpiracion,
+        ...(idCampanaValida ? { idCampana: idCampanaValida } : {}),
       },
     },
   );
@@ -496,14 +664,19 @@ const registrarVentaDesdeInvitacion = async ({
   if (!invitacion) return null;
 
   const options = transaction ? { transaction } : {};
+  const campanasOk = await crmCampanasDisponibles();
+  const campanaSql = campanasOk && invitacion.id_campana ? ', id_campana' : '';
+  const campanaVal = campanasOk && invitacion.id_campana ? ', :idCampana' : '';
 
   const [, insertMeta] = await sequelize.query(
     `INSERT INTO crm_venta (
        id_empresa, id_usuario_comercial, id_invitacion_registro,
        canal, etapa, usuario_alta
+       ${campanaSql}
      ) VALUES (
        :idEmpresa, :idComercial, :idInvitacion,
        :canal, 'registrada', :usuarioAlta
+       ${campanaVal}
      )`,
     {
       replacements: {
@@ -512,6 +685,9 @@ const registrarVentaDesdeInvitacion = async ({
         idInvitacion: invitacion.id_invitacion,
         canal: invitacion.canal || 'telefono',
         usuarioAlta,
+        ...(campanasOk && invitacion.id_campana
+          ? { idCampana: invitacion.id_campana }
+          : {}),
       },
       ...options,
     },
@@ -1194,6 +1370,9 @@ module.exports = {
   PERMISOS_ROOT,
   hashToken,
   crmTablasDisponibles,
+  crmCampanasDisponibles,
+  listarCampanas,
+  crearCampana,
   obtenerClaimsHub,
   emitirJwtSesionConHub,
   usuarioTienePermisoHub,

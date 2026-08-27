@@ -12,6 +12,8 @@ const {
   listarInvitacionesHandler,
   listarComercialesHandler,
   crearInvitacionHandler,
+  listarCampanasHandler,
+  crearCampanaHandler,
   asignarVentaHandler,
   previewInvitacionHandler,
   listarAccesosHubHandler,
@@ -35,6 +37,8 @@ router.get('/ventas', requireAuth, requireHubAccess, listarVentasHandler);
 router.get('/invitaciones', requireAuth, requireHubAccess, listarInvitacionesHandler);
 router.get('/comerciales', requireAuth, requireHubAccess, requireHubPermiso('asignar_comercial', 'ver_equipo', 'ver_todas'), listarComercialesHandler);
 router.post('/invitaciones', requireAuth, requireHubAccess, requireHubPermiso('crear_invitacion'), crearInvitacionHandler);
+router.get('/campanas', requireAuth, requireHubAccess, requireHubPermiso('crear_invitacion'), listarCampanasHandler);
+router.post('/campanas', requireAuth, requireHubAccess, requireHubGestorAccesos, crearCampanaHandler);
 router.post('/ventas/asignar', requireAuth, requireHubAccess, requireHubPermiso('asignar_comercial'), asignarVentaHandler);
 router.delete('/ventas/:id', requireAuth, requireHubAccess, requireHubGestorAccesos, eliminarVentaHandler);
 router.post('/ventas/:id/transferir', requireAuth, requireHubAccess, requireHubGestorAccesos, transferirVentaHandler);

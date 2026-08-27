@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  AutoComplete,
   Button,
   Dropdown,
   Input,
@@ -25,9 +26,11 @@ import {
 import dayjs from 'dayjs';
 import { useAuth } from '../../../config/AuthContext';
 import {
+  crearCampanaHub,
   crearInvitacionHub,
   eliminarInvitacionHub,
   eliminarVentaHub,
+  listarCampanasHub,
   listarComercialesHub,
   listarInvitacionesHub,
   listarVentasHub,
@@ -100,7 +103,14 @@ const HubVentas = () => {
   const [invitacionForm, setInvitacionForm] = useState({
     email_previsto: '',
     telefono_previsto: '',
+    campana_nombre: '',
+    id_campana: null,
   });
+  const [campanas, setCampanas] = useState([]);
+  const [campanasLoading, setCampanasLoading] = useState(false);
+  const [campanaModalOpen, setCampanaModalOpen] = useState(false);
+  const [campanaNuevaNombre, setCampanaNuevaNombre] = useState('');
+  const [campanaCreando, setCampanaCreando] = useState(false);
   const [comerciales, setComerciales] = useState([]);
   const [transferModal, setTransferModal] = useState(null);
   const [transferComercialId, setTransferComercialId] = useState(null);
@@ -109,6 +119,7 @@ const HubVentas = () => {
   const puedeCrearInvitacion = tienePermisoHub(user, 'crear_invitacion');
   const puedeVerImportes = tienePermisoHub(user, 'ver_importes');
   const puedeGestionarCartera = puedeGestionarAccesosHub(user);
+  const puedeGestionarCampanas = puedeGestionarCartera;
   const mostrarComercialInv = Number(user?.tipo_usuario) === 1
     || tienePermisoHub(user, 'ver_equipo')
     || tienePermisoHub(user, 'ver_todas');
@@ -310,10 +321,83 @@ const HubVentas = () => {
     }
   };
 
-  const abrirInvitacion = () => {
+  const abrirInvitacion = async () => {
     setInvitacionResultado(null);
-    setInvitacionForm({ email_previsto: '', telefono_previsto: '' });
+    setInvitacionForm({
+      email_previsto: '',
+      telefono_previsto: '',
+      campana_nombre: '',
+      id_campana: null,
+    });
     setInvitacionOpen(true);
+    if (puedeCrearInvitacion) {
+      setCampanasLoading(true);
+      try {
+        const data = await listarCampanasHub();
+        setCampanas(data.campanas || []);
+      } catch {
+        setCampanas([]);
+      } finally {
+        setCampanasLoading(false);
+      }
+    }
+  };
+
+  const opcionesCampana = useMemo(
+    () => campanas.map((c) => ({ value: c.nombre, id: c.id_campana })),
+    [campanas],
+  );
+
+  const resolverCampanaInvitacion = () => {
+    const nombre = invitacionForm.campana_nombre.trim();
+    if (!nombre && !invitacionForm.id_campana) {
+      return { id_campana: undefined, nombre_campana: undefined };
+    }
+
+    const existente = campanas.find(
+      (c) => c.nombre.localeCompare(nombre, undefined, { sensitivity: 'accent' }) === 0,
+    );
+    if (invitacionForm.id_campana || existente) {
+      return {
+        id_campana: invitacionForm.id_campana || existente?.id_campana,
+        nombre_campana: undefined,
+      };
+    }
+
+    if (!puedeGestionarCampanas) {
+      return { id_campana: undefined, nombre_campana: undefined };
+    }
+
+    return { id_campana: undefined, nombre_campana: nombre };
+  };
+
+  const crearCampanaDesdeModal = async () => {
+    const nombre = campanaNuevaNombre.trim();
+    if (nombre.length < 2) {
+      message.warning('El nombre debe tener al menos 2 caracteres');
+      return;
+    }
+    setCampanaCreando(true);
+    try {
+      const data = await crearCampanaHub({ nombre });
+      const campana = data.campana;
+      setCampanas((prev) => {
+        const sinDuplicado = prev.filter((c) => c.id_campana !== campana.id_campana);
+        return [...sinDuplicado, campana].sort((a, b) => a.nombre.localeCompare(b.nombre));
+      });
+      setInvitacionForm((prev) => ({
+        ...prev,
+        campana_nombre: campana.nombre,
+        id_campana: campana.id_campana,
+      }));
+      setCampanaNuevaNombre('');
+      setCampanaModalOpen(false);
+      message.success('Campaña creada');
+    } catch (error) {
+      message.error(error.message || 'No se pudo crear la campaña');
+    } finally {
+      setCampanaCreando(false);
+    }
   };
 
   const crearInvitacion = async () => {
@@ -337,9 +421,11 @@ const HubVentas = () => {
 
     setInvitacionLoading(true);
     try {
+      const campanaPayload = resolverCampanaInvitacion();
       const data = await crearInvitacionHub({
         email_previsto: tieneEmail ? email : undefined,
         telefono_previsto: tieneTelefono ? telefono : undefined,
+        ...campanaPayload,
       });
       setInvitacionResultado(data);
 
@@ -457,6 +543,13 @@ const HubVentas = () => {
       width: 100,
     },
     {
+      title: 'Campaña',
+      dataIndex: 'campana_nombre',
+      key: 'campana_nombre',
+      width: 140,
+      render: (nombre) => nombre || '—',
+    },
+    {
       title: 'Alta',
       dataIndex: 'fecha_venta',
       key: 'fecha_venta',
@@ -528,6 +621,13 @@ const HubVentas = () => {
         const map = { email: 'Email', telefono: 'Teléfono', mixto: 'Email + WA' };
         return map[canal] || canal;
       },
+    },
+    {
+      title: 'Campaña',
+      dataIndex: 'campana_nombre',
+      key: 'campana_nombre',
+      width: 130,
+      render: (nombre) => nombre || '—',
     },
   ];
 
@@ -763,8 +863,69 @@ const HubVentas = () => {
                 telefono_previsto: e.target.value,
               }))}
             />
+            <div>
+              <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
+                Campaña comercial
+              </Text>
+              {puedeGestionarCampanas ? (
+                <Space.Compact style={{ width: '100%' }}>
+                  <AutoComplete
+                    style={{ flex: 1 }}
+                    options={opcionesCampana}
+                    placeholder="Escribe o elige una campaña"
+                    value={invitacionForm.campana_nombre}
+                    onSelect={(value, option) => setInvitacionForm((prev) => ({
+                      ...prev,
+                      campana_nombre: value,
+                      id_campana: option.id ?? null,
+                    }))}
+                    onChange={(value) => setInvitacionForm((prev) => ({
+                      ...prev,
+                      campana_nombre: value,
+                      id_campana: null,
+                    }))}
+                    disabled={campanasLoading}
+                  />
+                  <Button
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      setCampanaNuevaNombre(invitacionForm.campana_nombre.trim());
+                      setCampanaModalOpen(true);
+                    }}
+                    title="Nueva campaña"
+                  />
+                </Space.Compact>
+              ) : (
+                <Select
+                  showSearch
+                  allowClear
+                  placeholder="Selecciona una campaña"
+                  value={invitacionForm.id_campana}
+                  onChange={(id) => {
+                    const campana = campanas.find((c) => c.id_campana === id);
+                    setInvitacionForm((prev) => ({
+                      ...prev,
+                      id_campana: id ?? null,
+                      campana_nombre: campana?.nombre ?? '',
+                    }));
+                  }}
+                  options={campanas.map((c) => ({
+                    value: c.id_campana,
+                    label: c.nombre,
+                  }))}
+                  optionFilterProp="label"
+                  loading={campanasLoading}
+                  style={{ width: '100%' }}
+                />
+              )}
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {puedeGestionarCampanas
+                  ? 'Opcional. Puedes crear una campaña nueva o reutilizar una existente.'
+                  : 'Opcional. Elige una campaña creada por tu responsable.'}
+              </Text>
+            </div>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              Debes rellenar al menos uno de los dos campos.
+              Debes rellenar al menos uno de los dos campos de contacto.
             </Text>
           </Space>
         ) : (
@@ -865,6 +1026,32 @@ const HubVentas = () => {
           />
         </Space>
       </Modal>
+
+      {puedeGestionarCampanas && (
+      <Modal
+        title="Nueva campaña"
+        open={campanaModalOpen}
+        onCancel={() => setCampanaModalOpen(false)}
+        onOk={crearCampanaDesdeModal}
+        okText="Crear campaña"
+        confirmLoading={campanaCreando}
+        destroyOnClose
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <Paragraph type="secondary">
+            Ponle un nombre a la campaña para identificar de dónde viene el cliente
+            (feria, LinkedIn, referido, etc.).
+          </Paragraph>
+          <Input
+            placeholder="Nombre de la campaña"
+            value={campanaNuevaNombre}
+            onChange={(e) => setCampanaNuevaNombre(e.target.value)}
+            maxLength={120}
+            onPressEnter={crearCampanaDesdeModal}
+          />
+        </Space>
+      </Modal>
+      )}
     </div>
   );
 };

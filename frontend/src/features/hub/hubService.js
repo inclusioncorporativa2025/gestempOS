@@ -76,6 +76,20 @@ export const crearInvitacionHub = async (payload) => {
   return data;
 };
 
+export const listarCampanasHub = async () => {
+  const response = await fetch(`${API_BASE_URL}/campanas`, { headers: authHeaders() });
+  return parseHubResponse(response, 'No se pudieron cargar las campañas');
+};
+
+export const crearCampanaHub = async ({ nombre, descripcion }) => {
+  const response = await fetch(`${API_BASE_URL}/campanas`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ nombre, descripcion }),
+  });
+  return parseHubResponse(response, 'No se pudo crear la campaña');
+};
+
 export const asignarComercialHub = async (payload) => {
   const response = await fetch(`${API_BASE_URL}/ventas/asignar`, {
     method: 'POST',
