@@ -18,13 +18,14 @@ const {
   obtenerCodigoPlanEmpresa,
 } = require('../services/planCatalogService');
 const { isValidRegionCode, resolveRegionCode, provinceByCpPrefix } = require('../config/spanishRegions');
-const { calcularFechaFinPrueba, extenderPeriodoPruebaEmpresa, TrialExtensionError } = require('../services/trialService');
+const { extenderPeriodoPruebaEmpresa, TrialExtensionError } = require('../services/trialService');
 const { crearCheckoutTrialPendiente } = require('../services/billingService');
 const { purgarEmpresaCompleta } = require('../services/empresaPurgeService');
 const {
   buscarInvitacionValida,
   registrarVentaDesdeInvitacion,
   crmTablasDisponibles,
+  calcularFechaFinPruebaCampana,
 } = require('../services/crmHubService');
 const {
   findEmpresaActivaPorCif,
@@ -255,8 +256,33 @@ const registerCompany = async (req, res) => {
         }, { transaction });
 
         const modoFacturacion = esRegistroPublico ? 'trial' : 'legacy';
-        const trialEndsAt = esRegistroPublico ? calcularFechaFinPrueba(fecha) : null;
         const estadoSuscripcion = null;
+
+        let invitacionRegistro = null;
+        if (esRegistroPublico && (await crmTablasDisponibles())) {
+          const invToken = req.body.invitacionToken || req.body.inv;
+          const invCodigo = req.body.invitacionCodigo || req.body.codigoInvitacion;
+          if (invToken || invCodigo) {
+            invitacionRegistro = await buscarInvitacionValida({
+              token: invToken,
+              codigoCorto: invCodigo,
+            });
+            if (!invitacionRegistro) {
+              await transaction.rollback();
+              return res.status(400).json({
+                message: 'La invitación de registro no es válida o ha expirado',
+                codigo: 'INVITACION_INVALIDA',
+              });
+            }
+          }
+        }
+
+        const trialEndsAt = esRegistroPublico
+          ? await calcularFechaFinPruebaCampana({
+            idCampana: invitacionRegistro?.id_campana,
+            desde: fecha,
+          })
+          : null;
 
         await sequelize.query(
           `INSERT INTO empresa_facturacion (
@@ -282,25 +308,6 @@ const registerCompany = async (req, res) => {
             transaction,
           },
         );
-
-        let invitacionRegistro = null;
-        if (esRegistroPublico && (await crmTablasDisponibles())) {
-          const invToken = req.body.invitacionToken || req.body.inv;
-          const invCodigo = req.body.invitacionCodigo || req.body.codigoInvitacion;
-          if (invToken || invCodigo) {
-            invitacionRegistro = await buscarInvitacionValida({
-              token: invToken,
-              codigoCorto: invCodigo,
-            });
-            if (!invitacionRegistro) {
-              await transaction.rollback();
-              return res.status(400).json({
-                message: 'La invitación de registro no es válida o ha expirado',
-                codigo: 'INVITACION_INVALIDA',
-              });
-            }
-          }
-        }
 
         if (invitacionRegistro) {
           await registrarVentaDesdeInvitacion({

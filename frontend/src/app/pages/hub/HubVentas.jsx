@@ -4,6 +4,7 @@ import {
   Button,
   Dropdown,
   Input,
+  InputNumber,
   Modal,
   Select,
   Space,
@@ -54,6 +55,12 @@ import './Hub.css';
 const { Text, Paragraph } = Typography;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const etiquetaCampanaHub = (nombre, diasPrueba) => {
+  if (!nombre) return '—';
+  if (diasPrueba) return `${nombre} (${diasPrueba} días prueba)`;
+  return nombre;
+};
 
 const WhatsAppIcon = () => (
   <svg
@@ -109,6 +116,7 @@ const HubVentas = () => {
   const [campanasLoading, setCampanasLoading] = useState(false);
   const [campanaModalOpen, setCampanaModalOpen] = useState(false);
   const [campanaNuevaNombre, setCampanaNuevaNombre] = useState('');
+  const [campanaNuevaDiasPrueba, setCampanaNuevaDiasPrueba] = useState(null);
   const [campanaCreando, setCampanaCreando] = useState(false);
   const [comerciales, setComerciales] = useState([]);
   const [transferModal, setTransferModal] = useState(null);
@@ -346,7 +354,7 @@ const HubVentas = () => {
   const opcionesSelectCampana = useMemo(
     () => campanas.map((c) => ({
       value: Number(c.id_campana),
-      label: c.nombre,
+      label: etiquetaCampanaHub(c.nombre, c.dias_prueba),
     })),
     [campanas],
   );
@@ -363,6 +371,7 @@ const HubVentas = () => {
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               setCampanaNuevaNombre('');
+              setCampanaNuevaDiasPrueba(null);
               setCampanaModalOpen(true);
             }}
           >
@@ -388,7 +397,10 @@ const HubVentas = () => {
     }
     setCampanaCreando(true);
     try {
-      const data = await crearCampanaHub({ nombre });
+      const data = await crearCampanaHub({
+        nombre,
+        dias_prueba: campanaNuevaDiasPrueba ?? undefined,
+      });
       const campana = data.campana;
       setCampanas((prev) => {
         const sinDuplicado = prev.filter((c) => c.id_campana !== campana.id_campana);
@@ -400,6 +412,7 @@ const HubVentas = () => {
         id_campana: Number(campana.id_campana),
       }));
       setCampanaNuevaNombre('');
+      setCampanaNuevaDiasPrueba(null);
       setCampanaModalOpen(false);
       message.success('Campaña creada');
     } catch (error) {
@@ -555,8 +568,8 @@ const HubVentas = () => {
       title: 'Campaña',
       dataIndex: 'campana_nombre',
       key: 'campana_nombre',
-      width: 140,
-      render: (nombre) => nombre || '—',
+      width: 180,
+      render: (nombre, row) => etiquetaCampanaHub(nombre, row.campana_dias_prueba),
     },
     {
       title: 'Alta',
@@ -635,8 +648,8 @@ const HubVentas = () => {
       title: 'Campaña',
       dataIndex: 'campana_nombre',
       key: 'campana_nombre',
-      width: 130,
-      render: (nombre) => nombre || '—',
+      width: 170,
+      render: (nombre, row) => etiquetaCampanaHub(nombre, row.campana_dias_prueba),
     },
   ];
 
@@ -1027,6 +1040,23 @@ const HubVentas = () => {
             maxLength={120}
             onPressEnter={crearCampanaDesdeModal}
           />
+          <div>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
+              Días de prueba (opcional)
+            </Text>
+            <InputNumber
+              min={1}
+              max={730}
+              placeholder="Por defecto (15 días)"
+              value={campanaNuevaDiasPrueba}
+              onChange={(value) => setCampanaNuevaDiasPrueba(value)}
+              style={{ width: '100%' }}
+            />
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Si lo indicas, los clientes que se registren con invitación de esta campaña
+              tendrán esa duración de prueba (p. ej. 365 para 1 año gratis).
+            </Text>
+          </div>
         </Space>
       </Modal>
       )}

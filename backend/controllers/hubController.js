@@ -160,6 +160,7 @@ const crearInvitacionHandler = async (req, res) => {
       }
       const campanaNueva = await crearCampana({
         nombre: nombreCampana,
+        diasPrueba: req.body?.dias_prueba,
         idUsuario: Number(req.user.id_usuario),
         usuarioAlta: Number(req.user.id_usuario),
       });
@@ -228,7 +229,8 @@ const crearInvitacionHandler = async (req, res) => {
       telefono_previsto: tieneTelefono ? telefono : null,
     });
   } catch (error) {
-    if (error.code === 'CAMPANA_INVALIDA' || error.code === 'NOMBRE_INVALIDO') {
+    if (error.code === 'CAMPANA_INVALIDA' || error.code === 'NOMBRE_INVALIDO'
+      || error.code === 'DIAS_PRUEBA_INVALIDO') {
       return res.status(400).json({ message: error.message, code: error.code });
     }
     if (error.code === 'CAMPANAS_NO_DISPONIBLES') {
@@ -251,10 +253,11 @@ const listarCampanasHandler = async (req, res) => {
 
 const crearCampanaHandler = async (req, res) => {
   try {
-    const { nombre, descripcion } = req.body || {};
+    const { nombre, descripcion, dias_prueba: diasPrueba } = req.body || {};
     const campana = await crearCampana({
       nombre,
       descripcion,
+      diasPrueba,
       idUsuario: Number(req.user.id_usuario),
       usuarioAlta: Number(req.user.id_usuario),
     });
@@ -263,7 +266,7 @@ const crearCampanaHandler = async (req, res) => {
       campana,
     });
   } catch (error) {
-    if (error.code === 'NOMBRE_INVALIDO') {
+    if (error.code === 'NOMBRE_INVALIDO' || error.code === 'DIAS_PRUEBA_INVALIDO') {
       return res.status(400).json({ message: error.message, code: error.code });
     }
     if (error.code === 'CAMPANAS_NO_DISPONIBLES') {

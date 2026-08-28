@@ -61,6 +61,19 @@ const generarCodigoCampanaUnico = async (nombre) => {
   }
 };
 
+const { TRIAL_DAYS } = require('../config/trial');
+
+const normalizarDiasPruebaCampana = (dias) => {
+  if (dias == null || dias === '') return null;
+  const n = Number(dias);
+  if (!Number.isFinite(n) || n < 1 || n > 730) {
+    const error = new Error('Los días de prueba deben estar entre 1 y 730');
+    error.code = 'DIAS_PRUEBA_INVALIDO';
+    throw error;
+  }
+  return Math.floor(n);
+};
+
 const listarCampanas = async () => {
   if (!(await crmCampanasDisponibles())) return [];
 
@@ -70,6 +83,7 @@ const listarCampanas = async () => {
        c.codigo,
        c.nombre,
        c.descripcion,
+       c.dias_prueba,
        c.tipo,
        c.activo,
        c.id_usuario_creador,
@@ -83,7 +97,13 @@ const listarCampanas = async () => {
   );
 };
 
-const crearCampana = async ({ nombre, descripcion = null, idUsuario, usuarioAlta }) => {
+const crearCampana = async ({
+  nombre,
+  descripcion = null,
+  diasPrueba = null,
+  idUsuario,
+  usuarioAlta,
+}) => {
   if (!(await crmCampanasDisponibles())) {
     const error = new Error('Las campañas comerciales no están disponibles en el servidor');
     error.code = 'CAMPANAS_NO_DISPONIBLES';
@@ -102,19 +122,21 @@ const crearCampana = async ({ nombre, descripcion = null, idUsuario, usuarioAlta
     throw error;
   }
 
+  const diasPruebaValidos = normalizarDiasPruebaCampana(diasPrueba);
   const codigo = await generarCodigoCampanaUnico(nombreLimpio);
 
   const [, meta] = await sequelize.query(
     `INSERT INTO crm_campana (
-       codigo, nombre, descripcion, tipo, activo, id_usuario_creador, usuario_alta
+       codigo, nombre, descripcion, dias_prueba, tipo, activo, id_usuario_creador, usuario_alta
      ) VALUES (
-       :codigo, :nombre, :descripcion, 'campana', 1, :idUsuarioCreador, :usuarioAlta
+       :codigo, :nombre, :descripcion, :diasPrueba, 'campana', 1, :idUsuarioCreador, :usuarioAlta
      )`,
     {
       replacements: {
         codigo,
         nombre: nombreLimpio,
         descripcion: descripcion ? String(descripcion).trim() : null,
+        diasPrueba: diasPruebaValidos,
         idUsuarioCreador: idUsuario || null,
         usuarioAlta: usuarioAlta || idUsuario || null,
       },
@@ -123,7 +145,8 @@ const crearCampana = async ({ nombre, descripcion = null, idUsuario, usuarioAlta
 
   const idCampana = meta?.insertId ?? null;
   const [campana] = await sequelize.query(
-    `SELECT id_campana, codigo, nombre, descripcion, tipo, activo, id_usuario_creador, fecha_alta
+    `SELECT id_campana, codigo, nombre, descripcion, dias_prueba, tipo, activo,
+            id_usuario_creador, fecha_alta
      FROM crm_campana
      WHERE id_campana = :idCampana
      LIMIT 1`,
@@ -137,7 +160,7 @@ const resolverCampanaActiva = async (idCampana) => {
   if (!idCampana || !(await crmCampanasDisponibles())) return null;
 
   const [campana] = await sequelize.query(
-    `SELECT id_campana, codigo, nombre, tipo, activo
+    `SELECT id_campana, codigo, nombre, tipo, activo, dias_prueba
      FROM crm_campana
      WHERE id_campana = :idCampana
        AND activo = 1
@@ -146,6 +169,21 @@ const resolverCampanaActiva = async (idCampana) => {
   );
 
   return campana || null;
+};
+
+const calcularFechaFinPruebaCampana = async ({ idCampana, desde = new Date() } = {}) => {
+  let dias = TRIAL_DAYS;
+
+  if (idCampana) {
+    const campana = await resolverCampanaActiva(idCampana);
+    if (campana?.dias_prueba != null) {
+      dias = Number(campana.dias_prueba);
+    }
+  }
+
+  const fin = new Date(desde);
+  fin.setDate(fin.getDate() + dias);
+  return fin;
 };
 
 const hashToken = (token) =>
@@ -396,7 +434,9 @@ const listarVentas = async (user, { q, etapa, pagina = 1, limite = 50 } = {}) =>
     : '';
 
   const campanasOk = await crmCampanasDisponibles();
-  const selectCampana = campanasOk ? ', v.id_campana, c.nombre AS campana_nombre' : '';
+  const selectCampana = campanasOk
+    ? ', v.id_campana, c.nombre AS campana_nombre, c.dias_prueba AS campana_dias_prueba'
+    : '';
   const joinCampana = campanasOk ? 'LEFT JOIN crm_campana c ON c.id_campana = v.id_campana' : '';
 
   const ventas = await sequelize.query(
@@ -498,7 +538,9 @@ const listarInvitaciones = async (user, { q, estado, pagina = 1, limite = 50 } =
   }
 
   const campanasOk = await crmCampanasDisponibles();
-  const selectCampanaInv = campanasOk ? ', i.id_campana, c.nombre AS campana_nombre' : '';
+  const selectCampanaInv = campanasOk
+    ? ', i.id_campana, c.nombre AS campana_nombre, c.dias_prueba AS campana_dias_prueba'
+    : '';
   const joinCampanaInv = campanasOk ? 'LEFT JOIN crm_campana c ON c.id_campana = i.id_campana' : '';
 
   const invitaciones = await sequelize.query(
@@ -1368,6 +1410,7 @@ module.exports = {
   crmCampanasDisponibles,
   listarCampanas,
   crearCampana,
+  calcularFechaFinPruebaCampana,
   obtenerClaimsHub,
   emitirJwtSesionConHub,
   usuarioTienePermisoHub,
