@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Card,
   Col,
+  ConfigProvider,
   DatePicker,
   Row,
   Statistic,
@@ -10,6 +11,7 @@ import {
   Typography,
   message,
 } from 'antd';
+import esES from 'antd/locale/es_ES';
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
@@ -63,7 +65,11 @@ const HubDashboard = () => {
   }, [metricas]);
 
   const productividadConRank = useMemo(() => {
-    const rows = metricas?.productividad || [];
+    const mesApi = metricas?.mes;
+    const mesUi = mesSeleccionado.format('YYYY-MM');
+    if (!metricas || mesApi !== mesUi) return [];
+
+    const rows = metricas.productividad || [];
     let rank = 0;
     return rows.map((row) => {
       if (row.es_organica) {
@@ -72,9 +78,9 @@ const HubDashboard = () => {
       rank += 1;
       return { ...row, rank };
     });
-  }, [metricas]);
+  }, [metricas, mesSeleccionado]);
 
-  const mesProductividadLabel = mesSeleccionado.format('MMMM YYYY');
+  const mesProductividadLabel = mesSeleccionado.locale('es').format('MMMM [de] YYYY');
 
   const columnasProductividad = [
     {
@@ -252,16 +258,18 @@ const HubDashboard = () => {
                 {mesProductividadLabel}
               </Text>
             </span>
-            <DatePicker
-              picker="month"
-              value={mesSeleccionado}
-              onChange={(value) => {
-                if (value) setMesSeleccionado(value.startOf('month'));
-              }}
-              allowClear={false}
-              format="MMMM YYYY"
-              className="hub-dashboard__mes-picker"
-            />
+            <ConfigProvider locale={esES}>
+              <DatePicker
+                picker="month"
+                value={mesSeleccionado}
+                onChange={(value) => {
+                  if (value) setMesSeleccionado(value.startOf('month'));
+                }}
+                allowClear={false}
+                format="MMMM [de] YYYY"
+                className="hub-dashboard__mes-picker"
+              />
+            </ConfigProvider>
           </div>
         )}
       >
@@ -273,7 +281,7 @@ const HubDashboard = () => {
           rowClassName={(row) => (
             row.rank != null && row.rank <= 3 ? `hub-top-row hub-top-row--${row.rank}` : ''
           )}
-          locale={{ emptyText: 'Sin comerciales con actividad' }}
+          locale={{ emptyText: 'Sin datos en este mes' }}
           scroll={{ x: 760 }}
         />
       </Card>

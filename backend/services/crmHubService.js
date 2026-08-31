@@ -1372,6 +1372,7 @@ const obtenerMetricasDashboard = async ({ mes } = {}) => {
        WHERE upi.fecha_baja IS NULL
          AND u.fecha_baja IS NULL
        GROUP BY u.id_usuario, u.nombre, u.email
+       HAVING ventas_total > 0 OR invitaciones_total > 0
        ORDER BY ventas_total DESC, u.nombre ASC`,
       { replacements: { mesFiltro }, type: QueryTypes.SELECT },
     );
@@ -1410,8 +1411,9 @@ const obtenerMetricasDashboard = async ({ mes } = {}) => {
          1 AS es_organica
        FROM m_empresas e
        LEFT JOIN empresa_facturacion ef ON ef.id_empresa = e.id_empresa
-       WHERE e.fecha_baja IS NULL`,
-      { type: QueryTypes.SELECT },
+       WHERE e.fecha_baja IS NULL
+         AND DATE_FORMAT(e.fecha_alta, '%Y-%m') = :mesFiltro`,
+      { replacements: { mesFiltro }, type: QueryTypes.SELECT },
     );
   }
 
@@ -1432,8 +1434,15 @@ const obtenerMetricasDashboard = async ({ mes } = {}) => {
     };
   };
 
+  const tieneActividadEnMes = (row) => {
+    const ventas = Number(row.ventas_total || 0);
+    const invitaciones = Number(row.invitaciones_total || 0);
+    if (row.es_organica) return ventas > 0;
+    return ventas > 0 || invitaciones > 0;
+  };
+
   const productividadConTasa = [
-    ...productividadComerciales.map(mapProductividad),
+    ...productividadComerciales.map(mapProductividad).filter(tieneActividadEnMes),
     ...(Number(productividadOrganica?.ventas_total || 0) > 0
       ? [mapProductividad(productividadOrganica)]
       : []),
