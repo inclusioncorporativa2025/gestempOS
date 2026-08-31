@@ -1410,6 +1410,7 @@ module.exports = {
   crmCampanasDisponibles,
   listarCampanas,
   crearCampana,
+  resolverCampanaActiva,
   calcularFechaFinPruebaCampana,
   obtenerClaimsHub,
   emitirJwtSesionConHub,
