@@ -118,6 +118,47 @@
   margin-top: 16px;
 }
 
+.hub-dashboard__productividad-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.hub-dashboard__mes-picker {
+  min-width: 160px;
+}
+
+.hub-top-rank {
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-top-rank--1 {
+  color: #ad8b00;
+}
+
+.hub-top-rank--2 {
+  color: #595959;
+}
+
+.hub-top-rank--3 {
+  color: #ad6800;
+}
+
+.hub-top-row--1 {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.12) 0%, transparent 100%);
+}
+
+.hub-top-row--2 {
+  background: linear-gradient(90deg, rgba(192, 192, 192, 0.14) 0%, transparent 100%);
+}
+
+.hub-top-row--3 {
+  background: linear-gradient(90deg, rgba(205, 127, 50, 0.12) 0%, transparent 100%);
+}
+
 .hub-outline-tag.ant-tag {
   background: transparent;
   border-color: #d9d9d9;

@@ -116,8 +116,14 @@ export const previewInvitacionHub = async ({ inv, codigo } = {}) => {
   return data;
 };
 
-export const obtenerMetricasHub = async () => {
-  const response = await fetch(`${API_BASE_URL}/metricas`, { headers: authHeaders() });
+export const obtenerMetricasHub = async ({ mes } = {}) => {
+  const params = new URLSearchParams();
+  if (mes) params.set('mes', mes);
+  const query = params.toString();
+  const response = await fetch(
+    `${API_BASE_URL}/metricas${query ? `?${query}` : ''}`,
+    { headers: authHeaders() },
+  );
   return parseHubResponse(response, 'No se pudieron cargar las métricas');
 };
 

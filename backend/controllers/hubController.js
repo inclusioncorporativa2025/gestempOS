@@ -411,9 +411,9 @@ const revocarAccesoHubHandler = async (req, res) => {
   }
 };
 
-const obtenerMetricasDashboardHandler = async (_req, res) => {
+const obtenerMetricasDashboardHandler = async (req, res) => {
   try {
-    const metricas = await obtenerMetricasDashboard();
+    const metricas = await obtenerMetricasDashboard({ mes: req.query.mes });
     return res.status(200).json(metricas);
   } catch (error) {
     console.error('[hub] obtenerMetricas:', error.message, error.parent?.sqlMessage || '');

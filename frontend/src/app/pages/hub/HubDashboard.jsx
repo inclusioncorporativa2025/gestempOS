@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Card,
   Col,
+  DatePicker,
   Row,
   Statistic,
   Table,
@@ -14,10 +15,14 @@ import {
   ArrowUpOutlined,
   MinusOutlined,
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
+import 'dayjs/locale/es';
 import { obtenerMetricasHub } from '../../../features/hub/hubService';
 import { etiquetaEtapaVenta } from '../../../utils/hubAccess';
 import HubEvolucionChart from './HubEvolucionChart';
 import './Hub.css';
+
+dayjs.locale('es');
 
 const { Text } = Typography;
 
@@ -30,18 +35,21 @@ const TagEtapa = ({ etapa, children }) => (
 const HubDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [metricas, setMetricas] = useState(null);
+  const [mesSeleccionado, setMesSeleccionado] = useState(() => dayjs().startOf('month'));
 
   const cargarMetricas = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await obtenerMetricasHub();
+      const data = await obtenerMetricasHub({
+        mes: mesSeleccionado.format('YYYY-MM'),
+      });
       setMetricas(data);
     } catch (error) {
       message.error(error.message || 'Error al cargar métricas');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [mesSeleccionado]);
 
   useEffect(() => {
     cargarMetricas();
@@ -54,13 +62,43 @@ const HubDashboard = () => {
     return Math.round(((actual - anterior) / anterior) * 100);
   }, [metricas]);
 
+  const productividadConRank = useMemo(() => {
+    const rows = metricas?.productividad || [];
+    let rank = 0;
+    return rows.map((row) => {
+      if (row.es_organica) {
+        return { ...row, rank: null };
+      }
+      rank += 1;
+      return { ...row, rank };
+    });
+  }, [metricas]);
+
+  const mesProductividadLabel = mesSeleccionado.format('MMMM YYYY');
+
   const columnasProductividad = [
+    {
+      title: '#',
+      key: 'rank',
+      width: 56,
+      align: 'center',
+      render: (_, row) => {
+        if (row.es_organica || row.rank == null) {
+          return <Text type="secondary">—</Text>;
+        }
+        return (
+          <Text strong={row.rank <= 3} className={row.rank <= 3 ? `hub-top-rank hub-top-rank--${row.rank}` : undefined}>
+            {row.rank}
+          </Text>
+        );
+      },
+    },
     {
       title: 'Comercial',
       key: 'comercial',
       render: (_, row) => (
         <div>
-          <Text strong>{row.nombre}</Text>
+          <Text strong={row.rank != null && row.rank <= 3}>{row.nombre}</Text>
           {row.es_organica ? (
             <>
               <br />
@@ -81,6 +119,7 @@ const HubDashboard = () => {
       key: 'ventas_total',
       width: 90,
       sorter: (a, b) => a.ventas_total - b.ventas_total,
+      defaultSortOrder: 'descend',
     },
     {
       title: 'Activas',
@@ -202,17 +241,40 @@ const HubDashboard = () => {
       </Row>
 
       <Card
-        title="Productividad por comercial"
         loading={loading}
         className="hub-dashboard__table-card"
+        title={(
+          <div className="hub-dashboard__productividad-header">
+            <span>
+              Top productividad —
+              {' '}
+              <Text type="secondary" style={{ fontWeight: 400, textTransform: 'capitalize' }}>
+                {mesProductividadLabel}
+              </Text>
+            </span>
+            <DatePicker
+              picker="month"
+              value={mesSeleccionado}
+              onChange={(value) => {
+                if (value) setMesSeleccionado(value.startOf('month'));
+              }}
+              allowClear={false}
+              format="MMMM YYYY"
+              className="hub-dashboard__mes-picker"
+            />
+          </div>
+        )}
       >
         <Table
           rowKey={(row) => row.id_usuario ?? 'organica'}
           columns={columnasProductividad}
-          dataSource={metricas?.productividad || []}
+          dataSource={productividadConRank}
           pagination={false}
+          rowClassName={(row) => (
+            row.rank != null && row.rank <= 3 ? `hub-top-row hub-top-row--${row.rank}` : ''
+          )}
           locale={{ emptyText: 'Sin comerciales con actividad' }}
-          scroll={{ x: 700 }}
+          scroll={{ x: 760 }}
         />
       </Card>
     </div>

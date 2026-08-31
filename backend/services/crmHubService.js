@@ -1213,7 +1213,17 @@ const SQL_ETAPA_VENTA = `
 
 const SQL_FECHA_CLIENTE = 'COALESCE(v.fecha_venta, e.fecha_alta)';
 
-const obtenerMetricasDashboard = async () => {
+const normalizarMesMetricas = (mes) => {
+  const raw = String(mes || '').trim();
+  if (/^\d{4}-\d{2}$/.test(raw)) return raw;
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+};
+
+const obtenerMetricasDashboard = async ({ mes } = {}) => {
+  const mesFiltro = normalizarMesMetricas(mes);
   const crmOk = await crmTablasDisponibles();
   const joinVenta = crmOk
     ? 'LEFT JOIN crm_venta v ON v.id_empresa = e.id_empresa AND v.fecha_baja IS NULL'
@@ -1293,20 +1303,62 @@ const obtenerMetricasDashboard = async () => {
          u.id_usuario,
          u.nombre,
          u.email,
-         COUNT(v.id_venta) AS ventas_total,
-         SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'activa' THEN 1 ELSE 0 END) AS ventas_activas,
-         SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'trial' THEN 1 ELSE 0 END) AS ventas_trial,
-         SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'registrada' THEN 1 ELSE 0 END) AS ventas_registradas,
-         SUM(CASE WHEN (${SQL_ETAPA_VENTA}) = 'cancelada' THEN 1 ELSE 0 END) AS ventas_canceladas,
+         COUNT(
+           CASE
+             WHEN v.id_venta IS NOT NULL
+               AND e.fecha_baja IS NULL
+               AND DATE_FORMAT(${SQL_FECHA_CLIENTE}, '%Y-%m') = :mesFiltro
+             THEN v.id_venta
+           END
+         ) AS ventas_total,
+         SUM(
+           CASE
+             WHEN v.id_venta IS NOT NULL
+               AND e.fecha_baja IS NULL
+               AND DATE_FORMAT(${SQL_FECHA_CLIENTE}, '%Y-%m') = :mesFiltro
+               AND (${SQL_ETAPA_VENTA}) = 'activa'
+             THEN 1 ELSE 0
+           END
+         ) AS ventas_activas,
+         SUM(
+           CASE
+             WHEN v.id_venta IS NOT NULL
+               AND e.fecha_baja IS NULL
+               AND DATE_FORMAT(${SQL_FECHA_CLIENTE}, '%Y-%m') = :mesFiltro
+               AND (${SQL_ETAPA_VENTA}) = 'trial'
+             THEN 1 ELSE 0
+           END
+         ) AS ventas_trial,
+         SUM(
+           CASE
+             WHEN v.id_venta IS NOT NULL
+               AND e.fecha_baja IS NULL
+               AND DATE_FORMAT(${SQL_FECHA_CLIENTE}, '%Y-%m') = :mesFiltro
+               AND (${SQL_ETAPA_VENTA}) = 'registrada'
+             THEN 1 ELSE 0
+           END
+         ) AS ventas_registradas,
+         SUM(
+           CASE
+             WHEN v.id_venta IS NOT NULL
+               AND e.fecha_baja IS NULL
+               AND DATE_FORMAT(${SQL_FECHA_CLIENTE}, '%Y-%m') = :mesFiltro
+               AND (${SQL_ETAPA_VENTA}) = 'cancelada'
+             THEN 1 ELSE 0
+           END
+         ) AS ventas_canceladas,
          (
            SELECT COUNT(*)
            FROM crm_invitacion_registro i
            WHERE i.id_usuario_comercial = u.id_usuario
+             AND DATE_FORMAT(i.fecha_creacion, '%Y-%m') = :mesFiltro
          ) AS invitaciones_total,
          (
            SELECT COUNT(*)
            FROM crm_invitacion_registro i
-           WHERE i.id_usuario_comercial = u.id_usuario AND i.usado = 1
+           WHERE i.id_usuario_comercial = u.id_usuario
+             AND DATE_FORMAT(i.fecha_creacion, '%Y-%m') = :mesFiltro
+             AND i.usado = 1
          ) AS invitaciones_usadas,
          0 AS es_organica
        FROM crm_usuario_puesto_interno upi
@@ -1321,7 +1373,7 @@ const obtenerMetricasDashboard = async () => {
          AND u.fecha_baja IS NULL
        GROUP BY u.id_usuario, u.nombre, u.email
        ORDER BY ventas_total DESC, u.nombre ASC`,
-      { type: QueryTypes.SELECT },
+      { replacements: { mesFiltro }, type: QueryTypes.SELECT },
     );
 
     [productividadOrganica] = await sequelize.query(
@@ -1338,8 +1390,9 @@ const obtenerMetricasDashboard = async () => {
          0 AS invitaciones_usadas,
          1 AS es_organica
        ${sqlFromClientes}
-         AND v.id_venta IS NULL`,
-      { type: QueryTypes.SELECT },
+         AND v.id_venta IS NULL
+         AND DATE_FORMAT(e.fecha_alta, '%Y-%m') = :mesFiltro`,
+      { replacements: { mesFiltro }, type: QueryTypes.SELECT },
     );
   } else {
     [productividadOrganica] = await sequelize.query(
@@ -1387,6 +1440,7 @@ const obtenerMetricasDashboard = async () => {
   ].sort((a, b) => b.ventas_total - a.ventas_total || String(a.nombre).localeCompare(String(b.nombre)));
 
   return {
+    mes: mesFiltro,
     resumen,
     evolucion: evolucion.map((row) => ({
       mes: row.mes,
