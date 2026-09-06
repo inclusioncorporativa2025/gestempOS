@@ -23,6 +23,7 @@ const { crearCheckoutTrialPendiente } = require('../services/billingService');
 const { purgarEmpresaCompleta } = require('../services/empresaPurgeService');
 const {
   buscarInvitacionValida,
+  buscarInvitacionValidaPorEmail,
   registrarVentaDesdeInvitacion,
   crmTablasDisponibles,
   calcularFechaFinPruebaCampana,
@@ -255,14 +256,23 @@ const registerCompany = async (req, res) => {
             usuario_alta: usuarioAlta,
         }, { transaction });
 
-        const modoFacturacion = esRegistroPublico ? 'trial' : 'legacy';
+        const clienteLegacy = Boolean(
+          req.body.clienteLegacy
+          || req.body.values?.clienteLegacy
+          || req.body.sinPrueba
+          || req.body.values?.sinPrueba,
+        );
+
+        const modoFacturacion = clienteLegacy ? 'legacy' : 'trial';
         const estadoSuscripcion = null;
 
         let invitacionRegistro = null;
-        if (esRegistroPublico && (await crmTablasDisponibles())) {
-          const invToken = req.body.invitacionToken || req.body.inv;
-          const invCodigo = req.body.invitacionCodigo || req.body.codigoInvitacion;
-          if (invToken || invCodigo) {
+        const invToken = req.body.invitacionToken || req.body.inv;
+        const invCodigo = req.body.invitacionCodigo || req.body.codigoInvitacion;
+        const invitacionExplicita = Boolean(invToken || invCodigo);
+
+        if (!clienteLegacy && (await crmTablasDisponibles())) {
+          if (invitacionExplicita) {
             invitacionRegistro = await buscarInvitacionValida({
               token: invToken,
               codigoCorto: invCodigo,
@@ -274,15 +284,19 @@ const registerCompany = async (req, res) => {
                 codigo: 'INVITACION_INVALIDA',
               });
             }
+          } else if (!esRegistroPublico) {
+            invitacionRegistro = await buscarInvitacionValidaPorEmail({
+              email: emailNormalizado,
+            });
           }
         }
 
-        const trialEndsAt = esRegistroPublico
-          ? await calcularFechaFinPruebaCampana({
+        const trialEndsAt = clienteLegacy
+          ? null
+          : await calcularFechaFinPruebaCampana({
             idCampana: invitacionRegistro?.id_campana,
             desde: fecha,
-          })
-          : null;
+          });
 
         await sequelize.query(
           `INSERT INTO empresa_facturacion (

@@ -388,6 +388,19 @@ const AltaEmpresaForm = ({
           </Col>
         </>
       ) : null}
+      {!registroPublico ? (
+        <Col xs={24}>
+          <Form.Item
+            name="clienteLegacy"
+            valuePropName="checked"
+            initialValue={false}
+          >
+            <Checkbox>
+              Cliente histórico (sin periodo de prueba)
+            </Checkbox>
+          </Form.Item>
+        </Col>
+      ) : null}
       {requireTermsAcceptance ? (
         <Col xs={24}>
           <Form.Item

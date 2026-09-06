@@ -692,6 +692,28 @@ const buscarInvitacionValida = async ({ token, codigoCorto }) => {
   return filas[0] || null;
 };
 
+/** Invitación pendiente más reciente para el email del admin (altas desde panel). */
+const buscarInvitacionValidaPorEmail = async ({ email }) => {
+  const emailNorm = String(email || '').trim().toLowerCase();
+  if (!emailNorm) return null;
+
+  const filas = await sequelize.query(
+    `SELECT *
+     FROM crm_invitacion_registro
+     WHERE usado = 0
+       AND (fecha_expiracion IS NULL OR fecha_expiracion > NOW())
+       AND LOWER(TRIM(email_previsto)) = :email
+     ORDER BY fecha_creacion DESC
+     LIMIT 1`,
+    {
+      replacements: { email: emailNorm },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return filas[0] || null;
+};
+
 const registrarVentaDesdeInvitacion = async ({
   idEmpresa,
   invitacion,
@@ -1490,6 +1512,7 @@ module.exports = {
   listarComerciales,
   crearInvitacionRegistro,
   buscarInvitacionValida,
+  buscarInvitacionValidaPorEmail,
   registrarVentaDesdeInvitacion,
   asignarVentaManual,
   obtenerInvitacionPreview,
