@@ -763,7 +763,8 @@ const BuscadorEmpresa = ({ embedded = false }) => {
             loading={loading}
             rowKey="id_empresa"
             pagination={{ pageSize: PAGE_SIZE, showSizeChanger: false }}
-            scroll={{ x: 700 }}
+            tableLayout="fixed"
+            scroll={{ x: 960 }}
             rowClassName={(record) => (empresaEstaActiva(record) ? '' : 'be-row-inactiva')}
             locale={{ emptyText: 'No hay empresas que coincidan con el filtro' }}
             columns={columns}

@@ -1,5 +1,6 @@
 .be-layout {
   width: 100%;
+  min-width: 0;
   min-height: 100%;
   background: var(--background);
   padding: 24px;

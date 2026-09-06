@@ -166,7 +166,7 @@ const HubDashboard = () => {
   return (
     <div className="hub-section hub-dashboard">
       <Row gutter={[16, 16]} className="hub-dashboard__kpis">
-        <Col xs={12} sm={8} lg={4}>
+        <Col xs={12} sm={6} md={8} lg={8} xl={4}>
           <Card loading={loading}>
             <Statistic title="Total clientes" value={resumen?.total ?? 0} />
             <Text type="secondary" style={{ fontSize: 12 }}>
@@ -174,27 +174,27 @@ const HubDashboard = () => {
             </Text>
           </Card>
         </Col>
-        <Col xs={12} sm={8} lg={4}>
+        <Col xs={12} sm={6} md={8} lg={8} xl={4}>
           <Card loading={loading}>
             <Statistic title="Activas" value={resumen?.activa ?? 0} valueStyle={{ color: '#52c41a' }} />
           </Card>
         </Col>
-        <Col xs={12} sm={8} lg={4}>
+        <Col xs={12} sm={6} md={8} lg={8} xl={4}>
           <Card loading={loading}>
             <Statistic title="En trial" value={resumen?.trial ?? 0} valueStyle={{ color: '#faad14' }} />
           </Card>
         </Col>
-        <Col xs={12} sm={8} lg={4}>
+        <Col xs={12} sm={6} md={8} lg={8} xl={4}>
           <Card loading={loading}>
             <Statistic title="Registradas" value={resumen?.registrada ?? 0} />
           </Card>
         </Col>
-        <Col xs={12} sm={8} lg={4}>
+        <Col xs={12} sm={6} md={8} lg={8} xl={4}>
           <Card loading={loading}>
             <Statistic title="Canceladas" value={resumen?.cancelada ?? 0} valueStyle={{ color: '#8c8c8c' }} />
           </Card>
         </Col>
-        <Col xs={12} sm={8} lg={4}>
+        <Col xs={12} sm={6} md={8} lg={8} xl={4}>
           <Card loading={loading}>
             <Statistic
               title="Ventas este mes"
@@ -273,17 +273,20 @@ const HubDashboard = () => {
           </div>
         )}
       >
-        <Table
-          rowKey={(row) => row.id_usuario ?? 'organica'}
-          columns={columnasProductividad}
-          dataSource={productividadConRank}
-          pagination={false}
-          rowClassName={(row) => (
-            row.rank != null && row.rank <= 3 ? `hub-top-row hub-top-row--${row.rank}` : ''
-          )}
-          locale={{ emptyText: 'Sin datos en este mes' }}
-          scroll={{ x: 760 }}
-        />
+        <div className="app-table-scroll">
+          <Table
+            rowKey={(row) => row.id_usuario ?? 'organica'}
+            columns={columnasProductividad}
+            dataSource={productividadConRank}
+            pagination={false}
+            tableLayout="fixed"
+            rowClassName={(row) => (
+              row.rank != null && row.rank <= 3 ? `hub-top-row hub-top-row--${row.rank}` : ''
+            )}
+            locale={{ emptyText: 'Sin datos en este mes' }}
+            scroll={{ x: 760 }}
+          />
+        </div>
       </Card>
     </div>
   );

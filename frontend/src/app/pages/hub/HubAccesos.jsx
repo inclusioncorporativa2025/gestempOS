@@ -121,11 +121,11 @@ const HubAccesos = () => {
     {
       title: 'Usuario',
       key: 'usuario',
+      width: 220,
       render: (_, row) => (
-        <div>
-          <Text strong>{row.nombre}</Text>
-          <br />
-          <Text type="secondary" style={{ fontSize: 12 }}>{row.email}</Text>
+        <div className="hub-table-stack">
+          <Text strong className="hub-table-stack__primary">{row.nombre}</Text>
+          <Text type="secondary" className="hub-table-stack__secondary">{row.email}</Text>
         </div>
       ),
     },
@@ -153,7 +153,8 @@ const HubAccesos = () => {
     {
       title: '',
       key: 'acciones',
-      width: 120,
+      width: 112,
+      fixed: 'right',
       render: (_, row) => (
         soloComerciales && row.puesto_codigo !== 'comercial' ? null : (
           <Button
@@ -161,8 +162,9 @@ const HubAccesos = () => {
             danger
             icon={<UserDeleteOutlined />}
             onClick={() => revocarAcceso(row)}
+            aria-label="Revocar acceso"
           >
-            Revocar
+            <span className="hub-accesos-revoke-label">Revocar</span>
           </Button>
         )
       ),
@@ -177,14 +179,18 @@ const HubAccesos = () => {
         </Button>
       </div>
 
-      <Table
-        rowKey="id"
-        loading={loading}
-        columns={columns}
-        dataSource={accesos}
-        pagination={false}
-        locale={{ emptyText: 'Ningún usuario con acceso al panel de ventas' }}
-      />
+      <div className="app-table-scroll">
+        <Table
+          rowKey="id"
+          loading={loading}
+          columns={columns}
+          dataSource={accesos}
+          pagination={false}
+          tableLayout="fixed"
+          scroll={{ x: 640 }}
+          locale={{ emptyText: 'Ningún usuario con acceso al panel de ventas' }}
+        />
+      </div>
 
       <Modal
         title="Dar acceso al panel de ventas"

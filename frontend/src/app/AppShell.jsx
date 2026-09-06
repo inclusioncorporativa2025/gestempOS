@@ -76,6 +76,7 @@ import './App.css';
 import './styles/sidebar.css';
 import './styles/app-layout.css';
 import './styles/app-page.css';
+import './styles/app-responsive.css';
 import './styles/forms.css';
 import './styles/modal-actions.css';
 
@@ -148,10 +149,15 @@ const pages = [
   },
 ];
 
+const COMPACT_DESKTOP_MAX = 1280;
+const MOBILE_MAX = 950;
+
+const shouldCollapseSidebar = (width) => width >= MOBILE_MAX && width < COMPACT_DESKTOP_MAX;
+
 const AppShell = () => {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => shouldCollapseSidebar(window.innerWidth));
   const [supportOpen, setSupportOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -188,7 +194,13 @@ const AppShell = () => {
   }, [ready, user, location.pathname, location.search]);
 
   useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setWindowWidth(width);
+      if (shouldCollapseSidebar(width)) {
+        setCollapsed(true);
+      }
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -199,7 +211,7 @@ const AppShell = () => {
     return () => window.removeEventListener(OPEN_SUPPORT_EVENT, openSupport);
   }, []);
 
-  const isMobile = windowWidth < 950;
+  const isMobile = windowWidth < MOBILE_MAX;
   const isAuthShellPage = authShellPaths.includes(location.pathname);
   const esRutaFacturacion = FACTURACION_ROUTES.includes(location.pathname);
   const puedeFichar = [1, 2, 3, 4, 5].includes(Number(tipousuario));

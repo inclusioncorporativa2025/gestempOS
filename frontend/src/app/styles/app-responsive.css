@@ -1,0 +1,140 @@
+/**
+ * Responsive global — portátiles 14" (~950–1366px) y móvil.
+ * Importado desde AppShell para todas las rutas autenticadas.
+ */
+
+:root {
+  --app-breakpoint-mobile: 950px;
+  --app-breakpoint-compact: 1280px;
+}
+
+/* Contención de overflow en la cadena flex principal */
+.app-main-layout,
+.app-main-content,
+.config-layout,
+.config-layout__content,
+.be-layout,
+.bu-page,
+.hub-section,
+.platform-layout {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Tablas Ant Design: scroll horizontal contenido */
+.app-main-content .ant-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-main-content .ant-table-cell {
+  vertical-align: top;
+}
+
+/* Utilidad explícita (alias de comportamiento anterior en Hub) */
+.app-table-scroll,
+.hub-ventas-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-table-scroll .ant-table,
+.hub-ventas-table-wrap .ant-table {
+  min-width: 100%;
+}
+
+/* Celdas apiladas (contacto, comercial, etc.) */
+.hub-table-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hub-table-stack__primary {
+  display: block;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.hub-table-stack__secondary {
+  display: block;
+  font-size: 12px !important;
+  word-break: break-all;
+  line-height: 1.35;
+}
+
+/* Compact desktop: menos padding en layouts de página */
+@media (max-width: 1280px) {
+  .config-layout,
+  .be-layout,
+  .bu-page,
+  .gt-layout {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .app-header {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    gap: 12px;
+  }
+
+  .app-header-search.ant-input-affix-wrapper {
+    max-width: min(280px, 100%);
+  }
+
+  .hub-section__search {
+    min-width: 0;
+    max-width: 100%;
+    flex: 1 1 180px;
+  }
+
+  .hub-section__etapa {
+    min-width: 0;
+    flex: 1 1 140px;
+  }
+
+  .hub-dashboard__mes-picker {
+    min-width: 0;
+    width: 100%;
+    max-width: 200px;
+  }
+
+  .hub-dashboard__productividad-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 1200px) {
+  .hub-section__filters {
+    flex: 1 1 100%;
+  }
+
+  .hub-section__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hub-section__toolbar--end {
+    align-items: stretch;
+  }
+
+  .hub-section__toolbar .ant-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 949px) {
+  .config-layout,
+  .be-layout,
+  .bu-page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}

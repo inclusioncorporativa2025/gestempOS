@@ -62,6 +62,21 @@ const etiquetaCampanaHub = (nombre, diasPrueba) => {
   return nombre;
 };
 
+const HUB_SCROLL_CLIENTES = 1280;
+const HUB_SCROLL_INVITACIONES = 1720;
+
+const renderCeldaDoble = (primary, secondary) => (
+  <div className="hub-table-stack">
+    {primary ? <Text className="hub-table-stack__primary">{primary}</Text> : null}
+    {secondary ? (
+      <Text type="secondary" className="hub-table-stack__secondary">{secondary}</Text>
+    ) : null}
+    {!primary && !secondary ? '—' : null}
+  </div>
+);
+
+const renderFechaCorta = (fecha) => (fecha ? dayjs(fecha).format('DD/MM/YYYY') : '—');
+
 const WhatsAppIcon = () => (
   <svg
     viewBox="0 0 24 24"
@@ -495,49 +510,27 @@ const HubVentas = () => {
     {
       title: 'Empresa',
       key: 'empresa',
-      render: (_, row) => (
-        <div>
-          <Text strong>{row.empresa_nombre}</Text>
-          {row.empresa_alias && (
-            <>
-              <br />
-              <Text type="secondary" style={{ fontSize: 12 }}>{row.empresa_alias}</Text>
-            </>
-          )}
-        </div>
-      ),
+      width: 200,
+      fixed: 'left',
+      render: (_, row) => renderCeldaDoble(row.empresa_nombre, row.empresa_alias),
     },
     {
       title: 'Contacto',
       key: 'contacto',
-      render: (_, row) => (
-        <div>
-          <Text>{row.empresa_email || '—'}</Text>
-          {row.empresa_telefono && (
-            <>
-              <br />
-              <Text type="secondary" style={{ fontSize: 12 }}>{row.empresa_telefono}</Text>
-            </>
-          )}
-        </div>
-      ),
+      width: 200,
+      render: (_, row) => renderCeldaDoble(row.empresa_email, row.empresa_telefono),
     },
     {
       title: 'Comercial',
       key: 'comercial',
-      render: (_, row) => (
-        <div>
-          <Text>{row.comercial_nombre}</Text>
-          <br />
-          <Text type="secondary" style={{ fontSize: 12 }}>{row.comercial_email}</Text>
-        </div>
-      ),
+      width: 200,
+      render: (_, row) => renderCeldaDoble(row.comercial_nombre, row.comercial_email),
     },
     {
       title: 'Etapa',
       dataIndex: 'etapa',
       key: 'etapa',
-      width: 150,
+      width: 168,
       render: (etapa, row) => {
         const licencia = resolverEstadoLicenciaHub(row);
         const mostrarFechaLicencia = licencia.fechaFin
@@ -562,21 +555,22 @@ const HubVentas = () => {
       title: 'Canal',
       dataIndex: 'canal',
       key: 'canal',
-      width: 100,
+      width: 96,
     },
     {
       title: 'Campaña',
       dataIndex: 'campana_nombre',
       key: 'campana_nombre',
-      width: 180,
+      width: 168,
+      ellipsis: true,
       render: (nombre, row) => etiquetaCampanaHub(nombre, row.campana_dias_prueba),
     },
     {
       title: 'Alta',
       dataIndex: 'fecha_venta',
       key: 'fecha_venta',
-      width: 130,
-      render: (fecha) => dayjs(fecha).format('DD/MM/YYYY'),
+      width: 112,
+      render: renderFechaCorta,
     },
   ];
 
@@ -606,30 +600,21 @@ const HubVentas = () => {
     {
       title: 'Contacto',
       key: 'contacto',
-      render: (_, row) => (
-        <div>
-          {row.email_previsto && <Text>{row.email_previsto}</Text>}
-          {row.telefono_previsto && (
-            <>
-              {row.email_previsto && <br />}
-              <Text type="secondary" style={{ fontSize: 12 }}>{row.telefono_previsto}</Text>
-            </>
-          )}
-          {!row.email_previsto && !row.telefono_previsto && '—'}
-        </div>
-      ),
+      width: 200,
+      fixed: 'left',
+      render: (_, row) => renderCeldaDoble(row.email_previsto, row.telefono_previsto),
     },
     {
       title: 'Código',
       dataIndex: 'codigo_corto',
       key: 'codigo_corto',
-      width: 120,
+      width: 108,
     },
     {
       title: 'Estado',
       dataIndex: 'estado',
       key: 'estado',
-      width: 120,
+      width: 112,
       render: (estado) => (
         <Tag color={colorEstadoInvitacion(estado)}>{etiquetaEstadoInvitacion(estado)}</Tag>
       ),
@@ -638,7 +623,7 @@ const HubVentas = () => {
       title: 'Canal',
       dataIndex: 'canal',
       key: 'canal',
-      width: 90,
+      width: 96,
       render: (canal) => {
         const map = { email: 'Email', telefono: 'Teléfono', mixto: 'Email + WA' };
         return map[canal] || canal;
@@ -648,7 +633,8 @@ const HubVentas = () => {
       title: 'Campaña',
       dataIndex: 'campana_nombre',
       key: 'campana_nombre',
-      width: 170,
+      width: 168,
+      ellipsis: true,
       render: (nombre, row) => etiquetaCampanaHub(nombre, row.campana_dias_prueba),
     },
   ];
@@ -657,13 +643,8 @@ const HubVentas = () => {
     columnasInvitaciones.push({
       title: 'Comercial',
       key: 'comercial',
-      render: (_, row) => (
-        <div>
-          <Text>{row.comercial_nombre}</Text>
-          <br />
-          <Text type="secondary" style={{ fontSize: 12 }}>{row.comercial_email}</Text>
-        </div>
-      ),
+      width: 200,
+      render: (_, row) => renderCeldaDoble(row.comercial_nombre, row.comercial_email),
     });
   }
 
@@ -671,19 +652,9 @@ const HubVentas = () => {
     {
       title: 'Empresa',
       key: 'empresa',
-      render: (_, row) => (
-        row.empresa_nombre ? (
-          <div>
-            <Text>{row.empresa_nombre}</Text>
-            {row.empresa_alias && (
-              <>
-                <br />
-                <Text type="secondary" style={{ fontSize: 12 }}>{row.empresa_alias}</Text>
-              </>
-            )}
-          </div>
-        ) : '—'
-      ),
+      width: 180,
+      ellipsis: true,
+      render: (_, row) => renderCeldaDoble(row.empresa_nombre, row.empresa_alias),
     },
     {
       title: 'Etapa venta',
@@ -700,22 +671,22 @@ const HubVentas = () => {
       title: 'Enviada',
       dataIndex: 'fecha_creacion',
       key: 'fecha_creacion',
-      width: 110,
-      render: (fecha) => dayjs(fecha).format('DD/MM/YYYY'),
+      width: 112,
+      render: renderFechaCorta,
     },
     {
       title: 'Válida hasta',
       dataIndex: 'fecha_expiracion',
       key: 'fecha_expiracion',
-      width: 120,
-      render: (fecha) => (fecha ? dayjs(fecha).format('DD/MM/YYYY') : '—'),
+      width: 112,
+      render: renderFechaCorta,
     },
     {
       title: 'Registrada',
       dataIndex: 'fecha_uso',
       key: 'fecha_uso',
-      width: 110,
-      render: (fecha) => (fecha ? dayjs(fecha).format('DD/MM/YYYY') : '—'),
+      width: 112,
+      render: renderFechaCorta,
     },
   );
 
@@ -789,20 +760,24 @@ const HubVentas = () => {
                 <Text type="secondary" className="hub-section__count">
                   {total} cliente{total === 1 ? '' : 's'} atribuido{total === 1 ? '' : 's'}
                 </Text>
-                <Table
-                  rowKey="id_venta"
-                  loading={loading}
-                  columns={columns}
-                  dataSource={ventas}
-                  pagination={{
-                    current: pagina,
-                    pageSize: limite,
-                    total,
-                    showSizeChanger: false,
-                    onChange: setPagina,
-                  }}
-                  scroll={{ x: 900 }}
-                />
+                <div className="hub-ventas-table-wrap">
+                  <Table
+                    rowKey="id_venta"
+                    loading={loading}
+                    columns={columns}
+                    dataSource={ventas}
+                    className="hub-ventas-table"
+                    tableLayout="fixed"
+                    pagination={{
+                      current: pagina,
+                      pageSize: limite,
+                      total,
+                      showSizeChanger: false,
+                      onChange: setPagina,
+                    }}
+                    scroll={{ x: HUB_SCROLL_CLIENTES }}
+                  />
+                </div>
               </>
             ),
           },
@@ -814,21 +789,25 @@ const HubVentas = () => {
                 <Text type="secondary" className="hub-section__count">
                   {totalInvitaciones} invitación{totalInvitaciones === 1 ? '' : 'es'}
                 </Text>
-                <Table
-                  rowKey="id_invitacion"
-                  loading={loadingInvitaciones}
-                  columns={columnasInvitaciones}
-                  dataSource={invitaciones}
-                  pagination={{
-                    current: paginaInvitaciones,
-                    pageSize: limite,
-                    total: totalInvitaciones,
-                    showSizeChanger: false,
-                    onChange: setPaginaInvitaciones,
-                  }}
-                  scroll={{ x: 1000 }}
-                  locale={{ emptyText: 'Sin invitaciones enviadas' }}
-                />
+                <div className="hub-ventas-table-wrap">
+                  <Table
+                    rowKey="id_invitacion"
+                    loading={loadingInvitaciones}
+                    columns={columnasInvitaciones}
+                    dataSource={invitaciones}
+                    className="hub-ventas-table"
+                    tableLayout="fixed"
+                    pagination={{
+                      current: paginaInvitaciones,
+                      pageSize: limite,
+                      total: totalInvitaciones,
+                      showSizeChanger: false,
+                      onChange: setPaginaInvitaciones,
+                    }}
+                    scroll={{ x: HUB_SCROLL_INVITACIONES }}
+                    locale={{ emptyText: 'Sin invitaciones enviadas' }}
+                  />
+                </div>
               </>
             ),
           },
