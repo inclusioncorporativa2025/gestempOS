@@ -7,6 +7,7 @@ import {
   Row,
   Select,
   Spin,
+  Typography,
   message,
 } from 'antd';
 import { editMiEmpresa, getMiEmpresa } from '../../../features/empresas/empresasService';
@@ -19,6 +20,8 @@ import {
 } from '../../../constants/spanishRegions';
 import GradientButton from '../../components/shared/GradientButton';
 import './Configuracion.css';
+
+const { Text } = Typography;
 
 const CAMPOS_EMPRESA = [
   'nombre',
@@ -69,6 +72,9 @@ const ConfiguracionEmpresa = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [logoPreviewError, setLogoPreviewError] = useState(false);
+  const logoUrl = Form.useWatch('logo_url', form);
+  const aliasPreview = Form.useWatch('alias', form) || Form.useWatch('nombre', form) || 'Tu empresa';
 
   useEffect(() => {
     const cargarEmpresa = async () => {
@@ -83,6 +89,7 @@ const ConfiguracionEmpresa = () => {
             undefined;
         }
         form.setFieldsValue(datos);
+        setLogoPreviewError(false);
       } catch (error) {
         form.setFieldsValue(valoresVacios());
         message.error(error.message || 'No se pudieron cargar los datos de la empresa');
@@ -284,8 +291,15 @@ const ConfiguracionEmpresa = () => {
           <h3 className="config-empresa-block__title">Marca</h3>
           <Row gutter={[16, 0]}>
             <Col xs={24} lg={12}>
-              <Form.Item name="logo_url" label="URL del logo">
-                <Input placeholder="https://…/logo.png" />
+              <Form.Item
+                name="logo_url"
+                label="URL del logo"
+                extra="Se muestra en el menú lateral. Usa una imagen cuadrada o horizontal con fondo transparente."
+              >
+                <Input
+                  placeholder="https://…/logo.png"
+                  onChange={() => setLogoPreviewError(false)}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} lg={12}>
@@ -293,6 +307,33 @@ const ConfiguracionEmpresa = () => {
                 <Input placeholder="#A85CE0" />
               </Form.Item>
             </Col>
+            {logoUrl && !logoPreviewError ? (
+              <Col xs={24}>
+                <div className="config-empresa-logo-preview">
+                  <Text type="secondary" className="config-empresa-logo-preview__label">
+                    Vista previa (menú lateral)
+                  </Text>
+                  <div className="config-empresa-logo-preview__row">
+                    <span className="config-empresa-logo-preview__frame">
+                      <img
+                        src={logoUrl}
+                        alt=""
+                        className="config-empresa-logo-preview__img"
+                        onError={() => setLogoPreviewError(true)}
+                      />
+                    </span>
+                    <Text className="config-empresa-logo-preview__alias">
+                      {aliasPreview}
+                    </Text>
+                  </div>
+                </div>
+              </Col>
+            ) : null}
+            {logoUrl && logoPreviewError ? (
+              <Col xs={24}>
+                <Text type="danger">No se pudo cargar la imagen. Comprueba la URL.</Text>
+              </Col>
+            ) : null}
           </Row>
         </section>
 
