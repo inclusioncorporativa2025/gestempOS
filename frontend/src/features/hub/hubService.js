@@ -63,6 +63,15 @@ export const listarComercialesHub = async ({ soloComercial = false } = {}) => {
   return parseHubResponse(response, 'No se pudieron cargar los comerciales');
 };
 
+export const generarEnlacePagoVentaHub = async (idEmpresa, { ciclo } = {}) => {
+  const response = await fetch(`${API_BASE_URL}/ventas/${idEmpresa}/enlace-pago`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ ciclo }),
+  });
+  return parseHubResponse(response, 'No se pudo generar el enlace de pago');
+};
+
 export const crearInvitacionHub = async (payload) => {
   const response = await fetch(`${API_BASE_URL}/invitaciones`, {
     method: 'POST',

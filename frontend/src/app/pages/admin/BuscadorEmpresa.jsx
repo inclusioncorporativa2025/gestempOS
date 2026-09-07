@@ -43,6 +43,7 @@ import {
   eliminarEmpresa,
   getEmpresasUsuarios,
   generarEnlacePagoEmpresa,
+  listarCampanasAlta,
   purgarEmpresaPermanente,
   reactivarEmpresa,
   extenderPeriodoPruebaEmpresa,
@@ -87,6 +88,7 @@ const empresaFacturacionBloquea = (record) => {
   const modo = String(record.modo_facturacion || '').toLowerCase();
 
   if (estado === 'canceled') return true;
+  if (modo === 'pendiente_pago') return true;
   if (trialExpiradoSinSuscripcion(record)) return true;
 
   if (estado === 'trialing' && record.trial_ends_at) {
@@ -110,6 +112,7 @@ const empresaEstaActiva = (record) =>
 const empresaRequiereEnlacePago = (record) =>
   record.requiere_enlace_pago === 1
   || record.requiere_enlace_pago === true
+  || String(record.modo_facturacion || '').toLowerCase() === 'pendiente_pago'
   || trialExpiradoSinSuscripcion(record);
 
 const empresaPuedeAmpliarPrueba = (record) => {
@@ -151,6 +154,9 @@ const renderEstadoEmpresa = (record) => {
   if (trialExpiradoSinSuscripcion(record)) {
     return <Tag color="orange">Pendiente de pago</Tag>;
   }
+  if (modo === 'pendiente_pago') {
+    return <Tag color="orange">Pendiente de pago</Tag>;
+  }
   if (estado === 'trialing') {
     return renderEnPrueba(record);
   }
@@ -189,6 +195,8 @@ const BuscadorEmpresa = ({ embedded = false }) => {
   const [editingRecord, setEditingRecord] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isAltaModalVisible, setIsAltaModalVisible] = useState(false);
+  const [campanasAlta, setCampanasAlta] = useState([]);
+  const [altaCheckoutUrl, setAltaCheckoutUrl] = useState(null);
   const [altaLoading, setAltaLoading] = useState(false);
   const [purgeTarget, setPurgeTarget] = useState(null);
   const [purgeCif, setPurgeCif] = useState('');
@@ -219,7 +227,7 @@ const BuscadorEmpresa = ({ embedded = false }) => {
 
   useEffect(() => {
     if (location.state?.abrirAltaEmpresa) {
-      setIsAltaModalVisible(true);
+      handleOpenAltaModal();
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state, location.pathname, navigate]);
@@ -375,9 +383,16 @@ const BuscadorEmpresa = ({ embedded = false }) => {
     setIsModalVisible(false);
   };
 
-  const handleOpenAltaModal = () => {
+  const handleOpenAltaModal = async () => {
     altaForm.resetFields();
+    setAltaCheckoutUrl(null);
     setIsAltaModalVisible(true);
+    try {
+      const campanas = await listarCampanasAlta();
+      setCampanasAlta(campanas);
+    } catch {
+      setCampanasAlta([]);
+    }
   };
 
   const handleCancelAltaModal = () => {
@@ -406,13 +421,27 @@ const BuscadorEmpresa = ({ embedded = false }) => {
     setAltaLoading(true);
     try {
       const data = await crearEmpresa(values);
-      if (data?.emailBienvenidaEnviado === false) {
+      if (data?.checkoutUrl) {
+        setAltaCheckoutUrl(data.checkoutUrl);
+        try {
+          await navigator.clipboard.writeText(data.checkoutUrl);
+          message.success('Empresa creada. Enlace de pago copiado al portapapeles.');
+        } catch {
+          message.success('Empresa creada. Copia el enlace de pago para enviarlo al cliente.');
+        }
+      } else if (data?.checkoutError) {
+        message.warning(`Empresa creada, pero no se generó el enlace de pago: ${data.checkoutError}`);
+        altaForm.resetFields();
+        setIsAltaModalVisible(false);
+      } else if (data?.emailBienvenidaEnviado === false) {
         message.warning(data.message || 'Empresa creada, pero no se pudo enviar el correo de bienvenida.');
+        altaForm.resetFields();
+        setIsAltaModalVisible(false);
       } else {
         message.success(data?.message || 'Empresa creada correctamente. Se ha enviado el correo de bienvenida.');
+        altaForm.resetFields();
+        setIsAltaModalVisible(false);
       }
-      altaForm.resetFields();
-      setIsAltaModalVisible(false);
       await fetchEmpresas();
     } catch (error) {
       message.error(error.message || 'Error al crear empresa');
@@ -795,7 +824,39 @@ const BuscadorEmpresa = ({ embedded = false }) => {
           onFinish={handleAltaSubmit}
           onCancel={() => altaForm.resetFields()}
           showPlanSelect
+          showCampanaSelect
+          campanas={campanasAlta}
         />
+        {altaCheckoutUrl ? (
+          <div style={{ marginTop: 16 }}>
+            <Text type="secondary">Enlace de pago Stripe</Text>
+            <Input
+              readOnly
+              value={altaCheckoutUrl}
+              addonAfter={(
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<CopyOutlined />}
+                  onClick={() => {
+                    navigator.clipboard.writeText(altaCheckoutUrl);
+                    message.success('Enlace copiado');
+                  }}
+                />
+              )}
+            />
+            <Button
+              style={{ marginTop: 12 }}
+              onClick={() => {
+                setAltaCheckoutUrl(null);
+                altaForm.resetFields();
+                setIsAltaModalVisible(false);
+              }}
+            >
+              Cerrar
+            </Button>
+          </div>
+        ) : null}
       </Modal>
 
       <Modal

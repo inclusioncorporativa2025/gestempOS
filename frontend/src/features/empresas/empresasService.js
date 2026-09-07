@@ -4,7 +4,6 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL+'empresas';
 const API_BASE_URL_FICHA = process.env.REACT_APP_API_BASE_URL+'ficha/getById'; 
 const API_BASE_URL_FICHA_UltimoRegistro = process.env.REACT_APP_API_BASE_URL+'ficha/getUltimoRegistroById'; 
 
-//llamada ejempo
 export const crearEmpresa = async (values) => {
     try {
         const idUsuario = getIdUsuario(); 
@@ -27,6 +26,20 @@ export const crearEmpresa = async (values) => {
         console.error('Error creando empresa:', error);
         throw error;
       }   
+};
+
+export const listarCampanasAlta = async () => {
+  const response = await fetch(`${API_BASE_URL}/campanas`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || 'Error al cargar campañas');
+  }
+
+  return data.campanas || [];
 };
 
 export const getUltimoRegistroById = async () => {
@@ -206,13 +219,13 @@ export const getEmpresasUsuarios = async () => {
     }   
 };
 
-export const generarEnlacePagoEmpresa = async (idEmpresa) => {
+export const generarEnlacePagoEmpresa = async (idEmpresa, { ciclo } = {}) => {
   const idUsuario = getIdUsuario();
 
   const response = await fetch(`${API_BASE_URL}/enlace-pago`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idEmpresa, idUsuario }),
+    body: JSON.stringify({ idEmpresa, idUsuario, ciclo }),
   });
 
   const data = await response.json().catch(() => ({}));

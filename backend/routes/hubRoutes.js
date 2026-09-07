@@ -26,6 +26,7 @@ const {
   transferirVentaHandler,
   eliminarInvitacionHandler,
   transferirInvitacionHandler,
+  enlacePagoVentaHandler,
 } = require('../controllers/hubController');
 
 const router = express.Router();
@@ -40,6 +41,7 @@ router.post('/invitaciones', requireAuth, requireHubAccess, requireHubPermiso('c
 router.get('/campanas', requireAuth, requireHubAccess, listarCampanasHandler);
 router.post('/campanas', requireAuth, requireHubAccess, requireHubGestorAccesos, crearCampanaHandler);
 router.post('/ventas/asignar', requireAuth, requireHubAccess, requireHubPermiso('asignar_comercial'), asignarVentaHandler);
+router.post('/ventas/:idEmpresa/enlace-pago', requireAuth, requireHubAccess, requireHubPermiso('crear_invitacion'), enlacePagoVentaHandler);
 router.delete('/ventas/:id', requireAuth, requireHubAccess, requireHubGestorAccesos, eliminarVentaHandler);
 router.post('/ventas/:id/transferir', requireAuth, requireHubAccess, requireHubGestorAccesos, transferirVentaHandler);
 router.delete('/invitaciones/:id', requireAuth, requireHubAccess, requireHubGestorAccesos, eliminarInvitacionHandler);

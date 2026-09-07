@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Input, Row, Col, Button, InputNumber, Select, Tooltip, Checkbox } from 'antd';
+import { Form, Input, Row, Col, Button, InputNumber, Select, Tooltip, Checkbox, Typography } from 'antd';
 import { Link } from 'react-router-dom';
 import GradientButton from '../../components/shared/GradientButton';
 import { LANDING_ROUTES } from '../../../constants/routes';
@@ -18,6 +18,8 @@ import {
   provinciaDesdeCodigoPostal,
 } from '../../../constants/spanishRegions';
 import './AltaEmpresa.css';
+
+const { Text } = Typography;
 
 const PLAN_UNAVAILABLE_TOOLTIP =
   'No disponible por el momento, disculpen las molestias';
@@ -124,11 +126,23 @@ const AltaEmpresaForm = ({
   registroPublico = false,
   requireTermsAcceptance = false,
   collectFiscalAddress = false,
+  showCampanaSelect = false,
+  campanas = [],
+  bloquearCicloFacturacion = false,
 }) => {
   const planEfectivo = registroPublico ? 'rrhh' : planId;
   const mostrarSelectorPlan = showPlanSelect && !registroPublico;
   const planSeleccionado = Form.useWatch('plan', form) || planEfectivo;
   const cicloFacturacion = Form.useWatch('cicloFacturacion', form) || 'mensual';
+  const idCampanaSeleccionada = Form.useWatch('id_campana', form);
+  const campanaSeleccionada = campanas.find(
+    (c) => Number(c.id_campana) === Number(idCampanaSeleccionada),
+  );
+  const esVentaDirecta = campanaSeleccionada?.tipo === 'venta_directa'
+    || Boolean(Form.useWatch('ventaDirectaInvitacion', form));
+  const mostrarCicloFacturacion = registroPublico
+    || esVentaDirecta
+    || (mostrarSelectorPlan && planSelectVariant === 'cards');
   const minLicencias = minLicenciasProp ?? getPlanMinLicencias(planSeleccionado);
   const isCompact = !registroPublico && planSelectVariant === 'cards';
   const rowGutter = isCompact ? [12, 0] : [16, 16];
@@ -202,7 +216,10 @@ const AltaEmpresaForm = ({
         <div className="alta-plan-billing-row">
           <PlanBillingToggle
             value={cicloFacturacion}
-            onChange={(ciclo) => form.setFieldsValue({ cicloFacturacion: ciclo })}
+            onChange={(ciclo) => {
+              if (bloquearCicloFacturacion) return;
+              form.setFieldsValue({ cicloFacturacion: ciclo });
+            }}
           />
         </div>
         <Form.Item
@@ -220,15 +237,38 @@ const AltaEmpresaForm = ({
       </>
     ) : null}
 
-    {!mostrarSelectorPlan ? (
-      <>
-        <Form.Item name="plan" hidden>
-          <Input type="hidden" />
-        </Form.Item>
-        <Form.Item name="cicloFacturacion" hidden>
-          <Input type="hidden" />
-        </Form.Item>
-      </>
+    {mostrarSelectorPlan && planSelectVariant === 'select' && mostrarCicloFacturacion ? (
+      <Row gutter={rowGutter}>
+        <Col xs={24}>
+          <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
+            Facturación
+          </Text>
+          <PlanBillingToggle
+            value={cicloFacturacion}
+            onChange={(ciclo) => {
+              if (bloquearCicloFacturacion) return;
+              form.setFieldsValue({ cicloFacturacion: ciclo });
+            }}
+          />
+          {esVentaDirecta && (
+            <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
+              Venta directa: sin periodo de prueba. Se generará enlace de pago Stripe al crear la empresa.
+            </Text>
+          )}
+        </Col>
+      </Row>
+    ) : null}
+
+    <Form.Item name="cicloFacturacion" hidden>
+      <Input type="hidden" />
+    </Form.Item>
+    <Form.Item name="ventaDirectaInvitacion" hidden>
+      <Input type="hidden" />
+    </Form.Item>
+    {!showCampanaSelect ? (
+      <Form.Item name="id_campana" hidden>
+        <Input type="hidden" />
+      </Form.Item>
     ) : null}
 
     <Row gutter={rowGutter}>
@@ -389,15 +429,33 @@ const AltaEmpresaForm = ({
         </>
       ) : null}
       {!registroPublico ? (
-        <Col xs={24}>
+        <Col xs={24} sm={12}>
           <Form.Item
             name="clienteLegacy"
             valuePropName="checked"
             initialValue={false}
           >
-            <Checkbox>
+            <Checkbox disabled={esVentaDirecta}>
               Cliente histórico (sin periodo de prueba)
             </Checkbox>
+          </Form.Item>
+        </Col>
+      ) : null}
+      {showCampanaSelect && !registroPublico ? (
+        <Col xs={24}>
+          <Form.Item name="id_campana" label="Campaña comercial">
+            <Select
+              allowClear
+              placeholder="Opcional"
+              options={campanas.map((c) => ({
+                value: Number(c.id_campana),
+                label: c.tipo === 'venta_directa'
+                  ? `${c.nombre} (venta directa · sin prueba)`
+                  : c.dias_prueba
+                    ? `${c.nombre} (${c.dias_prueba} días prueba)`
+                    : c.nombre,
+              }))}
+            />
           </Form.Item>
         </Col>
       ) : null}

@@ -90,6 +90,10 @@ export const resolverEstadoLicenciaHub = (row) => {
     return { codigo: 'pte_pago', etiqueta: 'Pte. de pago', color: 'orange', fechaFin: row?.trial_ends_at };
   }
 
+  if (modo === 'pendiente_pago') {
+    return { codigo: 'pte_pago', etiqueta: 'Pte. de pago', color: 'orange', fechaFin: null };
+  }
+
   if (trialSinSuscripcionHub(row) && !trialExpiradoSinSuscripcionHub(row)) {
     return { codigo: 'en_prueba', etiqueta: 'En prueba', color: 'blue', fechaFin: row?.trial_ends_at };
   }

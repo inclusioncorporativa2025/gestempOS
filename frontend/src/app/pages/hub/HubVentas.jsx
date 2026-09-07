@@ -5,7 +5,7 @@ import {
   Dropdown,
   Input,
   InputNumber,
-  Modal,
+  Radio,
   Select,
   Space,
   Table,
@@ -30,6 +30,7 @@ import {
   crearInvitacionHub,
   eliminarInvitacionHub,
   eliminarVentaHub,
+  generarEnlacePagoVentaHub,
   listarCampanasHub,
   listarComercialesHub,
   listarInvitacionesHub,
@@ -56,8 +57,9 @@ const { Text, Paragraph } = Typography;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const etiquetaCampanaHub = (nombre, diasPrueba) => {
+const etiquetaCampanaHub = (nombre, diasPrueba, tipo) => {
   if (!nombre) return '—';
+  if (tipo === 'venta_directa') return `${nombre} (venta directa · sin prueba)`;
   if (diasPrueba) return `${nombre} (${diasPrueba} días prueba)`;
   return nombre;
 };
@@ -126,6 +128,7 @@ const HubVentas = () => {
     telefono_previsto: '',
     campana_nombre: '',
     id_campana: null,
+    ciclo_facturacion: 'mensual',
   });
   const [campanas, setCampanas] = useState([]);
   const [campanasLoading, setCampanasLoading] = useState(false);
@@ -137,6 +140,7 @@ const HubVentas = () => {
   const [transferModal, setTransferModal] = useState(null);
   const [transferComercialId, setTransferComercialId] = useState(null);
   const [transferLoading, setTransferLoading] = useState(false);
+  const [paymentLinkLoadingId, setPaymentLinkLoadingId] = useState(null);
 
   const puedeCrearInvitacion = tienePermisoHub(user, 'crear_invitacion');
   const puedeVerImportes = tienePermisoHub(user, 'ver_importes');
@@ -283,12 +287,39 @@ const HubVentas = () => {
     }
   };
 
+  const copiarEnlacePagoVenta = async (row) => {
+    setPaymentLinkLoadingId(row.id_empresa);
+    try {
+      const resultado = await generarEnlacePagoVentaHub(row.id_empresa, {
+        ciclo: row.ciclo_facturacion,
+      });
+      if (!resultado?.url) {
+        throw new Error('No se recibió la URL de pago');
+      }
+      await navigator.clipboard.writeText(resultado.url);
+      message.success(`Enlace de pago copiado (${resultado.ciclo || row.ciclo_facturacion || 'mensual'})`);
+    } catch (error) {
+      message.error(error.message || 'No se pudo generar el enlace de pago');
+    } finally {
+      setPaymentLinkLoadingId(null);
+    }
+  };
+
   const renderAccionesCartera = (tipo, row) => {
     if (!puedeGestionarCartera) return null;
 
     const esInvitacionUsada = tipo === 'invitacion' && row.estado === 'registrada';
+    const puedeEnlacePago = tipo === 'venta'
+      && (row.requiere_enlace_pago === 1 || row.requiere_enlace_pago === true);
 
     const menuItems = [
+      ...(puedeEnlacePago ? [{
+        key: 'enlace-pago',
+        label: 'Copiar enlace de pago',
+        icon: <LinkOutlined />,
+        disabled: paymentLinkLoadingId === row.id_empresa,
+        onClick: () => copiarEnlacePagoVenta(row),
+      }] : []),
       {
         key: 'transferir',
         label: 'Transferir',
@@ -350,6 +381,7 @@ const HubVentas = () => {
       telefono_previsto: '',
       campana_nombre: '',
       id_campana: null,
+      ciclo_facturacion: 'mensual',
     });
     setInvitacionOpen(true);
     if (!puedeCrearInvitacion) return;
@@ -369,10 +401,18 @@ const HubVentas = () => {
   const opcionesSelectCampana = useMemo(
     () => campanas.map((c) => ({
       value: Number(c.id_campana),
-      label: etiquetaCampanaHub(c.nombre, c.dias_prueba),
+      label: etiquetaCampanaHub(c.nombre, c.dias_prueba, c.tipo),
+      tipo: c.tipo,
     })),
     [campanas],
   );
+
+  const campanaInvitacionSeleccionada = useMemo(
+    () => campanas.find((c) => Number(c.id_campana) === Number(invitacionForm.id_campana)),
+    [campanas, invitacionForm.id_campana],
+  );
+
+  const esInvitacionVentaDirecta = campanaInvitacionSeleccionada?.tipo === 'venta_directa';
 
   const renderDropdownCampana = (menu) => (
     <>
@@ -455,6 +495,10 @@ const HubVentas = () => {
       message.warning('El teléfono no es válido (mínimo 9 dígitos)');
       return;
     }
+    if (esInvitacionVentaDirecta && !invitacionForm.ciclo_facturacion) {
+      message.warning('Indica si la venta directa es mensual o anual');
+      return;
+    }
 
     setInvitacionLoading(true);
     try {
@@ -463,6 +507,9 @@ const HubVentas = () => {
         email_previsto: tieneEmail ? email : undefined,
         telefono_previsto: tieneTelefono ? telefono : undefined,
         ...campanaPayload,
+        ...(esInvitacionVentaDirecta
+          ? { ciclo_facturacion: invitacionForm.ciclo_facturacion }
+          : {}),
       });
       setInvitacionResultado(data);
 
@@ -563,7 +610,7 @@ const HubVentas = () => {
       key: 'campana_nombre',
       width: 168,
       ellipsis: true,
-      render: (nombre, row) => etiquetaCampanaHub(nombre, row.campana_dias_prueba),
+      render: (nombre, row) => etiquetaCampanaHub(nombre, row.campana_dias_prueba, row.campana_tipo),
     },
     {
       title: 'Alta',
@@ -635,7 +682,7 @@ const HubVentas = () => {
       key: 'campana_nombre',
       width: 168,
       ellipsis: true,
-      render: (nombre, row) => etiquetaCampanaHub(nombre, row.campana_dias_prueba),
+      render: (nombre, row) => etiquetaCampanaHub(nombre, row.campana_dias_prueba, row.campana_tipo),
     },
   ];
 
@@ -894,12 +941,40 @@ const HubVentas = () => {
                   : 'Opcional. Elige una campaña creada por tu responsable.'}
               </Text>
             </div>
+            {esInvitacionVentaDirecta && (
+              <div>
+                <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
+                  Facturación acordada con el cliente
+                </Text>
+                <Radio.Group
+                  value={invitacionForm.ciclo_facturacion}
+                  onChange={(e) => setInvitacionForm((prev) => ({
+                    ...prev,
+                    ciclo_facturacion: e.target.value,
+                  }))}
+                >
+                  <Radio.Button value="mensual">Mensual</Radio.Button>
+                  <Radio.Button value="anual">Anual</Radio.Button>
+                </Radio.Group>
+                <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
+                  Sin periodo de prueba. Tras el registro podrás copiar el enlace de pago Stripe.
+                </Text>
+              </div>
+            )}
             <Text type="secondary" style={{ fontSize: 12 }}>
               Debes rellenar al menos uno de los dos campos de contacto.
             </Text>
           </Space>
         ) : (
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            {invitacionResultado.venta_directa && (
+              <Alert
+                type="info"
+                showIcon
+                message="Venta directa (sin prueba)"
+                description={`Facturación ${invitacionResultado.ciclo_facturacion === 'anual' ? 'anual' : 'mensual'}. Cuando el cliente se registre, genera el enlace de pago desde la ficha del cliente en esta pestaña.`}
+              />
+            )}
             {invitacionResultado.email_enviado && (
               <Alert
                 type="success"

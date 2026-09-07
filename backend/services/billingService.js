@@ -1359,15 +1359,65 @@ const crearCheckoutTrialPendiente = async (idEmpresa, { email, nombre } = {}) =>
   }
 
   const licencias = Number(facturacion.licencias_facturadas) || Number(empresa.licencias) || 1;
+  const ciclo = String(facturacion.ciclo_facturacion || 'mensual').toLowerCase() === 'anual'
+    ? 'anual'
+    : 'mensual';
+  const finTrial = facturacion.trial_ends_at ? new Date(facturacion.trial_ends_at) : null;
+  const trialActivo = finTrial ? finTrial.getTime() > Date.now() : true;
 
   return crearCheckoutSession({
     idEmpresa,
     email,
     nombre,
     planCodigo: normalizePlanId(empresa.plan),
-    ciclo: 'mensual',
+    ciclo,
     licencias,
-    aplicarTrial: true,
+    aplicarTrial: trialActivo,
+  });
+};
+
+const crearCheckoutPagoPendiente = async (idEmpresa, { email, nombre, ciclo } = {}) => {
+  const facturacion = await obtenerFacturacionCompleta(idEmpresa);
+  if (!facturacion) {
+    const error = new Error('No se encontró la facturación de la empresa');
+    error.status = 404;
+    throw error;
+  }
+
+  const modo = String(facturacion.modo_facturacion || '').toLowerCase();
+  const tieneSuscripcion = Boolean(facturacion.stripe_subscription_id);
+  const trialExpirado = modo === 'trial'
+    && !tieneSuscripcion
+    && facturacion.trial_ends_at
+    && new Date(facturacion.trial_ends_at).getTime() <= Date.now();
+
+  if (modo !== 'pendiente_pago' && !trialExpirado) {
+    const error = new Error('Esta empresa no tiene un pago pendiente');
+    error.status = 400;
+    error.code = 'CHECKOUT_NOT_AVAILABLE';
+    throw error;
+  }
+
+  const empresa = await Empresa.findByPk(idEmpresa);
+  if (!empresa) {
+    const error = new Error('Empresa no encontrada');
+    error.status = 404;
+    throw error;
+  }
+
+  const licencias = Number(facturacion.licencias_facturadas) || Number(empresa.licencias) || 1;
+  const cicloEfectivo = String(ciclo || facturacion.ciclo_facturacion || 'mensual').toLowerCase() === 'anual'
+    ? 'anual'
+    : 'mensual';
+
+  return crearCheckoutSession({
+    idEmpresa,
+    email,
+    nombre,
+    planCodigo: normalizePlanId(empresa.plan),
+    ciclo: cicloEfectivo,
+    licencias,
+    aplicarTrial: false,
   });
 };
 
@@ -1378,6 +1428,7 @@ module.exports = {
   procesarWebhookEvent,
   crearCheckoutSession,
   crearCheckoutTrialPendiente,
+  crearCheckoutPagoPendiente,
   crearPortalSession,
   cancelarSuscripcion,
   reactivarSuscripcion,

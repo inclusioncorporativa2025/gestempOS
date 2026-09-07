@@ -63,6 +63,14 @@ const generarCodigoCampanaUnico = async (nombre) => {
 
 const { TRIAL_DAYS } = require('../config/trial');
 
+const TIPO_CAMPANA_VENTA_DIRECTA = 'venta_directa';
+
+const esCampanaVentaDirecta = (campana) =>
+  Boolean(campana && String(campana.tipo || '').toLowerCase() === TIPO_CAMPANA_VENTA_DIRECTA);
+
+const normalizarCicloFacturacion = (ciclo) =>
+  (String(ciclo || '').toLowerCase() === 'anual' ? 'anual' : 'mensual');
+
 const normalizarDiasPruebaCampana = (dias) => {
   if (dias == null || dias === '') return null;
   const n = Number(dias);
@@ -176,6 +184,7 @@ const calcularFechaFinPruebaCampana = async ({ idCampana, desde = new Date() } =
 
   if (idCampana) {
     const campana = await resolverCampanaActiva(idCampana);
+    if (esCampanaVentaDirecta(campana)) return null;
     if (campana?.dias_prueba != null) {
       dias = Number(campana.dias_prueba);
     }
@@ -184,6 +193,45 @@ const calcularFechaFinPruebaCampana = async ({ idCampana, desde = new Date() } =
   const fin = new Date(desde);
   fin.setDate(fin.getDate() + dias);
   return fin;
+};
+
+/** Modo de facturación según campaña / invitación / alta legacy. */
+const resolverFacturacionAlta = async ({
+  idCampana = null,
+  cicloFacturacion = null,
+  clienteLegacy = false,
+  desde = new Date(),
+} = {}) => {
+  const ciclo = normalizarCicloFacturacion(cicloFacturacion);
+
+  if (clienteLegacy) {
+    return {
+      modoFacturacion: 'legacy',
+      trialEndsAt: null,
+      cicloFacturacion: null,
+      ventaDirecta: false,
+    };
+  }
+
+  if (idCampana) {
+    const campana = await resolverCampanaActiva(idCampana);
+    if (esCampanaVentaDirecta(campana)) {
+      return {
+        modoFacturacion: 'pendiente_pago',
+        trialEndsAt: null,
+        cicloFacturacion: ciclo,
+        ventaDirecta: true,
+      };
+    }
+  }
+
+  const trialEndsAt = await calcularFechaFinPruebaCampana({ idCampana, desde });
+  return {
+    modoFacturacion: 'trial',
+    trialEndsAt,
+    cicloFacturacion: ciclo,
+    ventaDirecta: false,
+  };
 };
 
 const hashToken = (token) =>
@@ -435,7 +483,7 @@ const listarVentas = async (user, { q, etapa, pagina = 1, limite = 50 } = {}) =>
 
   const campanasOk = await crmCampanasDisponibles();
   const selectCampana = campanasOk
-    ? ', v.id_campana, c.nombre AS campana_nombre, c.dias_prueba AS campana_dias_prueba'
+    ? ', v.id_campana, c.nombre AS campana_nombre, c.dias_prueba AS campana_dias_prueba, c.tipo AS campana_tipo'
     : '';
   const joinCampana = campanasOk ? 'LEFT JOIN crm_campana c ON c.id_campana = v.id_campana' : '';
 
@@ -460,7 +508,19 @@ const listarVentas = async (user, { q, etapa, pagina = 1, limite = 50 } = {}) =>
        ef.estado_suscripcion,
        ef.trial_ends_at,
        ef.stripe_subscription_id,
-       ef.cancel_at_period_end
+       ef.cancel_at_period_end,
+       ef.ciclo_facturacion,
+       (
+         CASE
+           WHEN LOWER(IFNULL(ef.modo_facturacion, '')) = 'pendiente_pago'
+             AND (ef.stripe_subscription_id IS NULL OR ef.stripe_subscription_id = '') THEN 1
+           WHEN LOWER(IFNULL(ef.modo_facturacion, '')) = 'trial'
+             AND ef.stripe_subscription_id IS NULL
+             AND ef.trial_ends_at IS NOT NULL
+             AND ef.trial_ends_at <= UTC_TIMESTAMP() THEN 1
+           ELSE 0
+         END
+       ) AS requiere_enlace_pago
        ${selectCampana}
        ${selectImportes}
      FROM crm_venta v
@@ -539,7 +599,7 @@ const listarInvitaciones = async (user, { q, estado, pagina = 1, limite = 50 } =
 
   const campanasOk = await crmCampanasDisponibles();
   const selectCampanaInv = campanasOk
-    ? ', i.id_campana, c.nombre AS campana_nombre, c.dias_prueba AS campana_dias_prueba'
+    ? ', i.id_campana, i.ciclo_facturacion, c.nombre AS campana_nombre, c.dias_prueba AS campana_dias_prueba, c.tipo AS campana_tipo'
     : '';
   const joinCampanaInv = campanasOk ? 'LEFT JOIN crm_campana c ON c.id_campana = i.id_campana' : '';
 
@@ -611,6 +671,7 @@ const crearInvitacionRegistro = async ({
   canal = 'telefono',
   diasValidez = 30,
   idCampana = null,
+  cicloFacturacion = null,
 }) => {
   const token = generarTokenInvitacion();
   const tokenHash = hashToken(token);
@@ -628,20 +689,28 @@ const crearInvitacionRegistro = async ({
       throw error;
     }
     idCampanaValida = campana.id_campana;
+    if (esCampanaVentaDirecta(campana) && !cicloFacturacion) {
+      const error = new Error('Indica si la venta directa es mensual o anual');
+      error.code = 'CICLO_REQUERIDO';
+      throw error;
+    }
   }
 
+  const cicloNormalizado = cicloFacturacion ? normalizarCicloFacturacion(cicloFacturacion) : null;
   const campanaSql = idCampanaValida ? ', id_campana' : '';
   const campanaVal = idCampanaValida ? ', :idCampana' : '';
+  const cicloSql = cicloNormalizado ? ', ciclo_facturacion' : '';
+  const cicloVal = cicloNormalizado ? ', :cicloFacturacion' : '';
 
   const [, meta] = await sequelize.query(
     `INSERT INTO crm_invitacion_registro (
        token_hash, codigo_corto, id_usuario_comercial,
        email_previsto, telefono_previsto, canal, fecha_expiracion
-       ${campanaSql}
+       ${campanaSql}${cicloSql}
      ) VALUES (
        :tokenHash, :codigoCorto, :idUsuarioComercial,
        :emailPrevisto, :telefonoPrevisto, :canal, :fechaExpiracion
-       ${campanaVal}
+       ${campanaVal}${cicloVal}
      )`,
     {
       replacements: {
@@ -653,6 +722,7 @@ const crearInvitacionRegistro = async ({
         canal,
         fechaExpiracion,
         ...(idCampanaValida ? { idCampana: idCampanaValida } : {}),
+        ...(cicloNormalizado ? { cicloFacturacion: cicloNormalizado } : {}),
       },
     },
   );
@@ -1214,11 +1284,21 @@ const obtenerInvitacionPreview = async ({ token, codigoCorto }) => {
     },
   );
 
+  let campana = null;
+  if (invitacion.id_campana && (await crmCampanasDisponibles())) {
+    campana = await resolverCampanaActiva(invitacion.id_campana);
+  }
+
   return {
     email_previsto: invitacion.email_previsto,
     telefono_previsto: invitacion.telefono_previsto,
     canal: invitacion.canal,
     comercial_nombre: comercial?.nombre || null,
+    venta_directa: esCampanaVentaDirecta(campana),
+    ciclo_facturacion: invitacion.ciclo_facturacion
+      ? normalizarCicloFacturacion(invitacion.ciclo_facturacion)
+      : null,
+    campana_nombre: campana?.nombre || null,
   };
 };
 
@@ -1228,6 +1308,7 @@ const SQL_ETAPA_VENTA = `
     WHEN LOWER(COALESCE(ef.estado_suscripcion, '')) = 'canceled' THEN 'cancelada'
     WHEN LOWER(COALESCE(ef.modo_facturacion, '')) = 'legacy' THEN 'activa'
     WHEN LOWER(COALESCE(ef.estado_suscripcion, '')) IN ('active', 'past_due') THEN 'activa'
+    WHEN LOWER(COALESCE(ef.modo_facturacion, '')) = 'pendiente_pago' THEN 'registrada'
     WHEN LOWER(COALESCE(ef.modo_facturacion, '')) = 'trial'
       AND (ef.trial_ends_at IS NULL OR ef.trial_ends_at > NOW()) THEN 'trial'
     ELSE 'registrada'
@@ -1496,6 +1577,9 @@ module.exports = {
   listarCampanas,
   crearCampana,
   resolverCampanaActiva,
+  esCampanaVentaDirecta,
+  normalizarCicloFacturacion,
+  resolverFacturacionAlta,
   calcularFechaFinPruebaCampana,
   obtenerClaimsHub,
   emitirJwtSesionConHub,

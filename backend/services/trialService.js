@@ -61,6 +61,32 @@ const evaluarEstadoTrial = (facturacion) => {
     };
   }
 
+  if (facturacion.modo_facturacion === 'pendiente_pago') {
+    if (tieneSuscripcionDePago(facturacion)) {
+      return {
+        enPrueba: false,
+        activa: true,
+        expirada: false,
+        suscripcionActiva: true,
+        diasRestantes: null,
+        fechaFin: null,
+        advertir: false,
+      };
+    }
+
+    return {
+      enPrueba: false,
+      activa: false,
+      expirada: false,
+      requierePago: true,
+      requierePlan: true,
+      pendientePago: true,
+      diasRestantes: 0,
+      fechaFin: null,
+      advertir: false,
+    };
+  }
+
   if (
     facturacion.modo_facturacion === 'trial' &&
     !facturacion.stripe_subscription_id
@@ -86,6 +112,7 @@ const evaluarEstadoTrial = (facturacion) => {
       activa: !expirada,
       expirada,
       requierePlan: expirada,
+      requierePago: expirada,
       diasRestantes,
       fechaFin: fin.toISOString(),
       advertir: !expirada && diasRestantes <= TRIAL_WARN_DAYS,
@@ -151,6 +178,7 @@ const evaluarEstadoTrial = (facturacion) => {
     activa: !expirada,
     expirada,
     requierePlan: expirada,
+    requierePago: expirada,
     diasRestantes,
     fechaFin: fin.toISOString(),
     advertir: !expirada && diasRestantes <= TRIAL_WARN_DAYS,

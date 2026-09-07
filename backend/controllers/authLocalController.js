@@ -26,7 +26,7 @@ const {
   buildPaymentRequiredPayload,
   obtenerEstadoTrialEmpresa,
 } = require('../services/trialService');
-const { crearCheckoutTrialPendiente } = require('../services/billingService');
+const { crearCheckoutTrialPendiente, crearCheckoutPagoPendiente } = require('../services/billingService');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const BCRYPT_ROUNDS = 10;
@@ -511,15 +511,18 @@ const reanudarCheckout = async (req, res) => {
       });
     }
 
-    const checkout = await crearCheckoutTrialPendiente(empresaPendiente.id_empresa, {
+    const estadoPendiente = await obtenerEstadoTrialEmpresa(empresaPendiente.id_empresa);
+    const crearCheckout = estadoPendiente.pendientePago
+      ? crearCheckoutPagoPendiente
+      : crearCheckoutTrialPendiente;
+
+    const checkout = await crearCheckout(empresaPendiente.id_empresa, {
       email: usuario.email,
       nombre: usuario.nombre,
     });
 
     return res.status(200).json({
-      ...buildPaymentRequiredPayload(
-        await obtenerEstadoTrialEmpresa(empresaPendiente.id_empresa),
-      ),
+      ...buildPaymentRequiredPayload(estadoPendiente),
       checkoutUrl: checkout.url,
     });
   } catch (error) {

@@ -15,6 +15,7 @@ const Register = () => {
   const [searchParams] = useSearchParams();
   const invToken = searchParams.get('inv');
   const [invTokenActivo, setInvTokenActivo] = useState(invToken);
+  const [invitacionPreview, setInvitacionPreview] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,12 +23,22 @@ const Register = () => {
 
     previewInvitacionHub({ inv: invToken })
       .then((data) => {
+        setInvitacionPreview(data);
+        const fields = {};
         if (data.email_previsto) {
-          form.setFieldsValue({ email: data.email_previsto });
+          fields.email = data.email_previsto;
+        }
+        if (data.venta_directa && data.ciclo_facturacion) {
+          fields.cicloFacturacion = data.ciclo_facturacion;
+          fields.ventaDirectaInvitacion = true;
+        }
+        if (Object.keys(fields).length > 0) {
+          form.setFieldsValue(fields);
         }
       })
       .catch(() => {
         setInvTokenActivo(null);
+        setInvitacionPreview(null);
       });
   }, [invToken, form]);
 
@@ -41,6 +52,16 @@ const Register = () => {
         cicloFacturacion: payload.cicloFacturacion || 'mensual',
         invitacionToken: invTokenActivo || undefined,
       });
+
+      if (data?.checkoutUrl) {
+        notification.info({
+          message: 'Completa el pago',
+          description: 'Te redirigimos a Stripe para activar tu suscripción.',
+          duration: 4,
+        });
+        window.location.href = data.checkoutUrl;
+        return;
+      }
 
       if (data?.checkoutError) {
         notification.warning({
@@ -86,12 +107,23 @@ const Register = () => {
     <div className="register-page gradient-bg">
       <div className="register-glass-panel">
         <Title level={2} className="register-title">
-          Empieza gratis
+          {invitacionPreview?.venta_directa ? 'Activa tu suscripción' : 'Empieza gratis'}
         </Title>
         <Text className="register-lead">
-          <strong className="register-trial">15 días de prueba gratis.</strong>{' '}
-          Crea tu empresa en minutos y empieza a registrar la jornada de tu equipo sin coste
-          durante la prueba. Recibirás un correo para activar tu cuenta y acceder al panel.
+          {invitacionPreview?.venta_directa ? (
+            <>
+              <strong>Registro con venta directa.</strong>{' '}
+              Tras crear la empresa deberás completar el pago (
+              {invitacionPreview.ciclo_facturacion === 'anual' ? 'facturación anual' : 'facturación mensual'}
+              ) para activar Timecor.
+            </>
+          ) : (
+            <>
+              <strong className="register-trial">15 días de prueba gratis.</strong>{' '}
+              Crea tu empresa en minutos y empieza a registrar la jornada de tu equipo sin coste
+              durante la prueba. Recibirás un correo para activar tu cuenta y acceder al panel.
+            </>
+          )}
         </Text>
         <ul className="register-trust" aria-label="Ventajas del registro">
           <li>Sin permanencia</li>
@@ -109,6 +141,7 @@ const Register = () => {
           registroPublico
           requireTermsAcceptance
           collectFiscalAddress
+          bloquearCicloFacturacion={Boolean(invitacionPreview?.venta_directa)}
         />
 
         <p className="register-footer">

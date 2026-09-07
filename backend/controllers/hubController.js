@@ -7,6 +7,8 @@ const {
   listarCampanas,
   crearCampana,
   resolverCampanaActiva,
+  esCampanaVentaDirecta,
+  normalizarCicloFacturacion,
   asignarVentaManual,
   obtenerInvitacionPreview,
   eliminarVentaHub,
@@ -22,6 +24,8 @@ const {
   revocarPuestoHub,
   obtenerMetricasDashboard,
 } = require('../services/crmHubService');
+const { crearCheckoutPagoPendiente } = require('../services/billingService');
+const { sequelize } = require('../config/db');
 const { isEmailValido } = require('../utils/identityChecks');
 const { enviarInvitacionRegistroHub } = require('../utils/mailService');
 
@@ -119,6 +123,7 @@ const crearInvitacionHandler = async (req, res) => {
       dias_validez: diasValidez,
       id_campana: idCampanaBody,
       nombre_campana: nombreCampanaBody,
+      ciclo_facturacion: cicloFacturacionBody,
     } = req.body || {};
 
     const email = String(emailPrevisto || '').trim().toLowerCase();
@@ -176,6 +181,22 @@ const crearInvitacionHandler = async (req, res) => {
       idCampana = campana.id_campana;
     }
 
+    let campanaInvitacion = null;
+    if (idCampana) {
+      campanaInvitacion = await resolverCampanaActiva(idCampana);
+    }
+    const esVentaDirecta = esCampanaVentaDirecta(campanaInvitacion);
+    const cicloFacturacion = esVentaDirecta
+      ? normalizarCicloFacturacion(cicloFacturacionBody)
+      : (cicloFacturacionBody ? normalizarCicloFacturacion(cicloFacturacionBody) : null);
+
+    if (esVentaDirecta && !cicloFacturacionBody) {
+      return res.status(400).json({
+        message: 'Indica si la venta directa es mensual o anual',
+        code: 'CICLO_REQUERIDO',
+      });
+    }
+
     let canal = 'telefono';
     if (tieneEmail && tieneTelefono) canal = 'mixto';
     else if (tieneEmail) canal = 'email';
@@ -187,6 +208,7 @@ const crearInvitacionHandler = async (req, res) => {
       canal,
       diasValidez: diasValidez || 30,
       idCampana,
+      cicloFacturacion,
     });
 
     const registerUrl = `${APP_PUBLIC_URL}/register?inv=${encodeURIComponent(invitacion.token)}`;
@@ -227,10 +249,12 @@ const crearInvitacionHandler = async (req, res) => {
       email_destino: tieneEmail ? email : null,
       email_error: emailError,
       telefono_previsto: tieneTelefono ? telefono : null,
+      venta_directa: esVentaDirecta,
+      ciclo_facturacion: cicloFacturacion,
     });
   } catch (error) {
     if (error.code === 'CAMPANA_INVALIDA' || error.code === 'NOMBRE_INVALIDO'
-      || error.code === 'DIAS_PRUEBA_INVALIDO') {
+      || error.code === 'DIAS_PRUEBA_INVALIDO' || error.code === 'CICLO_REQUERIDO') {
       return res.status(400).json({ message: error.message, code: error.code });
     }
     if (error.code === 'CAMPANAS_NO_DISPONIBLES') {
@@ -528,6 +552,56 @@ const transferirInvitacionHandler = async (req, res) => {
   }
 };
 
+const enlacePagoVentaHandler = async (req, res) => {
+  try {
+    const idEmpresa = Number(req.params.idEmpresa);
+    if (!idEmpresa) {
+      return res.status(400).json({ message: 'idEmpresa es obligatorio' });
+    }
+
+    const [admin] = await sequelize.query(
+      `SELECT u.email, u.nombre
+       FROM m_usuarios_empresas ue
+       INNER JOIN m_usuarios u ON u.id_usuario = ue.id_usuario AND u.tipo_usuario = 3
+       WHERE ue.id_empresa = :idEmpresa
+         AND ue.fecha_baja IS NULL
+         AND IFNULL(ue.activo, 1) = 1
+       ORDER BY ue.fecha_alta ASC
+       LIMIT 1`,
+      {
+        replacements: { idEmpresa },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
+
+    if (!admin?.email) {
+      return res.status(400).json({
+        message: 'No se encontró el administrador de la empresa',
+        code: 'ADMIN_NOT_FOUND',
+      });
+    }
+
+    const cicloBody = req.body?.ciclo || req.body?.ciclo_facturacion;
+    const checkout = await crearCheckoutPagoPendiente(idEmpresa, {
+      email: admin.email,
+      nombre: admin.nombre,
+      ciclo: cicloBody,
+    });
+
+    return res.status(200).json({
+      url: checkout.url,
+      sessionId: checkout.sessionId,
+      email: admin.email,
+    });
+  } catch (error) {
+    console.error('[hub] enlacePagoVenta:', error.message);
+    return res.status(error.status || 500).json({
+      message: error.message || 'Error al generar el enlace de pago',
+      code: error.code,
+    });
+  }
+};
+
 module.exports = {
   obtenerContexto,
   listarVentasHandler,
@@ -548,4 +622,5 @@ module.exports = {
   transferirVentaHandler,
   eliminarInvitacionHandler,
   transferirInvitacionHandler,
+  enlacePagoVentaHandler,
 };

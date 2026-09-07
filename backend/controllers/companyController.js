@@ -19,14 +19,16 @@ const {
 } = require('../services/planCatalogService');
 const { isValidRegionCode, resolveRegionCode, provinceByCpPrefix } = require('../config/spanishRegions');
 const { extenderPeriodoPruebaEmpresa, TrialExtensionError } = require('../services/trialService');
-const { crearCheckoutTrialPendiente } = require('../services/billingService');
+const { crearCheckoutTrialPendiente, crearCheckoutPagoPendiente } = require('../services/billingService');
 const { purgarEmpresaCompleta } = require('../services/empresaPurgeService');
 const {
   buscarInvitacionValida,
   buscarInvitacionValidaPorEmail,
   registrarVentaDesdeInvitacion,
   crmTablasDisponibles,
-  calcularFechaFinPruebaCampana,
+  resolverFacturacionAlta,
+  listarCampanas,
+  normalizarCicloFacturacion,
 } = require('../services/crmHubService');
 const {
   findEmpresaActivaPorCif,
@@ -263,9 +265,6 @@ const registerCompany = async (req, res) => {
           || req.body.values?.sinPrueba,
         );
 
-        const modoFacturacion = clienteLegacy ? 'legacy' : 'trial';
-        const estadoSuscripcion = null;
-
         let invitacionRegistro = null;
         const invToken = req.body.invitacionToken || req.body.inv;
         const invCodigo = req.body.invitacionCodigo || req.body.codigoInvitacion;
@@ -291,25 +290,42 @@ const registerCompany = async (req, res) => {
           }
         }
 
-        const trialEndsAt = clienteLegacy
-          ? null
-          : await calcularFechaFinPruebaCampana({
-            idCampana: invitacionRegistro?.id_campana,
-            desde: fecha,
-          });
+        const idCampanaAlta = invitacionRegistro?.id_campana
+          ?? req.body.values?.id_campana
+          ?? req.body.id_campana
+          ?? null;
+
+        const cicloAlta = invitacionRegistro?.ciclo_facturacion
+          ?? cicloFacturacion
+          ?? req.body.values?.cicloFacturacion
+          ?? null;
+
+        const facturacionAlta = await resolverFacturacionAlta({
+          idCampana: idCampanaAlta,
+          cicloFacturacion: cicloAlta,
+          clienteLegacy,
+          desde: fecha,
+        });
+
+        const modoFacturacion = facturacionAlta.modoFacturacion;
+        const trialEndsAt = facturacionAlta.trialEndsAt;
+        const cicloFacturacionGuardado = facturacionAlta.cicloFacturacion;
+        const esVentaDirecta = facturacionAlta.ventaDirecta;
+        const estadoSuscripcion = null;
 
         await sequelize.query(
           `INSERT INTO empresa_facturacion (
              id_empresa, modo_facturacion, id_plan, licencias_facturadas,
-             trial_ends_at, estado_suscripcion
+             trial_ends_at, estado_suscripcion, ciclo_facturacion
            )
-           VALUES (:idEmpresa, :modo, :idPlan, :licencias, :trialEndsAt, :estadoSuscripcion)
+           VALUES (:idEmpresa, :modo, :idPlan, :licencias, :trialEndsAt, :estadoSuscripcion, :cicloFacturacion)
            ON DUPLICATE KEY UPDATE
              id_plan = VALUES(id_plan),
              licencias_facturadas = VALUES(licencias_facturadas),
              modo_facturacion = VALUES(modo_facturacion),
              trial_ends_at = VALUES(trial_ends_at),
-             estado_suscripcion = VALUES(estado_suscripcion)`,
+             estado_suscripcion = VALUES(estado_suscripcion),
+             ciclo_facturacion = VALUES(ciclo_facturacion)`,
           {
             replacements: {
               idEmpresa: empresa.id_empresa,
@@ -318,6 +334,7 @@ const registerCompany = async (req, res) => {
               licencias: licenciasSolicitadas,
               trialEndsAt,
               estadoSuscripcion,
+              cicloFacturacion: cicloFacturacionGuardado,
             },
             transaction,
           },
@@ -337,10 +354,29 @@ const registerCompany = async (req, res) => {
         const respuesta = {
           message: adminExistente
             ? 'Empresa registrada con éxito. Se ha vinculado su cuenta como administrador. Revisa el correo para crear tu contraseña.'
-            : 'Empresa registrada con éxito. Revisa el correo para crear tu contraseña e iniciar sesión.',
+            : esVentaDirecta
+              ? 'Empresa registrada. Completa el pago para activar la suscripción.'
+              : 'Empresa registrada con éxito. Revisa el correo para crear tu contraseña e iniciar sesión.',
           emailBienvenidaEnviado: null,
           adminExistente,
+          ventaDirecta: esVentaDirecta,
         };
+
+        if (esVentaDirecta) {
+          try {
+            const checkout = await crearCheckoutPagoPendiente(empresa.id_empresa, {
+              email: emailNormalizado,
+              nombre: Administrador,
+              ciclo: cicloFacturacionGuardado,
+            });
+            respuesta.checkoutUrl = checkout.url;
+            respuesta.checkoutSessionId = checkout.sessionId;
+          } catch (checkoutErr) {
+            console.error('[empresa] checkout venta directa:', checkoutErr.message);
+            respuesta.checkoutError = checkoutErr.message
+              || 'No se pudo generar el enlace de pago. Contacta con soporte.';
+          }
+        }
 
         res.status(201).json(respuesta);
 
@@ -432,6 +468,8 @@ const getEmpresasUsuarios = async (req, res)=> {
                         ef.cancel_at_period_end,
                         (
                           CASE
+                            WHEN LOWER(IFNULL(ef.modo_facturacion, '')) = 'pendiente_pago'
+                              AND (ef.stripe_subscription_id IS NULL OR ef.stripe_subscription_id = '') THEN 1
                             WHEN LOWER(IFNULL(ef.modo_facturacion, '')) = 'trial'
                               AND ef.stripe_subscription_id IS NULL
                               AND ef.trial_ends_at IS NOT NULL
@@ -830,15 +868,45 @@ const generarEnlacePagoEmpresa = async (req, res) => {
       });
     }
 
-    const checkout = await crearCheckoutTrialPendiente(idEmpresa, {
-      email: admin.email,
-      nombre: admin.nombre,
-    });
+    const [facturacionRow] = await sequelize.query(
+      `SELECT modo_facturacion, ciclo_facturacion, trial_ends_at, stripe_subscription_id
+       FROM empresa_facturacion WHERE id_empresa = :idEmpresa LIMIT 1`,
+      {
+        replacements: { idEmpresa },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
+
+    const modo = String(facturacionRow?.modo_facturacion || '').toLowerCase();
+    const cicloBody = req.body?.ciclo || req.body?.ciclo_facturacion || req.body?.cicloFacturacion;
+    const cicloOverride = cicloBody ? normalizarCicloFacturacion(cicloBody) : null;
+
+    if (cicloOverride) {
+      await sequelize.query(
+        `UPDATE empresa_facturacion SET ciclo_facturacion = :ciclo WHERE id_empresa = :idEmpresa`,
+        { replacements: { ciclo: cicloOverride, idEmpresa } },
+      );
+    }
+
+    let checkout;
+    if (modo === 'pendiente_pago') {
+      checkout = await crearCheckoutPagoPendiente(idEmpresa, {
+        email: admin.email,
+        nombre: admin.nombre,
+        ciclo: cicloOverride,
+      });
+    } else {
+      checkout = await crearCheckoutTrialPendiente(idEmpresa, {
+        email: admin.email,
+        nombre: admin.nombre,
+      });
+    }
 
     return res.status(200).json({
       url: checkout.url,
       sessionId: checkout.sessionId,
       email: admin.email,
+      ciclo: cicloOverride || facturacionRow?.ciclo_facturacion || 'mensual',
     });
   } catch (error) {
     console.error('Error al generar enlace de pago:', error);
@@ -847,6 +915,19 @@ const generarEnlacePagoEmpresa = async (req, res) => {
       code: error.code,
       campos_faltantes: error.campos_faltantes,
     });
+  }
+};
+
+const listarCampanasAltaHandler = async (req, res) => {
+  try {
+    if (!(await crmTablasDisponibles())) {
+      return res.status(200).json({ campanas: [] });
+    }
+    const campanas = await listarCampanas();
+    return res.status(200).json({ campanas });
+  } catch (error) {
+    console.error('Error al listar campañas para alta:', error.message);
+    return res.status(500).json({ message: 'Error al listar campañas' });
   }
 };
 
@@ -932,4 +1013,5 @@ module.exports = {
   purgaEmpresaPermanente,
   generarEnlacePagoEmpresa,
   extenderPeriodoPrueba,
+  listarCampanasAltaHandler,
 };
