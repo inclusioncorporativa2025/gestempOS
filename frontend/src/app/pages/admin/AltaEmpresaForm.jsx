@@ -157,6 +157,7 @@ const AltaEmpresaForm = ({
   showCampanaSelect = false,
   campanas = [],
   invitacionPagoInmediato = false,
+  invitacionPlan = null,
   bloquearCicloFacturacion = false,
 }) => {
   const planEfectivo = registroPublico ? 'rrhh' : planId;
@@ -206,19 +207,25 @@ const AltaEmpresaForm = ({
   }, [form, watchedValues, requireTermsAcceptance, minLicencias]);
 
   useEffect(() => {
-    if (!registroPublico) return;
+    if (!registroPublico || invitacionPagoInmediato) return;
     const minRrhh = getPlanMinLicencias('rrhh');
     const actuales = form.getFieldValue('numLicencias');
-    const patch = {
+    form.setFieldsValue({
       plan: 'rrhh',
+      cicloFacturacion: form.getFieldValue('cicloFacturacion') || 'mensual',
       ...(actuales == null || Number(actuales) < minRrhh ? { numLicencias: minRrhh } : {}),
-    };
-    if (!invitacionPagoInmediato) {
-      patch.cicloFacturacion = form.getFieldValue('cicloFacturacion') || 'mensual';
-      patch.plan = 'rrhh';
-    }
-    form.setFieldsValue(patch);
+    });
   }, [form, registroPublico, invitacionPagoInmediato]);
+
+  useEffect(() => {
+    if (!invitacionPagoInmediato || !invitacionPlan) return;
+    const min = getPlanMinLicencias(invitacionPlan);
+    const actuales = form.getFieldValue('numLicencias');
+    form.setFieldsValue({
+      plan: invitacionPlan,
+      ...(actuales == null || Number(actuales) < min ? { numLicencias: min } : {}),
+    });
+  }, [form, invitacionPagoInmediato, invitacionPlan]);
 
   const handleCodigoPostalChange = (event) => {
     const cp = String(event?.target?.value || '').replace(/\s/g, '');

@@ -155,6 +155,7 @@ const Register = () => {
           requireTermsAcceptance
           collectFiscalAddress
           invitacionPagoInmediato={esPagoInmediatoInv}
+          invitacionPlan={invitacionPreview?.plan || null}
           bloquearCicloFacturacion={esPagoInmediatoInv}
         />
 
