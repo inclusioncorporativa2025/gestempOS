@@ -28,9 +28,10 @@ const Register = () => {
         if (data.email_previsto) {
           fields.email = data.email_previsto;
         }
-        if (data.venta_directa && data.ciclo_facturacion) {
+        const esPagoInv = data.pago_inmediato || data.venta_directa;
+        if (esPagoInv && data.ciclo_facturacion) {
           fields.cicloFacturacion = data.ciclo_facturacion;
-          fields.ventaDirectaInvitacion = true;
+          fields.pagoInmediatoInvitacion = true;
         }
         if (Object.keys(fields).length > 0) {
           form.setFieldsValue(fields);
@@ -103,16 +104,20 @@ const Register = () => {
     }
   };
 
+  const esPagoInmediatoInv = Boolean(
+    invitacionPreview?.pago_inmediato || invitacionPreview?.venta_directa,
+  );
+
   return (
     <div className="register-page gradient-bg">
       <div className="register-glass-panel">
         <Title level={2} className="register-title">
-          {invitacionPreview?.venta_directa ? 'Activa tu suscripción' : 'Empieza gratis'}
+          {esPagoInmediatoInv ? 'Activa tu suscripción' : 'Empieza gratis'}
         </Title>
         <Text className="register-lead">
-          {invitacionPreview?.venta_directa ? (
+          {esPagoInmediatoInv ? (
             <>
-              <strong>Registro con venta directa.</strong>{' '}
+              <strong>Venta privada acordada con tu comercial.</strong>{' '}
               Tras crear la empresa deberás completar el pago (
               {invitacionPreview.ciclo_facturacion === 'anual' ? 'facturación anual' : 'facturación mensual'}
               ) para activar Timecor.
@@ -141,7 +146,7 @@ const Register = () => {
           registroPublico
           requireTermsAcceptance
           collectFiscalAddress
-          bloquearCicloFacturacion={Boolean(invitacionPreview?.venta_directa)}
+          bloquearCicloFacturacion={esPagoInmediatoInv}
         />
 
         <p className="register-footer">

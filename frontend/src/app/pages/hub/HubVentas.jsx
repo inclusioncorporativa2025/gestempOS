@@ -58,9 +58,23 @@ const { Text, Paragraph } = Typography;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const etiquetaCampanaHub = (nombre, diasPrueba, tipo) => {
+const CODIGOS_CAMPANA_PAGO_INMEDIATO = new Set(['venta-privada']);
+const TIPOS_CAMPANA_PAGO_INMEDIATO = new Set(['pago_inmediato', 'venta_directa']);
+
+const esCampanaPagoInmediato = (campanaOrTipo, codigo) => {
+  if (campanaOrTipo && typeof campanaOrTipo === 'object') {
+    const tipo = String(campanaOrTipo.tipo || '').toLowerCase();
+    const cod = String(campanaOrTipo.codigo || '').toLowerCase();
+    return TIPOS_CAMPANA_PAGO_INMEDIATO.has(tipo) || CODIGOS_CAMPANA_PAGO_INMEDIATO.has(cod);
+  }
+  const tipo = String(campanaOrTipo || '').toLowerCase();
+  const cod = String(codigo || '').toLowerCase();
+  return TIPOS_CAMPANA_PAGO_INMEDIATO.has(tipo) || CODIGOS_CAMPANA_PAGO_INMEDIATO.has(cod);
+};
+
+const etiquetaCampanaHub = (nombre, diasPrueba, tipo, codigo) => {
   if (!nombre) return '—';
-  if (tipo === 'venta_directa') return `${nombre} (venta directa · sin prueba)`;
+  if (esCampanaPagoInmediato(tipo, codigo)) return `${nombre} (sin prueba · pago inmediato)`;
   if (diasPrueba) return `${nombre} (${diasPrueba} días prueba)`;
   return nombre;
 };
@@ -402,8 +416,9 @@ const HubVentas = () => {
   const opcionesSelectCampana = useMemo(
     () => campanas.map((c) => ({
       value: Number(c.id_campana),
-      label: etiquetaCampanaHub(c.nombre, c.dias_prueba, c.tipo),
+      label: etiquetaCampanaHub(c.nombre, c.dias_prueba, c.tipo, c.codigo),
       tipo: c.tipo,
+      codigo: c.codigo,
     })),
     [campanas],
   );
@@ -413,7 +428,7 @@ const HubVentas = () => {
     [campanas, invitacionForm.id_campana],
   );
 
-  const esInvitacionVentaDirecta = campanaInvitacionSeleccionada?.tipo === 'venta_directa';
+  const esInvitacionPagoInmediato = esCampanaPagoInmediato(campanaInvitacionSeleccionada);
 
   const renderDropdownCampana = (menu) => (
     <>
@@ -496,8 +511,8 @@ const HubVentas = () => {
       message.warning('El teléfono no es válido (mínimo 9 dígitos)');
       return;
     }
-    if (esInvitacionVentaDirecta && !invitacionForm.ciclo_facturacion) {
-      message.warning('Indica si la venta directa es mensual o anual');
+    if (esInvitacionPagoInmediato && !invitacionForm.ciclo_facturacion) {
+      message.warning('Indica si la venta privada es mensual o anual');
       return;
     }
 
@@ -508,7 +523,7 @@ const HubVentas = () => {
         email_previsto: tieneEmail ? email : undefined,
         telefono_previsto: tieneTelefono ? telefono : undefined,
         ...campanaPayload,
-        ...(esInvitacionVentaDirecta
+        ...(esInvitacionPagoInmediato
           ? { ciclo_facturacion: invitacionForm.ciclo_facturacion }
           : {}),
       });
@@ -942,7 +957,7 @@ const HubVentas = () => {
                   : 'Opcional. Elige una campaña creada por tu responsable.'}
               </Text>
             </div>
-            {esInvitacionVentaDirecta && (
+            {esInvitacionPagoInmediato && (
               <div>
                 <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
                   Facturación acordada con el cliente
@@ -958,7 +973,7 @@ const HubVentas = () => {
                   <Radio.Button value="anual">Anual</Radio.Button>
                 </Radio.Group>
                 <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
-                  Sin periodo de prueba. Tras el registro podrás copiar el enlace de pago Stripe.
+                  Venta privada: sin prueba. Tras el registro podrás copiar el enlace de pago Stripe.
                 </Text>
               </div>
             )}
@@ -968,11 +983,11 @@ const HubVentas = () => {
           </Space>
         ) : (
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
-            {invitacionResultado.venta_directa && (
+            {(invitacionResultado.pago_inmediato || invitacionResultado.venta_directa) && (
               <Alert
                 type="info"
                 showIcon
-                message="Venta directa (sin prueba)"
+                message="Venta privada (sin prueba)"
                 description={`Facturación ${invitacionResultado.ciclo_facturacion === 'anual' ? 'anual' : 'mensual'}. Cuando el cliente se registre, genera el enlace de pago desde la ficha del cliente en esta pestaña.`}
               />
             )}

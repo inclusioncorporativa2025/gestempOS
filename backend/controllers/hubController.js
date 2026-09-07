@@ -7,6 +7,7 @@ const {
   listarCampanas,
   crearCampana,
   resolverCampanaActiva,
+  esCampanaPagoInmediato,
   esCampanaVentaDirecta,
   normalizarCicloFacturacion,
   asignarVentaManual,
@@ -185,14 +186,14 @@ const crearInvitacionHandler = async (req, res) => {
     if (idCampana) {
       campanaInvitacion = await resolverCampanaActiva(idCampana);
     }
-    const esVentaDirecta = esCampanaVentaDirecta(campanaInvitacion);
-    const cicloFacturacion = esVentaDirecta
+    const esPagoInmediato = esCampanaPagoInmediato(campanaInvitacion);
+    const cicloFacturacion = esPagoInmediato
       ? normalizarCicloFacturacion(cicloFacturacionBody)
       : (cicloFacturacionBody ? normalizarCicloFacturacion(cicloFacturacionBody) : null);
 
-    if (esVentaDirecta && !cicloFacturacionBody) {
+    if (esPagoInmediato && !cicloFacturacionBody) {
       return res.status(400).json({
-        message: 'Indica si la venta directa es mensual o anual',
+        message: 'Indica si la venta privada es mensual o anual',
         code: 'CICLO_REQUERIDO',
       });
     }
@@ -249,7 +250,8 @@ const crearInvitacionHandler = async (req, res) => {
       email_destino: tieneEmail ? email : null,
       email_error: emailError,
       telefono_previsto: tieneTelefono ? telefono : null,
-      venta_directa: esVentaDirecta,
+      pago_inmediato: esPagoInmediato,
+      venta_directa: esPagoInmediato,
       ciclo_facturacion: cicloFacturacion,
     });
   } catch (error) {

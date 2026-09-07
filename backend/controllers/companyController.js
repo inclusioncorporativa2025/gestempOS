@@ -310,7 +310,7 @@ const registerCompany = async (req, res) => {
         const modoFacturacion = facturacionAlta.modoFacturacion;
         const trialEndsAt = facturacionAlta.trialEndsAt;
         const cicloFacturacionGuardado = facturacionAlta.cicloFacturacion;
-        const esVentaDirecta = facturacionAlta.ventaDirecta;
+        const esPagoInmediato = facturacionAlta.pagoInmediato;
         const estadoSuscripcion = null;
 
         await sequelize.query(
@@ -354,15 +354,16 @@ const registerCompany = async (req, res) => {
         const respuesta = {
           message: adminExistente
             ? 'Empresa registrada con éxito. Se ha vinculado su cuenta como administrador. Revisa el correo para crear tu contraseña.'
-            : esVentaDirecta
+            : esPagoInmediato
               ? 'Empresa registrada. Completa el pago para activar la suscripción.'
               : 'Empresa registrada con éxito. Revisa el correo para crear tu contraseña e iniciar sesión.',
           emailBienvenidaEnviado: null,
           adminExistente,
-          ventaDirecta: esVentaDirecta,
+          pagoInmediato: esPagoInmediato,
+          ventaDirecta: esPagoInmediato,
         };
 
-        if (esVentaDirecta) {
+        if (esPagoInmediato) {
           try {
             const checkout = await crearCheckoutPagoPendiente(empresa.id_empresa, {
               email: emailNormalizado,
@@ -372,7 +373,7 @@ const registerCompany = async (req, res) => {
             respuesta.checkoutUrl = checkout.url;
             respuesta.checkoutSessionId = checkout.sessionId;
           } catch (checkoutErr) {
-            console.error('[empresa] checkout venta directa:', checkoutErr.message);
+            console.error('[empresa] checkout pago inmediato:', checkoutErr.message);
             respuesta.checkoutError = checkoutErr.message
               || 'No se pudo generar el enlace de pago. Contacta con soporte.';
           }

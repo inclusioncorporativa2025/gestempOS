@@ -63,10 +63,19 @@ const generarCodigoCampanaUnico = async (nombre) => {
 
 const { TRIAL_DAYS } = require('../config/trial');
 
-const TIPO_CAMPANA_VENTA_DIRECTA = 'venta_directa';
+/** VENTA PRIVADA: comercial vende, sin trial, pago Stripe inmediato. */
+const TIPOS_CAMPANA_PAGO_INMEDIATO = new Set(['pago_inmediato', 'venta_directa']);
+const CODIGOS_CAMPANA_PAGO_INMEDIATO = new Set(['venta-privada']);
 
-const esCampanaVentaDirecta = (campana) =>
-  Boolean(campana && String(campana.tipo || '').toLowerCase() === TIPO_CAMPANA_VENTA_DIRECTA);
+const esCampanaPagoInmediato = (campana) => {
+  if (!campana) return false;
+  const tipo = String(campana.tipo || '').toLowerCase();
+  const codigo = String(campana.codigo || '').toLowerCase();
+  return TIPOS_CAMPANA_PAGO_INMEDIATO.has(tipo) || CODIGOS_CAMPANA_PAGO_INMEDIATO.has(codigo);
+};
+
+/** @deprecated usar esCampanaPagoInmediato */
+const esCampanaVentaDirecta = esCampanaPagoInmediato;
 
 const normalizarCicloFacturacion = (ciclo) =>
   (String(ciclo || '').toLowerCase() === 'anual' ? 'anual' : 'mensual');
@@ -184,7 +193,7 @@ const calcularFechaFinPruebaCampana = async ({ idCampana, desde = new Date() } =
 
   if (idCampana) {
     const campana = await resolverCampanaActiva(idCampana);
-    if (esCampanaVentaDirecta(campana)) return null;
+    if (esCampanaPagoInmediato(campana)) return null;
     if (campana?.dias_prueba != null) {
       dias = Number(campana.dias_prueba);
     }
@@ -209,18 +218,18 @@ const resolverFacturacionAlta = async ({
       modoFacturacion: 'legacy',
       trialEndsAt: null,
       cicloFacturacion: null,
-      ventaDirecta: false,
+      pagoInmediato: false,
     };
   }
 
   if (idCampana) {
     const campana = await resolverCampanaActiva(idCampana);
-    if (esCampanaVentaDirecta(campana)) {
+    if (esCampanaPagoInmediato(campana)) {
       return {
         modoFacturacion: 'pendiente_pago',
         trialEndsAt: null,
         cicloFacturacion: ciclo,
-        ventaDirecta: true,
+        pagoInmediato: true,
       };
     }
   }
@@ -230,7 +239,7 @@ const resolverFacturacionAlta = async ({
     modoFacturacion: 'trial',
     trialEndsAt,
     cicloFacturacion: ciclo,
-    ventaDirecta: false,
+    pagoInmediato: false,
   };
 };
 
@@ -689,8 +698,8 @@ const crearInvitacionRegistro = async ({
       throw error;
     }
     idCampanaValida = campana.id_campana;
-    if (esCampanaVentaDirecta(campana) && !cicloFacturacion) {
-      const error = new Error('Indica si la venta directa es mensual o anual');
+    if (esCampanaPagoInmediato(campana) && !cicloFacturacion) {
+      const error = new Error('Indica si la venta privada es mensual o anual');
       error.code = 'CICLO_REQUERIDO';
       throw error;
     }
@@ -1294,7 +1303,8 @@ const obtenerInvitacionPreview = async ({ token, codigoCorto }) => {
     telefono_previsto: invitacion.telefono_previsto,
     canal: invitacion.canal,
     comercial_nombre: comercial?.nombre || null,
-    venta_directa: esCampanaVentaDirecta(campana),
+    pago_inmediato: esCampanaPagoInmediato(campana),
+    /** @deprecated */ venta_directa: esCampanaPagoInmediato(campana),
     ciclo_facturacion: invitacion.ciclo_facturacion
       ? normalizarCicloFacturacion(invitacion.ciclo_facturacion)
       : null,
@@ -1577,6 +1587,7 @@ module.exports = {
   listarCampanas,
   crearCampana,
   resolverCampanaActiva,
+  esCampanaPagoInmediato,
   esCampanaVentaDirecta,
   normalizarCicloFacturacion,
   resolverFacturacionAlta,

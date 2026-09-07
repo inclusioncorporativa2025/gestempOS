@@ -21,6 +21,20 @@ import './AltaEmpresa.css';
 
 const { Text } = Typography;
 
+const CODIGOS_CAMPANA_PAGO_INMEDIATO = new Set(['venta-privada']);
+const TIPOS_CAMPANA_PAGO_INMEDIATO = new Set(['pago_inmediato', 'venta_directa']);
+
+const esCampanaPagoInmediato = (campanaOrTipo, codigo) => {
+  if (campanaOrTipo && typeof campanaOrTipo === 'object') {
+    const tipo = String(campanaOrTipo.tipo || '').toLowerCase();
+    const cod = String(campanaOrTipo.codigo || '').toLowerCase();
+    return TIPOS_CAMPANA_PAGO_INMEDIATO.has(tipo) || CODIGOS_CAMPANA_PAGO_INMEDIATO.has(cod);
+  }
+  const tipo = String(campanaOrTipo || '').toLowerCase();
+  const cod = String(codigo || '').toLowerCase();
+  return TIPOS_CAMPANA_PAGO_INMEDIATO.has(tipo) || CODIGOS_CAMPANA_PAGO_INMEDIATO.has(cod);
+};
+
 const PLAN_UNAVAILABLE_TOOLTIP =
   'No disponible por el momento, disculpen las molestias';
 
@@ -138,10 +152,11 @@ const AltaEmpresaForm = ({
   const campanaSeleccionada = campanas.find(
     (c) => Number(c.id_campana) === Number(idCampanaSeleccionada),
   );
-  const esVentaDirecta = campanaSeleccionada?.tipo === 'venta_directa'
+  const esPagoInmediato = esCampanaPagoInmediato(campanaSeleccionada)
+    || Boolean(Form.useWatch('pagoInmediatoInvitacion', form))
     || Boolean(Form.useWatch('ventaDirectaInvitacion', form));
   const mostrarCicloFacturacion = registroPublico
-    || esVentaDirecta
+    || esPagoInmediato
     || (mostrarSelectorPlan && planSelectVariant === 'cards');
   const minLicencias = minLicenciasProp ?? getPlanMinLicencias(planSeleccionado);
   const isCompact = !registroPublico && planSelectVariant === 'cards';
@@ -250,9 +265,9 @@ const AltaEmpresaForm = ({
               form.setFieldsValue({ cicloFacturacion: ciclo });
             }}
           />
-          {esVentaDirecta && (
+          {esPagoInmediato && (
             <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
-              Venta directa: sin periodo de prueba. Se generará enlace de pago Stripe al crear la empresa.
+              Venta privada: sin periodo de prueba. Se generará enlace de pago Stripe al crear la empresa.
             </Text>
           )}
         </Col>
@@ -260,6 +275,9 @@ const AltaEmpresaForm = ({
     ) : null}
 
     <Form.Item name="cicloFacturacion" hidden>
+      <Input type="hidden" />
+    </Form.Item>
+    <Form.Item name="pagoInmediatoInvitacion" hidden>
       <Input type="hidden" />
     </Form.Item>
     <Form.Item name="ventaDirectaInvitacion" hidden>
@@ -435,7 +453,7 @@ const AltaEmpresaForm = ({
             valuePropName="checked"
             initialValue={false}
           >
-            <Checkbox disabled={esVentaDirecta}>
+            <Checkbox disabled={esPagoInmediato}>
               Cliente histórico (sin periodo de prueba)
             </Checkbox>
           </Form.Item>
@@ -449,8 +467,8 @@ const AltaEmpresaForm = ({
               placeholder="Opcional"
               options={campanas.map((c) => ({
                 value: Number(c.id_campana),
-                label: c.tipo === 'venta_directa'
-                  ? `${c.nombre} (venta directa · sin prueba)`
+                label: esCampanaPagoInmediato(c)
+                  ? `${c.nombre} (sin prueba · pago inmediato)`
                   : c.dias_prueba
                     ? `${c.nombre} (${c.dias_prueba} días prueba)`
                     : c.nombre,
