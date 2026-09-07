@@ -6,7 +6,6 @@ import {
   Input,
   InputNumber,
   Modal,
-  Radio,
   Select,
   Space,
   Table,
@@ -52,6 +51,9 @@ import {
   buildWhatsAppInvitacionUrl,
   telefonoValidoWhatsApp,
 } from '../../../utils/hubInvitacionWhatsApp';
+import { LICENSE_IS_USER_NOTE } from '../../../constants/plans';
+import { PlanBillingToggle, PlanCardPicker } from '../admin/AltaEmpresaForm';
+import '../admin/AltaEmpresa.css';
 import './Hub.css';
 
 const { Text, Paragraph } = Typography;
@@ -144,6 +146,7 @@ const HubVentas = () => {
     campana_nombre: '',
     id_campana: null,
     ciclo_facturacion: 'mensual',
+    plan: 'rrhh',
   });
   const [campanas, setCampanas] = useState([]);
   const [campanasLoading, setCampanasLoading] = useState(false);
@@ -397,6 +400,7 @@ const HubVentas = () => {
       campana_nombre: '',
       id_campana: null,
       ciclo_facturacion: 'mensual',
+      plan: 'rrhh',
     });
     setInvitacionOpen(true);
     if (!puedeCrearInvitacion) return;
@@ -515,6 +519,10 @@ const HubVentas = () => {
       message.warning('Indica si la venta privada es mensual o anual');
       return;
     }
+    if (esInvitacionPagoInmediato && !invitacionForm.plan) {
+      message.warning('Selecciona el plan acordado con el cliente');
+      return;
+    }
 
     setInvitacionLoading(true);
     try {
@@ -524,7 +532,10 @@ const HubVentas = () => {
         telefono_previsto: tieneTelefono ? telefono : undefined,
         ...campanaPayload,
         ...(esInvitacionPagoInmediato
-          ? { ciclo_facturacion: invitacionForm.ciclo_facturacion }
+          ? {
+            ciclo_facturacion: invitacionForm.ciclo_facturacion,
+            plan: invitacionForm.plan,
+          }
           : {}),
       });
       setInvitacionResultado(data);
@@ -962,18 +973,26 @@ const HubVentas = () => {
                 <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
                   Facturación acordada con el cliente
                 </Text>
-                <Radio.Group
+                <PlanBillingToggle
                   value={invitacionForm.ciclo_facturacion}
-                  onChange={(e) => setInvitacionForm((prev) => ({
+                  onChange={(ciclo) => setInvitacionForm((prev) => ({
                     ...prev,
-                    ciclo_facturacion: e.target.value,
+                    ciclo_facturacion: ciclo,
                   }))}
-                >
-                  <Radio.Button value="mensual">Mensual</Radio.Button>
-                  <Radio.Button value="anual">Anual</Radio.Button>
-                </Radio.Group>
+                />
+                <Text type="secondary" style={{ display: 'block', marginTop: 12, marginBottom: 4 }}>
+                  Plan acordado con el cliente
+                </Text>
+                <PlanCardPicker
+                  value={invitacionForm.plan || 'rrhh'}
+                  billingPeriod={invitacionForm.ciclo_facturacion}
+                  onChange={(planId) => setInvitacionForm((prev) => ({
+                    ...prev,
+                    plan: planId,
+                  }))}
+                />
                 <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
-                  Venta privada: sin prueba. Tras el registro podrás copiar el enlace de pago Stripe.
+                  {LICENSE_IS_USER_NOTE} Venta privada: sin prueba. Tras el registro podrás copiar el enlace de pago Stripe.
                 </Text>
               </div>
             )}

@@ -38,13 +38,18 @@ const esCampanaPagoInmediato = (campanaOrTipo, codigo) => {
 const PLAN_UNAVAILABLE_TOOLTIP =
   'No disponible por el momento, disculpen las molestias';
 
-const PlanBillingToggle = ({ value, onChange }) => (
-  <div className="alta-plan-billing" role="group" aria-label="Periodo de facturación">
+const PlanBillingToggle = ({ value, onChange, disabled = false }) => (
+  <div
+    className={`alta-plan-billing${disabled ? ' alta-plan-billing--disabled' : ''}`}
+    role="group"
+    aria-label="Periodo de facturación"
+  >
     <button
       type="button"
       className={`alta-plan-billing-option${value === 'mensual' ? ' alta-plan-billing-option--active' : ''}`}
       aria-pressed={value === 'mensual'}
-      onClick={() => onChange('mensual')}
+      disabled={disabled}
+      onClick={() => !disabled && onChange('mensual')}
     >
       Mensual
     </button>
@@ -52,7 +57,8 @@ const PlanBillingToggle = ({ value, onChange }) => (
       type="button"
       className={`alta-plan-billing-option${value === 'anual' ? ' alta-plan-billing-option--active' : ''}`}
       aria-pressed={value === 'anual'}
-      onClick={() => onChange('anual')}
+      disabled={disabled}
+      onClick={() => !disabled && onChange('anual')}
     >
       Anual
       <span className="alta-plan-billing-badge">({ANNUAL_FREE_MONTHS_BADGE})</span>
@@ -60,13 +66,20 @@ const PlanBillingToggle = ({ value, onChange }) => (
   </div>
 );
 
-const PlanCardPicker = ({ value, onChange, onPlanChange, billingPeriod = 'mensual' }) => (
+const PlanCardPicker = ({
+  value,
+  onChange,
+  onPlanChange,
+  billingPeriod = 'mensual',
+  readOnly = false,
+}) => (
   <div className="alta-plan-picker" role="radiogroup" aria-label="Elige tu plan">
     {PLANS.map((plan) => {
       const selected = value === plan.id;
       const esAnual = billingPeriod === 'anual';
+      const bloqueado = readOnly && !selected;
       const selectPlan = () => {
-        if (!plan.available) return;
+        if (readOnly || !plan.available) return;
         onChange?.(plan.id);
         onPlanChange?.(plan.id);
       };
@@ -75,13 +88,14 @@ const PlanCardPicker = ({ value, onChange, onPlanChange, billingPeriod = 'mensua
           type="button"
           role="radio"
           aria-checked={selected}
-          disabled={!plan.available}
+          disabled={!plan.available || bloqueado}
           className={[
             'alta-plan-option',
             `alta-plan-option--${plan.variant}`,
             selected ? 'alta-plan-option--selected' : '',
             plan.featured ? 'alta-plan-option--featured' : '',
             !plan.available ? 'alta-plan-option--disabled' : '',
+            bloqueado ? 'alta-plan-option--locked' : '',
           ].filter(Boolean).join(' ')}
           onClick={selectPlan}
         >
@@ -155,6 +169,7 @@ const AltaEmpresaForm = ({
   );
   const esPagoInmediato = esCampanaPagoInmediato(campanaSeleccionada)
     || invitacionPagoInmediato;
+  const mostrarResumenPlanVentaPrivada = registroPublico && invitacionPagoInmediato;
   const mostrarCicloFacturacion = registroPublico
     || esPagoInmediato
     || (mostrarSelectorPlan && planSelectVariant === 'cards');
@@ -200,6 +215,7 @@ const AltaEmpresaForm = ({
     };
     if (!invitacionPagoInmediato) {
       patch.cicloFacturacion = form.getFieldValue('cicloFacturacion') || 'mensual';
+      patch.plan = 'rrhh';
     }
     form.setFieldsValue(patch);
   }, [form, registroPublico, invitacionPagoInmediato]);
@@ -226,6 +242,38 @@ const AltaEmpresaForm = ({
       ...(requireTermsAcceptance ? { acceptTerms: false } : {}),
     }}
   >
+    {mostrarResumenPlanVentaPrivada ? (
+      <>
+        <div className="alta-plan-billing-row">
+          <div className="alta-plan-resumen-registro-header">
+            <Text type="secondary" style={{ display: 'block', marginBottom: 8, textAlign: 'center' }}>
+              Facturación acordada con tu comercial
+            </Text>
+            <PlanBillingToggle
+              value={cicloFacturacion}
+              disabled={bloquearCicloFacturacion}
+              onChange={(ciclo) => {
+                if (bloquearCicloFacturacion) return;
+                form.setFieldsValue({ cicloFacturacion: ciclo });
+              }}
+            />
+          </div>
+        </div>
+        <Form.Item
+          name="plan"
+          label="Plan contratado"
+          className="alta-plan-form-item"
+          extra={LICENSE_IS_USER_NOTE}
+        >
+          <PlanCardPicker
+            readOnly={bloquearCicloFacturacion}
+            onPlanChange={handlePlanChange}
+            billingPeriod={cicloFacturacion}
+          />
+        </Form.Item>
+      </>
+    ) : null}
+
     {mostrarSelectorPlan && planSelectVariant === 'cards' ? (
       <>
         <Form.Item name="cicloFacturacion" hidden>
@@ -532,4 +580,5 @@ const AltaEmpresaForm = ({
   );
 };
 
+export { PlanCardPicker, PlanBillingToggle };
 export default AltaEmpresaForm;

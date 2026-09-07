@@ -74,6 +74,44 @@
   box-shadow: 0 2px 12px rgba(0, 21, 41, 0.08);
 }
 
+.alta-plan-billing--disabled {
+  opacity: 0.92;
+}
+
+.alta-plan-billing--disabled .alta-plan-billing-option {
+  cursor: default;
+}
+
+.alta-plan-resumen-registro-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.alta-plan-resumen-registro-label {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.65rem;
+}
+
+.alta-plan-resumen-registro {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.15rem;
+}
+
+.alta-plan-resumen-registro .alta-plan-option {
+  max-width: 320px;
+  width: 100%;
+  cursor: default;
+}
+
+.alta-plan-option--locked {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .alta-plan-billing-badge {
   font-size: 0.75rem;
   font-weight: var(--font-weight-medium);

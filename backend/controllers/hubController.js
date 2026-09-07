@@ -10,6 +10,7 @@ const {
   esCampanaPagoInmediato,
   esCampanaVentaDirecta,
   normalizarCicloFacturacion,
+  normalizarPlanInvitacion,
   asignarVentaManual,
   obtenerInvitacionPreview,
   eliminarVentaHub,
@@ -125,6 +126,7 @@ const crearInvitacionHandler = async (req, res) => {
       id_campana: idCampanaBody,
       nombre_campana: nombreCampanaBody,
       ciclo_facturacion: cicloFacturacionBody,
+      plan: planBody,
     } = req.body || {};
 
     const email = String(emailPrevisto || '').trim().toLowerCase();
@@ -198,6 +200,17 @@ const crearInvitacionHandler = async (req, res) => {
       });
     }
 
+    const planInvitacion = esPagoInmediato && planBody
+      ? normalizarPlanInvitacion(planBody)
+      : (planBody ? normalizarPlanInvitacion(planBody) : null);
+
+    if (esPagoInmediato && !planInvitacion) {
+      return res.status(400).json({
+        message: 'Indica el plan acordado con el cliente',
+        code: 'PLAN_REQUERIDO',
+      });
+    }
+
     let canal = 'telefono';
     if (tieneEmail && tieneTelefono) canal = 'mixto';
     else if (tieneEmail) canal = 'email';
@@ -210,6 +223,7 @@ const crearInvitacionHandler = async (req, res) => {
       diasValidez: diasValidez || 30,
       idCampana,
       cicloFacturacion,
+      plan: planInvitacion,
     });
 
     const registerUrl = `${APP_PUBLIC_URL}/register?inv=${encodeURIComponent(invitacion.token)}`;
@@ -253,10 +267,12 @@ const crearInvitacionHandler = async (req, res) => {
       pago_inmediato: esPagoInmediato,
       venta_directa: esPagoInmediato,
       ciclo_facturacion: cicloFacturacion,
+      plan: planInvitacion,
     });
   } catch (error) {
     if (error.code === 'CAMPANA_INVALIDA' || error.code === 'NOMBRE_INVALIDO'
-      || error.code === 'DIAS_PRUEBA_INVALIDO' || error.code === 'CICLO_REQUERIDO') {
+      || error.code === 'DIAS_PRUEBA_INVALIDO' || error.code === 'CICLO_REQUERIDO'
+      || error.code === 'PLAN_REQUERIDO') {
       return res.status(400).json({ message: error.message, code: error.code });
     }
     if (error.code === 'CAMPANAS_NO_DISPONIBLES') {

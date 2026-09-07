@@ -62,6 +62,7 @@ const generarCodigoCampanaUnico = async (nombre) => {
 };
 
 const { TRIAL_DAYS } = require('../config/trial');
+const { normalizePlanId } = require('../config/plans');
 
 /** VENTA PRIVADA: comercial vende, sin trial, pago Stripe inmediato. */
 const TIPOS_CAMPANA_PAGO_INMEDIATO = new Set(['pago_inmediato', 'venta_directa']);
@@ -79,6 +80,12 @@ const esCampanaVentaDirecta = esCampanaPagoInmediato;
 
 const normalizarCicloFacturacion = (ciclo) =>
   (String(ciclo || '').toLowerCase() === 'anual' ? 'anual' : 'mensual');
+
+const normalizarPlanInvitacion = (plan) => {
+  const raw = String(plan || '').trim().toLowerCase();
+  if (!raw) return null;
+  return normalizePlanId(raw);
+};
 
 const normalizarDiasPruebaCampana = (dias) => {
   if (dias == null || dias === '') return null;
@@ -681,6 +688,7 @@ const crearInvitacionRegistro = async ({
   diasValidez = 30,
   idCampana = null,
   cicloFacturacion = null,
+  plan = null,
 }) => {
   const token = generarTokenInvitacion();
   const tokenHash = hashToken(token);
@@ -690,36 +698,47 @@ const crearInvitacionRegistro = async ({
 
   const campanasOk = await crmCampanasDisponibles();
   let idCampanaValida = null;
+  let campanaInvitacion = null;
   if (campanasOk && idCampana) {
-    const campana = await resolverCampanaActiva(idCampana);
-    if (!campana) {
+    campanaInvitacion = await resolverCampanaActiva(idCampana);
+    if (!campanaInvitacion) {
       const error = new Error('La campaña seleccionada no es válida');
       error.code = 'CAMPANA_INVALIDA';
       throw error;
     }
-    idCampanaValida = campana.id_campana;
-    if (esCampanaPagoInmediato(campana) && !cicloFacturacion) {
-      const error = new Error('Indica si la venta privada es mensual o anual');
-      error.code = 'CICLO_REQUERIDO';
-      throw error;
+    idCampanaValida = campanaInvitacion.id_campana;
+    if (esCampanaPagoInmediato(campanaInvitacion)) {
+      if (!cicloFacturacion) {
+        const error = new Error('Indica si la venta privada es mensual o anual');
+        error.code = 'CICLO_REQUERIDO';
+        throw error;
+      }
+      if (!plan) {
+        const error = new Error('Indica el plan acordado con el cliente');
+        error.code = 'PLAN_REQUERIDO';
+        throw error;
+      }
     }
   }
 
   const cicloNormalizado = cicloFacturacion ? normalizarCicloFacturacion(cicloFacturacion) : null;
+  const planNormalizado = plan ? normalizarPlanInvitacion(plan) : null;
   const campanaSql = idCampanaValida ? ', id_campana' : '';
   const campanaVal = idCampanaValida ? ', :idCampana' : '';
   const cicloSql = cicloNormalizado ? ', ciclo_facturacion' : '';
   const cicloVal = cicloNormalizado ? ', :cicloFacturacion' : '';
+  const planSql = planNormalizado ? ', plan' : '';
+  const planVal = planNormalizado ? ', :plan' : '';
 
   const [, meta] = await sequelize.query(
     `INSERT INTO crm_invitacion_registro (
        token_hash, codigo_corto, id_usuario_comercial,
        email_previsto, telefono_previsto, canal, fecha_expiracion
-       ${campanaSql}${cicloSql}
+       ${campanaSql}${cicloSql}${planSql}
      ) VALUES (
        :tokenHash, :codigoCorto, :idUsuarioComercial,
        :emailPrevisto, :telefonoPrevisto, :canal, :fechaExpiracion
-       ${campanaVal}${cicloVal}
+       ${campanaVal}${cicloVal}${planVal}
      )`,
     {
       replacements: {
@@ -732,6 +751,7 @@ const crearInvitacionRegistro = async ({
         fechaExpiracion,
         ...(idCampanaValida ? { idCampana: idCampanaValida } : {}),
         ...(cicloNormalizado ? { cicloFacturacion: cicloNormalizado } : {}),
+        ...(planNormalizado ? { plan: planNormalizado } : {}),
       },
     },
   );
@@ -1308,6 +1328,7 @@ const obtenerInvitacionPreview = async ({ token, codigoCorto }) => {
     ciclo_facturacion: invitacion.ciclo_facturacion
       ? normalizarCicloFacturacion(invitacion.ciclo_facturacion)
       : null,
+    plan: invitacion.plan ? normalizarPlanInvitacion(invitacion.plan) : null,
     campana_nombre: campana?.nombre || null,
   };
 };
@@ -1590,6 +1611,7 @@ module.exports = {
   esCampanaPagoInmediato,
   esCampanaVentaDirecta,
   normalizarCicloFacturacion,
+  normalizarPlanInvitacion,
   resolverFacturacionAlta,
   calcularFechaFinPruebaCampana,
   obtenerClaimsHub,

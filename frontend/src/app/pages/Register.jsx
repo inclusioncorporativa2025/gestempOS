@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { registrarEmpresaPublica } from '../../features/auth/authService';
 import { previewInvitacionHub } from '../../features/hub/hubService';
+import { getPlanMinLicencias } from '../../constants/plans';
 import AltaEmpresaForm from './admin/AltaEmpresaForm';
 import './Register.css';
 
@@ -32,6 +33,14 @@ const Register = () => {
         if (esPagoInv && data.ciclo_facturacion) {
           fields.cicloFacturacion = data.ciclo_facturacion;
         }
+        if (esPagoInv && data.plan) {
+          fields.plan = data.plan;
+          const minPlan = getPlanMinLicencias(data.plan);
+          const actuales = form.getFieldValue('numLicencias');
+          if (actuales == null || Number(actuales) < minPlan) {
+            fields.numLicencias = minPlan;
+          }
+        }
         if (Object.keys(fields).length > 0) {
           form.setFieldsValue(fields);
         }
@@ -48,7 +57,7 @@ const Register = () => {
     try {
       const data = await registrarEmpresaPublica({
         ...payload,
-        plan: 'rrhh',
+        plan: payload.plan || 'rrhh',
         cicloFacturacion: payload.cicloFacturacion || 'mensual',
         invitacionToken: invTokenActivo || undefined,
       });
