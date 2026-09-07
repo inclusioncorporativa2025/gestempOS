@@ -142,6 +142,7 @@ const AltaEmpresaForm = ({
   collectFiscalAddress = false,
   showCampanaSelect = false,
   campanas = [],
+  invitacionPagoInmediato = false,
   bloquearCicloFacturacion = false,
 }) => {
   const planEfectivo = registroPublico ? 'rrhh' : planId;
@@ -153,8 +154,7 @@ const AltaEmpresaForm = ({
     (c) => Number(c.id_campana) === Number(idCampanaSeleccionada),
   );
   const esPagoInmediato = esCampanaPagoInmediato(campanaSeleccionada)
-    || Boolean(Form.useWatch('pagoInmediatoInvitacion', form))
-    || Boolean(Form.useWatch('ventaDirectaInvitacion', form));
+    || invitacionPagoInmediato;
   const mostrarCicloFacturacion = registroPublico
     || esPagoInmediato
     || (mostrarSelectorPlan && planSelectVariant === 'cards');
@@ -194,12 +194,15 @@ const AltaEmpresaForm = ({
     if (!registroPublico) return;
     const minRrhh = getPlanMinLicencias('rrhh');
     const actuales = form.getFieldValue('numLicencias');
-    form.setFieldsValue({
+    const patch = {
       plan: 'rrhh',
-      cicloFacturacion: 'mensual',
       ...(actuales == null || Number(actuales) < minRrhh ? { numLicencias: minRrhh } : {}),
-    });
-  }, [form, registroPublico]);
+    };
+    if (!invitacionPagoInmediato) {
+      patch.cicloFacturacion = form.getFieldValue('cicloFacturacion') || 'mensual';
+    }
+    form.setFieldsValue(patch);
+  }, [form, registroPublico, invitacionPagoInmediato]);
 
   const handleCodigoPostalChange = (event) => {
     const cp = String(event?.target?.value || '').replace(/\s/g, '');
@@ -275,12 +278,6 @@ const AltaEmpresaForm = ({
     ) : null}
 
     <Form.Item name="cicloFacturacion" hidden>
-      <Input type="hidden" />
-    </Form.Item>
-    <Form.Item name="pagoInmediatoInvitacion" hidden>
-      <Input type="hidden" />
-    </Form.Item>
-    <Form.Item name="ventaDirectaInvitacion" hidden>
       <Input type="hidden" />
     </Form.Item>
     {!showCampanaSelect ? (

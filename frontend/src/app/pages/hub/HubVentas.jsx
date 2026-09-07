@@ -983,14 +983,6 @@ const HubVentas = () => {
           </Space>
         ) : (
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
-            {(invitacionResultado.pago_inmediato || invitacionResultado.venta_directa) && (
-              <Alert
-                type="info"
-                showIcon
-                message="Venta privada (sin prueba)"
-                description={`Facturación ${invitacionResultado.ciclo_facturacion === 'anual' ? 'anual' : 'mensual'}. Cuando el cliente se registre, genera el enlace de pago desde la ficha del cliente en esta pestaña.`}
-              />
-            )}
             {invitacionResultado.email_enviado && (
               <Alert
                 type="success"

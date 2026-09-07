@@ -31,7 +31,6 @@ const Register = () => {
         const esPagoInv = data.pago_inmediato || data.venta_directa;
         if (esPagoInv && data.ciclo_facturacion) {
           fields.cicloFacturacion = data.ciclo_facturacion;
-          fields.pagoInmediatoInvitacion = true;
         }
         if (Object.keys(fields).length > 0) {
           form.setFieldsValue(fields);
@@ -146,6 +145,7 @@ const Register = () => {
           registroPublico
           requireTermsAcceptance
           collectFiscalAddress
+          invitacionPagoInmediato={esPagoInmediatoInv}
           bloquearCicloFacturacion={esPagoInmediatoInv}
         />
 
