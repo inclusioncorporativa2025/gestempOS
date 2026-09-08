@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getUltimoRegistroById } from '../features/empresas/empresasService';
 import { getFechaEuropeMadrid } from '../utils/Helper';
+import { useAuth } from '../config/AuthContext';
+import { puedeUsarFichajeSesion } from '../utils/tipoUsuarioLabel';
 
 export const JORNADA_ACTUALIZADA = 'gestemp:jornada-actualizada';
 
@@ -42,6 +44,8 @@ const parseFechaRegistro = (fecha) => {
  * y acciones de fichaje disponibles según último registro.
  */
 export const useEstadoJornada = () => {
+  const { user, ready } = useAuth();
+  const puedeFichar = puedeUsarFichajeSesion(user);
   const [estadoJornada, setEstadoJornada] = useState('out');
   const [horasTrabajadas, setHorasTrabajadas] = useState('00:00');
   const [tiposRegistros, setTiposRegistros] = useState([]);
@@ -50,6 +54,16 @@ export const useEstadoJornada = () => {
   const [tiempoPausa, setTiempoPausa] = useState('00:00');
 
   const refetch = useCallback(async () => {
+    if (!puedeFichar) {
+      setTiposRegistros([]);
+      setHorasTrabajadas('00:00');
+      setTiempoPausa('00:00');
+      setEstadoJornada('out');
+      setEntradaMs(null);
+      setPausaInicioMs(null);
+      return;
+    }
+
     try {
       const ultimoRegistro = await getUltimoRegistroById();
       const registros = [];
@@ -101,19 +115,22 @@ export const useEstadoJornada = () => {
       setEntradaMs(null);
       setPausaInicioMs(null);
     }
-  }, []);
+  }, [puedeFichar]);
 
   useEffect(() => {
+    if (!ready || !puedeFichar) return undefined;
     refetch();
-  }, [refetch]);
+  }, [ready, puedeFichar, refetch]);
 
   useEffect(() => {
+    if (!puedeFichar) return undefined;
     const onActualizada = () => refetch();
     window.addEventListener(JORNADA_ACTUALIZADA, onActualizada);
     return () => window.removeEventListener(JORNADA_ACTUALIZADA, onActualizada);
-  }, [refetch]);
+  }, [puedeFichar, refetch]);
 
   useEffect(() => {
+    if (!puedeFichar) return undefined;
     const onVisible = () => {
       if (document.visibilityState === 'visible') refetch();
     };
@@ -123,7 +140,7 @@ export const useEstadoJornada = () => {
       window.removeEventListener('focus', refetch);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [refetch]);
+  }, [puedeFichar, refetch]);
 
   // Actualizar contador cada segundo mientras está en jornada
   useEffect(() => {

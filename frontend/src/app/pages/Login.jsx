@@ -9,6 +9,7 @@ import { SUPPORT_EMAIL } from '../../constants/support';
 import BrandLogo from '../../components/BrandLogo';
 import { redirectToApp } from '../../utils/appLinks';
 import { getAuthToken } from '../../utils/authSession';
+import { getRutaInicioSesion } from '../../utils/tipoUsuarioLabel';
 import SelectEmpresaModal from '../components/SelectEmpresaModal';
 import { TRIAL_PAYMENT_DETAIL, TRIAL_PAYMENT_HEADLINE } from '../../constants/trial';
 import './Login.css';
@@ -34,9 +35,10 @@ const Login = () => {
 
   useEffect(() => {
     if (ready && user) {
+      const destino = getRutaInicioSesion(user);
       const token = getAuthToken();
-      if (redirectToApp(APP_ROUTES.home, token)) return;
-      navigate(APP_ROUTES.home, { replace: true });
+      if (redirectToApp(destino, token)) return;
+      navigate(destino, { replace: true });
     }
   }, [ready, user, navigate]);
 
@@ -57,11 +59,15 @@ const Login = () => {
       duration: trialCaducado ? 10 : 4,
     });
 
-    if (redirectToApp(trialCaducado ? APP_ROUTES.facturacion : APP_ROUTES.home, data.token)) {
+    const destino = trialCaducado
+      ? APP_ROUTES.facturacion
+      : getRutaInicioSesion(data.usuario || usuarioPendiente);
+
+    if (redirectToApp(destino, data.token)) {
       return;
     }
 
-    navigate(trialCaducado ? APP_ROUTES.facturacion : APP_ROUTES.home);
+    navigate(destino);
   };
 
   const handleSeleccionEmpresa = async (idEmpresa) => {
