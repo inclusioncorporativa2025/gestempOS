@@ -655,7 +655,7 @@ const HubVentas = () => {
         const mostrarFechaLicencia = licencia.fechaFin
           && ['en_prueba', 'pte_pago', 'cancelada', 'cancelacion_programada'].includes(licencia.codigo);
 
-        const codigoPago = row.codigo_pago || row.enlace_pago_codigo;
+        const enlacePago = row.enlace_pago_url;
 
         return (
           <div className="hub-etapa-cell">
@@ -664,15 +664,15 @@ const HubVentas = () => {
               <Tag color={licencia.color} className="hub-licencia-tag">
                 {licencia.etiqueta}
               </Tag>
-              {licencia.codigo === 'pte_pago' && codigoPago ? (
+              {licencia.codigo === 'pte_pago' && enlacePago ? (
                 <Button
                   type="text"
                   size="small"
                   className="hub-licencia-copy"
                   icon={<CopyOutlined />}
-                  title={`Copiar código ${codigoPago}`}
-                  aria-label={`Copiar código de pago ${codigoPago}`}
-                  onClick={() => copiarTexto(codigoPago, `Código ${codigoPago} copiado`)}
+                  title={`Copiar enlace de pago${row.enlace_pago_caducado ? ' (caducado)' : ''}`}
+                  aria-label="Copiar enlace de pago"
+                  onClick={() => copiarTexto(enlacePago, 'Enlace de pago copiado')}
                 />
               ) : null}
             </div>
@@ -764,25 +764,7 @@ const HubVentas = () => {
         );
         const caducada = invitacionEstaCaducada(row);
 
-        return (
-          <div className="hub-table-stack hub-invitacion-campana">
-            <Text className="hub-table-stack__primary">
-              {etiqueta}
-              {caducada ? ' (caducada)' : ''}
-            </Text>
-            {row.register_url ? (
-              <Button
-                type="link"
-                size="small"
-                className="hub-invitacion-campana__copy"
-                icon={<CopyOutlined />}
-                onClick={() => copiarTexto(row.register_url, 'Enlace de invitación copiado')}
-              >
-                Copiar enlace
-              </Button>
-            ) : null}
-          </div>
-        );
+        return `${etiqueta}${caducada ? ' (caducada)' : ''}`;
       },
     },
   ];

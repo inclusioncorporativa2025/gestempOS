@@ -80,10 +80,13 @@ const etiquetaPlanInvitacion = (plan) => {
 const enriquecerVentaHub = (row) => {
   const enlacePagoCaducado = row.enlace_pago_expira
     && new Date(row.enlace_pago_expira).getTime() <= Date.now();
+  const codigoPago = row.enlace_pago_codigo || null;
+  const enlacePagoUrl = codigoPago ? construirUrlPublicaPago(codigoPago) : null;
 
   return {
     ...row,
-    codigo_pago: row.enlace_pago_codigo || null,
+    codigo_pago: codigoPago,
+    enlace_pago_url: enlacePagoUrl,
     enlace_pago_caducado: Boolean(enlacePagoCaducado),
   };
 };

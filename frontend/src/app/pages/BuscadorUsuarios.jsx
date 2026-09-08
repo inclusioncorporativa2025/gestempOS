@@ -17,6 +17,7 @@ import {
   puedeVerFichaPersonal,
   esAdministradorEmpresa,
   esInspector,
+  puedeEnviarRegistrosPorEmail,
   valorTipoUsuarioForm,
   etiquetaTipoUsuario,
 } from '../../utils/tipoUsuarioLabel';
@@ -508,6 +509,7 @@ const BuscarUsuarios = () => {
                     onClose={() => setExportModalVisible(false)}
                     idUsuario={id_usuario}
                     requireUser
+                    permitirEnvioEmail={puedeEnviarRegistrosPorEmail(tipoUsuario)}
                 />
 
                 {/* Modal de detalles */}

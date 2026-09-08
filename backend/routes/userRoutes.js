@@ -52,7 +52,7 @@ router.post(
   requireRole(ROLE_GROUPS.USER_WRITE),
   ajustarBolsaHoras,
 );
-router.post('/exportar', requireRole(ROLE_GROUPS.COMPANY_STAFF), exportarDatosExcel);
+router.post('/exportar', requireRole(ROLE_GROUPS.EXPORT_REGISTROS), exportarDatosExcel);
 router.post('/exportar/enviar', requireRole(ROLE_GROUPS.COMPANY_STAFF), enviarRegistrosHorariosPorEmail);
 router.post('/importar', requireRole(ROLE_GROUPS.USER_WRITE), importarUsuariosEmpresa);
 

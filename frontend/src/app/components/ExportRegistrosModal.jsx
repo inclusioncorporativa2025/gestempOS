@@ -12,6 +12,7 @@ const ExportRegistrosModal = ({
   onClose,
   idUsuario,
   requireUser = false,
+  permitirEnvioEmail = true,
 }) => {
   const [exportDateRange, setExportDateRange] = useState(null);
   const [emailDestino, setEmailDestino] = useState('');
@@ -104,8 +105,9 @@ const ExportRegistrosModal = ({
       width={520}
     >
       <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-        Selecciona el periodo y descarga el Excel o envíalo a un correo externo
-        (gestoría, asesoría, etc.).
+        {permitirEnvioEmail
+          ? 'Selecciona el periodo y descarga el Excel o envíalo a un correo externo (gestoría, asesoría, etc.).'
+          : 'Selecciona el periodo y descarga el Excel con los registros horarios.'}
       </Text>
 
       <div style={{ marginBottom: 16 }}>
@@ -120,19 +122,21 @@ const ExportRegistrosModal = ({
         />
       </div>
 
-      <div style={{ marginBottom: 24 }}>
-        <Text strong style={{ display: 'block', marginBottom: 8 }}>Correo externo</Text>
-        <Input
-          type="email"
-          placeholder="ejemplo@gestoria.com"
-          value={emailDestino}
-          onChange={(e) => setEmailDestino(e.target.value)}
-          disabled={loadingDownload || loadingEmail}
-        />
-        <Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12 }}>
-          Puedes indicar varios correos separados por comas.
-        </Text>
-      </div>
+      {permitirEnvioEmail ? (
+        <div style={{ marginBottom: 24 }}>
+          <Text strong style={{ display: 'block', marginBottom: 8 }}>Correo externo</Text>
+          <Input
+            type="email"
+            placeholder="ejemplo@gestoria.com"
+            value={emailDestino}
+            onChange={(e) => setEmailDestino(e.target.value)}
+            disabled={loadingDownload || loadingEmail}
+          />
+          <Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12 }}>
+            Puedes indicar varios correos separados por comas.
+          </Text>
+        </div>
+      ) : null}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
         <Button onClick={resetAndClose} disabled={loadingDownload || loadingEmail}>
@@ -146,13 +150,15 @@ const ExportRegistrosModal = ({
         >
           Descargar Excel
         </Button>
-        <GradientButton
-          text="Enviar por correo"
-          iconStart={<MailOutlined />}
-          onClick={handleSendEmail}
-          loading={loadingEmail}
-          disabled={loadingDownload}
-        />
+        {permitirEnvioEmail ? (
+          <GradientButton
+            text="Enviar por correo"
+            iconStart={<MailOutlined />}
+            onClick={handleSendEmail}
+            loading={loadingEmail}
+            disabled={loadingDownload}
+          />
+        ) : null}
       </div>
     </Modal>
   );

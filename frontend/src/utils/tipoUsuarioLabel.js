@@ -20,6 +20,20 @@ export const puedeUsarFichaje = (tipoUsuario) =>
 export const puedeUsarFichajeSesion = (user) =>
   puedeUsarFichaje(user?.tipo_usuario);
 
+/** Administrador y supervisor de empresa (y roles plataforma). */
+export const esStaffEmpresa = (tipoUsuario) =>
+  [1, 2, 3, 4].includes(normalizarTipoUsuario(tipoUsuario));
+
+export const esStaffEmpresaSesion = (user) =>
+  esStaffEmpresa(user?.tipo_usuario);
+
+/** Enviar registros horarios por correo: admin, supervisor y roles plataforma. */
+export const puedeEnviarRegistrosPorEmail = (tipoUsuario) =>
+  esStaffEmpresa(tipoUsuario);
+
+export const puedeEnviarRegistrosPorEmailSesion = (user) =>
+  puedeEnviarRegistrosPorEmail(user?.tipo_usuario);
+
 /** Primera pantalla tras login según rol. */
 export const getRutaInicioSesion = (user) => {
   const tipo = normalizarTipoUsuario(user?.tipo_usuario);

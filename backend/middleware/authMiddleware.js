@@ -53,6 +53,14 @@ const ROLE_GROUPS = {
     ROLES.ADMIN_EMPRESA,
     ROLES.SUPERVISOR,
   ],
+  /** Exportar Excel de registros (staff de empresa + inspector). */
+  EXPORT_REGISTROS: [
+    ROLES.ROOT,
+    ROLES.PLATFORM_ADMIN,
+    ROLES.ADMIN_EMPRESA,
+    ROLES.SUPERVISOR,
+    ROLES.INSPECTOR,
+  ],
   /** Aprobar/rechazar solicitudes de empresa (horario, cierres, ausencias) */
   APROBACION_SOLICITUDES: [ROLES.ADMIN_EMPRESA, ROLES.SUPERVISOR],
   ALL: [1, 2, 3, 4, 5, 6],
