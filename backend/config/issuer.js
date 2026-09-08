@@ -1,6 +1,6 @@
 /**
  * Datos fiscales del emisor (Inclusión Corporativa).
- * El documento usa logo Timecor (brand.js).
+ * El documento usa logo TimeCor (brand.js).
  */
 const ISSUER = {
   razon_social: 'Inclusión Corporativa S.L.',

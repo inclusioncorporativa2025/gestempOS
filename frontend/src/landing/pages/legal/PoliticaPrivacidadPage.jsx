@@ -64,7 +64,7 @@ const PoliticaPrivacidadPage = () => (
           recibidos para su inclusión en los procesos de selección de personal que realizamos.
         </li>
         <li>
-          <strong>Plataforma Timecor:</strong> gestionar el registro de jornada, fichajes,
+          <strong>Plataforma TimeCor:</strong> gestionar el registro de jornada, fichajes,
           ausencias, nóminas documentales y demás funcionalidades del software de control horario
           contratado por tu empresa.
         </li>

@@ -293,7 +293,7 @@ const enviarInvitacionRegistroHub = async ({
       html: buildInvitacionRegistroHubHtml({
         registerUrl,
         fechaExpiracionLabel,
-        comercialNombre: comercialNombre || 'Tu comercial Timecor',
+        comercialNombre: comercialNombre || 'Tu comercial TimeCor',
         urlApp: APP_URL,
       }),
     });
@@ -770,7 +770,7 @@ const buildTrialEndingEmailHtml = ({
   const diasTexto = diasRestantes === 1 ? '1 día' : `${diasRestantes} días`;
   const asuntoSoporte = encodeURIComponent(`Ampliar prueba — ${nombreEmpresa}`);
   const cuerpoSoporte = encodeURIComponent(
-    `Hola,\n\nEstamos probando Timecor con ${nombreEmpresa} y nos gustaría ampliar el periodo de prueba.\n\n¿Podéis ayudarnos?\n\nGracias.`,
+    `Hola,\n\nEstamos probando TimeCor con ${nombreEmpresa} y nos gustaría ampliar el periodo de prueba.\n\n¿Podéis ayudarnos?\n\nGracias.`,
   );
   const enlaceSoporte = `mailto:${SUPPORT_EMAIL}?subject=${asuntoSoporte}&body=${cuerpoSoporte}`;
 

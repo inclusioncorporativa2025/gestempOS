@@ -40,15 +40,15 @@ import './LandingPage.css';
 const LANDING_HERO_IMAGES = [
   {
     src: '/landing/hero.png',
-    alt: 'Pantalla de fichaje en Timecor',
+    alt: 'Pantalla de fichaje en TimeCor',
   },
   {
     src: '/landing/hero-gestion-tiempo.png',
-    alt: 'Gestión de tiempo en tiempo real en Timecor',
+    alt: 'Gestión de tiempo en tiempo real en TimeCor',
   },
   {
     src: '/landing/hero-personal.png',
-    alt: 'Listado de personal en Timecor',
+    alt: 'Listado de personal en TimeCor',
   },
 ];
 

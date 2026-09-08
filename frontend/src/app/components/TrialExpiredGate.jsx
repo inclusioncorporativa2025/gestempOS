@@ -9,7 +9,7 @@ const TrialExpiredGate = () => (
     <Result
       status="warning"
       title="Acceso no disponible"
-      subTitle="Tu periodo de prueba ha finalizado o ha sido cancelado. Activa una suscripción para seguir gestionando la jornada de tu equipo en Timecor."
+      subTitle="Tu periodo de prueba ha finalizado o ha sido cancelado. Activa una suscripción para seguir gestionando la jornada de tu equipo en TimeCor."
       extra={[
         <Button
           type="primary"

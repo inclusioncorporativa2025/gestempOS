@@ -1,5 +1,5 @@
 /**
- * Series de facturación Timecor (emisor: Inclusión Corporativa).
+ * Series de facturación TimeCor (emisor: Inclusión Corporativa).
  *
  * R — Recibo: periodo de prueba o importe 0 €
  * F — Factura: cobros con importe > 0 €

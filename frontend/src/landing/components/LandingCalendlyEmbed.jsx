@@ -97,7 +97,7 @@ const LandingCalendlyEmbed = ({
   return (
     <div className={`landing-calendly-embed ${className}`.trim()}>
       <iframe
-        title="Reservar demo Timecor en Calendly"
+        title="Reservar demo TimeCor en Calendly"
         src={buildCalendlyEmbedUrl(url, { hideDetails })}
         className="landing-calendly-embed__iframe"
         loading="lazy"

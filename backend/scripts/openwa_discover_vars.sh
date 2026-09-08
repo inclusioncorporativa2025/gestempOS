@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Descubre variables OpenWA para Timecor.
+# Descubre variables OpenWA para TimeCor.
 # Ejecutar EN EL VPS donde está OpenWA (misma máquina que el backend).
 #
 # Uso:

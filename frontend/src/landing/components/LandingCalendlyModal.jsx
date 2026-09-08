@@ -23,7 +23,7 @@ const LandingCalendlyModal = ({ open, onClose }) => (
     <header className="landing-calendly-modal__header">
       <div className="landing-calendly-modal__header-text">
         <span className="landing-calendly-modal__eyebrow">Demo gratuita</span>
-        <h2 className="landing-calendly-modal__title">Reserva tu sesión con Timecor</h2>
+        <h2 className="landing-calendly-modal__title">Reserva tu sesión con TimeCor</h2>
         <p className="landing-calendly-modal__subtitle">
           Sin coste ni compromiso · Te mostramos la plataforma en directo
         </p>

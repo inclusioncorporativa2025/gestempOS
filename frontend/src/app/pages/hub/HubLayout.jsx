@@ -52,7 +52,7 @@ const HubLayout = () => {
       ? 'Empresas atribuidas y seguimiento comercial'
       : esAccesos
         ? 'Usuarios con acceso al panel de ventas'
-        : 'Panel de ventas Timecor';
+        : 'Panel de ventas TimeCor';
 
   return (
     <div className="config-layout">

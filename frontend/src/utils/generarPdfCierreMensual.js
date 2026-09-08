@@ -4,7 +4,7 @@ import 'dayjs/locale/es';
 import { DECLARACION_CIERRE_MENSUAL } from './cierreMensualLegal';
 import { SUPPORT_EMAIL } from '../constants/support';
 import { TIPO_HORA_BOLSA } from './tipoHora';
-import { LOGO_SRC } from '../constants/brand';
+import { LOGO_SRC, BRAND_NAME } from '../constants/brand';
 import {
   NOTA_COMPARATIVA_HORAS,
   detalleJornadaPactada,
@@ -120,13 +120,13 @@ const dibujarHeader = (doc, mesLabel, logoDataUrl = null) => {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(...BRAND.white);
-      doc.text('Timecor', PAGE_WIDTH - MARGIN, 12, { align: 'right' });
+      doc.text(BRAND_NAME, PAGE_WIDTH - MARGIN, 12, { align: 'right' });
     }
   } else {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(...BRAND.white);
-    doc.text('Timecor', PAGE_WIDTH - MARGIN, 12, { align: 'right' });
+    doc.text(BRAND_NAME, PAGE_WIDTH - MARGIN, 12, { align: 'right' });
   }
 
   doc.setFont('helvetica', 'normal');

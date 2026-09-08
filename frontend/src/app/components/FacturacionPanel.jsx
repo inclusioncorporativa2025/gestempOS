@@ -462,8 +462,8 @@ const FacturacionPanel = ({ activo = true }) => {
           )}`}
           description={
             enPruebaStripe
-              ? 'Hasta esa fecha puedes seguir usando Timecor. No se te cobrará nada.'
-              : 'Hasta esa fecha puedes seguir usando Timecor con normalidad.'
+              ? 'Hasta esa fecha puedes seguir usando TimeCor. No se te cobrará nada.'
+              : 'Hasta esa fecha puedes seguir usando TimeCor con normalidad.'
           }
         />
       )}

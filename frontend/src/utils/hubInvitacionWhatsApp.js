@@ -1,3 +1,5 @@
+import { BRAND_NAME } from '../constants/brand';
+
 /** Normaliza teléfono a formato internacional para wa.me (España por defecto). */
 export const normalizarTelefonoWhatsApp = (raw) => {
   let digits = String(raw || '').replace(/\D/g, '');
@@ -23,16 +25,16 @@ export const buildWhatsAppInvitacionUrl = ({
   const phone = normalizarTelefonoWhatsApp(telefono);
   if (!phone) return null;
 
-  const nombre = comercialNombre || 'Timecor';
+  const nombre = comercialNombre || BRAND_NAME;
   const text = [
-    'Hola, te envío tu invitación para registrarte en Timecor:',
+    `Hola, te envío tu invitación para registrarte en ${BRAND_NAME}:`,
     '',
     `👉 Completar registro: ${registerUrl}`,
     '',
     `Válido hasta el ${fechaExpiracionLabel}.`,
     '',
     'Cualquier duda, responde a este mensaje.',
-    `— ${nombre} (Timecor)`,
+    `— ${nombre} (${BRAND_NAME})`,
   ].join('\n');
 
   return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;

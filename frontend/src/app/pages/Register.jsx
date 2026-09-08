@@ -128,7 +128,7 @@ const Register = () => {
               <strong>Venta privada acordada con tu comercial.</strong>{' '}
               Tras crear la empresa deberás completar el pago (
               {invitacionPreview.ciclo_facturacion === 'anual' ? 'facturación anual' : 'facturación mensual'}
-              ) para activar Timecor.
+              ) para activar TimeCor.
             </>
           ) : (
             <>

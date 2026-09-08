@@ -15,7 +15,7 @@ export const TooltipTipoHoraContent = ({ includeHeredar = false }) => (
       <strong>Extra</strong> — Para <strong>jornada completa</strong>. El exceso se
       registra como hora extra. En derecho laboral español suele llevar{' '}
       <strong>recargo mínimo del 75%</strong> (Estatuto de los Trabajadores, art. 35).
-      Timecor aplica factor <strong>1,75×</strong> en prenómina.
+      TimeCor aplica factor <strong>1,75×</strong> en prenómina.
     </p>
     <p style={lineStyle}>
       <strong>Complementaria</strong> — Para <strong>tiempo parcial</strong>. Horas

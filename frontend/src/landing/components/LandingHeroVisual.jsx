@@ -208,7 +208,7 @@ const LandingHeroVisual = ({ images = [] }) => {
         <div
           className="landing-hero-stage"
           aria-live="polite"
-          aria-label="Capturas de la aplicación Timecor"
+          aria-label="Capturas de la aplicación TimeCor"
         >
           <div
             className={`landing-hero-slide landing-hero-slide--main${

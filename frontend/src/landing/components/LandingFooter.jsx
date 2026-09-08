@@ -89,7 +89,7 @@ const LandingFooter = () => {
     {
       label: 'Prueba gratuita',
       href: LANDING_ROUTES.plans,
-      title: '15 días de prueba gratis con Timecor RRHH',
+      title: '15 días de prueba gratis con TimeCor RRHH',
     },
     {
       label: 'Registro',
@@ -123,8 +123,8 @@ const LandingFooter = () => {
   const solutionLinks = [
     {
       label: 'Fichaje digital',
-      href: LANDING_ROUTES.features,
-      title: 'Fichaje digital conforme a la normativa',
+      href: LANDING_ROUTES.seoFichajeDigital,
+      title: 'Software de fichaje digital conforme a la normativa',
     },
     {
       label: 'Gestión de equipos',

@@ -74,7 +74,7 @@ const mapCalendlyBookingToLead = ({
     empresa: findAnswer(qa, QA_PATTERNS.empresa),
     cargo: findAnswer(qa, QA_PATTERNS.cargo),
     num_empleados: findAnswer(qa, QA_PATTERNS.num_empleados),
-    interes: String(event.name || 'Demo Timecor').trim(),
+    interes: String(event.name || 'Demo TimeCor').trim(),
     mensaje: findAnswer(qa, QA_PATTERNS.mensaje),
     origen,
     evento,

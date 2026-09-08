@@ -144,7 +144,7 @@ const construirMenuTexto = async (idUsuario, idEmpresa, nombreUsuario) => {
   });
 
   return (
-    `*Timecor* · ${hora}\n` +
+    `*TimeCor* · ${hora}\n` +
     `Hola ${nombreUsuario} 👋\n` +
     `Estado: *${ESTADO_LABELS[estado]}*\n\n` +
     `${lineasAcciones.join('\n')}\n\n` +
@@ -176,7 +176,7 @@ const construirMenuInteractivo = async (idUsuario, idEmpresa, nombreUsuario, { m
     type: 'button',
     body: {
       text: (
-        `*Timecor* · ${hora}\n` +
+        `*TimeCor* · ${hora}\n` +
         `Hola ${nombreUsuario} 👋\n` +
         `Estado: *${ESTADO_LABELS[estado]}*\n\n` +
         `Elige una acción:`
@@ -331,7 +331,7 @@ const procesarMensajeEntrante = async ({ chatId, body, fromMe }) => {
   if (!usuario) {
     return {
       reply:
-        'No encontramos tu número en Timecor.\n\n' +
+        'No encontramos tu número en TimeCor.\n\n' +
         'Pide a tu administrador que vincule tu WhatsApp en la ficha de personal, ' +
         'o configúralo en *Mi perfil* si tu empresa tiene el plan Completo.',
     };

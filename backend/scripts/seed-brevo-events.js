@@ -80,7 +80,7 @@ const main = async () => {
     fecha_registro: new Date().toISOString(),
     fecha_demo: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     hora_demo: '11:00',
-    nombre: 'Timecor Eventos Seed',
+    nombre: 'TimeCor Eventos Seed',
     email: SEED_EMAIL,
     telefono: '+34600000001',
     empresa: 'Seed interno',
@@ -90,7 +90,7 @@ const main = async () => {
 
   console.log('Creando contacto seed en Brevo...');
   await upsertContact(lead, {
-    nombre: 'Timecor',
+    nombre: 'TimeCor',
     apellidos: 'Eventos Seed',
     rawLead: { fecha_demo: lead.fecha_demo, fecha_registro: new Date().toISOString(), hora_demo: '11:00' },
   });

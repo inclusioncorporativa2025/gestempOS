@@ -9,6 +9,8 @@ export const LANDING_ROUTES = {
   privacy: '/politica-privacidad',
   cookies: '/politica-cookies',
   terms: '/terminos-condiciones',
+  /** Landings SEO */
+  seoFichajeDigital: '/fichaje-digital',
 };
 
 /** Authenticated app + auth screens. */

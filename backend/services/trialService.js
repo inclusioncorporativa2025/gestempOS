@@ -198,8 +198,8 @@ const empresaTieneAccesoSuscripcion = async (idEmpresa) => {
 const buildTrialExpiredPayload = (estado) => ({
   code: 'TRIAL_EXPIRED',
   message: estado?.cancelada
-    ? 'Has cancelado la prueba gratuita. Activa una suscripción para volver a usar Timecor.'
-    : 'Tu periodo de prueba de 15 días ha finalizado. Elige un plan para seguir usando Timecor.',
+    ? 'Has cancelado la prueba gratuita. Activa una suscripción para volver a usar TimeCor.'
+    : 'Tu periodo de prueba de 15 días ha finalizado. Elige un plan para seguir usando TimeCor.',
   trial: {
     expirada: true,
     cancelada: Boolean(estado?.cancelada),

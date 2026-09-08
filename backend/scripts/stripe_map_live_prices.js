@@ -86,7 +86,7 @@ const formatEur = (cents) => `${(cents / 100).toFixed(2).replace('.', ',')} €`
 async function main() {
   const { data: products } = await stripe.products.list({ limit: 100, active: true });
 
-  console.log('==> Productos Timecor en LIVE:\n');
+  console.log('==> Productos TimeCor en LIVE:\n');
   products
     .filter((p) => /timecor/i.test(p.name))
     .forEach((p) => {

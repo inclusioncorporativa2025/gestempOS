@@ -1,30 +1,39 @@
+import { BRAND_NAME } from '../constants/brand';
 import { LANDING_URL } from '../constants/urls';
 import { isAppSubdomain } from './host';
-import { isLegalPath } from './appLinks';
+import { isIndexableLandingPath, isLegalPath, isSeoLandingPath } from './appLinks';
 
 export const SEO_DEFAULTS = {
-  title: 'Timecor — Software de fichaje digital y control horario | Prueba gratis',
+  title: `${BRAND_NAME} — Software de fichaje digital y control horario | Prueba gratis`,
   description:
     'Fichaje digital conforme a la normativa española. Registro de jornada, informes para inspección y gestión de equipos. 15 días gratis. Desde 2,50 €/usuario.',
   image: `${LANDING_URL}/landing/hero.png`,
 };
 
+const SEO_LANDING_PAGES = {
+  '/fichaje-digital': {
+    title: `Fichaje digital para empresas | Software control horario — ${BRAND_NAME}`,
+    description:
+      'Software de fichaje digital conforme a la normativa española. Registro de jornada laboral, informes para inspecciones y gestión de equipos. Prueba gratis 15 días.',
+  },
+};
+
 const LEGAL_PAGES = {
   '/aviso-legal': {
-    title: 'Aviso legal | Timecor',
-    description: 'Aviso legal y datos identificativos del titular de Timecor, software de fichaje digital y control horario.',
+    title: `Aviso legal | ${BRAND_NAME}`,
+    description: `Aviso legal y datos identificativos del titular de ${BRAND_NAME}, software de fichaje digital y control horario.`,
   },
   '/politica-privacidad': {
-    title: 'Política de privacidad | Timecor',
-    description: 'Política de privacidad de Timecor: tratamiento de datos personales en el software de control horario.',
+    title: `Política de privacidad | ${BRAND_NAME}`,
+    description: `Política de privacidad de ${BRAND_NAME}: tratamiento de datos personales en el software de control horario.`,
   },
   '/politica-cookies': {
-    title: 'Política de cookies | Timecor',
-    description: 'Información sobre el uso de cookies en la web de Timecor, software de fichaje digital.',
+    title: `Política de cookies | ${BRAND_NAME}`,
+    description: `Información sobre el uso de cookies en la web de ${BRAND_NAME}, software de fichaje digital.`,
   },
   '/terminos-condiciones': {
-    title: 'Términos y condiciones | Timecor',
-    description: 'Condiciones generales de contratación del servicio Timecor de registro de jornada laboral.',
+    title: `Términos y condiciones | ${BRAND_NAME}`,
+    description: `Condiciones generales de contratación del servicio ${BRAND_NAME} de registro de jornada laboral.`,
   },
 };
 
@@ -64,7 +73,7 @@ export const applyPageSeo = ({ title, description, path = '/', noindex = false }
   });
 
   upsertMeta('meta[property="og:type"]', { property: 'og:type', content: 'website' });
-  upsertMeta('meta[property="og:site_name"]', { property: 'og:site_name', content: 'Timecor' });
+  upsertMeta('meta[property="og:site_name"]', { property: 'og:site_name', content: BRAND_NAME });
   upsertMeta('meta[property="og:title"]', { property: 'og:title', content: resolvedTitle });
   upsertMeta('meta[property="og:description"]', {
     property: 'og:description',
@@ -92,11 +101,16 @@ export const applyPageSeo = ({ title, description, path = '/', noindex = false }
 /** SEO según host y ruta actual (landing indexable, app noindex). */
 export const resolveSeoForPath = (pathname) => {
   if (isAppSubdomain()) {
-    return { title: 'Timecor', noindex: true };
+    return { title: BRAND_NAME, noindex: true };
   }
 
   if (pathname === '/') {
     return { path: '/' };
+  }
+
+  if (isSeoLandingPath(pathname)) {
+    const seoLanding = SEO_LANDING_PAGES[pathname];
+    return { ...seoLanding, path: pathname };
   }
 
   if (isLegalPath(pathname)) {
@@ -104,5 +118,9 @@ export const resolveSeoForPath = (pathname) => {
     return { ...legal, path: pathname };
   }
 
-  return { title: 'Timecor', noindex: true };
+  if (!isIndexableLandingPath(pathname)) {
+    return { title: BRAND_NAME, noindex: true };
+  }
+
+  return { path: pathname };
 };

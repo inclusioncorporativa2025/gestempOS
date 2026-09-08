@@ -99,7 +99,7 @@ const LandingStats = () => {
     >
       <div className="landing-container">
         <h2 id="landing-stats-title" className="landing-stats-title">
-          Empresas que ya confían en Timecor
+          Empresas que ya confían en TimeCor
         </h2>
         <ul className="landing-stats-grid">
           {STATS.map((stat, index) => (

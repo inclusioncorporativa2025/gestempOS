@@ -5,6 +5,7 @@ import { isAppSubdomain } from './utils/host';
 import { initMetricoolTracker } from './landing/utils/metricoolTracker';
 import LandingPage from './landing/pages/LandingPage';
 import legalRouteElements from './LegalRoutes';
+import seoLandingRouteElements from './SeoLandingRoutes';
 import AppShell from './app/AppShell';
 import SeoManager from './components/SeoManager';
 
@@ -26,6 +27,7 @@ function App() {
     <SeoManager />
     <Routes>
       {legalRouteElements}
+      {seoLandingRouteElements}
       {onAppHost ? (
         <>
           <Route path="/" element={<Navigate to={APP_ROUTES.login} replace />} />

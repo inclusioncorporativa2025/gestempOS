@@ -135,7 +135,7 @@ const LandingDemoFormModal = ({ open, onClose }) => {
             <p className="landing-demo-modal__eyebrow">Demo gratuita</p>
             <h2 className="landing-demo-modal__title">Reserva tu demo personalizada</h2>
             <p className="landing-demo-modal__intro">
-              Elige el día y la hora que mejor te venga y te enseñamos cómo Timecor
+              Elige el día y la hora que mejor te venga y te enseñamos cómo TimeCor
               puede ayudarte a cumplir la normativa de fichaje.
             </p>
           </header>

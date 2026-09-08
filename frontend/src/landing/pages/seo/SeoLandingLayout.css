@@ -1,0 +1,222 @@
+.seo-landing__hero .landing-hero-inner {
+  align-items: center;
+}
+
+.seo-landing__main {
+  flex: 1;
+}
+
+.seo-landing__section {
+  padding: 3.5rem 0;
+}
+
+.seo-landing__section--alt {
+  background: rgba(255, 255, 255, 0.45);
+  border-block: 1px solid rgba(255, 255, 255, 0.65);
+}
+
+.seo-landing__section-title {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-dark, #0a2540);
+  text-align: center;
+}
+
+.seo-landing__section-intro {
+  max-width: 720px;
+  margin: 0 auto 2rem;
+  text-align: center;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: #425466;
+}
+
+.seo-landing__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.seo-landing__card {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 28px rgba(0, 21, 41, 0.05);
+}
+
+.seo-landing__card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 12px;
+  background: rgba(43, 169, 224, 0.12);
+  color: #2ba9e0;
+  font-size: 1.25rem;
+  margin-bottom: 0.85rem;
+}
+
+.seo-landing__card-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0a2540;
+}
+
+.seo-landing__card-text {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #425466;
+}
+
+.seo-landing__steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+  counter-reset: seo-step;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.seo-landing__step {
+  position: relative;
+  padding-top: 2.5rem;
+  list-style: none;
+}
+
+.seo-landing__step::before {
+  counter-increment: seo-step;
+  content: counter(seo-step);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #fff;
+  background: linear-gradient(135deg, #2ba9e0, #1a8fc4);
+}
+
+.seo-landing__step-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0a2540;
+}
+
+.seo-landing__step-text {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #425466;
+}
+
+.seo-landing__prose {
+  max-width: 760px;
+  margin: 0 auto;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #425466;
+}
+
+.seo-landing__prose p {
+  margin: 0 0 1rem;
+}
+
+.seo-landing__prose ul {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+}
+
+.seo-landing__prose li {
+  margin-bottom: 0.5rem;
+}
+
+.seo-landing__faq-list {
+  max-width: 760px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.seo-landing__faq-item {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  padding: 1.25rem 1.35rem;
+}
+
+.seo-landing__faq-question {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0a2540;
+}
+
+.seo-landing__faq-answer {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: #425466;
+}
+
+.seo-landing__cta-band {
+  padding: 3rem 0 4rem;
+}
+
+.seo-landing__cta-inner {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 20px;
+  padding: 2.5rem 1.5rem;
+  box-shadow: 0 12px 40px rgba(0, 21, 41, 0.06);
+}
+
+.seo-landing__cta-title {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  font-weight: 700;
+  color: #0a2540;
+}
+
+.seo-landing__cta-lead {
+  margin: 0 auto 1.5rem;
+  max-width: 520px;
+  color: #425466;
+  line-height: 1.6;
+}
+
+.seo-landing__cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.seo-landing__cta-link {
+  font-weight: 600;
+  color: #2ba9e0;
+}
+
+.seo-landing__cta-link:hover {
+  color: #1a8fc4;
+}
+
+@media (max-width: 900px) {
+  .seo-landing__grid,
+  .seo-landing__steps {
+    grid-template-columns: 1fr;
+  }
+}

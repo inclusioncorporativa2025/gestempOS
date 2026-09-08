@@ -52,7 +52,7 @@ const Login = () => {
     notification.success({
       message: trialCaducado ? 'Sesión iniciada' : 'Inicio de sesión exitoso',
       description: trialCaducado
-        ? 'Tu periodo de prueba ha finalizado. Activa una suscripción para seguir usando Timecor.'
+        ? 'Tu periodo de prueba ha finalizado. Activa una suscripción para seguir usando TimeCor.'
         : `Hola, ${data.usuario?.nombre || usuarioPendiente?.nombre || ''}`,
       duration: trialCaducado ? 10 : 4,
     });

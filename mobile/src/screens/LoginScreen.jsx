@@ -69,7 +69,7 @@ const LoginScreen = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.card}>
-        <Text style={styles.title}>Timecor</Text>
+        <Text style={styles.title}>TimeCor</Text>
         <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
 
         <Text style={styles.label}>Email</Text>

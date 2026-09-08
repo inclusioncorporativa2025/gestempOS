@@ -1,4 +1,4 @@
-# Timecor — App móvil (Fase 0)
+# TimeCor — App móvil (Fase 0)
 
 Cliente Android/iOS con **Expo** que consume el backend gestempOS (`/api/*`).
 

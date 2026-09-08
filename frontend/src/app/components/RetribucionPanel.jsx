@@ -208,7 +208,7 @@ const RetribucionPanel = ({ idUsuario, soloLectura = false }) => {
         <Text type="secondary" className="retribucion-panel__hint">
           {soloLectura
             ? 'Importe base acordado en tu contrato. El cobro real de cada mes figura en tu nómina oficial (PDF).'
-            : 'Se usa para la previsión de coste bruto. Puedes introducir el bruto mensual o el anual (12 o 14 pagas); Timecor calcula el mensual de referencia.'}
+            : 'Se usa para la previsión de coste bruto. Puedes introducir el bruto mensual o el anual (12 o 14 pagas); TimeCor calcula el mensual de referencia.'}
         </Text>
 
         {vigente && (

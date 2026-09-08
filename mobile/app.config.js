@@ -1,7 +1,7 @@
 /** @type {import('expo/config').ExpoConfig} */
 export default {
   expo: {
-    name: 'Timecor',
+    name: 'TimeCor',
     slug: 'timecor',
     version: '1.0.0',
     orientation: 'portrait',

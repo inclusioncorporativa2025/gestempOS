@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 const SplashScreen = () => (
   <View style={styles.container}>
-    <Text style={styles.logo}>Timecor</Text>
+    <Text style={styles.logo}>TimeCor</Text>
     <ActivityIndicator size="large" color="#7c3aed" style={styles.spinner} />
     <Text style={styles.hint}>Cargando sesión…</Text>
   </View>

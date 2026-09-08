@@ -66,6 +66,12 @@ export const isLegalPath = (pathname) =>
     LANDING_ROUTES.terms,
   ].includes(pathname);
 
+export const isSeoLandingPath = (pathname) =>
+  [LANDING_ROUTES.seoFichajeDigital].includes(pathname);
+
+export const isIndexableLandingPath = (pathname) =>
+  pathname === LANDING_ROUTES.home || isLegalPath(pathname) || isSeoLandingPath(pathname);
+
 /**
  * Tras cerrar sesión: en app.* → landing (timecor.es); en local, /.
  */
