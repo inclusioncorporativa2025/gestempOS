@@ -67,7 +67,11 @@ export const isLegalPath = (pathname) =>
   ].includes(pathname);
 
 export const isSeoLandingPath = (pathname) =>
-  [LANDING_ROUTES.seoFichajeDigital].includes(pathname);
+  [
+    LANDING_ROUTES.seoFichajeDigital,
+    LANDING_ROUTES.seoControlHorarioPymes,
+    LANDING_ROUTES.seoRegistroJornadaNormativa,
+  ].includes(pathname);
 
 export const isIndexableLandingPath = (pathname) =>
   pathname === LANDING_ROUTES.home || isLegalPath(pathname) || isSeoLandingPath(pathname);

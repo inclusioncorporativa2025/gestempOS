@@ -11,6 +11,8 @@ export const LANDING_ROUTES = {
   terms: '/terminos-condiciones',
   /** Landings SEO */
   seoFichajeDigital: '/fichaje-digital',
+  seoControlHorarioPymes: '/control-horario-pymes',
+  seoRegistroJornadaNormativa: '/registro-jornada-normativa',
 };
 
 /** Authenticated app + auth screens. */

@@ -127,14 +127,19 @@ const LandingFooter = () => {
       title: 'Software de fichaje digital conforme a la normativa',
     },
     {
+      label: 'Control horario pymes',
+      href: LANDING_ROUTES.seoControlHorarioPymes,
+      title: 'Control horario para pymes y equipos pequeños',
+    },
+    {
+      label: 'Registro jornada normativa',
+      href: LANDING_ROUTES.seoRegistroJornadaNormativa,
+      title: 'Registro de jornada laboral y cumplimiento legal',
+    },
+    {
       label: 'Gestión de equipos',
       href: LANDING_ROUTES.features,
       title: 'Gestión de personal y supervisores',
-    },
-    {
-      label: 'Informes de jornada',
-      href: LANDING_ROUTES.features,
-      title: 'Informes y exportación para RR. HH.',
     },
   ];
 

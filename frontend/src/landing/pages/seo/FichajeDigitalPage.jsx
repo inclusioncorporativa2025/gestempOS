@@ -158,8 +158,13 @@ const FichajeDigitalPage = () => {
               <p>
                 Con un software de <strong>registro de jornada laboral</strong> evitas errores,
                 multas y pérdida de tiempo. TimeCor te permite cumplir la normativa sin pagar por
-                funcionalidades de RRHH que no necesitas. Si quieres comparar planes y precios,
-                visita la <Link to={LANDING_ROUTES.home}>página principal de TimeCor</Link>.
+                funcionalidades de RRHH que no necesitas. Consulta también el{' '}
+                <Link to={LANDING_ROUTES.seoControlHorarioPymes}>control horario para pymes</Link>
+                {' '}y la guía sobre{' '}
+                <Link to={LANDING_ROUTES.seoRegistroJornadaNormativa}>
+                  registro de jornada normativa
+                </Link>
+                , o visita la <Link to={LANDING_ROUTES.home}>página principal de TimeCor</Link>.
               </p>
             </div>
           </div>

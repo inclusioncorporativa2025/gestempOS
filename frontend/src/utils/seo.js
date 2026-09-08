@@ -16,6 +16,16 @@ const SEO_LANDING_PAGES = {
     description:
       'Software de fichaje digital conforme a la normativa española. Registro de jornada laboral, informes para inspecciones y gestión de equipos. Prueba gratis 15 días.',
   },
+  '/control-horario-pymes': {
+    title: `Control horario para pymes | Software registro jornada — ${BRAND_NAME}`,
+    description:
+      'Control horario para pymes sin pagar de más. Registro de jornada, fichaje digital e informes para inspecciones. Desde 2,50 €/usuario. Prueba gratis 15 días.',
+  },
+  '/registro-jornada-normativa': {
+    title: `Registro de jornada normativa | Cumplimiento legal — ${BRAND_NAME}`,
+    description:
+      'Cumple la normativa de registro de jornada laboral en España. Fichaje digital, conservación 4 años e informes para la Inspección de Trabajo. Prueba TimeCor gratis.',
+  },
 };
 
 const LEGAL_PAGES = {
