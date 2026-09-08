@@ -77,6 +77,17 @@ const etiquetaPlanInvitacion = (plan) => {
   return map[String(plan || '').toLowerCase()] || plan || '';
 };
 
+const enriquecerVentaHub = (row) => {
+  const enlacePagoCaducado = row.enlace_pago_expira
+    && new Date(row.enlace_pago_expira).getTime() <= Date.now();
+
+  return {
+    ...row,
+    codigo_pago: row.enlace_pago_codigo || null,
+    enlace_pago_caducado: Boolean(enlacePagoCaducado),
+  };
+};
+
 const enriquecerInvitacionHub = (row) => {
   const enlacePagoUrl = row.enlace_pago_codigo
     ? construirUrlPublicaPago(row.enlace_pago_codigo)
@@ -123,7 +134,10 @@ const listarVentasHandler = async (req, res) => {
       pagina: Number(req.query.pagina) || 1,
       limite: Number(req.query.limite) || 50,
     });
-    return res.status(200).json(data);
+    return res.status(200).json({
+      ...data,
+      ventas: (data.ventas || []).map(enriquecerVentaHub),
+    });
   } catch (error) {
     console.error('[hub] listarVentas:', error.message);
     return res.status(500).json({ message: 'Error al listar ventas del hub' });

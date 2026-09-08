@@ -88,8 +88,20 @@ const invitacionEstaCaducada = (row) => {
   return dayjs(row.fecha_expiracion).isBefore(dayjs());
 };
 
-const HUB_SCROLL_CLIENTES = 1280;
-const HUB_SCROLL_INVITACIONES = 1720;
+const HUB_SCROLL_CLIENTES = 1304;
+const HUB_SCROLL_INVITACIONES = 1632;
+const HUB_COL_ACCIONES_WIDTH = 96;
+
+const columnaAccionesHub = (render) => ({
+  title: 'Acciones',
+  key: 'acciones',
+  width: HUB_COL_ACCIONES_WIDTH,
+  align: 'center',
+  fixed: 'right',
+  className: 'hub-col-acciones',
+  onHeaderCell: () => ({ className: 'hub-col-acciones' }),
+  render,
+});
 
 const renderCeldaDoble = (primary, secondary) => (
   <div className="hub-table-stack">
@@ -643,12 +655,27 @@ const HubVentas = () => {
         const mostrarFechaLicencia = licencia.fechaFin
           && ['en_prueba', 'pte_pago', 'cancelada', 'cancelacion_programada'].includes(licencia.codigo);
 
+        const codigoPago = row.codigo_pago || row.enlace_pago_codigo;
+
         return (
           <div className="hub-etapa-cell">
             <Tag color={colorEtapaVenta(etapa)}>{etiquetaEtapaVenta(etapa)}</Tag>
-            <Tag color={licencia.color} className="hub-licencia-tag">
-              {licencia.etiqueta}
-            </Tag>
+            <div className="hub-licencia-row">
+              <Tag color={licencia.color} className="hub-licencia-tag">
+                {licencia.etiqueta}
+              </Tag>
+              {licencia.codigo === 'pte_pago' && codigoPago ? (
+                <Button
+                  type="text"
+                  size="small"
+                  className="hub-licencia-copy"
+                  icon={<CopyOutlined />}
+                  title={`Copiar código ${codigoPago}`}
+                  aria-label={`Copiar código de pago ${codigoPago}`}
+                  onClick={() => copiarTexto(codigoPago, `Código ${codigoPago} copiado`)}
+                />
+              ) : null}
+            </div>
             {mostrarFechaLicencia && (
               <Text type="secondary" className="hub-licencia-fecha">
                 Finaliza el {dayjs(licencia.fechaFin).format('DD/MM/YYYY')}
@@ -693,14 +720,7 @@ const HubVentas = () => {
   }
 
   if (puedeGestionarCartera) {
-    columns.push({
-      title: 'Acciones',
-      key: 'acciones',
-      width: 72,
-      align: 'center',
-      fixed: 'right',
-      render: (_, row) => renderAccionesCartera('venta', row),
-    });
+    columns.push(columnaAccionesHub((_, row) => renderAccionesCartera('venta', row)));
   }
 
   const columnasInvitaciones = [
@@ -796,18 +816,15 @@ const HubVentas = () => {
       ),
     },
     {
-      title: 'Enviada',
-      dataIndex: 'fecha_creacion',
-      key: 'fecha_creacion',
-      width: 112,
-      render: renderFechaCorta,
-    },
-    {
-      title: 'Válida hasta',
-      dataIndex: 'fecha_expiracion',
-      key: 'fecha_expiracion',
-      width: 112,
-      render: renderFechaCorta,
+      title: 'Vigencia',
+      key: 'vigencia',
+      width: 128,
+      render: (_, row) => renderCeldaDoble(
+        row.fecha_creacion ? renderFechaCorta(row.fecha_creacion) : null,
+        row.fecha_expiracion
+          ? `Hasta ${renderFechaCorta(row.fecha_expiracion)}`
+          : 'Sin caducidad',
+      ),
     },
     {
       title: 'Registrada',
@@ -819,14 +836,7 @@ const HubVentas = () => {
   );
 
   if (puedeGestionarCartera || puedeCrearInvitacion) {
-    columnasInvitaciones.push({
-      title: 'Acciones',
-      key: 'acciones',
-      width: 72,
-      align: 'center',
-      fixed: 'right',
-      render: (_, row) => renderAccionesCartera('invitacion', row),
-    });
+    columnasInvitaciones.push(columnaAccionesHub((_, row) => renderAccionesCartera('invitacion', row)));
   }
 
   const filtrosToolbar = (

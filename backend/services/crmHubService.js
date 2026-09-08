@@ -541,6 +541,8 @@ const listarVentas = async (user, { q, etapa, pagina = 1, limite = 50 } = {}) =>
        ef.stripe_subscription_id,
        ef.cancel_at_period_end,
        ef.ciclo_facturacion,
+       ef.enlace_pago_codigo,
+       ef.enlace_pago_expira,
        (
          CASE
            WHEN LOWER(IFNULL(ef.modo_facturacion, '')) = 'pendiente_pago'

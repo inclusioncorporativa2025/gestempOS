@@ -246,6 +246,10 @@
   font-size: 16px;
 }
 
+.hub-ventas-table .hub-col-acciones {
+  white-space: nowrap;
+}
+
 .hub-etapa-cell {
   display: flex;
   flex-direction: column;
@@ -253,8 +257,26 @@
   gap: 4px;
 }
 
+.hub-licencia-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .hub-licencia-tag {
   margin-inline-end: 0;
+}
+
+.hub-licencia-copy {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.hub-licencia-copy:hover {
+  color: #6d28d9;
 }
 
 .hub-licencia-fecha {
