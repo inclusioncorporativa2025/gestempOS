@@ -264,6 +264,21 @@ const generarCodigoCorto = () => {
   return code;
 };
 
+const generarCodigoCortoInvitacionUnico = async () => {
+  for (let intento = 0; intento < 8; intento += 1) {
+    const codigo = generarCodigoCorto();
+    const [existente] = await sequelize.query(
+      `SELECT id_invitacion FROM crm_invitacion_registro
+       WHERE codigo_corto = :codigo LIMIT 1`,
+      { replacements: { codigo }, type: QueryTypes.SELECT },
+    );
+    if (!existente) return codigo;
+  }
+  const error = new Error('No se pudo generar un código de invitación único');
+  error.code = 'CODIGO_INVITACION_DUP';
+  throw error;
+};
+
 const crmTablasDisponibles = async () => {
   if (crmTablasCache != null) return crmTablasCache;
   try {
@@ -615,9 +630,11 @@ const listarInvitaciones = async (user, { q, estado, pagina = 1, limite = 50 } =
 
   const campanasOk = await crmCampanasDisponibles();
   const selectCampanaInv = campanasOk
-    ? ', i.id_campana, i.ciclo_facturacion, c.nombre AS campana_nombre, c.dias_prueba AS campana_dias_prueba, c.tipo AS campana_tipo'
+    ? ', i.id_campana, i.ciclo_facturacion, i.plan, c.nombre AS campana_nombre, c.dias_prueba AS campana_dias_prueba, c.tipo AS campana_tipo, c.codigo AS campana_codigo'
     : '';
   const joinCampanaInv = campanasOk ? 'LEFT JOIN crm_campana c ON c.id_campana = i.id_campana' : '';
+  const selectEnlacePago = ', ef.enlace_pago_codigo, ef.enlace_pago_expira';
+  const joinEnlacePago = 'LEFT JOIN empresa_facturacion ef ON ef.id_empresa = i.id_empresa_uso';
 
   const invitaciones = await sequelize.query(
     `SELECT
@@ -639,11 +656,13 @@ const listarInvitaciones = async (user, { q, estado, pagina = 1, limite = 50 } =
        e.alias AS empresa_alias,
        v.etapa AS venta_etapa
        ${selectCampanaInv}
+       ${selectEnlacePago}
      FROM crm_invitacion_registro i
      INNER JOIN m_usuarios u ON u.id_usuario = i.id_usuario_comercial
      LEFT JOIN m_empresas e ON e.id_empresa = i.id_empresa_uso
      LEFT JOIN crm_venta v ON v.id_venta = i.id_venta
      ${joinCampanaInv}
+     ${joinEnlacePago}
      WHERE ${where}
      ORDER BY i.fecha_creacion DESC
      LIMIT :limite OFFSET :offset`,
@@ -728,20 +747,22 @@ const crearInvitacionRegistro = async ({
   const cicloVal = cicloNormalizado ? ', :cicloFacturacion' : '';
   const planSql = planNormalizado ? ', plan' : '';
   const planVal = planNormalizado ? ', :plan' : '';
+  const codigoCorto = await generarCodigoCortoInvitacionUnico();
 
   const [, meta] = await sequelize.query(
     `INSERT INTO crm_invitacion_registro (
-       token_hash, id_usuario_comercial,
+       token_hash, codigo_corto, id_usuario_comercial,
        email_previsto, telefono_previsto, canal, fecha_expiracion
        ${campanaSql}${cicloSql}${planSql}
      ) VALUES (
-       :tokenHash, :idUsuarioComercial,
+       :tokenHash, :codigoCorto, :idUsuarioComercial,
        :emailPrevisto, :telefonoPrevisto, :canal, :fechaExpiracion
        ${campanaVal}${cicloVal}${planVal}
      )`,
     {
       replacements: {
         tokenHash,
+        codigoCorto,
         idUsuarioComercial,
         emailPrevisto: emailPrevisto || null,
         telefonoPrevisto: telefonoPrevisto || null,
@@ -759,6 +780,7 @@ const crearInvitacionRegistro = async ({
   return {
     id_invitacion: idInvitacion,
     token,
+    codigo_corto: codigoCorto,
     fecha_expiracion: fechaExpiracion,
   };
 };
@@ -1298,6 +1320,21 @@ const revocarPuestoHub = async ({ idAsignacion, user }) => {
   return { id_usuario: asignacion.id_usuario };
 };
 
+const obtenerEmailInvitacionPorEmpresa = async (idEmpresa) => {
+  if (!idEmpresa) return null;
+  const [row] = await sequelize.query(
+    `SELECT email_previsto
+     FROM crm_invitacion_registro
+     WHERE id_empresa_uso = :idEmpresa
+       AND email_previsto IS NOT NULL
+       AND TRIM(email_previsto) <> ''
+     ORDER BY fecha_uso DESC, fecha_creacion DESC
+     LIMIT 1`,
+    { replacements: { idEmpresa }, type: QueryTypes.SELECT },
+  );
+  return row?.email_previsto ? String(row.email_previsto).trim().toLowerCase() : null;
+};
+
 const obtenerInvitacionPreview = async ({ token, codigoCorto }) => {
   const invitacion = await buscarInvitacionValida({ token, codigoCorto });
   if (!invitacion) return null;
@@ -1629,6 +1666,7 @@ module.exports = {
   buscarInvitacionValidaPorEmail,
   registrarVentaDesdeInvitacion,
   asignarVentaManual,
+  obtenerEmailInvitacionPorEmpresa,
   obtenerInvitacionPreview,
   listarPuestosInternos,
   listarAccesosHub,

@@ -15,14 +15,16 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const invToken = searchParams.get('inv');
+  const invCodigo = searchParams.get('codigo');
   const [invTokenActivo, setInvTokenActivo] = useState(invToken);
+  const [invCodigoActivo, setInvCodigoActivo] = useState(invCodigo);
   const [invitacionPreview, setInvitacionPreview] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!invToken) return;
+    if (!invToken && !invCodigo) return;
 
-    previewInvitacionHub({ inv: invToken })
+    previewInvitacionHub({ inv: invToken, codigo: invCodigo })
       .then((data) => {
         setInvitacionPreview(data);
         const fields = {};
@@ -47,9 +49,10 @@ const Register = () => {
       })
       .catch(() => {
         setInvTokenActivo(null);
+        setInvCodigoActivo(null);
         setInvitacionPreview(null);
       });
-  }, [invToken, form]);
+  }, [invToken, invCodigo, form]);
 
   const handleFinish = async (values) => {
     const { acceptTerms: _acceptTerms, ...payload } = values;
@@ -60,6 +63,7 @@ const Register = () => {
         plan: payload.plan || 'rrhh',
         cicloFacturacion: payload.cicloFacturacion || 'mensual',
         invitacionToken: invTokenActivo || undefined,
+        invitacionCodigo: invCodigoActivo || undefined,
       });
 
       if (data?.checkoutUrl) {

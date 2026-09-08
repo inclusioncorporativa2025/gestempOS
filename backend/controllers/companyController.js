@@ -4,7 +4,7 @@ const Usuario = require('../models/Usuario');
 const UsuarioEmpresa = require('../models/UsuarioEmpresa');
 const ConfiguracionEsquemaModel = require('../models/ConfiguracionEsquemaModel');
 const { getNextGlobalId } = require('../utils/empresaScope');
-const { enviarBienvenidaEmpresa } = require('../utils/mailService');
+const { enviarBienvenidaEmpresa, enviarEnlacePagoHub } = require('../utils/mailService');
 
 const {
   normalizePlanId,
@@ -392,6 +392,21 @@ const registerCompany = async (req, res) => {
             });
             respuesta.checkoutUrl = enlace.url;
             respuesta.checkoutSessionId = enlace.sessionId;
+            respuesta.codigoPago = enlace.codigo;
+
+            const emailInvitacion = invitacionRegistro?.email_previsto
+              ? String(invitacionRegistro.email_previsto).trim().toLowerCase()
+              : null;
+            if (emailInvitacion) {
+              enviarEnlacePagoHub({
+                to: emailInvitacion,
+                enlacePagoUrl: enlace.url,
+                codigoPago: enlace.codigo,
+                nombreEmpresa: nombre_empresa,
+              }).catch((mailErr) => {
+                console.error('[empresa] email enlace pago invitación:', mailErr.message);
+              });
+            }
           } catch (checkoutErr) {
             console.error('[empresa] checkout pago inmediato:', checkoutErr.message);
             respuesta.checkoutError = checkoutErr.message
@@ -406,6 +421,7 @@ const registerCompany = async (req, res) => {
           licencias: numLicencias,
           alias,
           identificadorFiscal: CIF,
+          enlacePago: esPagoInmediato ? respuesta.checkoutUrl : undefined,
         })
           .then((devWelcomeUrl) => {
             if (process.env.NODE_ENV !== 'production' && devWelcomeUrl) {

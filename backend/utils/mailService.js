@@ -233,9 +233,15 @@ const buildWelcomeEmailHtml = ({
 
 const buildInvitacionRegistroHubHtml = ({
   registerUrl,
+  codigoCorto,
   fechaExpiracionLabel,
   comercialNombre,
   urlApp,
+  pagoInmediato = false,
+  enlacePagoUrl = '',
+  codigoPago = '',
+  planLabel = '',
+  cicloLabel = '',
 }) =>
   emailLayout(`
     <tr>
@@ -251,6 +257,24 @@ const buildInvitacionRegistroHubHtml = ({
             <td style="padding:16px 20px; font-size:14px; color:#444;">
               <p style="margin:0 0 8px 0;"><strong>Válido hasta:</strong> ${escapeHtml(fechaExpiracionLabel)}</p>
               <p style="margin:0 0 8px 0;"><strong>Tu contacto comercial:</strong> ${escapeHtml(comercialNombre)}</p>
+              ${codigoCorto ? `<p style="margin:0 0 8px 0;"><strong>Código de invitación:</strong> ${escapeHtml(codigoCorto)}</p>` : ''}
+              ${
+                pagoInmediato
+                  ? `<p style="margin:0 0 8px 0;"><strong>Venta privada:</strong> pago inmediato${planLabel ? ` · Plan ${escapeHtml(planLabel)}` : ''}${cicloLabel ? ` (${escapeHtml(cicloLabel)})` : ''}</p>`
+                  : ''
+              }
+              ${
+                enlacePagoUrl
+                  ? `<p style="margin:0 0 8px 0;"><strong>Enlace de pago:</strong> <a href="${enlacePagoUrl}" style="color:#2BA9E0;">${escapeHtml(enlacePagoUrl)}</a></p>`
+                  : pagoInmediato
+                    ? '<p style="margin:0 0 8px 0;">Tras completar el registro recibirás en este correo el enlace de pago con tu código.</p>'
+                    : ''
+              }
+              ${
+                codigoPago
+                  ? `<p style="margin:0 0 8px 0;"><strong>Código de pago:</strong> ${escapeHtml(codigoPago)}</p>`
+                  : ''
+              }
               <p style="margin:0;"><strong>URL de la aplicación:</strong> <a href="${urlApp}" style="color:#2BA9E0;">${urlApp}</a></p>
             </td>
           </tr>
@@ -261,6 +285,11 @@ const buildInvitacionRegistroHubHtml = ({
       </td>
     </tr>
     ${bloqueBotonEnlace(registerUrl, 'Completar registro')}
+    ${
+      enlacePagoUrl
+        ? bloqueBotonEnlace(enlacePagoUrl, 'Completar pago')
+        : ''
+    }
     <tr>
       <td style="padding:0 40px 24px 40px; font-family:Arial,Helvetica,sans-serif;">
         <p style="margin:0; font-size:13px; color:#777;">
@@ -271,11 +300,53 @@ const buildInvitacionRegistroHubHtml = ({
     </tr>
   `);
 
+const buildEnlacePagoHubHtml = ({
+  enlacePagoUrl,
+  codigoPago,
+  nombreEmpresa,
+  comercialNombre,
+}) =>
+  emailLayout(`
+    <tr>
+      <td style="padding:36px 40px 8px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <h1 style="margin:0 0 16px 0; font-size:22px; color:#0f1020;">Completa el pago de tu suscripción</h1>
+        <p style="margin:0 0 12px 0; font-size:15px; line-height:1.6; color:#444;">Hola,</p>
+        <p style="margin:0 0 20px 0; font-size:15px; line-height:1.6; color:#444;">
+          ${nombreEmpresa
+            ? `Tu empresa <strong>${escapeHtml(nombreEmpresa)}</strong> ya está registrada en <strong>${BRAND_NAME}</strong>.`
+            : `Tu registro en <strong>${BRAND_NAME}</strong> está listo.`}
+          Para activar la suscripción, completa el pago con el enlace siguiente.
+        </p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px 0; background:#f9fafb; border-radius:8px; font-family:Arial,Helvetica,sans-serif;">
+          <tr>
+            <td style="padding:16px 20px; font-size:14px; color:#444;">
+              ${codigoPago ? `<p style="margin:0 0 8px 0;"><strong>Código de pago:</strong> ${escapeHtml(codigoPago)}</p>` : ''}
+              <p style="margin:0 0 8px 0;"><strong>Enlace de pago:</strong> <a href="${enlacePagoUrl}" style="color:#2BA9E0;">${escapeHtml(enlacePagoUrl)}</a></p>
+              ${comercialNombre ? `<p style="margin:0;"><strong>Tu contacto comercial:</strong> ${escapeHtml(comercialNombre)}</p>` : ''}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    ${bloqueBotonEnlace(enlacePagoUrl, 'Pagar ahora')}
+    <tr>
+      <td style="padding:0 40px 24px 40px; font-family:Arial,Helvetica,sans-serif;">
+        <p style="margin:0; font-size:13px; color:#777;">El enlace caduca en 24 horas. Si expira, contacta con tu comercial.</p>
+      </td>
+    </tr>
+  `);
+
 const enviarInvitacionRegistroHub = async ({
   to,
   registerUrl,
+  codigoCorto,
   fechaExpiracionLabel,
   comercialNombre,
+  pagoInmediato,
+  enlacePagoUrl,
+  codigoPago,
+  planLabel,
+  cicloLabel,
 }) => {
   const destino = String(to || '').trim().toLowerCase();
   if (!isEmailValido(destino)) {
@@ -292,9 +363,15 @@ const enviarInvitacionRegistroHub = async ({
       subject: `${BRAND_NAME} — Completa el registro de tu empresa`,
       html: buildInvitacionRegistroHubHtml({
         registerUrl,
+        codigoCorto,
         fechaExpiracionLabel,
         comercialNombre: comercialNombre || 'Tu comercial TimeCor',
         urlApp: APP_URL,
+        pagoInmediato,
+        enlacePagoUrl,
+        codigoPago,
+        planLabel,
+        cicloLabel,
       }),
     });
   } catch (mailError) {
@@ -304,6 +381,36 @@ const enviarInvitacionRegistroHub = async ({
       ? 'SMTP_NO_CONFIGURADO'
       : 'EMAIL_SEND_FAILED';
     throw error;
+  }
+};
+
+const enviarEnlacePagoHub = async ({
+  to,
+  enlacePagoUrl,
+  codigoPago,
+  nombreEmpresa,
+  comercialNombre,
+}) => {
+  const destino = String(to || '').trim().toLowerCase();
+  if (!isEmailValido(destino) || !enlacePagoUrl) return false;
+
+  try {
+    await enviarCorreo({
+      to: destino,
+      from: process.env.NOREPLY_EMAIL || process.env.SMTP_USER,
+      replyTo: SUPPORT_EMAIL,
+      subject: `${BRAND_NAME} — Completa el pago de tu suscripción`,
+      html: buildEnlacePagoHubHtml({
+        enlacePagoUrl,
+        codigoPago,
+        nombreEmpresa,
+        comercialNombre,
+      }),
+    });
+    return true;
+  } catch (mailError) {
+    console.error('Error enviando email de enlace de pago hub:', mailError.message);
+    return false;
   }
 };
 
@@ -849,6 +956,7 @@ module.exports = {
   enviarBienvenidaEmpresa,
   enviarInvitacionEmpleado,
   enviarInvitacionRegistroHub,
+  enviarEnlacePagoHub,
   enviarNotificacionGestion,
   enviarCorreoSoporte,
   enviarRegistrosHorariosPorEmail,

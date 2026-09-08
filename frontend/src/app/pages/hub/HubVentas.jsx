@@ -81,6 +81,13 @@ const etiquetaCampanaHub = (nombre, diasPrueba, tipo, codigo) => {
   return nombre;
 };
 
+const invitacionEstaCaducada = (row) => {
+  if (row?.estado === 'expirada') return true;
+  if (row?.usado) return false;
+  if (!row?.fecha_expiracion) return false;
+  return dayjs(row.fecha_expiracion).isBefore(dayjs());
+};
+
 const HUB_SCROLL_CLIENTES = 1280;
 const HUB_SCROLL_INVITACIONES = 1720;
 
@@ -324,21 +331,27 @@ const HubVentas = () => {
   };
 
   const renderAccionesCartera = (tipo, row) => {
-    if (!puedeGestionarCartera) return null;
+    if (!puedeGestionarCartera && tipo !== 'invitacion') return null;
 
     const esInvitacionUsada = tipo === 'invitacion' && row.estado === 'registrada';
     const puedeEnlacePago = tipo === 'venta'
       && (row.requiere_enlace_pago === 1 || row.requiere_enlace_pago === true);
 
     const menuItems = [
-      ...(puedeEnlacePago ? [{
+      ...(tipo === 'invitacion' ? [{
+        key: 'ver-enlaces',
+        label: 'Ver enlaces',
+        icon: <LinkOutlined />,
+        onClick: () => abrirDetalleInvitacion(row),
+      }] : []),
+      ...(puedeGestionarCartera && puedeEnlacePago ? [{
         key: 'enlace-pago',
         label: 'Copiar enlace de pago',
         icon: <LinkOutlined />,
         disabled: paymentLinkLoadingId === row.id_empresa,
         onClick: () => copiarEnlacePagoVenta(row),
       }] : []),
-      {
+      ...(puedeGestionarCartera ? [{
         key: 'transferir',
         label: 'Transferir',
         icon: <SwapOutlined />,
@@ -368,8 +381,10 @@ const HubVentas = () => {
             ),
           });
         },
-      },
+      }] : []),
     ];
+
+    if (menuItems.length === 0) return null;
 
     return (
       <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
@@ -390,6 +405,23 @@ const HubVentas = () => {
     } catch {
       message.error('No se pudo copiar al portapapeles');
     }
+  };
+
+  const abrirDetalleInvitacion = (row) => {
+    setInvitacionResultado({
+      register_url: row.register_url,
+      codigo_corto: row.codigo_corto,
+      fecha_expiracion: row.fecha_expiracion,
+      email_enviado: Boolean(row.email_previsto),
+      email_destino: row.email_previsto,
+      telefono_previsto: row.telefono_previsto,
+      pago_inmediato: row.pago_inmediato,
+      enlace_pago_url: row.enlace_pago_url,
+      codigo_pago: row.codigo_pago,
+      enlace_pago_caducado: row.enlace_pago_caducado,
+      caducada: invitacionEstaCaducada(row),
+    });
+    setInvitacionOpen(true);
   };
 
   const abrirInvitacion = async () => {
@@ -576,6 +608,8 @@ const HubVentas = () => {
       registerUrl: invitacionResultado.register_url,
       fechaExpiracionLabel: dayjs(invitacionResultado.fecha_expiracion).format('DD/MM/YYYY HH:mm'),
       comercialNombre: user?.nombre,
+      enlacePagoUrl: invitacionResultado.enlace_pago_url,
+      codigoPago: invitacionResultado.codigo_pago,
     });
   }, [invitacionResultado, user?.nombre]);
 
@@ -700,9 +734,36 @@ const HubVentas = () => {
       title: 'Campaña',
       dataIndex: 'campana_nombre',
       key: 'campana_nombre',
-      width: 168,
-      ellipsis: true,
-      render: (nombre, row) => etiquetaCampanaHub(nombre, row.campana_dias_prueba, row.campana_tipo),
+      width: 200,
+      render: (nombre, row) => {
+        const etiqueta = etiquetaCampanaHub(
+          nombre,
+          row.campana_dias_prueba,
+          row.campana_tipo,
+          row.campana_codigo,
+        );
+        const caducada = invitacionEstaCaducada(row);
+
+        return (
+          <div className="hub-table-stack hub-invitacion-campana">
+            <Text className="hub-table-stack__primary">
+              {etiqueta}
+              {caducada ? ' (caducada)' : ''}
+            </Text>
+            {row.register_url ? (
+              <Button
+                type="link"
+                size="small"
+                className="hub-invitacion-campana__copy"
+                icon={<CopyOutlined />}
+                onClick={() => copiarTexto(row.register_url, 'Enlace de invitación copiado')}
+              >
+                Copiar enlace
+              </Button>
+            ) : null}
+          </div>
+        );
+      },
     },
   ];
 
@@ -757,7 +818,7 @@ const HubVentas = () => {
     },
   );
 
-  if (puedeGestionarCartera) {
+  if (puedeGestionarCartera || puedeCrearInvitacion) {
     columnasInvitaciones.push({
       title: 'Acciones',
       key: 'acciones',
@@ -1033,9 +1094,69 @@ const HubVentas = () => {
                 )}
               />
             </div>
+            {invitacionResultado.codigo_corto ? (
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Código de invitación: {invitacionResultado.codigo_corto}
+              </Text>
+            ) : null}
+            {invitacionResultado.pago_inmediato && (
+              <>
+                {invitacionResultado.enlace_pago_url ? (
+                  <>
+                    <div>
+                      <Text type="secondary">
+                        Código de pago
+                        {invitacionResultado.enlace_pago_caducado ? ' (caducado)' : ''}
+                      </Text>
+                      <Input
+                        readOnly
+                        value={invitacionResultado.codigo_pago || '—'}
+                        addonAfter={invitacionResultado.codigo_pago ? (
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<CopyOutlined />}
+                            onClick={() => copiarTexto(
+                              invitacionResultado.codigo_pago,
+                              'Código de pago copiado',
+                            )}
+                          />
+                        ) : null}
+                      />
+                    </div>
+                    <div>
+                      <Text type="secondary">Enlace de pago</Text>
+                      <Input
+                        readOnly
+                        value={invitacionResultado.enlace_pago_url}
+                        addonAfter={(
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<CopyOutlined />}
+                            onClick={() => copiarTexto(
+                              invitacionResultado.enlace_pago_url,
+                              'Enlace de pago copiado',
+                            )}
+                          />
+                        )}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <Alert
+                    type="info"
+                    showIcon
+                    message="Enlace de pago pendiente"
+                    description="Tras el registro del cliente se enviará el código de pago al email de la invitación y podrás copiarlo aquí."
+                  />
+                )}
+              </>
+            )}
             <Text type="secondary">
               <LinkOutlined /> Válido hasta{' '}
               {dayjs(invitacionResultado.fecha_expiracion).format('DD/MM/YYYY HH:mm')}
+              {invitacionResultado.caducada ? ' (caducada)' : ''}
             </Text>
           </Space>
         )}

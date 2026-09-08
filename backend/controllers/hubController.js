@@ -13,6 +13,7 @@ const {
   normalizarPlanInvitacion,
   asignarVentaManual,
   obtenerInvitacionPreview,
+  obtenerEmailInvitacionPorEmpresa,
   eliminarVentaHub,
   transferirVentaHub,
   eliminarInvitacionHub,
@@ -27,10 +28,10 @@ const {
   obtenerMetricasDashboard,
 } = require('../services/crmHubService');
 const { crearCheckoutPagoPendiente } = require('../services/billingService');
-const { publicarEnlacePagoCorto } = require('../services/enlacePagoService');
+const { publicarEnlacePagoCorto, construirUrlPublicaPago } = require('../services/enlacePagoService');
 const { sequelize } = require('../config/db');
 const { isEmailValido } = require('../utils/identityChecks');
-const { enviarInvitacionRegistroHub } = require('../utils/mailService');
+const { enviarInvitacionRegistroHub, enviarEnlacePagoHub } = require('../utils/mailService');
 
 const normalizarTelefonoInvitacion = (raw) => {
   let digits = String(raw || '').replace(/\D/g, '');
@@ -60,6 +61,43 @@ const APP_PUBLIC_URL = (
   process.env.FRONTEND_URL ||
   'https://app.timecor.es'
 ).replace(/\/$/, '');
+
+const construirRegisterUrlInvitacion = (codigoCorto, token) => {
+  if (codigoCorto) {
+    return `${APP_PUBLIC_URL}/register?codigo=${encodeURIComponent(codigoCorto)}`;
+  }
+  if (token) {
+    return `${APP_PUBLIC_URL}/register?inv=${encodeURIComponent(token)}`;
+  }
+  return null;
+};
+
+const etiquetaPlanInvitacion = (plan) => {
+  const map = { esencial: 'Esencial', rrhh: 'RRHH', completo: 'Completo' };
+  return map[String(plan || '').toLowerCase()] || plan || '';
+};
+
+const enriquecerInvitacionHub = (row) => {
+  const enlacePagoUrl = row.enlace_pago_codigo
+    ? construirUrlPublicaPago(row.enlace_pago_codigo)
+    : null;
+  const enlacePagoCaducado = row.enlace_pago_expira
+    && new Date(row.enlace_pago_expira).getTime() <= Date.now();
+
+  return {
+    ...row,
+    register_url: row.codigo_corto
+      ? construirRegisterUrlInvitacion(row.codigo_corto)
+      : null,
+    enlace_pago_url: enlacePagoUrl,
+    codigo_pago: row.enlace_pago_codigo || null,
+    enlace_pago_caducado: Boolean(enlacePagoCaducado),
+    pago_inmediato: esCampanaPagoInmediato({
+      tipo: row.campana_tipo,
+      codigo: row.campana_codigo,
+    }),
+  };
+};
 
 const obtenerContexto = async (req, res) => {
   try {
@@ -100,7 +138,10 @@ const listarInvitacionesHandler = async (req, res) => {
       pagina: Number(req.query.pagina) || 1,
       limite: Number(req.query.limite) || 50,
     });
-    return res.status(200).json(data);
+    return res.status(200).json({
+      ...data,
+      invitaciones: (data.invitaciones || []).map(enriquecerInvitacionHub),
+    });
   } catch (error) {
     console.error('[hub] listarInvitaciones:', error.message);
     return res.status(500).json({ message: 'Error al listar invitaciones' });
@@ -227,7 +268,10 @@ const crearInvitacionHandler = async (req, res) => {
       plan: planInvitacion,
     });
 
-    const registerUrl = `${APP_PUBLIC_URL}/register?inv=${encodeURIComponent(invitacion.token)}`;
+    const registerUrl = construirRegisterUrlInvitacion(
+      invitacion.codigo_corto,
+      invitacion.token,
+    );
     const fechaExpiracionLabel = formatearFechaExpiracion(invitacion.fecha_expiracion);
 
     let emailEnviado = false;
@@ -238,8 +282,12 @@ const crearInvitacionHandler = async (req, res) => {
         await enviarInvitacionRegistroHub({
           to: email,
           registerUrl,
+          codigoCorto: invitacion.codigo_corto,
           fechaExpiracionLabel,
           comercialNombre: req.user.nombre,
+          pagoInmediato: esPagoInmediato,
+          planLabel: etiquetaPlanInvitacion(planInvitacion),
+          cicloLabel: cicloFacturacion === 'anual' ? 'Anual' : cicloFacturacion === 'mensual' ? 'Mensual' : '',
         });
         emailEnviado = true;
       } catch (mailErr) {
@@ -257,6 +305,7 @@ const crearInvitacionHandler = async (req, res) => {
           ? 'Invitación creada, pero no se pudo enviar el correo'
           : 'Invitación creada',
       id_invitacion: invitacion.id_invitacion,
+      codigo_corto: invitacion.codigo_corto,
       register_url: registerUrl,
       fecha_expiracion: invitacion.fecha_expiracion,
       email_enviado: emailEnviado,
@@ -267,6 +316,8 @@ const crearInvitacionHandler = async (req, res) => {
       venta_directa: esPagoInmediato,
       ciclo_facturacion: cicloFacturacion,
       plan: planInvitacion,
+      enlace_pago_url: null,
+      codigo_pago: null,
     });
   } catch (error) {
     if (error.code === 'CAMPANA_INVALIDA' || error.code === 'NOMBRE_INVALIDO'
@@ -607,11 +658,29 @@ const enlacePagoVentaHandler = async (req, res) => {
 
     const enlace = await publicarEnlacePagoCorto({ idEmpresa, checkout });
 
+    const emailInvitacion = await obtenerEmailInvitacionPorEmpresa(idEmpresa);
+    if (emailInvitacion) {
+      const [empresaRow] = await sequelize.query(
+        `SELECT nombre FROM m_empresas WHERE id_empresa = :idEmpresa LIMIT 1`,
+        { replacements: { idEmpresa }, type: sequelize.QueryTypes.SELECT },
+      );
+      enviarEnlacePagoHub({
+        to: emailInvitacion,
+        enlacePagoUrl: enlace.url,
+        codigoPago: enlace.codigo,
+        nombreEmpresa: empresaRow?.nombre,
+        comercialNombre: req.user?.nombre,
+      }).catch((err) => {
+        console.error('[hub] email enlace pago:', err.message);
+      });
+    }
+
     return res.status(200).json({
       url: enlace.url,
       sessionId: enlace.sessionId,
       email: admin.email,
       codigo: enlace.codigo,
+      email_pago_enviado: Boolean(emailInvitacion),
     });
   } catch (error) {
     console.error('[hub] enlacePagoVenta:', error.message);
