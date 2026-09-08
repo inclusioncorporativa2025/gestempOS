@@ -6,6 +6,7 @@ import { initMetricoolTracker } from './landing/utils/metricoolTracker';
 import LandingPage from './landing/pages/LandingPage';
 import legalRouteElements from './LegalRoutes';
 import AppShell from './app/AppShell';
+import SeoManager from './components/SeoManager';
 
 /**
  * Raíz del SPA: landing pública (/) en timecor.es; login solo en app.timecor.es.
@@ -21,6 +22,8 @@ function App() {
   }, [onAppHost]);
 
   return (
+    <>
+    <SeoManager />
     <Routes>
       {legalRouteElements}
       {onAppHost ? (
@@ -35,6 +38,7 @@ function App() {
         </>
       )}
     </Routes>
+    </>
   );
 }
 
