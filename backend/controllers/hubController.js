@@ -27,6 +27,7 @@ const {
   obtenerMetricasDashboard,
 } = require('../services/crmHubService');
 const { crearCheckoutPagoPendiente } = require('../services/billingService');
+const { publicarEnlacePagoCorto } = require('../services/enlacePagoService');
 const { sequelize } = require('../config/db');
 const { isEmailValido } = require('../utils/identityChecks');
 const { enviarInvitacionRegistroHub } = require('../utils/mailService');
@@ -237,7 +238,6 @@ const crearInvitacionHandler = async (req, res) => {
         await enviarInvitacionRegistroHub({
           to: email,
           registerUrl,
-          codigoCorto: invitacion.codigo_corto,
           fechaExpiracionLabel,
           comercialNombre: req.user.nombre,
         });
@@ -257,7 +257,6 @@ const crearInvitacionHandler = async (req, res) => {
           ? 'Invitación creada, pero no se pudo enviar el correo'
           : 'Invitación creada',
       id_invitacion: invitacion.id_invitacion,
-      codigo_corto: invitacion.codigo_corto,
       register_url: registerUrl,
       fecha_expiracion: invitacion.fecha_expiracion,
       email_enviado: emailEnviado,
@@ -606,10 +605,13 @@ const enlacePagoVentaHandler = async (req, res) => {
       ciclo: cicloBody,
     });
 
+    const enlace = await publicarEnlacePagoCorto({ idEmpresa, checkout });
+
     return res.status(200).json({
-      url: checkout.url,
-      sessionId: checkout.sessionId,
+      url: enlace.url,
+      sessionId: enlace.sessionId,
       email: admin.email,
+      codigo: enlace.codigo,
     });
   } catch (error) {
     console.error('[hub] enlacePagoVenta:', error.message);

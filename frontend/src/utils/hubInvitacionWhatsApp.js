@@ -17,7 +17,6 @@ export const telefonoValidoWhatsApp = (raw) => {
 export const buildWhatsAppInvitacionUrl = ({
   telefono,
   registerUrl,
-  codigoCorto,
   fechaExpiracionLabel,
   comercialNombre,
 }) => {
@@ -30,7 +29,6 @@ export const buildWhatsAppInvitacionUrl = ({
     '',
     `👉 Completar registro: ${registerUrl}`,
     '',
-    `Código: ${codigoCorto}`,
     `Válido hasta el ${fechaExpiracionLabel}.`,
     '',
     'Cualquier duda, responde a este mensaje.',

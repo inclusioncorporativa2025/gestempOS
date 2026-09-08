@@ -574,7 +574,6 @@ const HubVentas = () => {
     return buildWhatsAppInvitacionUrl({
       telefono: invitacionResultado.telefono_previsto,
       registerUrl: invitacionResultado.register_url,
-      codigoCorto: invitacionResultado.codigo_corto,
       fechaExpiracionLabel: dayjs(invitacionResultado.fecha_expiracion).format('DD/MM/YYYY HH:mm'),
       comercialNombre: user?.nombre,
     });
@@ -677,12 +676,6 @@ const HubVentas = () => {
       width: 200,
       fixed: 'left',
       render: (_, row) => renderCeldaDoble(row.email_previsto, row.telefono_previsto),
-    },
-    {
-      title: 'Código',
-      dataIndex: 'codigo_corto',
-      key: 'codigo_corto',
-      width: 108,
     },
     {
       title: 'Estado',
@@ -1026,7 +1019,7 @@ const HubVentas = () => {
               </Button>
             )}
             <div>
-              <Text type="secondary">Enlace</Text>
+              <Text type="secondary">Enlace de registro</Text>
               <Input
                 readOnly
                 value={invitacionResultado.register_url}
@@ -1036,24 +1029,6 @@ const HubVentas = () => {
                     size="small"
                     icon={<CopyOutlined />}
                     onClick={() => copiarTexto(invitacionResultado.register_url, 'Enlace copiado')}
-                  />
-                )}
-              />
-            </div>
-            <div>
-              <Text type="secondary">Código corto</Text>
-              <Input
-                readOnly
-                value={invitacionResultado.codigo_corto}
-                addonAfter={(
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<CopyOutlined />}
-                    onClick={() => copiarTexto(
-                      invitacionResultado.codigo_corto,
-                      'Código copiado',
-                    )}
                   />
                 )}
               />

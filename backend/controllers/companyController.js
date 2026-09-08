@@ -20,6 +20,7 @@ const {
 const { isValidRegionCode, resolveRegionCode, provinceByCpPrefix } = require('../config/spanishRegions');
 const { extenderPeriodoPruebaEmpresa, TrialExtensionError } = require('../services/trialService');
 const { crearCheckoutTrialPendiente, crearCheckoutPagoPendiente } = require('../services/billingService');
+const { publicarEnlacePagoCorto } = require('../services/enlacePagoService');
 const { purgarEmpresaCompleta } = require('../services/empresaPurgeService');
 const {
   buscarInvitacionValida,
@@ -385,8 +386,12 @@ const registerCompany = async (req, res) => {
               nombre: Administrador,
               ciclo: cicloFacturacionGuardado,
             });
-            respuesta.checkoutUrl = checkout.url;
-            respuesta.checkoutSessionId = checkout.sessionId;
+            const enlace = await publicarEnlacePagoCorto({
+              idEmpresa: empresa.id_empresa,
+              checkout,
+            });
+            respuesta.checkoutUrl = enlace.url;
+            respuesta.checkoutSessionId = enlace.sessionId;
           } catch (checkoutErr) {
             console.error('[empresa] checkout pago inmediato:', checkoutErr.message);
             respuesta.checkoutError = checkoutErr.message
@@ -918,11 +923,14 @@ const generarEnlacePagoEmpresa = async (req, res) => {
       });
     }
 
+    const enlace = await publicarEnlacePagoCorto({ idEmpresa, checkout });
+
     return res.status(200).json({
-      url: checkout.url,
-      sessionId: checkout.sessionId,
+      url: enlace.url,
+      sessionId: enlace.sessionId,
       email: admin.email,
       ciclo: cicloOverride || facturacionRow?.ciclo_facturacion || 'mensual',
+      codigo: enlace.codigo,
     });
   } catch (error) {
     console.error('Error al generar enlace de pago:', error);

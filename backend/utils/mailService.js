@@ -233,7 +233,6 @@ const buildWelcomeEmailHtml = ({
 
 const buildInvitacionRegistroHubHtml = ({
   registerUrl,
-  codigoCorto,
   fechaExpiracionLabel,
   comercialNombre,
   urlApp,
@@ -250,7 +249,6 @@ const buildInvitacionRegistroHubHtml = ({
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px 0; background:#f9fafb; border-radius:8px; font-family:Arial,Helvetica,sans-serif;">
           <tr>
             <td style="padding:16px 20px; font-size:14px; color:#444;">
-              <p style="margin:0 0 8px 0;"><strong>Código de invitación:</strong> ${escapeHtml(codigoCorto)}</p>
               <p style="margin:0 0 8px 0;"><strong>Válido hasta:</strong> ${escapeHtml(fechaExpiracionLabel)}</p>
               <p style="margin:0 0 8px 0;"><strong>Tu contacto comercial:</strong> ${escapeHtml(comercialNombre)}</p>
               <p style="margin:0;"><strong>URL de la aplicación:</strong> <a href="${urlApp}" style="color:#2BA9E0;">${urlApp}</a></p>
@@ -258,8 +256,7 @@ const buildInvitacionRegistroHubHtml = ({
           </tr>
         </table>
         <p style="margin:0 0 28px 0; font-size:15px; line-height:1.6; color:#444;">
-          Pulsa el botón para acceder al formulario de registro. Si te lo solicitan, introduce el código
-          <strong>${escapeHtml(codigoCorto)}</strong> durante el alta.
+          Pulsa el botón para acceder al formulario de registro.
         </p>
       </td>
     </tr>
@@ -277,7 +274,6 @@ const buildInvitacionRegistroHubHtml = ({
 const enviarInvitacionRegistroHub = async ({
   to,
   registerUrl,
-  codigoCorto,
   fechaExpiracionLabel,
   comercialNombre,
 }) => {
@@ -296,7 +292,6 @@ const enviarInvitacionRegistroHub = async ({
       subject: `${BRAND_NAME} — Completa el registro de tu empresa`,
       html: buildInvitacionRegistroHubHtml({
         registerUrl,
-        codigoCorto,
         fechaExpiracionLabel,
         comercialNombre: comercialNombre || 'Tu comercial Timecor',
         urlApp: APP_URL,

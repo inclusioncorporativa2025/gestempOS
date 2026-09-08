@@ -692,7 +692,6 @@ const crearInvitacionRegistro = async ({
 }) => {
   const token = generarTokenInvitacion();
   const tokenHash = hashToken(token);
-  const codigoCorto = generarCodigoCorto();
   const fechaExpiracion = new Date();
   fechaExpiracion.setDate(fechaExpiracion.getDate() + diasValidez);
 
@@ -732,18 +731,17 @@ const crearInvitacionRegistro = async ({
 
   const [, meta] = await sequelize.query(
     `INSERT INTO crm_invitacion_registro (
-       token_hash, codigo_corto, id_usuario_comercial,
+       token_hash, id_usuario_comercial,
        email_previsto, telefono_previsto, canal, fecha_expiracion
        ${campanaSql}${cicloSql}${planSql}
      ) VALUES (
-       :tokenHash, :codigoCorto, :idUsuarioComercial,
+       :tokenHash, :idUsuarioComercial,
        :emailPrevisto, :telefonoPrevisto, :canal, :fechaExpiracion
        ${campanaVal}${cicloVal}${planVal}
      )`,
     {
       replacements: {
         tokenHash,
-        codigoCorto,
         idUsuarioComercial,
         emailPrevisto: emailPrevisto || null,
         telefonoPrevisto: telefonoPrevisto || null,
@@ -761,7 +759,6 @@ const crearInvitacionRegistro = async ({
   return {
     id_invitacion: idInvitacion,
     token,
-    codigo_corto: codigoCorto,
     fecha_expiracion: fechaExpiracion,
   };
 };

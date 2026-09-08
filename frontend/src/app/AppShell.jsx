@@ -68,6 +68,7 @@ import FacturacionPage from './pages/facturacion/FacturacionPage';
 import FacturacionExito from './pages/facturacion/FacturacionExito';
 import FacturacionCancelado from './pages/facturacion/FacturacionCancelado';
 import RenovarSuscripcion from './pages/facturacion/RenovarSuscripcion';
+import PagoRedirect from './pages/PagoRedirect';
 import NominasPage from './pages/NominasPage';
 import { useTrialStatus } from '../hooks/useTrialStatus';
 import { usePlan } from '../hooks/usePlan';
@@ -177,6 +178,8 @@ const AppShell = () => {
     APP_ROUTES.facturacionExito,
     APP_ROUTES.facturacionCancelado,
     APP_ROUTES.renovarSuscripcion,
+    APP_ROUTES.pagoCaducado,
+    APP_ROUTES.pagoError,
   ];
 
   useEffect(() => {
@@ -212,7 +215,8 @@ const AppShell = () => {
   }, []);
 
   const isMobile = windowWidth < MOBILE_MAX;
-  const isAuthShellPage = authShellPaths.includes(location.pathname);
+  const isAuthShellPage = authShellPaths.includes(location.pathname)
+    || location.pathname.startsWith('/pago/');
   const esRutaFacturacion = FACTURACION_ROUTES.includes(location.pathname);
   const puedeFichar = [1, 2, 3, 4, 5].includes(Number(tipousuario));
 
@@ -418,6 +422,9 @@ const AppShell = () => {
               <Routes>
                 <Route path={APP_ROUTES.login} element={<Login />} />
                 <Route path={APP_ROUTES.register} element={<Register />} />
+                <Route path={APP_ROUTES.pago} element={<PagoRedirect />} />
+                <Route path={APP_ROUTES.pagoCaducado} element={<PagoRedirect />} />
+                <Route path={APP_ROUTES.pagoError} element={<PagoRedirect />} />
                 <Route path={APP_ROUTES.forgotPassword} element={<ForgotPassword />} />
                 <Route path={APP_ROUTES.resetPassword} element={<ResetPassword />} />
                 <Route path={APP_ROUTES.facturacionExito} element={<FacturacionExito />} />

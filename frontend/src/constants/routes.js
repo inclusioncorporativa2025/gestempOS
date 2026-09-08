@@ -46,6 +46,9 @@ export const APP_ROUTES = {
   facturacionExito: '/facturacion/exito',
   facturacionCancelado: '/facturacion/cancelado',
   renovarSuscripcion: '/renovar',
+  pago: '/pago/:codigo',
+  pagoCaducado: '/pago/caducado',
+  pagoError: '/pago/error',
 };
 
 /** Rutas de facturación accesibles aunque el trial haya expirado */

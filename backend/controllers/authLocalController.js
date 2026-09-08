@@ -27,6 +27,7 @@ const {
   obtenerEstadoTrialEmpresa,
 } = require('../services/trialService');
 const { crearCheckoutTrialPendiente, crearCheckoutPagoPendiente } = require('../services/billingService');
+const { publicarEnlacePagoCorto } = require('../services/enlacePagoService');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const BCRYPT_ROUNDS = 10;
@@ -521,9 +522,14 @@ const reanudarCheckout = async (req, res) => {
       nombre: usuario.nombre,
     });
 
+    const enlace = await publicarEnlacePagoCorto({
+      idEmpresa: empresaPendiente.id_empresa,
+      checkout,
+    });
+
     return res.status(200).json({
       ...buildPaymentRequiredPayload(estadoPendiente),
-      checkoutUrl: checkout.url,
+      checkoutUrl: enlace.url,
     });
   } catch (error) {
     console.error('Error en reanudarCheckout:', error.message);
