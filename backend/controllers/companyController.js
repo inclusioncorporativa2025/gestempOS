@@ -34,11 +34,82 @@ const {
 const {
   findEmpresaActivaPorCif,
   normalizeEmail,
+  normalizeIdentificador,
   isEmailValido,
   resolverUsuarioIdentidad,
   reactivarUsuarioGlobal,
   usuarioEstaActivoGlobal,
+  sanitizarConflictoIdentidadPublico,
 } = require('../utils/identityChecks');
+
+const mapRegistroEmpresaDbError = (error, { esRegistroPublico = false } = {}) => {
+  const esUnico = error?.name === 'SequelizeUniqueConstraintError'
+    || error?.parent?.code === 'ER_DUP_ENTRY'
+    || /duplicate entry/i.test(String(error?.parent?.sqlMessage || ''));
+
+  if (!esUnico) return null;
+
+  const campo = String(error?.errors?.[0]?.path || '').toLowerCase();
+  const sqlMsg = String(error?.parent?.sqlMessage || '').toLowerCase();
+
+  if (campo === 'email' || sqlMsg.includes('.email') || sqlMsg.includes("'email'")) {
+    return {
+      status: 409,
+      body: {
+        message: 'Este email ya está registrado en la plataforma',
+        codigo: 'EMAIL_EN_USO',
+      },
+    };
+  }
+
+  if (campo === 'dni' || sqlMsg.includes('.dni') || sqlMsg.includes("'dni'")) {
+    return {
+      status: 409,
+      body: esRegistroPublico
+        ? sanitizarConflictoIdentidadPublico()
+        : {
+            message: 'El DNI ya está asociado a otra cuenta en la plataforma',
+            codigo: 'DNI_EN_USO',
+          },
+    };
+  }
+
+  if (
+    campo === 'identificador_fiscal'
+    || sqlMsg.includes('identificador_fiscal')
+    || sqlMsg.includes('empresas_unique')
+  ) {
+    return {
+      status: 409,
+      body: {
+        message: 'Ya existe una empresa registrada con este CIF',
+        codigo: 'CIF_EN_USO',
+      },
+    };
+  }
+
+  if (campo === 'nombre_esquema' || sqlMsg.includes('nombre_esquema')) {
+    return {
+      status: 409,
+      body: {
+        message: 'Ya existe una empresa con un nombre similar. Prueba con otro nombre comercial.',
+        codigo: 'NOMBRE_ESQUEMA_EN_USO',
+      },
+    };
+  }
+
+  if (sqlMsg.includes('uq_usuarios_empresas_par')) {
+    return {
+      status: 409,
+      body: {
+        message: 'El administrador ya está vinculado a esta empresa',
+        codigo: 'YA_EN_EMPRESA',
+      },
+    };
+  }
+
+  return null;
+};
 
 const trimOptional = (value) => {
   const text = String(value ?? '').trim();
@@ -111,7 +182,6 @@ const registerCompany = async (req, res) => {
             provincia,
         } = req.body.values;
         const idUsuarioAccion = req.body.idUsuario;
-        const schemaName = `empresa_${nombre_empresa.toLowerCase().replace(/\s+/g, '_')}`;
         const fecha = new Date();
 
         const invTokenPrevio = req.body.invitacionToken || req.body.inv;
@@ -143,7 +213,7 @@ const registerCompany = async (req, res) => {
             });
         }
 
-        const cifNormalizado = String(CIF ?? '').trim();
+        const cifNormalizado = normalizeIdentificador(CIF);
         if (!cifNormalizado) {
             await transaction.rollback();
             return res.status(400).json({ message: 'El CIF es obligatorio' });
@@ -235,6 +305,7 @@ const registerCompany = async (req, res) => {
         const usuarioAlta = idUsuarioAccion ?? usuarioAdmin.id_usuario;
 
         const idEmpresa = await getNextGlobalId(Empresa, 'id_empresa', transaction);
+        const schemaName = `empresa_${idEmpresa}`;
         const empresa = await Empresa.create({
             id_empresa: idEmpresa,
             nombre: nombre_empresa,
@@ -432,24 +503,23 @@ const registerCompany = async (req, res) => {
             console.error('Empresa creada pero falló el email de bienvenida:', mailError.message);
           });
     } catch (error) {
+        try {
+          await transaction.rollback();
+        } catch (rollbackErr) {
+          console.error('[empresa] rollback:', rollbackErr.message);
+        }
 
-        await transaction.rollback();
-        console.error(`Error proceso creación empresa: ${error.message}`);
+        const detalleSql = error?.parent?.sqlMessage || error?.message;
+        const campos = error?.errors?.map((e) => e.path).filter(Boolean).join(', ') || '—';
+        console.error(
+          `[empresa] Error creación: ${error.name || 'Error'} | campos: ${campos} | ${detalleSql}`,
+        );
 
-        if (error.name === 'SequelizeUniqueConstraintError') {
-            const campo = error.errors?.[0]?.path;
-            if (campo === 'email') {
-                return res.status(409).json({
-                    message: 'Este email ya está registrado en la plataforma',
-                    codigo: 'EMAIL_EN_USO',
-                });
-            }
-            if (campo === 'identificador_fiscal') {
-                return res.status(409).json({
-                    message: 'Ya existe una empresa registrada con este CIF',
-                    codigo: 'CIF_EN_USO',
-                });
-            }
+        const mapeado = mapRegistroEmpresaDbError(error, {
+          esRegistroPublico: req.body?.idUsuario == null,
+        });
+        if (mapeado) {
+            return res.status(mapeado.status).json(mapeado.body);
         }
 
         res.status(500).json({ error: 'Error al registrar la empresa' });
