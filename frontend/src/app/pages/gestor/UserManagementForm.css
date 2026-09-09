@@ -1,5 +1,14 @@
 .umf-layout {
+  min-height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
   background-color: var(--background);
+}
+
+.umf-layout > .ant-card {
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .umf-header {
@@ -19,8 +28,12 @@
 }
 
 .umf-form-col {
-  width: 100vw;
-  margin: 0 auto;
-  justify-content: center;
-  align-items: center;
+  width: 100%;
+  max-width: 720px;
+}
+
+@media (max-width: 950px) {
+  .umf-layout {
+    padding: 16px;
+  }
 }

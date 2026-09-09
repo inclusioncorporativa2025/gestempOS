@@ -4,9 +4,11 @@ import GradientButton from '../../components/shared/GradientButton';
 import { InboxOutlined, DownloadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../../constants/routes';
-import * as XLSX from 'xlsx'; // Importamos la biblioteca para manejar Excel
-
 import { crearUsuario, importarUsuariosEmpresa } from '../../../features/user/usuarioService';
+import {
+  descargarPlantillaImportacion,
+  resolverNombreJornadaPlantilla,
+} from '../../../utils/plantillaImportacionUsuarios';
 import { mostrarModalLicenciasAgotadas } from '../../../features/billing/licenciasAgotadasModal';
 import { obtenerJornadas, obtenerJornadasByIdEmpresa } from "../../../features/jornada/jornadaService";
 import './UserManagementForm.css';
@@ -34,7 +36,7 @@ const UserManagementForm = () => {
   const [fileList, setFileList] = useState([]);
   const [jornadas, setJornadas] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [tipoUsuario, setTipoUsuario] = useState('Trabajador');
+  const [tipoUsuario, setTipoUsuario] = useState('Personal');
   const [tipoJornada, setTipoJornada] = useState('');
   const [inspectorForm] = Form.useForm();
   
@@ -42,7 +44,7 @@ const UserManagementForm = () => {
   const obtenerTipoJornadas = async () => {
     try {
       const response = await obtenerJornadas();
-      setJornadas(response); // Almacenar las jornadas en el estado
+      setJornadas(Array.isArray(response) ? response : []);
     } catch (error) {
       message.error('Error recuperando tipo de jornadas');
     }
@@ -149,7 +151,7 @@ const UserManagementForm = () => {
   
   const handleModalOk = () => {
     setModalVisible(false); // Cierra el modal
-    descargarPlantillaExcel(tipoUsuario, tipoJornada); // Llama a la función para descargar el Excel con los valores seleccionados
+    descargarPlantillaExcel();
   };
   
   const handleUsuarioChange = (value) => {
@@ -160,27 +162,12 @@ const UserManagementForm = () => {
     setTipoJornada(value); // Cambia el tipo de jornada seleccionado
   };
   
-  const descargarPlantillaExcel = (tipoUsuario, tipoJornada) => {
-    // Crear datos de ejemplo con los valores seleccionados
-    const data = [
-      { 
-        'Nombre Completo': 'Ejemplo Nombre', 
-        'Correo': 'ejemplo@correo.com', 
-        'DNI': '12345678A', 
-        'Tipo de Horario': tipoJornada, 
-        'Tipo de Usuario': tipoUsuario
-      },
-    ];
-  
-    // Crear un libro de Excel
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(data);
-  
-    // Añadir la hoja al libro
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'PlantillaUsuarios');
-  
-    // Exportar el archivo
-    XLSX.writeFile(workbook, 'PlantillaUsuarios.xlsx');
+  const descargarPlantillaExcel = () => {
+    const nombreJornada = resolverNombreJornadaPlantilla(jornadas, tipoJornada);
+    descargarPlantillaImportacion({
+      tipoUsuario,
+      tipoJornada: nombreJornada,
+    });
   };
   
 
@@ -308,14 +295,23 @@ const UserManagementForm = () => {
             {/* Selector de Tipo de Usuario */}
             <Form.Item label="Tipo de Usuario" required>
               <Select value={tipoUsuario} onChange={handleUsuarioChange}>
-                <Option value="Trabajador">Trabajador</Option>
+                <Option value="Personal">Personal</Option>
                 <Option value="Supervisor">Supervisor</Option>
               </Select>
             </Form.Item>
 
             {/* Selector de Tipo de Jornada */}
             <Form.Item label="Tipo de Jornada" required>
-              <Select value={tipoJornada} onChange={handleJornadaChange}>
+              <Select
+                value={tipoJornada || undefined}
+                onChange={handleJornadaChange}
+                placeholder={
+                  jornadas.length
+                    ? 'Selecciona una jornada'
+                    : 'Crea una jornada en Configuración primero'
+                }
+                notFoundContent="No hay jornadas configuradas"
+              >
                 {jornadas.map((jornada) => (
                   <Option key={jornada.id_jornada} value={jornada.id_jornada}>
                     {jornada.nombre}

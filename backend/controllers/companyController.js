@@ -20,7 +20,7 @@ const {
 const { isValidRegionCode, resolveRegionCode, provinceByCpPrefix } = require('../config/spanishRegions');
 const { extenderPeriodoPruebaEmpresa, TrialExtensionError } = require('../services/trialService');
 const { crearCheckoutTrialPendiente, crearCheckoutPagoPendiente } = require('../services/billingService');
-const { publicarEnlacePagoCorto } = require('../services/enlacePagoService');
+const { publicarEnlacePagoCorto, construirUrlPublicaPago } = require('../services/enlacePagoService');
 const { purgarEmpresaCompleta } = require('../services/empresaPurgeService');
 const {
   buscarInvitacionValida,
@@ -561,11 +561,24 @@ const getEmpresas = async (req, res)=> {
 
 };
 
+const enriquecerEmpresaListado = (row) => {
+  const enlacePagoCaducado = row.enlace_pago_expira
+    && new Date(row.enlace_pago_expira).getTime() <= Date.now();
+  const codigoPago = row.enlace_pago_codigo || null;
+  const enlacePagoUrl = codigoPago ? construirUrlPublicaPago(codigoPago) : null;
+
+  return {
+    ...row,
+    enlace_pago_url: enlacePagoUrl,
+    enlace_pago_caducado: Boolean(enlacePagoCaducado),
+  };
+};
+
 const getEmpresasUsuarios = async (req, res)=> {
 
   try {
 
-         const result = await sequelize.query(
+         const rows = await sequelize.query(
                 `SELECT e.id_empresa, e.nombre, e.identificador_fiscal, e.fecha_alta, e.licencias,
                         e.id_plan, e.plan, e.activo, e.alias, e.fecha_baja,
                         ef.modo_facturacion,
@@ -573,6 +586,8 @@ const getEmpresasUsuarios = async (req, res)=> {
                         ef.trial_ends_at,
                         ef.stripe_subscription_id,
                         ef.cancel_at_period_end,
+                        ef.enlace_pago_codigo,
+                        ef.enlace_pago_expira,
                         (
                           CASE
                             WHEN LOWER(IFNULL(ef.modo_facturacion, '')) = 'pendiente_pago'
@@ -597,6 +612,7 @@ const getEmpresasUsuarios = async (req, res)=> {
                 ORDER BY e.fecha_alta DESC`,
                 { type: sequelize.QueryTypes.SELECT }
               );
+         const result = rows.map(enriquecerEmpresaListado);
         if(!res){
           return result;
         }else{

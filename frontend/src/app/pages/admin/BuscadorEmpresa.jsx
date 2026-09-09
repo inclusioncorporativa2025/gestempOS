@@ -401,6 +401,19 @@ const BuscadorEmpresa = ({ embedded = false }) => {
   };
 
   const copiarEnlacePagoEmpresa = async (record) => {
+    const enlaceExistente = record.enlace_pago_url;
+    const enlaceVigente = enlaceExistente && !record.enlace_pago_caducado;
+
+    if (enlaceVigente) {
+      try {
+        await navigator.clipboard.writeText(enlaceExistente);
+        message.success('Enlace de pago copiado');
+      } catch {
+        message.error('No se pudo copiar el enlace al portapapeles');
+      }
+      return;
+    }
+
     setPaymentLinkLoadingId(record.id_empresa);
     try {
       const resultado = await generarEnlacePagoEmpresa(record.id_empresa);
@@ -410,6 +423,7 @@ const BuscadorEmpresa = ({ embedded = false }) => {
       await navigator.clipboard.writeText(resultado.url);
       const destino = resultado.email || record.email || 'el administrador';
       message.success(`Enlace copiado. Envíalo a ${destino}`);
+      await fetchEmpresas();
     } catch (error) {
       message.error(error.message || 'No se pudo copiar el enlace de pago');
     } finally {
@@ -623,22 +637,29 @@ const BuscadorEmpresa = ({ embedded = false }) => {
     {
       title: 'Pago',
       key: 'enlace_pago',
-      width: 56,
+      width: 132,
       align: 'center',
       render: (_, record) => {
         if (!empresaRequiereEnlacePago(record)) {
           return '—';
         }
+        const caducado = record.enlace_pago_caducado;
+        const tooltip = caducado
+          ? 'Regenerar y copiar enlace de pago (anterior caducado)'
+          : 'Copiar enlace de pago';
         return (
-          <Tooltip title="Copiar enlace de pago">
+          <Tooltip title={tooltip}>
             <Button
-              type="text"
+              type="default"
+              size="small"
               icon={<CopyOutlined />}
               loading={paymentLinkLoadingId === record.id_empresa}
               onClick={() => copiarEnlacePagoEmpresa(record)}
               aria-label="Copiar enlace de pago"
-              className="be-accion-btn be-accion-btn--copy"
-            />
+              className="be-pago-copy-btn"
+            >
+              Copiar enlace
+            </Button>
           </Tooltip>
         );
       },
@@ -646,6 +667,7 @@ const BuscadorEmpresa = ({ embedded = false }) => {
     {
       title: 'Acciones',
       key: 'acciones',
+      width: 120,
       render: (_, record) => renderAccionesEmpresa(record),
     },
   ];
@@ -700,7 +722,7 @@ const BuscadorEmpresa = ({ embedded = false }) => {
           icon={<CopyOutlined />}
           loading={paymentLinkLoadingId === record.id_empresa}
           onClick={() => copiarEnlacePagoEmpresa(record)}
-          className="be-mobile-card__pago-btn"
+          className="be-pago-copy-btn be-mobile-card__pago-btn"
         >
           Copiar enlace de pago
         </Button>
@@ -793,7 +815,7 @@ const BuscadorEmpresa = ({ embedded = false }) => {
             rowKey="id_empresa"
             pagination={{ pageSize: PAGE_SIZE, showSizeChanger: false }}
             tableLayout="fixed"
-            scroll={{ x: 960 }}
+            scroll={{ x: 1080 }}
             rowClassName={(record) => (empresaEstaActiva(record) ? '' : 'be-row-inactiva')}
             locale={{ emptyText: 'No hay empresas que coincidan con el filtro' }}
             columns={columns}
