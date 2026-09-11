@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { APP_ROUTES, FACTURACION_ROUTES } from '../constants/routes';
-import { Layout, Menu, Drawer, Button, ConfigProvider } from 'antd';
+import { Layout, Menu, Drawer, Button, ConfigProvider, App as AntApp } from 'antd';
+import esES from 'antd/es/locale/es_ES';
 import {
   MenuOutlined,
   SlidersOutlined,
@@ -272,6 +273,7 @@ const AppShell = () => {
 
   return (
     <ConfigProvider
+      locale={esES}
       theme={{
         token: {
           fontFamily: 'var(--font-family-base)',
@@ -320,6 +322,7 @@ const AppShell = () => {
         },
       }}
     >
+      <AntApp>
       <Layout className="app-shell">
         <NavigationTracker />
         <Layout
@@ -659,6 +662,7 @@ const AppShell = () => {
       <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
       {user && !isAuthShellPage && <NovedadAppNotifier />}
       {user && !isAuthShellPage && puedeFichar && <PausaBloqueoOverlay />}
+      </AntApp>
     </ConfigProvider>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Tag, Card, Table, Input, Button, Modal, Tooltip, Popconfirm, Form, message, Typography, DatePicker, Switch, Select, ConfigProvider, Dropdown, Pagination } from 'antd';
+import { Tag, Card, Table, Input, Button, Modal, Tooltip, Popconfirm, Form, message, Typography, DatePicker, Switch, Select, Dropdown, Pagination } from 'antd';
 import GradientButton from '../components/shared/GradientButton';
 import { SearchOutlined, EditOutlined, StopOutlined, EyeOutlined, DownloadOutlined, UserAddOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -11,7 +11,6 @@ import { parseFechaFichaje } from '../../utils/fechaFichaje';
 
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
-import esES from 'antd/es/locale/es_ES';
 import { getTipoUsuario, getIdUsuario } from '../../utils/authSession';
 import {
   puedeVerFichaPersonal,
@@ -447,7 +446,6 @@ const BuscarUsuarios = () => {
     ];
 
     return (
-        <ConfigProvider locale={esES}>
             <div className="bu-page">
             <Card>
                 <div className="bu-stats">
@@ -699,7 +697,6 @@ const BuscarUsuarios = () => {
                 </Modal>
             </Card>
             </div>
-        </ConfigProvider>
     );
 };
 

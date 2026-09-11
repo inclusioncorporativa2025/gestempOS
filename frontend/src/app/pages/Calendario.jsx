@@ -4,8 +4,6 @@ import { SyncOutlined, SettingOutlined, LeftOutlined, RightOutlined, DownOutline
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
-import locale from 'antd/locale/es_ES';
-import { ConfigProvider } from 'antd';
 import {
   getFestivosByIdEmpresa,
   getFestivosCalendario,
@@ -504,7 +502,6 @@ const Calendario = () => {
   };
 
   return (
-    <ConfigProvider locale={locale}>
       <Layout className="calendario-layout">
         {renderLeyenda()}
 
@@ -541,7 +538,6 @@ const Calendario = () => {
           </Modal>
         )}
       </Layout>
-    </ConfigProvider>
   );
 };
 

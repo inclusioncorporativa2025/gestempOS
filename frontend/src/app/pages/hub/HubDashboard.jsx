@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Card,
   Col,
-  ConfigProvider,
   DatePicker,
   Row,
   Statistic,
@@ -11,7 +10,6 @@ import {
   Typography,
   message,
 } from 'antd';
-import esES from 'antd/locale/es_ES';
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
@@ -258,18 +256,16 @@ const HubDashboard = () => {
                 {mesProductividadLabel}
               </Text>
             </span>
-            <ConfigProvider locale={esES}>
-              <DatePicker
-                picker="month"
-                value={mesSeleccionado}
-                onChange={(value) => {
-                  if (value) setMesSeleccionado(value.startOf('month'));
-                }}
-                allowClear={false}
-                format="MMMM [de] YYYY"
-                className="hub-dashboard__mes-picker"
-              />
-            </ConfigProvider>
+            <DatePicker
+              picker="month"
+              value={mesSeleccionado}
+              onChange={(value) => {
+                if (value) setMesSeleccionado(value.startOf('month'));
+              }}
+              allowClear={false}
+              format="MMMM [de] YYYY"
+              className="hub-dashboard__mes-picker"
+            />
           </div>
         )}
       >

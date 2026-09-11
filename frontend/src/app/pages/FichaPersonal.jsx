@@ -20,9 +20,6 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
-import esES from 'antd/es/locale/es_ES';
-import { ConfigProvider } from 'antd';
-
 import { APP_ROUTES } from '../../constants/routes';
 import { getUsuariosEmpresa, getHorasTotalesMesByIdUsuario, getMiPerfil, editUsuario } from '../../features/user/usuarioService';
 import { listarConveniosEmpresa, obtenerConvenioUsuario } from '../../features/convenios/convenioService';
@@ -697,7 +694,6 @@ const FichaPersonal = () => {
   const currentTab = tabItems.find((t) => t.key === currentTabKey);
 
   return (
-    <ConfigProvider locale={esES}>
       <div className="fp-page">
         <div className="fp-header">
           <div className="fp-header-main">
@@ -767,7 +763,6 @@ const FichaPersonal = () => {
           nombreEmpleado={usuario?.nombre}
         />
       </div>
-    </ConfigProvider>
   );
 };
 
