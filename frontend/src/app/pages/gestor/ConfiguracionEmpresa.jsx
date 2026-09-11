@@ -75,7 +75,9 @@ const ConfiguracionEmpresa = () => {
   const [saving, setSaving] = useState(false);
   const [logoPreviewError, setLogoPreviewError] = useState(false);
   const logoUrl = Form.useWatch('logo_url', form);
-  const aliasPreview = Form.useWatch('alias', form) || Form.useWatch('nombre', form) || 'Tu empresa';
+  const alias = Form.useWatch('alias', form);
+  const nombre = Form.useWatch('nombre', form);
+  const aliasPreview = alias || nombre || 'Tu empresa';
 
   useEffect(() => {
     const cargarEmpresa = async () => {
