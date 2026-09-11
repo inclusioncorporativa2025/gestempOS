@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Layout, Card, Row, Col, Button, Form, Input, notification, Upload, Typography, Select, message } from 'antd';
+import { App as AntApp, Modal, Layout, Card, Row, Col, Button, Form, Input, Upload, Typography, Select } from 'antd';
 import GradientButton from '../../components/shared/GradientButton';
 import { InboxOutlined, DownloadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -30,6 +30,7 @@ const seccionInicial = (state) =>
   SECCIONES_VALIDAS.includes(state?.section) ? state.section : 'importUsers';
 
 const UserManagementForm = () => {
+  const { message, notification } = AntApp.useApp();
   const location = useLocation();
   const navigate = useNavigate();
   const [selectedButton, setSelectedButton] = useState(() => seccionInicial(location.state));

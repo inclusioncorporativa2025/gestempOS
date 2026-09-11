@@ -1,13 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Modal, Form, Input, Select, DatePicker, Button, Checkbox, message, ConfigProvider,
+  App as AntApp, Modal, Form, Input, Select, DatePicker, Button, Checkbox,
 } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import updateLocale from 'dayjs/plugin/updateLocale';
 import 'dayjs/locale/es';
-import esES from 'antd/locale/es_ES';
 import { LANDING_ROUTES } from '../../constants/routes';
 import { submitDemoLead } from '../utils/submitDemoLead';
 import './LandingDemoFormModal.css';
@@ -45,6 +44,7 @@ const disabledDate = (current) => {
 };
 
 const LandingDemoFormModal = ({ open, onClose }) => {
+  const { message } = AntApp.useApp();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -93,7 +93,6 @@ const LandingDemoFormModal = ({ open, onClose }) => {
   };
 
   return (
-    <ConfigProvider locale={esES}>
     <Modal
       title={null}
       open={open}
@@ -282,7 +281,6 @@ const LandingDemoFormModal = ({ open, onClose }) => {
         </>
       )}
     </Modal>
-    </ConfigProvider>
   );
 };
 

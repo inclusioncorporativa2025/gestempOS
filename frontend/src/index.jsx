@@ -5,7 +5,8 @@ import './styles/variables.css'; // Fuente Filson Soft + variables (design token
 import './index.css'; // Si tienes estilos globales
 import App from './App'; // Importa el componente App
 import { BrowserRouter as Router } from 'react-router-dom'; // Importa el Router
-import {AuthProvider} from './config/AuthContext';
+import { AuthProvider } from './config/AuthContext';
+import AntDesignProvider from './config/AntDesignProvider';
 
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -13,10 +14,10 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 // Asegúrate de envolver el componente App con Router
 root.render(
   <AuthProvider>
-    <Router>
-    <App />
-  </Router>
+    <AntDesignProvider>
+      <Router>
+        <App />
+      </Router>
+    </AntDesignProvider>
   </AuthProvider>
-
-  
 );

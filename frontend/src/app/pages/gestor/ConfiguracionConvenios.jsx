@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Button, Card, Form, Input, Modal, Select, Switch, Table, Tag, Tooltip, Typography, message,
+  App as AntApp,
+  Button, Card, Form, Input, Modal, Select, Switch, Table, Tag, Tooltip, Typography,
 } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import {
@@ -55,6 +56,7 @@ const InfoConvenioDefecto = () => (
 );
 
 const ConfiguracionConvenios = () => {
+  const { message } = AntApp.useApp();
   const [conveniosEmpresa, setConveniosEmpresa] = useState([]);
   const [catalogo, setCatalogo] = useState([]);
   const [loading, setLoading] = useState(true);

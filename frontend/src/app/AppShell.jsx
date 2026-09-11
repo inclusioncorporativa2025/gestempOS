@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { APP_ROUTES, FACTURACION_ROUTES } from '../constants/routes';
-import { Layout, Menu, Drawer, Button, ConfigProvider, App as AntApp } from 'antd';
-import esES from 'antd/es/locale/es_ES';
+import { Layout, Menu, Drawer, Button } from 'antd';
 import {
   MenuOutlined,
   SlidersOutlined,
@@ -272,57 +271,7 @@ const AppShell = () => {
   };
 
   return (
-    <ConfigProvider
-      locale={esES}
-      theme={{
-        token: {
-          fontFamily: 'var(--font-family-base)',
-          fontWeightStrong: 300,
-          colorPrimary: '#A85CE0',
-          colorBgLayout: '#F6F2FA',
-          colorBgContainer: '#FFFFFF',
-          borderRadius: 12,
-          controlHeight: 42,
-        },
-        components: {
-          Input: {
-            borderRadius: 999,
-            controlHeight: 42,
-            paddingInline: 16,
-            lineWidth: 0,
-            colorBorder: 'transparent',
-            hoverBorderColor: 'transparent',
-            activeBorderColor: 'transparent',
-            activeShadow: '0 4px 18px rgba(168, 92, 224, 0.16)',
-          },
-          Select: {
-            borderRadius: 999,
-            controlHeight: 42,
-            lineWidth: 0,
-            colorBorder: 'transparent',
-            hoverBorderColor: 'transparent',
-            activeBorderColor: 'transparent',
-          },
-          DatePicker: {
-            borderRadius: 999,
-            controlHeight: 42,
-            lineWidth: 0,
-            colorBorder: 'transparent',
-            hoverBorderColor: 'transparent',
-            activeBorderColor: 'transparent',
-          },
-          InputNumber: {
-            borderRadius: 999,
-            controlHeight: 42,
-            lineWidth: 0,
-            colorBorder: 'transparent',
-            hoverBorderColor: 'transparent',
-            activeBorderColor: 'transparent',
-          },
-        },
-      }}
-    >
-      <AntApp>
+    <>
       <Layout className="app-shell">
         <NavigationTracker />
         <Layout
@@ -662,8 +611,7 @@ const AppShell = () => {
       <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
       {user && !isAuthShellPage && <NovedadAppNotifier />}
       {user && !isAuthShellPage && puedeFichar && <PausaBloqueoOverlay />}
-      </AntApp>
-    </ConfigProvider>
+    </>
   );
 };
 

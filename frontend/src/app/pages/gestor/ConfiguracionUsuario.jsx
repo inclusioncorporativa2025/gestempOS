@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Col, Form, Input, Row, Spin, message } from 'antd';
+import { App as AntApp, Col, Form, Input, Row, Spin } from 'antd';
 import GradientButton from '../../components/shared/GradientButton';
 import { editMiPerfil, getMiPerfil } from '../../../features/user/usuarioService';
 import { useAuth } from '../../../config/AuthContext';
@@ -17,6 +17,7 @@ const labelTipoUsuario = (tipo) => {
 };
 
 const ConfiguracionUsuario = () => {
+  const { message } = AntApp.useApp();
   const [form] = Form.useForm();
   const { patchUser } = useAuth();
   const [loading, setLoading] = useState(true);

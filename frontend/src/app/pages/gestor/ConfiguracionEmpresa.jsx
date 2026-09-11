@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  App as AntApp,
   Col,
   Form,
   Input,
@@ -8,7 +9,6 @@ import {
   Select,
   Spin,
   Typography,
-  message,
 } from 'antd';
 import { editMiEmpresa, getMiEmpresa } from '../../../features/empresas/empresasService';
 import { EMPRESA_BRANDING_UPDATED } from '../../../hooks/useEmpresaBranding';
@@ -69,6 +69,7 @@ const emailOpcional = (_, value) => {
 };
 
 const ConfiguracionEmpresa = () => {
+  const { message } = AntApp.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
