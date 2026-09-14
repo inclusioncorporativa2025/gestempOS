@@ -8,6 +8,7 @@ const {
   eliminarEmpresa,
   reactivarEmpresa,
   getEmpresasUsuarios,
+  getEmpresaFicha,
   getMiEmpresa,
   editMiEmpresa,
   getEmpresaBranding,
@@ -23,6 +24,7 @@ const router = express.Router();
 router.post('/create', requireRole(ROLE_GROUPS.PLATFORM), registerCompany);
 router.get('/getEmpresas', requireRole(ROLE_GROUPS.PLATFORM), getEmpresas);
 router.get('/getEmpresasUsuarios', requireRole(ROLE_GROUPS.PLATFORM), getEmpresasUsuarios);
+router.get('/ficha/:idEmpresa', requireRole(ROLE_GROUPS.PLATFORM), getEmpresaFicha);
 router.post('/edit', requireRole(ROLE_GROUPS.PLATFORM), editEmpresa);
 router.post('/delete', requireRole(ROLE_GROUPS.PLATFORM), eliminarEmpresa);
 router.post('/reactivar', requireRole(ROLE_GROUPS.PLATFORM), reactivarEmpresa);

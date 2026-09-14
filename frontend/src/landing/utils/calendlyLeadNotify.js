@@ -2,11 +2,21 @@ import { getLandingApiBase } from './calendlyLead';
 
 const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign'];
 
+export const DEMO_LANDING_PATHS = ['/demo', '/llamada'];
+
 export const isDemoDeepLink = (search = '') => {
   const normalized = search.startsWith('?') ? search : `?${search}`;
   const demo = new URLSearchParams(normalized).get('demo');
   return demo === '1' || demo === 'true';
 };
+
+export const isDemoLandingPath = (pathname = '') => {
+  const normalized = String(pathname || '').replace(/\/$/, '') || '/';
+  return DEMO_LANDING_PATHS.includes(normalized);
+};
+
+export const shouldOpenDemoForm = (search = '', pathname = '') =>
+  isDemoLandingPath(pathname) || isDemoDeepLink(search);
 
 export const getStoredUtmParams = () => {
   if (typeof window === 'undefined') return {};
@@ -32,7 +42,7 @@ export const getStoredUtmParams = () => {
   return utm;
 };
 
-/** Guarda UTMs y detecta ?demo=1 (también tras bfcache al volver desde email). */
+/** Guarda UTMs y detecta ?demo=1 o rutas /demo, /llamada (también tras bfcache). */
 export const syncLandingCampaignFromUrl = () => {
   if (typeof window === 'undefined') {
     return { openDemo: false };
@@ -41,7 +51,7 @@ export const syncLandingCampaignFromUrl = () => {
   getStoredUtmParams();
 
   return {
-    openDemo: isDemoDeepLink(window.location.search),
+    openDemo: shouldOpenDemoForm(window.location.search, window.location.pathname),
   };
 };
 

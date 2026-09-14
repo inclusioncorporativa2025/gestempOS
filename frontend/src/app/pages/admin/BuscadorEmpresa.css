@@ -190,6 +190,32 @@
   color: rgba(0, 0, 0, 0.72);
 }
 
+.be-empresa-link {
+  padding: 0;
+  height: auto;
+  font-weight: 500;
+  text-align: left;
+  white-space: normal;
+}
+
+.be-mobile-card__nombre-btn {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-primary, #A85CE0);
+  cursor: pointer;
+}
+
+.be-mobile-card__nombre-btn:hover {
+  text-decoration: underline;
+}
+
 .be-pago-copy-btn {
   display: inline-flex;
   align-items: center;

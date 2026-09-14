@@ -27,6 +27,7 @@ const {
   buscarInvitacionValidaPorEmail,
   registrarVentaDesdeInvitacion,
   crmTablasDisponibles,
+  crmCampanasDisponibles,
   resolverFacturacionAlta,
   listarCampanas,
   normalizarCicloFacturacion,
@@ -1097,6 +1098,188 @@ const purgaEmpresaPermanente = async (req, res) => {
   }
 };
 
+const getEmpresaFicha = async (req, res) => {
+  try {
+    const idEmpresa = Number(req.params.idEmpresa);
+    if (!Number.isFinite(idEmpresa)) {
+      return res.status(400).json({ message: 'Empresa no válida' });
+    }
+
+    const [empresaRow] = await sequelize.query(
+      `SELECT
+         e.id_empresa,
+         e.nombre,
+         e.alias,
+         e.razon_social,
+         e.nombre_comercial,
+         e.identificador_fiscal,
+         e.email,
+         e.telefono,
+         e.web,
+         e.direccion,
+         e.codigo_postal,
+         e.ciudad,
+         e.provincia,
+         e.pais,
+         e.sector,
+         e.actividad,
+         e.licencias,
+         e.id_plan,
+         e.plan,
+         e.activo,
+         e.fecha_alta,
+         e.fecha_baja,
+         ef.modo_facturacion,
+         ef.estado_suscripcion,
+         ef.trial_ends_at,
+         ef.stripe_subscription_id,
+         ef.cancel_at_period_end,
+         ef.ciclo_facturacion,
+         ef.licencias_facturadas
+       FROM m_empresas e
+       LEFT JOIN empresa_facturacion ef ON ef.id_empresa = e.id_empresa
+       WHERE e.id_empresa = :idEmpresa
+       LIMIT 1`,
+      {
+        replacements: { idEmpresa },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
+
+    if (!empresaRow) {
+      return res.status(404).json({ message: 'Empresa no encontrada' });
+    }
+
+    const administradores = await sequelize.query(
+      `SELECT
+         u.id_usuario,
+         u.nombre,
+         u.email,
+         u.telefono_whatsapp,
+         u.dni,
+         u.activo AS usuario_activo,
+         u.fecha_alta,
+         u.fecha_baja AS usuario_fecha_baja,
+         ue.activo AS membresia_activa,
+         ue.fecha_baja AS membresia_fecha_baja,
+         ue.fecha_alta AS membresia_fecha_alta
+       FROM m_usuarios_empresas ue
+       INNER JOIN m_usuarios u ON u.id_usuario = ue.id_usuario
+       WHERE ue.id_empresa = :idEmpresa
+         AND COALESCE(ue.tipo_usuario, u.tipo_usuario) = 3
+       ORDER BY ue.fecha_baja IS NULL DESC, ue.fecha_alta ASC`,
+      {
+        replacements: { idEmpresa },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
+
+    const [conteoUsuarios] = await sequelize.query(
+      `SELECT
+         COUNT(*) AS total,
+         SUM(
+           CASE
+             WHEN ue.fecha_baja IS NULL
+               AND IFNULL(ue.activo, 1) = 1
+               AND u.fecha_baja IS NULL
+               AND IFNULL(u.activo, 1) = 1
+             THEN 1 ELSE 0
+           END
+         ) AS activos
+       FROM m_usuarios_empresas ue
+       INNER JOIN m_usuarios u ON u.id_usuario = ue.id_usuario
+       WHERE ue.id_empresa = :idEmpresa`,
+      {
+        replacements: { idEmpresa },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
+
+    const usuariosPorRol = await sequelize.query(
+      `SELECT
+         COALESCE(ue.tipo_usuario, u.tipo_usuario) AS tipo_usuario,
+         COUNT(*) AS total,
+         SUM(
+           CASE
+             WHEN ue.fecha_baja IS NULL
+               AND IFNULL(ue.activo, 1) = 1
+               AND u.fecha_baja IS NULL
+               AND IFNULL(u.activo, 1) = 1
+             THEN 1 ELSE 0
+           END
+         ) AS activos
+       FROM m_usuarios_empresas ue
+       INNER JOIN m_usuarios u ON u.id_usuario = ue.id_usuario
+       WHERE ue.id_empresa = :idEmpresa
+       GROUP BY COALESCE(ue.tipo_usuario, u.tipo_usuario)
+       ORDER BY tipo_usuario`,
+      {
+        replacements: { idEmpresa },
+        type: sequelize.QueryTypes.SELECT,
+      },
+    );
+
+    let comercial = null;
+    if (await crmTablasDisponibles()) {
+      const campanasOk = await crmCampanasDisponibles();
+      const joinCampana = campanasOk
+        ? `LEFT JOIN crm_campana c ON c.id_campana = v.id_campana`
+        : '';
+      const selectCampana = campanasOk
+        ? `, c.id_campana, c.nombre AS campana_nombre, c.dias_prueba AS campana_dias_prueba`
+        : '';
+
+      const [ventaRow] = await sequelize.query(
+        `SELECT
+           v.id_venta,
+           v.canal,
+           v.etapa,
+           v.fecha_venta,
+           u.id_usuario AS comercial_id,
+           u.nombre AS comercial_nombre,
+           u.email AS comercial_email
+           ${selectCampana}
+         FROM crm_venta v
+         LEFT JOIN m_usuarios u ON u.id_usuario = v.id_usuario_comercial
+         ${joinCampana}
+         WHERE v.id_empresa = :idEmpresa
+           AND v.fecha_baja IS NULL
+         LIMIT 1`,
+        {
+          replacements: { idEmpresa },
+          type: sequelize.QueryTypes.SELECT,
+        },
+      );
+
+      if (ventaRow) {
+        comercial = ventaRow;
+      }
+    }
+
+    return res.status(200).json({
+      message: 'Ficha recuperada correctamente',
+      ficha: {
+        empresa: enriquecerEmpresaListado(empresaRow),
+        administradores,
+        usuarios: {
+          total: Number(conteoUsuarios?.total || 0),
+          activos: Number(conteoUsuarios?.activos || 0),
+          inactivos: Number(conteoUsuarios?.total || 0) - Number(conteoUsuarios?.activos || 0),
+          por_rol: usuariosPorRol.map((row) => ({
+            tipo_usuario: Number(row.tipo_usuario),
+            total: Number(row.total),
+            activos: Number(row.activos),
+          })),
+        },
+        comercial,
+      },
+    });
+  } catch (error) {
+    console.error('Error al obtener ficha de empresa:', error);
+    return res.status(500).json({ message: 'Error al obtener la ficha de la empresa' });
+  }
+};
+
 const extenderPeriodoPrueba = async (req, res) => {
   try {
     const { idEmpresa, trialEndsAt } = req.body;
@@ -1133,6 +1316,7 @@ module.exports = {
   eliminarEmpresa,
   reactivarEmpresa,
   getEmpresasUsuarios,
+  getEmpresaFicha,
   getMiEmpresa,
   editMiEmpresa,
   getEmpresaBranding,

@@ -1,0 +1,41 @@
+.be-ficha-drawer .ant-drawer-body {
+  padding-top: 8px;
+}
+
+.be-ficha-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.be-ficha-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.be-ficha-header {
+  margin-bottom: 8px;
+}
+
+.be-ficha-header__title {
+  margin: 0 0 8px !important;
+}
+
+.be-ficha-header__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.be-ficha-desc {
+  margin-bottom: 8px;
+}
+
+.be-ficha-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 4px;
+}

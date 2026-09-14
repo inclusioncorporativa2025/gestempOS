@@ -196,6 +196,21 @@ export const getEmpresas = async () => {
     }   
 };
 
+export const getEmpresaFicha = async (idEmpresa) => {
+  const response = await fetch(`${API_BASE_URL}/ficha/${idEmpresa}`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Error al cargar la ficha de la empresa');
+  }
+
+  return data.ficha;
+};
+
 export const getEmpresasUsuarios = async () => {
 
   try {

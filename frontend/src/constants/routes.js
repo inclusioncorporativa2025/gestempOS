@@ -13,6 +13,9 @@ export const LANDING_ROUTES = {
   seoFichajeDigital: '/fichaje-digital',
   seoControlHorarioPymes: '/control-horario-pymes',
   seoRegistroJornadaNormativa: '/registro-jornada-normativa',
+  /** Abre el formulario de demo al cargar (campañas email, Brevo, etc.) */
+  demo: '/demo',
+  llamada: '/llamada',
 };
 
 /** Authenticated app + auth screens. */

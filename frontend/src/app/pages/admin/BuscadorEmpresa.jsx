@@ -50,6 +50,7 @@ import {
 } from '../../../features/empresas/empresasService';
 import { getTipoUsuario } from '../../../utils/authSession';
 import AltaEmpresaForm from './AltaEmpresaForm';
+import EmpresaFichaDrawer from './EmpresaFichaDrawer';
 import {
   PLANS,
   getPlanLabel,
@@ -57,6 +58,12 @@ import {
   getPlanTagColor,
   normalizePlanId,
 } from '../../../constants/plans';
+import {
+  empresaEstaActiva,
+  empresaPuedeAmpliarPrueba,
+  empresaRequiereEnlacePago,
+  renderEstadoEmpresa,
+} from './empresaEstadoUtils';
 import './BuscadorEmpresa.css';
 
 const { Title, Text } = Typography;
@@ -67,108 +74,6 @@ const PAGE_SIZE = 10;
 const FILTRO_TODAS = 'todas';
 const FILTRO_ACTIVAS = 'activas';
 const FILTRO_DESACTIVADAS = 'desactivadas';
-
-const empresaDadaDeBaja = (record) =>
-  Boolean(record.fecha_baja) || record.activo === 0 || record.activo === false;
-
-const trialSinSuscripcion = (record) =>
-  String(record.modo_facturacion || '').toLowerCase() === 'trial'
-  && !record.stripe_subscription_id;
-
-const trialExpiradoSinSuscripcion = (record) => {
-  if (!trialSinSuscripcion(record) || !record.trial_ends_at) return false;
-  return new Date(record.trial_ends_at) <= new Date();
-};
-
-const trialActivoSinTarjeta = (record) =>
-  trialSinSuscripcion(record) && !trialExpiradoSinSuscripcion(record);
-
-const empresaFacturacionBloquea = (record) => {
-  const estado = String(record.estado_suscripcion || '').toLowerCase();
-  const modo = String(record.modo_facturacion || '').toLowerCase();
-
-  if (estado === 'canceled') return true;
-  if (modo === 'pendiente_pago') return true;
-  if (trialExpiradoSinSuscripcion(record)) return true;
-
-  if (estado === 'trialing' && record.trial_ends_at) {
-    if (new Date(record.trial_ends_at) <= new Date()) return true;
-  }
-
-  if (
-    modo === 'stripe' &&
-    estado &&
-    !['active', 'trialing', 'past_due'].includes(estado)
-  ) {
-    return true;
-  }
-
-  return false;
-};
-
-const empresaEstaActiva = (record) =>
-  !empresaDadaDeBaja(record) && !empresaFacturacionBloquea(record);
-
-const empresaRequiereEnlacePago = (record) =>
-  record.requiere_enlace_pago === 1
-  || record.requiere_enlace_pago === true
-  || String(record.modo_facturacion || '').toLowerCase() === 'pendiente_pago'
-  || trialExpiradoSinSuscripcion(record);
-
-const empresaPuedeAmpliarPrueba = (record) => {
-  const modo = String(record.modo_facturacion || '').toLowerCase();
-  const estado = String(record.estado_suscripcion || '').toLowerCase();
-
-  if (modo === 'legacy') return false;
-  if (modo === 'trial') return true;
-  if (estado === 'trialing') return true;
-
-  return false;
-};
-
-const renderEnPrueba = (record) => (
-  <div>
-    <Tag color="blue">En prueba</Tag>
-    {record.trial_ends_at && (
-      <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
-        Finaliza el {dayjs(record.trial_ends_at).format('DD/MM/YYYY')}
-      </Text>
-    )}
-  </div>
-);
-
-const renderEstadoEmpresa = (record) => {
-  if (empresaDadaDeBaja(record)) {
-    return <Tag color="default">De baja</Tag>;
-  }
-
-  const estado = String(record.estado_suscripcion || '').toLowerCase();
-  const modo = String(record.modo_facturacion || '').toLowerCase();
-
-  if (estado === 'canceled') {
-    return <Tag color="red">Suscripción cancelada</Tag>;
-  }
-  if (trialActivoSinTarjeta(record)) {
-    return renderEnPrueba(record);
-  }
-  if (trialExpiradoSinSuscripcion(record)) {
-    return <Tag color="orange">Pendiente de pago</Tag>;
-  }
-  if (modo === 'pendiente_pago') {
-    return <Tag color="orange">Pendiente de pago</Tag>;
-  }
-  if (estado === 'trialing') {
-    return renderEnPrueba(record);
-  }
-  if (estado === 'past_due') {
-    return <Tag color="orange">Pago pendiente</Tag>;
-  }
-  if (record.cancel_at_period_end) {
-    return <Tag color="gold">Cancelación programada</Tag>;
-  }
-
-  return <Tag color="green">Activa</Tag>;
-};
 
 const sumarLicencias = (empresas) =>
   empresas.reduce((acc, empresa) => acc + (Number(empresa.licencias) || 0), 0);
@@ -205,6 +110,7 @@ const BuscadorEmpresa = ({ embedded = false }) => {
   const [trialExtendTarget, setTrialExtendTarget] = useState(null);
   const [trialExtendDate, setTrialExtendDate] = useState(null);
   const [trialExtendLoading, setTrialExtendLoading] = useState(false);
+  const [fichaTarget, setFichaTarget] = useState(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BREAKPOINT);
   const [mobilePage, setMobilePage] = useState(1);
   const esRoot = Number(getTipoUsuario()) === 1;
@@ -610,8 +516,31 @@ const BuscadorEmpresa = ({ embedded = false }) => {
     );
   };
 
+  const abrirFichaEmpresa = (record) => {
+    setFichaTarget(record);
+  };
+
+  const cerrarFichaEmpresa = () => {
+    setFichaTarget(null);
+  };
+
+  const renderNombreEmpresa = (nombre, record) => (
+    <Button
+      type="link"
+      className="be-empresa-link"
+      onClick={() => abrirFichaEmpresa(record)}
+    >
+      {nombre}
+    </Button>
+  );
+
   const columns = [
-    { title: 'Nombre Empresa', dataIndex: 'nombre', key: 'nombre' },
+    {
+      title: 'Nombre Empresa',
+      dataIndex: 'nombre',
+      key: 'nombre',
+      render: renderNombreEmpresa,
+    },
     { title: 'Identificador Fiscal', dataIndex: 'identificador_fiscal', key: 'identificador_fiscal' },
     { title: 'Email Responsable', dataIndex: 'email', key: 'email', render: (email) => email || '—' },
     {
@@ -681,7 +610,13 @@ const BuscadorEmpresa = ({ embedded = false }) => {
       ].filter(Boolean).join(' ')}
     >
       <div className="be-mobile-card__header">
-        <h3 className="be-mobile-card__nombre">{record.nombre}</h3>
+        <button
+          type="button"
+          className="be-mobile-card__nombre be-mobile-card__nombre-btn"
+          onClick={() => abrirFichaEmpresa(record)}
+        >
+          {record.nombre}
+        </button>
         <div className="be-mobile-card__badges">
           {renderEstadoEmpresa(record)}
           <Tag color={getPlanTagColor(record.plan)}>{getPlanLabel(record.plan)}</Tag>
@@ -1066,6 +1001,13 @@ const BuscadorEmpresa = ({ embedded = false }) => {
           </>
         )}
       </Modal>
+
+      <EmpresaFichaDrawer
+        open={Boolean(fichaTarget)}
+        idEmpresa={fichaTarget?.id_empresa}
+        preview={fichaTarget}
+        onClose={cerrarFichaEmpresa}
+      />
     </Layout>
   );
 };
