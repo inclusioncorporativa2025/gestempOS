@@ -66,6 +66,12 @@ export const isLegalPath = (pathname) =>
     LANDING_ROUTES.terms,
   ].includes(pathname);
 
+/** Rutas de campaña (formulario demo) — deben quedarse en la landing, no redirigir a app.* */
+export const isCampaignLandingPath = (pathname = '') => {
+  const normalized = String(pathname).replace(/\/$/, '') || '/';
+  return [LANDING_ROUTES.demo, LANDING_ROUTES.llamada].includes(normalized);
+};
+
 export const isSeoLandingPath = (pathname) =>
   [
     LANDING_ROUTES.seoFichajeDigital,

@@ -30,7 +30,12 @@ import PausaBloqueoOverlay from './components/PausaBloqueoOverlay';
 import { OPEN_SUPPORT_EVENT } from './components/Header';
 import { useAuth } from '../config/AuthContext';
 import { puedeVerNotificacionesSesion } from '../utils/tipoUsuarioLabel';
-import { redirectToApp, isAuthAppPath, isLegalPath } from '../utils/appLinks';
+import {
+  redirectToApp,
+  isAuthAppPath,
+  isLegalPath,
+  isCampaignLandingPath,
+} from '../utils/appLinks';
 import { isLandingHost } from '../utils/host';
 import { getAuthToken } from '../utils/authSession';
 import GestionTiempoPage from './pages/GestionTiempoPage';
@@ -190,7 +195,13 @@ const AppShell = () => {
 
   useEffect(() => {
     if (!ready || !user || !isLandingHost()) return;
-    if (isAuthAppPath(location.pathname) || isLegalPath(location.pathname)) return;
+    if (
+      isAuthAppPath(location.pathname)
+      || isLegalPath(location.pathname)
+      || isCampaignLandingPath(location.pathname)
+    ) {
+      return;
+    }
 
     const target = `${location.pathname}${location.search}`;
     redirectToApp(target, getAuthToken());

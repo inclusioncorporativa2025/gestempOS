@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { Button, Tooltip } from 'antd';
 import {
   ClockCircleOutlined,
@@ -196,6 +196,7 @@ const NavLink = ({ href, external, children }) =>
   );
 
 const LandingPage = () => {
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [billingPeriod, setBillingPeriod] = useState('monthly');
   const [demoFormOpen, setDemoFormOpen] = useState(
@@ -221,7 +222,7 @@ const LandingPage = () => {
 
     window.addEventListener('pageshow', handlePageShow);
     return () => window.removeEventListener('pageshow', handlePageShow);
-  }, [searchParams]);
+  }, [searchParams, location.pathname]);
   const registerHref = getAppRegisterHref();
   const loginIsExternal = loginHref.startsWith('http');
   const registerIsExternal = registerHref.startsWith('http');
