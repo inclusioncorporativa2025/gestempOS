@@ -4,6 +4,7 @@ import { APP_ROUTES, LANDING_ROUTES } from './constants/routes';
 import { isAppSubdomain } from './utils/host';
 import { initMetricoolTracker } from './landing/utils/metricoolTracker';
 import LandingPage from './landing/pages/LandingPage';
+import CampaignContactPage from './landing/pages/CampaignContactPage';
 import RedirectToLandingCampaign from './landing/components/RedirectToLandingCampaign';
 import legalRouteElements from './LegalRoutes';
 import seoLandingRouteElements from './SeoLandingRoutes';
@@ -39,7 +40,7 @@ function App() {
       ) : (
         <>
           <Route path={LANDING_ROUTES.demo} element={<LandingPage />} />
-          <Route path={LANDING_ROUTES.llamada} element={<LandingPage />} />
+          <Route path={LANDING_ROUTES.llamada} element={<CampaignContactPage variant="llamada" />} />
           <Route path="/" element={<LandingPage />} />
           <Route path="/*" element={<AppShell />} />
         </>

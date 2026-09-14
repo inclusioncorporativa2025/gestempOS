@@ -7,7 +7,22 @@ import App from './App'; // Importa el componente App
 import { BrowserRouter as Router } from 'react-router-dom'; // Importa el Router
 import { AuthProvider } from './config/AuthContext';
 import AntDesignProvider from './config/AntDesignProvider';
+import { LANDING_URL } from './constants/urls';
+import { isAppSubdomain } from './utils/host';
+import { isCampaignLandingPath } from './utils/appLinks';
 
+if (
+  typeof window !== 'undefined'
+  && isAppSubdomain()
+  && isCampaignLandingPath(window.location.pathname)
+) {
+  const landingOrigin = LANDING_URL.replace(/\/$/, '');
+  if (window.location.origin !== landingOrigin) {
+    window.location.replace(
+      `${landingOrigin}${window.location.pathname}${window.location.search}`,
+    );
+  }
+}
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
