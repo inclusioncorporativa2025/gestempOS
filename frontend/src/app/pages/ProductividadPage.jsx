@@ -6,23 +6,34 @@ import {
   Col,
   DatePicker,
   Row,
+  Segmented,
+  Spin,
   Statistic,
   Table,
   Tag,
   Typography,
   message,
 } from 'antd';
-import { BarChartOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
+import {
+  BarChartOutlined,
+  DownloadOutlined,
+  ReloadOutlined,
+  TableOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { getInformeProductividad } from '../../features/informes/productividadService';
 import { usePlan } from '../../hooks/usePlan';
 import { PLANS } from '../../constants/plans';
+import ProductividadCharts from './ProductividadCharts';
 import './ProductividadPage.css';
 
 dayjs.locale('es');
 
 const { Title, Text, Paragraph } = Typography;
+
+const VISTA_TABLA = 'tabla';
+const VISTA_GRAFICOS = 'graficos';
 
 const formatMinutos = (minutos) => {
   if (minutos == null) return '—';
@@ -87,6 +98,7 @@ const ProductividadPage = () => {
   const planCompleto = PLANS.find((p) => p.id === 'completo');
 
   const [mesSeleccionado, setMesSeleccionado] = useState(() => dayjs().startOf('month'));
+  const [vistaActiva, setVistaActiva] = useState(VISTA_TABLA);
   const [loading, setLoading] = useState(false);
   const [informe, setInforme] = useState(null);
 
@@ -187,6 +199,27 @@ const ProductividadPage = () => {
     },
   ], []);
 
+  const opcionesVista = useMemo(() => ([
+    {
+      value: VISTA_TABLA,
+      label: (
+        <span className="productividad-page__view-option">
+          <TableOutlined />
+          Tabla
+        </span>
+      ),
+    },
+    {
+      value: VISTA_GRAFICOS,
+      label: (
+        <span className="productividad-page__view-option">
+          <BarChartOutlined />
+          Gráficos
+        </span>
+      ),
+    },
+  ]), []);
+
   if (!puedeVerInforme) {
     return (
       <div className="productividad-page">
@@ -261,7 +294,7 @@ const ProductividadPage = () => {
       </Paragraph>
 
       <Row gutter={[16, 16]} className="productividad-page__kpis">
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8} xl={4}>
           <Card className="productividad-page__kpi-card">
             <Statistic
               title="Empleados analizados"
@@ -269,7 +302,16 @@ const ProductividadPage = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8} xl={4}>
+          <Card className="productividad-page__kpi-card">
+            <Statistic
+              title="Con jornada"
+              value={resumen?.empleados_con_jornada ?? 0}
+              suffix={resumen?.total_empleados ? ` / ${resumen.total_empleados}` : undefined}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={8} xl={4}>
           <Card className="productividad-page__kpi-card">
             <Statistic
               title="Cumplimiento medio"
@@ -278,7 +320,7 @@ const ProductividadPage = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8} xl={4}>
           <Card className="productividad-page__kpi-card">
             <Statistic
               title="Absentismo medio"
@@ -287,7 +329,7 @@ const ProductividadPage = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8} xl={4}>
           <Card className="productividad-page__kpi-card">
             <Statistic
               title="Retraso medio entrada"
@@ -296,18 +338,44 @@ const ProductividadPage = () => {
             />
           </Card>
         </Col>
+        <Col xs={24} sm={12} lg={8} xl={4}>
+          <Card className="productividad-page__kpi-card">
+            <Statistic
+              title="Horas extra equipo"
+              value={
+                resumen?.total_horas_extra_min != null
+                  ? formatMinutos(resumen.total_horas_extra_min)
+                  : '—'
+              }
+            />
+          </Card>
+        </Col>
       </Row>
 
-      <Card>
-        <Table
-          rowKey="id_usuario"
-          columns={columnas}
-          dataSource={informe?.empleados ?? []}
-          loading={loading}
-          pagination={{ pageSize: 15, hideOnSinglePage: true }}
-          scroll={{ x: 980 }}
-          locale={{ emptyText: 'No hay personal activo para analizar en este mes' }}
+      <div className="productividad-page__view-toggle">
+        <Segmented
+          value={vistaActiva}
+          onChange={setVistaActiva}
+          options={opcionesVista}
         />
+      </div>
+
+      <Card className="productividad-page__content-card">
+        {vistaActiva === VISTA_TABLA ? (
+          <Table
+            rowKey="id_usuario"
+            columns={columnas}
+            dataSource={informe?.empleados ?? []}
+            loading={loading}
+            pagination={{ pageSize: 15, hideOnSinglePage: true }}
+            scroll={{ x: 980 }}
+            locale={{ emptyText: 'No hay personal activo para analizar en este mes' }}
+          />
+        ) : (
+          <Spin spinning={loading}>
+            <ProductividadCharts empleados={informe?.empleados ?? []} />
+          </Spin>
+        )}
       </Card>
     </div>
   );

@@ -20,7 +20,8 @@
 .config-gestor-layout,
 .umf-layout,
 .notif-layout,
-.bu-page {
+.bu-page,
+.productividad-page {
   background: var(--background);
 }
 
