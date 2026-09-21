@@ -135,7 +135,8 @@ export const getIdUsuario = () => {
 };
 
 export const getIdEmpresa = () => {
-  const id = getSession()?.id_empresa;
+  const session = getSession();
+  const id = session?.id_empresa ?? session?.esquema;
   return id != null ? parseInt(id, 10) : null;
 };
 

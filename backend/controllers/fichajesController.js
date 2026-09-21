@@ -1062,7 +1062,8 @@ const getPeticionesByIdUsuario = async (req, res) => {
 
 const getUltimoRegistroById= async (req, res) => {
   const {esquema, idUsuario}  = req.body;
-  const idEmpresa = req.body.idEmpresa || parseInt(String(esquema || '').replace('empresa', ''), 10);
+  const idEmpresa = resolveIdEmpresa(req)
+    || parseInt(String(esquema || '').replace('empresa', ''), 10);
 
   try{
     const info = await Fichajes.findOne({
@@ -1461,7 +1462,7 @@ const ausenciaCubreHoy = (ausencia, hoy) => {
 };
 
 const getEstadoPersonalEmpresa = async (req, res) => {
-  const { idEmpresa } = req.body;
+  const idEmpresa = resolveIdEmpresa(req);
 
   if (!idEmpresa) {
     return res.status(400).json({ error: 'idEmpresa requerido' });

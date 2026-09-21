@@ -141,7 +141,9 @@ const construirClaimsSesion = (usuario, empresa, membresia, extras = {}) => {
     ...restExtras
   } = extras;
   const operativa = empresaEstaOperativa(empresa);
-  const vincularEmpresa = empresa && (operativa || permitirEmpresaInactiva);
+  const vincularEmpresa = empresa && (
+    operativa || permitirEmpresaInactiva || Boolean(restExtras.impersonacion)
+  );
   const id_empresa = vincularEmpresa ? empresa.id_empresa : null;
   const nombre_empresa = vincularEmpresa ? empresa.nombre : null;
   const alias = vincularEmpresa ? empresa.alias : null;

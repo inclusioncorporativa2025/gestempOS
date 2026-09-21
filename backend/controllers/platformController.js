@@ -23,7 +23,8 @@ const construirExtrasSuplantacion = (req, esRootAdmin) => ({
   impersonado_por: Number(req.user.id_usuario),
   impersonado_por_email: req.user.email,
   impersonado_por_nombre: req.user.nombre,
-  ...(esRootAdmin ? { impersonado_por_es_root: true, permitir_empresa_inactiva: true } : {}),
+  permitir_empresa_inactiva: true,
+  ...(esRootAdmin ? { impersonado_por_es_root: true } : {}),
 });
 
 const sanitizeUsuario = (usuario, membresia = null) => ({

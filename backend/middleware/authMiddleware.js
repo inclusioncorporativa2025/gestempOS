@@ -130,15 +130,19 @@ const requireOwnEmpresa = async (req, res, next) => {
     return next();
   }
 
-  if (req.user.impersonado_por_es_root) {
-    const empresaToken = Number(req.user.id_empresa);
-    if (req.body && req.body.idEmpresa == null && req.body.id_empresa == null && empresaToken) {
-      req.body.idEmpresa = empresaToken;
+  const empresaTokenJwt = Number(req.user.id_empresa) || null;
+
+  if (req.user.impersonacion && req.body && empresaTokenJwt) {
+    if (req.body.idEmpresa == null && req.body.id_empresa == null) {
+      req.body.idEmpresa = empresaTokenJwt;
     }
+  }
+
+  if (req.user.impersonado_por_es_root) {
     return next();
   }
 
-  const empresaToken = Number(req.user.id_empresa);
+  const empresaToken = empresaTokenJwt;
   if (!empresaToken) {
     return res.status(403).json({
       code: 'EMPRESA_NO_VINCULADA',
