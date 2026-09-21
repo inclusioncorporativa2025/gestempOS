@@ -46,8 +46,9 @@ export const useTrialStatus = () => {
     return () => window.removeEventListener(TRIAL_EXPIRED_EVENT, onTrialExpired);
   }, [cargarTrial]);
 
-  const bloqueado = Boolean(trial?.expirada || trial?.requierePlan);
-  const mostrarAviso = Boolean(trial?.enPrueba && trial?.activa && !bloqueado);
+  const bypassTrial = Boolean(user?.impersonado_por_es_root);
+  const bloqueado = !bypassTrial && Boolean(trial?.expirada || trial?.requierePlan);
+  const mostrarAviso = !bypassTrial && Boolean(trial?.enPrueba && trial?.activa && !bloqueado);
 
   return {
     trial,

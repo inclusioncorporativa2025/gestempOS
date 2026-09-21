@@ -44,11 +44,14 @@ export const listarAccesos = async ({ pagina = 1, limite = 50, tipo, q } = {}) =
   return data;
 };
 
-export const accederComoUsuario = async (email) => {
+export const accederComoUsuario = async (email, idEmpresa = null) => {
   const response = await fetch(`${API_BASE_URL}/accederComoUsuario`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({
+      email,
+      ...(idEmpresa != null ? { id_empresa: idEmpresa } : {}),
+    }),
   });
 
   const data = await response.json().catch(() => ({}));

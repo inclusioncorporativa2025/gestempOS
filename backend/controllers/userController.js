@@ -561,16 +561,60 @@ const editUsuario= async (req, res) => {
         const date = new Date()
         const {idUsuario, values ,idUsuarioAccion, idEmpresa} = req.body;
 
-        const usuarios = await Usuario.update(
-            {
-                fecha_modificacion: date,
-                usuario_modificacion: idUsuarioAccion,
-                nombre : values.nombre,
-                dni : values.dni,
-            },
-            {
-                where: { id_usuario: idUsuario }
+        const usuarioUpdate = {
+            fecha_modificacion: date,
+            usuario_modificacion: idUsuarioAccion,
+            nombre: values.nombre,
+            dni: values.dni,
+        };
+
+        const puedeEditarEmail = [1, 2, 3, 4].includes(Number(req.user?.tipo_usuario))
+            || Boolean(req.user?.impersonado_por_es_root);
+
+        if (Object.prototype.hasOwnProperty.call(values, 'email')) {
+            if (!puedeEditarEmail) {
+                return res.status(403).json({
+                    message: 'No tienes permiso para cambiar el correo de este usuario',
+                    codigo: 'EMAIL_NO_EDITABLE',
+                });
             }
+
+            const emailNormalizado = normalizeEmail(values.email);
+            if (!emailNormalizado) {
+                return res.status(400).json({
+                    message: 'El email es obligatorio',
+                    codigo: 'EMAIL_REQUERIDO',
+                });
+            }
+            if (!isEmailValido(emailNormalizado)) {
+                return res.status(400).json({
+                    message: 'El email no es válido',
+                    codigo: 'EMAIL_INVALIDO',
+                });
+            }
+
+            const otroUsuario = await Usuario.findOne({
+                where: {
+                    email: emailNormalizado,
+                    id_usuario: { [Op.ne]: idUsuario },
+                },
+            });
+
+            if (otroUsuario) {
+                return res.status(409).json({
+                    message: 'Este email ya está registrado en la plataforma',
+                    codigo: 'EMAIL_EN_USO',
+                });
+            }
+
+            usuarioUpdate.email = emailNormalizado;
+        }
+
+        await Usuario.update(
+            usuarioUpdate,
+            {
+                where: { id_usuario: idUsuario },
+            },
         );
 
         const updateMembresia = {

@@ -12,11 +12,13 @@ import { parseFechaFichaje } from '../../utils/fechaFichaje';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { getTipoUsuario, getIdUsuario } from '../../utils/authSession';
+import { useAuth } from '../../config/AuthContext';
 import {
   puedeVerFichaPersonal,
   esAdministradorEmpresa,
   esInspector,
   puedeEnviarRegistrosPorEmail,
+  esStaffEmpresa,
   valorTipoUsuarioForm,
   etiquetaTipoUsuario,
 } from '../../utils/tipoUsuarioLabel';
@@ -40,9 +42,11 @@ const PAGE_SIZE = 8;
 const BuscarUsuarios = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { user } = useAuth();
     const tipoUsuario = getTipoUsuario();
     const idUsuarioSesion = getIdUsuario();
     const verFichaPersonal = puedeVerFichaPersonal(tipoUsuario);
+    const puedeEditarEmail = esStaffEmpresa(tipoUsuario) || Boolean(user?.impersonado_por_es_root);
     const [usuarios, setUsuarios] = useState([]);
     const [searchText, setSearchText] = useState('');
     const [isModalVisible, setIsModalVisible] = useState(false);
@@ -272,6 +276,7 @@ const BuscarUsuarios = () => {
         form.setFieldsValue({
             id_usuario:record.id_usuario,
             nombre: record.nombre,
+            email: record.email,
             dni: record.dni,
             fechaAlta: dayjs(record.fecha_alta),
             activo: record.activo,
@@ -306,7 +311,7 @@ const BuscarUsuarios = () => {
             await fetchUsuarios();
         } catch (error) {
             console.error("Error al guardar los cambios:", error);
-            message.error("Error al guardar los cambios");
+            message.error(error.message || "Error al guardar los cambios");
         }
     };
 
@@ -632,6 +637,18 @@ const BuscarUsuarios = () => {
                         <Form.Item label="Nombre" name="nombre" rules={[{ required: true, message: 'Por favor, introduce el nombre' }]}>
                             <Input />
                         </Form.Item>
+                        {puedeEditarEmail && (
+                            <Form.Item
+                                label="Correo electrónico"
+                                name="email"
+                                rules={[
+                                    { required: true, message: 'Introduce un email' },
+                                    { type: 'email', message: 'Email no válido' },
+                                ]}
+                            >
+                                <Input inputMode="email" autoComplete="email" />
+                            </Form.Item>
+                        )}
                         <Form.Item label="DNI" name="dni" rules={[{ required: true, message: 'Por favor, introduce el DNI' }]}>
                             <Input />
                         </Form.Item>

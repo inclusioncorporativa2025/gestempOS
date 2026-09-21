@@ -121,6 +121,7 @@ export const claimsToUser = (claims) => {
     impersonado_por: claims.impersonado_por ?? null,
     impersonado_por_email: claims.impersonado_por_email ?? null,
     impersonado_por_nombre: claims.impersonado_por_nombre ?? null,
+    impersonado_por_es_root: Boolean(claims.impersonado_por_es_root),
     plan_id: claims.plan_id ?? 'esencial',
     hub_acceso: Boolean(claims.hub_acceso),
     hub_puestos: claims.hub_puestos ?? [],

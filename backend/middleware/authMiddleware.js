@@ -130,6 +130,14 @@ const requireOwnEmpresa = async (req, res, next) => {
     return next();
   }
 
+  if (req.user.impersonado_por_es_root) {
+    const empresaToken = Number(req.user.id_empresa);
+    if (req.body && req.body.idEmpresa == null && req.body.id_empresa == null && empresaToken) {
+      req.body.idEmpresa = empresaToken;
+    }
+    return next();
+  }
+
   const empresaToken = Number(req.user.id_empresa);
   if (!empresaToken) {
     return res.status(403).json({

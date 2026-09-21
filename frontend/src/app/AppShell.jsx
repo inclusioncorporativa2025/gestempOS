@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { APP_ROUTES, FACTURACION_ROUTES } from '../constants/routes';
+import { APP_ROUTES, FACTURACION_ROUTES, LANDING_ROUTES } from '../constants/routes';
 import { Layout, Menu, Drawer, Button } from 'antd';
 import {
   MenuOutlined,
@@ -36,7 +36,9 @@ import {
   isLegalPath,
   isCampaignLandingPath,
 } from '../utils/appLinks';
-import { isLandingHost } from '../utils/host';
+import { isAppSubdomain, isLandingHost } from '../utils/host';
+import CampaignContactPage from '../landing/pages/CampaignContactPage';
+import RedirectToLandingCampaign from '../landing/components/RedirectToLandingCampaign';
 import { getAuthToken } from '../utils/authSession';
 import GestionTiempoPage from './pages/GestionTiempoPage';
 import UserManagementForm from './pages/gestor/UserManagementForm';
@@ -280,6 +282,17 @@ const AppShell = () => {
       closeDrawer();
     }
   };
+
+  if (isCampaignLandingPath(location.pathname)) {
+    if (isAppSubdomain()) {
+      return <RedirectToLandingCampaign />;
+    }
+    if (isLandingHost()) {
+      const normalized = location.pathname.replace(/\/$/, '') || '/';
+      const variant = normalized === LANDING_ROUTES.llamada ? 'llamada' : 'demo';
+      return <CampaignContactPage variant={variant} />;
+    }
+  }
 
   return (
     <>

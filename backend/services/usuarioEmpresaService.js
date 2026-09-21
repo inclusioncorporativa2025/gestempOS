@@ -77,6 +77,32 @@ const listarMembresiasActivas = async (idUsuario) => {
     .filter((item) => empresaEstaOperativa(item.empresa) && membresiaEstaActiva(item.membresia));
 };
 
+/** ROOT: incluye membresías/empresas inactivas (sin fecha_baja) para suplantación desde gestión interna. */
+const listarMembresiasSuplantacionRoot = async (idUsuario) => {
+  const membresias = await UsuarioEmpresa.findAll({
+    where: { id_usuario: idUsuario, fecha_baja: null },
+    order: [['fecha_alta', 'DESC']],
+  });
+
+  if (!membresias.length) {
+    return [];
+  }
+
+  const empresas = await Empresa.findAll({
+    where: {
+      id_empresa: { [Op.in]: membresias.map((m) => m.id_empresa) },
+    },
+  });
+  const empresaPorId = new Map(empresas.map((e) => [e.id_empresa, e]));
+
+  return membresias
+    .map((membresia) => ({
+      membresia,
+      empresa: empresaPorId.get(membresia.id_empresa) ?? null,
+    }))
+    .filter((item) => item.empresa != null);
+};
+
 const usuarioPuedeAutenticarse = async (usuario) => {
   if (!usuario || usuario.fecha_baja) {
     return false;
@@ -110,10 +136,15 @@ const usuarioTieneAccesoEmpresa = async (idUsuario, idEmpresa) => {
 };
 
 const construirClaimsSesion = (usuario, empresa, membresia, extras = {}) => {
+  const {
+    permitir_empresa_inactiva: permitirEmpresaInactiva,
+    ...restExtras
+  } = extras;
   const operativa = empresaEstaOperativa(empresa);
-  const id_empresa = operativa ? empresa.id_empresa : null;
-  const nombre_empresa = operativa ? empresa.nombre : null;
-  const alias = operativa ? empresa.alias : null;
+  const vincularEmpresa = empresa && (operativa || permitirEmpresaInactiva);
+  const id_empresa = vincularEmpresa ? empresa.id_empresa : null;
+  const nombre_empresa = vincularEmpresa ? empresa.nombre : null;
+  const alias = vincularEmpresa ? empresa.alias : null;
   const planCodigo = normalizePlanId(empresa?.plan);
 
   return {
@@ -126,9 +157,9 @@ const construirClaimsSesion = (usuario, empresa, membresia, extras = {}) => {
     nombre_empresa,
     alias,
     esquema: id_empresa,
-    plan_id: operativa ? planCodigo : null,
-    plan_row_id: operativa && empresa.id_plan ? Number(empresa.id_plan) : null,
-    ...extras,
+    plan_id: vincularEmpresa ? planCodigo : null,
+    plan_row_id: vincularEmpresa && empresa.id_plan ? Number(empresa.id_plan) : null,
+    ...restExtras,
   };
 };
 
@@ -162,6 +193,7 @@ module.exports = {
   resolverTipoSesion,
   obtenerMembresiaActiva,
   listarMembresiasActivas,
+  listarMembresiasSuplantacionRoot,
   listarEmpresasParaSelector,
   usuarioTieneAccesoEmpresa,
   construirClaimsSesion,

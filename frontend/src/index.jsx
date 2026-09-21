@@ -11,16 +11,18 @@ import { LANDING_URL } from './constants/urls';
 import { isAppSubdomain } from './utils/host';
 import { isCampaignLandingPath } from './utils/appLinks';
 
-if (
-  typeof window !== 'undefined'
-  && isAppSubdomain()
-  && isCampaignLandingPath(window.location.pathname)
-) {
-  const landingOrigin = LANDING_URL.replace(/\/$/, '');
-  if (window.location.origin !== landingOrigin) {
-    window.location.replace(
-      `${landingOrigin}${window.location.pathname}${window.location.search}`,
-    );
+if (typeof window !== 'undefined' && isCampaignLandingPath(window.location.pathname)) {
+  const normalizedPath = window.location.pathname.replace(/\/$/, '') || '/';
+  const search = window.location.search;
+  const hash = window.location.hash;
+
+  if (isAppSubdomain()) {
+    const landingOrigin = LANDING_URL.replace(/\/$/, '');
+    if (window.location.origin !== landingOrigin) {
+      window.location.replace(`${landingOrigin}${normalizedPath}${search}${hash}`);
+    }
+  } else if (window.location.pathname !== normalizedPath) {
+    window.location.replace(`${window.location.origin}${normalizedPath}${search}${hash}`);
   }
 }
 

@@ -4,18 +4,27 @@ const AccesoPlataforma = require('../models/AccesoPlataforma');
 const Usuario = require('../models/Usuario');
 const { registrarAcceso } = require('../services/accesoPlataformaService');
 const { getClientIp, getUserAgent } = require('../utils/request');
-const { ROLE_GROUPS } = require('../middleware/authMiddleware');
+const { ROLE_GROUPS, ROLES } = require('../middleware/authMiddleware');
 const {
   listarMembresiasActivas,
+  listarMembresiasSuplantacionRoot,
   construirClaimsSesion,
   usuarioPuedeAutenticarse,
   membresiaEstaActiva,
+  TIPOS_PLATAFORMA,
 } = require('../services/usuarioEmpresaService');
 const { obtenerClaimsHub } = require('../services/crmHubService');
 
 const IMPERSONATION_EXPIRES_IN = process.env.IMPERSONATION_JWT_EXPIRES_IN || '1h';
-const TIPOS_PLATAFORMA = ROLE_GROUPS.PLATFORM;
 const MAX_ACCESOS_UI = 3000;
+
+const construirExtrasSuplantacion = (req, esRootAdmin) => ({
+  impersonacion: true,
+  impersonado_por: Number(req.user.id_usuario),
+  impersonado_por_email: req.user.email,
+  impersonado_por_nombre: req.user.nombre,
+  ...(esRootAdmin ? { impersonado_por_es_root: true, permitir_empresa_inactiva: true } : {}),
+});
 
 const sanitizeUsuario = (usuario, membresia = null) => ({
   id_usuario: usuario.id_usuario,
@@ -184,51 +193,92 @@ const accederComoUsuario = async (req, res) => {
   }
 
   const adminTipo = Number(req.user.tipo_usuario);
-  if (!TIPOS_PLATAFORMA.includes(adminTipo)) {
+  if (!ROLE_GROUPS.PLATFORM.includes(adminTipo)) {
     return res.status(403).json({ message: 'Acceso denegado' });
   }
+
+  const esRootAdmin = adminTipo === ROLES.ROOT;
 
   try {
     const usuario = await Usuario.findOne({
       where: { email, fecha_baja: null },
     });
 
-    if (!(await usuarioPuedeAutenticarse(usuario))) {
+    if (!usuario) {
+      return res.status(404).json({ message: 'No existe un usuario con ese correo' });
+    }
+
+    if (!esRootAdmin && !(await usuarioPuedeAutenticarse(usuario))) {
       return res.status(404).json({ message: 'No existe un usuario activo con ese correo' });
     }
 
     const tipoDestino = Number(usuario.tipo_usuario);
-    if (TIPOS_PLATAFORMA.includes(tipoDestino)) {
+    if (TIPOS_PLATAFORMA.includes(tipoDestino) && !esRootAdmin) {
       return res.status(403).json({
         message: 'No se puede acceder a cuentas de administración de plataforma',
       });
     }
 
-    const membresiasActivas = await listarMembresiasActivas(usuario.id_usuario);
-    if (!membresiasActivas.length) {
+    const hubClaims = await obtenerClaimsHub(usuario);
+    const extrasSuplantacion = {
+      ...hubClaims,
+      ...construirExtrasSuplantacion(req, esRootAdmin),
+    };
+
+    if (TIPOS_PLATAFORMA.includes(tipoDestino) && esRootAdmin) {
+      const token = jwt.sign(
+        construirClaimsSesion(usuario, null, null, extrasSuplantacion),
+        process.env.JWT_SECRET,
+        { expiresIn: IMPERSONATION_EXPIRES_IN },
+      );
+
+      await registrarAcceso({
+        idUsuario: Number(req.user.id_usuario),
+        tipoEvento: 'suplantacion',
+        ruta: `/platform/acceder:${usuario.email}`,
+        ip: getClientIp(req),
+        userAgent: getUserAgent(req),
+        idEmpresa: null,
+      });
+
+      return res.status(200).json({
+        message: 'Acceso temporal generado',
+        token,
+        expiraEn: IMPERSONATION_EXPIRES_IN,
+        usuario: sanitizeUsuario(usuario),
+        empresa: null,
+      });
+    }
+
+    const membresias = esRootAdmin
+      ? await listarMembresiasSuplantacionRoot(usuario.id_usuario)
+      : await listarMembresiasActivas(usuario.id_usuario);
+
+    if (!membresias.length) {
       return res.status(403).json({
         message: 'El usuario no está vinculado a ninguna empresa',
       });
     }
 
-    let seleccion = membresiasActivas[0];
+    let seleccion = membresias[0];
     if (idEmpresaSolicitada) {
-      const encontrada = membresiasActivas.find(
+      const encontrada = membresias.find(
         (item) => item.empresa.id_empresa === idEmpresaSolicitada,
       );
       if (!encontrada) {
         return res.status(403).json({ message: 'El usuario no pertenece a esa empresa' });
       }
       seleccion = encontrada;
-    } else if (membresiasActivas.length > 1) {
+    } else if (membresias.length > 1) {
       return res.status(200).json({
         code: 'EMPRESA_SELECTION_REQUIRED',
         message: 'El usuario pertenece a varias empresas. Indica id_empresa.',
-        empresas: membresiasActivas.map(({ empresa, membresia }) => ({
+        empresas: membresias.map(({ empresa, membresia }) => ({
           id_empresa: empresa.id_empresa,
           nombre: empresa.nombre,
           alias: empresa.alias,
           tipo_usuario: membresia.tipo_usuario ?? usuario.tipo_usuario,
+          activo: membresiaEstaActiva(membresia),
         })),
       });
     }
@@ -236,16 +286,8 @@ const accederComoUsuario = async (req, res) => {
     const { membresia, empresa } = seleccion;
     const id_empresa = empresa.id_empresa;
 
-    const hubClaims = await obtenerClaimsHub(usuario);
-
     const token = jwt.sign(
-      construirClaimsSesion(usuario, empresa, membresia, {
-        ...hubClaims,
-        impersonacion: true,
-        impersonado_por: Number(req.user.id_usuario),
-        impersonado_por_email: req.user.email,
-        impersonado_por_nombre: req.user.nombre,
-      }),
+      construirClaimsSesion(usuario, empresa, membresia, extrasSuplantacion),
       process.env.JWT_SECRET,
       { expiresIn: IMPERSONATION_EXPIRES_IN },
     );
