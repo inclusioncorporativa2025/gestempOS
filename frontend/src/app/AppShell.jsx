@@ -15,6 +15,7 @@ import {
   AppstoreOutlined,
   UserOutlined,
   FileTextOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
 import Login from './pages/Login';
 import Home from './pages/Home';
@@ -77,6 +78,7 @@ import FacturacionCancelado from './pages/facturacion/FacturacionCancelado';
 import RenovarSuscripcion from './pages/facturacion/RenovarSuscripcion';
 import PagoRedirect from './pages/PagoRedirect';
 import NominasPage from './pages/NominasPage';
+import ProductividadPage from './pages/ProductividadPage';
 import { useTrialStatus } from '../hooks/useTrialStatus';
 import { usePlan } from '../hooks/usePlan';
 
@@ -147,6 +149,14 @@ const pages = [
     path: APP_ROUTES.nominas,
     tipousuario: [1, 2, 3, 4],
     planFeature: 'nominas',
+  },
+  {
+    label: 'Productividad',
+    key: '14',
+    icon: <BarChartOutlined />,
+    path: APP_ROUTES.productividad,
+    tipousuario: [1, 2, 3, 4],
+    planFeature: 'informes_productividad',
   },
   {
     label: 'Mi perfil',
@@ -546,6 +556,14 @@ const AppShell = () => {
                   element={
                     <ProtectedRoute allowedTypes={[1, 2, 3, 4]}>
                       <NominasPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path={APP_ROUTES.productividad}
+                  element={
+                    <ProtectedRoute allowedTypes={[1, 2, 3, 4]}>
+                      <ProductividadPage />
                     </ProtectedRoute>
                   }
                 />

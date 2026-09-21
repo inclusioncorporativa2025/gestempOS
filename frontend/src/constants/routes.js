@@ -49,6 +49,7 @@ export const APP_ROUTES = {
   notifications: '/notifications',
   miPerfil: '/mi-perfil',
   nominas: '/nominas',
+  productividad: '/informes/productividad',
   facturacion: '/facturacion',
   facturacionExito: '/facturacion/exito',
   facturacionCancelado: '/facturacion/cancelado',

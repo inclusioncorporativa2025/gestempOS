@@ -1,0 +1,50 @@
+.productividad-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.productividad-page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.productividad-page__title-block {
+  flex: 1;
+  min-width: 200px;
+}
+
+.productividad-page__subtitle {
+  display: block;
+  margin-top: 4px;
+}
+
+.productividad-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.productividad-page__kpis {
+  margin-bottom: 4px;
+}
+
+.productividad-page__kpi-card {
+  height: 100%;
+}
+
+.productividad-page__nota {
+  margin: 0;
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .productividad-page__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
