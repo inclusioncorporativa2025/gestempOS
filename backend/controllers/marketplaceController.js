@@ -6,6 +6,7 @@ const {
   listarAsignacionesModulo,
   guardarAsignacionUsuario,
 } = require('../services/marketplaceModuloService');
+const { ejecutarAlertasFichaje } = require('../services/alertasFichajeService');
 
 const resolveIdEmpresa = (req) => {
   const fromBody = Number(req.body?.idEmpresa ?? req.body?.id_empresa);
@@ -170,6 +171,30 @@ const postGuardarAsignacion = async (req, res) => {
   }
 };
 
+const postEjecutarAlertasFichaje = async (req, res) => {
+  const idEmpresaRaw = req.body?.idEmpresa ?? req.body?.id_empresa;
+  const idEmpresa = idEmpresaRaw != null ? Number(idEmpresaRaw) : null;
+  const fecha = req.body?.fecha ?? null;
+  const horaReferencia = req.body?.hora ?? req.body?.horaReferencia ?? null;
+  const dryRun = req.body?.dryRun === true || req.body?.dry_run === true;
+
+  try {
+    const resultado = await ejecutarAlertasFichaje({
+      idEmpresa: Number.isFinite(idEmpresa) && idEmpresa > 0 ? idEmpresa : null,
+      fecha,
+      horaReferencia,
+      dryRun,
+    });
+    return res.status(200).json({
+      message: dryRun ? 'Simulación de alertas completada' : 'Ejecución de alertas completada',
+      resultado,
+    });
+  } catch (error) {
+    console.error('postEjecutarAlertasFichaje:', error.message);
+    return res.status(500).json({ message: 'Error al ejecutar alertas de fichaje' });
+  }
+};
+
 module.exports = {
   getCatalogo,
   getEstadoEmpresa,
@@ -177,4 +202,5 @@ module.exports = {
   postCancelarModulo,
   postListarAsignaciones,
   postGuardarAsignacion,
+  postEjecutarAlertasFichaje,
 };

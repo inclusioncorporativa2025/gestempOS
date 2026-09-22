@@ -54,9 +54,35 @@ const startServer = () => {
   });
 };
 
+const iniciarCronAlertasFichaje = () => {
+  if (String(process.env.ALERTAS_FICHAJE_CRON || '').trim() !== '1') {
+    return;
+  }
+  const intervalMs = Number(process.env.ALERTAS_FICHAJE_CRON_MS) || 5 * 60 * 1000;
+  const { ejecutarAlertasFichaje } = require('./services/alertasFichajeService');
+
+  const tick = () => {
+    ejecutarAlertasFichaje({})
+      .then((res) => {
+        if ((res.enviados?.length || 0) > 0 || (res.errores?.length || 0) > 0) {
+          console.log('[alertas-fichaje-cron]', JSON.stringify({
+            enviados: res.enviados?.length ?? 0,
+            errores: res.errores?.length ?? 0,
+            fecha_dia: res.fecha_dia,
+          }));
+        }
+      })
+      .catch((err) => console.error('[alertas-fichaje-cron]', err.message));
+  };
+
+  setInterval(tick, intervalMs);
+  console.log(`Cron alertas fichaje activo (cada ${Math.round(intervalMs / 1000)}s)`);
+};
+
 const iniciarServidor = async () => {
   try {
     await connectToDatabase();
+    iniciarCronAlertasFichaje();
     startServer();
   } catch (error) {
     console.error('No se pudo iniciar el servidor por un fallo de base de datos.');

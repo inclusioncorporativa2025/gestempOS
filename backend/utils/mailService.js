@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
+const dayjs = require('dayjs');
 
 const { APP_URL } = require('../config/appUrls');
 const { BRAND_NAME, LOGO_PATH, buildBrandBylineHtml } = require('../config/brand');
@@ -947,6 +948,85 @@ const enviarAvisoFinPrueba = async ({
   });
 };
 
+const formatFechaDiaEs = (fechaDia) => {
+  const d = dayjs(fechaDia);
+  if (!d.isValid()) return fechaDia;
+  return d.format('DD/MM/YYYY');
+};
+
+const enviarAlertaFichajeEmpleado = async ({
+  email,
+  nombreEmpleado,
+  fechaDia,
+  horaEntrada,
+  tipoEnvio = 'alerta',
+}) => {
+  const destino = String(email || '').trim();
+  if (!isEmailValido(destino)) {
+    const error = new Error('Email de empleado no válido');
+    error.code = 'EMAIL_INVALIDO';
+    throw error;
+  }
+
+  const esRecordatorio = tipoEnvio === 'recordatorio';
+  const subject = esRecordatorio
+    ? `${BRAND_NAME} — Recordatorio: fichaje de entrada pendiente`
+    : `${BRAND_NAME} — Fichaje de entrada pendiente`;
+
+  const cuerpo = esRecordatorio
+    ? `<p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#333;">
+        Hola <strong>${escapeHtml(nombreEmpleado || '')}</strong>,
+      </p>
+      <p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#333;">
+        Recordatorio: aún no consta tu fichaje de entrada del <strong>${escapeHtml(formatFechaDiaEs(fechaDia))}</strong>
+        (horario previsto: <strong>${escapeHtml(horaEntrada)}</strong>).
+      </p>`
+    : `<p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#333;">
+        Hola <strong>${escapeHtml(nombreEmpleado || '')}</strong>,
+      </p>
+      <p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#333;">
+        No consta tu fichaje de entrada del <strong>${escapeHtml(formatFechaDiaEs(fechaDia))}</strong>
+        (horario previsto: <strong>${escapeHtml(horaEntrada)}</strong>).
+      </p>`;
+
+  await enviarCorreo({
+    to: destino,
+    replyTo: SUPPORT_EMAIL,
+    subject,
+    html: emailLayout(`${cuerpo}
+      <p style="margin:0; font-size:15px; line-height:1.6; color:#333;">
+        Accede a <a href="${APP_URL}">${APP_URL}</a> y registra tu entrada cuando corresponda.
+      </p>`),
+  });
+};
+
+const enviarAlertaFichajeSupervisor = async ({
+  destinatarios,
+  nombreEmpleado,
+  fechaDia,
+  horaEntrada,
+}) => {
+  const validos = [...new Set((destinatarios || []).map((e) => String(e).trim()).filter(isEmailValido))];
+  if (!validos.length) return { enviado: false, destinatarios: [] };
+
+  await enviarCorreo({
+    to: validos.join(', '),
+    replyTo: SUPPORT_EMAIL,
+    subject: `${BRAND_NAME} — Alerta fichaje: ${nombreEmpleado || 'empleado'}`,
+    html: emailLayout(`
+      <p style="margin:0 0 16px 0; font-size:15px; line-height:1.6; color:#333;">
+        <strong>${escapeHtml(nombreEmpleado || 'Un empleado')}</strong> no ha registrado la entrada
+        el <strong>${escapeHtml(formatFechaDiaEs(fechaDia))}</strong>
+        (previsto: <strong>${escapeHtml(horaEntrada)}</strong>).
+      </p>
+      <p style="margin:0; font-size:15px; line-height:1.6; color:#333;">
+        Revisa la situación en la aplicación si procede.
+      </p>`),
+  });
+
+  return { enviado: true, destinatarios: validos };
+};
+
 module.exports = {
   hashToken,
   RESET_TOKEN_TTL_MINUTES,
@@ -963,5 +1043,7 @@ module.exports = {
   buildSupportSubject,
   enviarAvisoRenovacionLegacy,
   enviarAvisoFinPrueba,
+  enviarAlertaFichajeEmpleado,
+  enviarAlertaFichajeSupervisor,
   SUPPORT_EMAIL,
 };

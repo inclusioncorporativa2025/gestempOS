@@ -6,6 +6,7 @@ const {
   postCancelarModulo,
   postListarAsignaciones,
   postGuardarAsignacion,
+  postEjecutarAlertasFichaje,
 } = require('../controllers/marketplaceController');
 const { requireRole, ROLES, ROLE_GROUPS } = require('../middleware/authMiddleware');
 
@@ -29,6 +30,12 @@ router.post(
   '/asignaciones/guardar',
   requireRole(ROLE_GROUPS.COMPANY_STAFF),
   postGuardarAsignacion,
+);
+
+router.post(
+  '/alertas/ejecutar',
+  requireRole(ROLES.ROOT),
+  postEjecutarAlertasFichaje,
 );
 
 module.exports = router;
