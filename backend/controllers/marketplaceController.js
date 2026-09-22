@@ -5,7 +5,7 @@ const {
   cancelarModuloEmpresa,
   listarAsignacionesModulo,
   guardarAsignacionUsuario,
-} = require('../services/markplaceModuloService');
+} = require('../services/marketplaceModuloService');
 
 const resolveIdEmpresa = (req) => {
   const fromBody = Number(req.body?.idEmpresa ?? req.body?.id_empresa);
