@@ -89,7 +89,10 @@ const parseConfigModulo = (configJson) => ({
   ...(configJson && typeof configJson === 'object' ? configJson : {}),
 });
 
-const canalEmailActivo = (row) => row.canal_email !== false && row.canal_email !== 0;
+const canalEmailActivo = (row) => {
+  if (row.canal_email === false || row.canal_email === 0) return false;
+  return true;
+};
 const canalWhatsappActivo = (row) => row.canal_whatsapp === true || row.canal_whatsapp === 1;
 
 const obtenerHoraEntradaPactada = (jornadaRaw, fecha) => {
@@ -238,6 +241,7 @@ const procesarEmpresa = async ({
   ahora,
   fechaDia,
   dryRun,
+  ignorarEnviosPrevios,
   resumen,
 }) => {
   const config = parseConfigModulo(configJson);
@@ -336,72 +340,91 @@ const procesarEmpresa = async ({
       };
 
       if (canalEmailActivo(asignacion)) {
-        const ya = await envioYaRegistrado({
+        const ya = ignorarEnviosPrevios ? false : await envioYaRegistrado({
           idEmpresa,
           idUsuario: usuario.id_usuario,
           fechaDia,
           tipoEnvio: ventana.tipo,
           canal: 'email',
         });
-        if (!ya) {
-          if (dryRun) {
-            resumen.simulados.push({
+        if (ya) {
+          resumen.omitidos.push({
+            id_usuario: usuario.id_usuario,
+            motivo: 'ya_enviado',
+            canal: 'email',
+            tipo: ventana.tipo,
+          });
+        } else if (dryRun) {
+          resumen.simulados.push({
+            id_usuario: usuario.id_usuario,
+            canal: 'email',
+            tipo: ventana.tipo,
+            email: usuario.email,
+          });
+        } else {
+          try {
+            await enviarAlertaFichajeEmpleado({
+              email: usuario.email,
+              ...payloadBase,
+            });
+            await registrarEnvio({
+              idEmpresa,
+              idUsuario: usuario.id_usuario,
+              fechaDia,
+              tipoEnvio: ventana.tipo,
+              canal: 'email',
+              idUsuarioModulo: asignacion.id_usuario_modulo,
+            });
+            resumen.enviados.push({
               id_usuario: usuario.id_usuario,
               canal: 'email',
               tipo: ventana.tipo,
             });
-          } else {
-            try {
-              await enviarAlertaFichajeEmpleado({
-                email: usuario.email,
-                ...payloadBase,
-              });
-              await registrarEnvio({
-                idEmpresa,
-                idUsuario: usuario.id_usuario,
-                fechaDia,
-                tipoEnvio: ventana.tipo,
-                canal: 'email',
-                idUsuarioModulo: asignacion.id_usuario_modulo,
-              });
-              resumen.enviados.push({
-                id_usuario: usuario.id_usuario,
-                canal: 'email',
-                tipo: ventana.tipo,
-              });
 
-              if (config.notificar_supervisor && ventana.tipo === 'alerta') {
-                const supervisores = await obtenerEmailsSupervisoresEmpresa(idEmpresa);
-                if (supervisores.length) {
-                  await enviarAlertaFichajeSupervisor({
-                    destinatarios: supervisores,
-                    nombreEmpleado: usuario.nombre,
-                    fechaDia,
-                    horaEntrada: horaEntradaLabel,
-                  });
-                }
+            if (config.notificar_supervisor && ventana.tipo === 'alerta') {
+              const supervisores = await obtenerEmailsSupervisoresEmpresa(idEmpresa);
+              if (supervisores.length) {
+                await enviarAlertaFichajeSupervisor({
+                  destinatarios: supervisores,
+                  nombreEmpleado: usuario.nombre,
+                  fechaDia,
+                  horaEntrada: horaEntradaLabel,
+                });
               }
-            } catch (error) {
-              resumen.errores.push({
-                id_usuario: usuario.id_usuario,
-                canal: 'email',
-                tipo: ventana.tipo,
-                error: error.message,
-              });
             }
+          } catch (error) {
+            resumen.errores.push({
+              id_usuario: usuario.id_usuario,
+              canal: 'email',
+              tipo: ventana.tipo,
+              error: error.message,
+            });
           }
         }
+      } else {
+        resumen.omitidos.push({
+          id_usuario: usuario.id_usuario,
+          motivo: 'canal_email_desactivado',
+          tipo: ventana.tipo,
+        });
       }
 
       if (canalWhatsappActivo(asignacion) && usuario.telefono_whatsapp) {
-        const ya = await envioYaRegistrado({
+        const ya = ignorarEnviosPrevios ? false : await envioYaRegistrado({
           idEmpresa,
           idUsuario: usuario.id_usuario,
           fechaDia,
           tipoEnvio: ventana.tipo,
           canal: 'whatsapp',
         });
-        if (!ya) {
+        if (ya) {
+          resumen.omitidos.push({
+            id_usuario: usuario.id_usuario,
+            motivo: 'ya_enviado',
+            canal: 'whatsapp',
+            tipo: ventana.tipo,
+          });
+        } else {
           const puedeWa = await puedeEnviarWhatsappAlerta(idEmpresa, idModulo);
           if (!puedeWa) {
             resumen.omitidos.push({
@@ -444,6 +467,12 @@ const procesarEmpresa = async ({
             }
           }
         }
+      } else if (canalWhatsappActivo(asignacion) && !usuario.telefono_whatsapp) {
+        resumen.omitidos.push({
+          id_usuario: usuario.id_usuario,
+          motivo: 'sin_telefono_whatsapp',
+          tipo: ventana.tipo,
+        });
       }
     }
   }
@@ -457,6 +486,7 @@ const ejecutarAlertasFichaje = async ({
   fecha = null,
   dryRun = false,
   horaReferencia = null,
+  ignorarEnviosPrevios = false,
 } = {}) => {
   const modulo = await obtenerModuloPorCodigo(CODIGO_ALERTAS);
   if (!modulo) {
@@ -517,6 +547,7 @@ const ejecutarAlertasFichaje = async ({
       ahora,
       fechaDia,
       dryRun,
+      ignorarEnviosPrevios,
       resumen,
     });
   }

@@ -22,6 +22,7 @@ const { ejecutarAlertasFichaje } = require('../services/alertasFichajeService');
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
+const ignorarEnviosPrevios = args.includes('--forzar');
 const idEmpresaArg = args.find((a) => a.startsWith('--id-empresa='));
 const fechaArg = args.find((a) => a.startsWith('--fecha='));
 const horaArg = args.find((a) => a.startsWith('--hora='));
@@ -37,6 +38,7 @@ const main = async () => {
     fecha,
     horaReferencia,
     dryRun,
+    ignorarEnviosPrevios,
   });
   console.log(JSON.stringify(resultado, null, 2));
   process.exit(0);
