@@ -51,6 +51,7 @@ export const APP_ROUTES = {
   nominas: '/nominas',
   productividad: '/informes/productividad',
   marketplace: '/marketplace',
+  marketplaceAsignaciones: '/marketplace/asignaciones',
   facturacion: '/facturacion',
   facturacionExito: '/facturacion/exito',
   facturacionCancelado: '/facturacion/cancelado',

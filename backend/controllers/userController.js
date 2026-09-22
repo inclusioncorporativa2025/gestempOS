@@ -41,6 +41,7 @@ const {
   usuarioEstaActivoGlobal,
 } = require('../utils/identityChecks');
 const { Op } = require('sequelize');
+const { normalizarTelefonoWhatsapp } = require('../utils/telefonoWhatsapp');
 const dayjs = require('dayjs');
 const isoWeek = require('dayjs/plugin/isoWeek');
 const duration = require('dayjs/plugin/duration');
@@ -139,7 +140,14 @@ const getMiPerfil = async (req, res) => {
 
 const editMiPerfil = async (req, res) => {
     const idUsuario = Number(req.user.id_usuario);
-    const { nombre, dni, contrasenaActual, contrasenaNueva } = req.body;
+    const {
+        nombre,
+        dni,
+        contrasenaActual,
+        contrasenaNueva,
+        telefonoWhatsapp,
+        telefono_whatsapp: telefonoWhatsappSnake,
+    } = req.body;
 
     try {
         const usuario = await Usuario.findOne({
@@ -165,6 +173,36 @@ const editMiPerfil = async (req, res) => {
 
         if (dni !== undefined) {
             updates.dni = dni ? String(dni).trim() : null;
+        }
+
+        if (telefonoWhatsapp !== undefined || telefonoWhatsappSnake !== undefined) {
+            const raw = telefonoWhatsapp ?? telefonoWhatsappSnake;
+            if (raw == null || String(raw).trim() === '') {
+                updates.telefono_whatsapp = null;
+            } else {
+                const telefonoNorm = normalizarTelefonoWhatsapp(raw);
+                if (!telefonoNorm) {
+                    return res.status(400).json({
+                        message: 'Teléfono móvil no válido. Usa un número español (9 dígitos) o formato internacional.',
+                    });
+                }
+
+                const duplicado = await Usuario.findOne({
+                    where: {
+                        telefono_whatsapp: telefonoNorm,
+                        id_usuario: { [Op.ne]: idUsuario },
+                        fecha_baja: null,
+                    },
+                });
+
+                if (duplicado) {
+                    return res.status(409).json({
+                        message: 'Ese número ya está registrado en otra cuenta',
+                    });
+                }
+
+                updates.telefono_whatsapp = telefonoNorm;
+            }
         }
 
         if (contrasenaNueva) {

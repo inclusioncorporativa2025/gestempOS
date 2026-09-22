@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { App as AntApp, Col, Form, Input, Row, Spin } from 'antd';
 import GradientButton from '../../components/shared/GradientButton';
 import { editMiPerfil, getMiPerfil } from '../../../features/user/usuarioService';
+import {
+  formatearTelefonoWhatsappDisplay,
+  telefonoWhatsappValido,
+} from '../../../utils/telefonoWhatsapp';
 import { useAuth } from '../../../config/AuthContext';
 import './Configuracion.css';
 
@@ -32,6 +36,9 @@ const ConfiguracionUsuario = () => {
           nombre: perfil.nombre,
           email: perfil.email,
           dni: perfil.dni || '',
+          telefonoWhatsapp: perfil.telefono_whatsapp
+            ? formatearTelefonoWhatsappDisplay(perfil.telefono_whatsapp)
+            : '',
           tipoUsuario: labelTipoUsuario(perfil.tipo_usuario),
         });
       } catch (error) {
@@ -47,9 +54,17 @@ const ConfiguracionUsuario = () => {
   const handleSave = async (values) => {
     setSaving(true);
     try {
+      const telefonoRaw = String(values.telefonoWhatsapp || '').trim();
+      if (telefonoRaw && !telefonoWhatsappValido(telefonoRaw)) {
+        message.error('Introduce un móvil válido (España: 9 dígitos)');
+        setSaving(false);
+        return;
+      }
+
       const payload = {
         nombre: values.nombre,
         dni: values.dni,
+        telefonoWhatsapp: telefonoRaw || null,
       };
 
       if (values.contrasenaNueva) {
@@ -103,6 +118,11 @@ const ConfiguracionUsuario = () => {
             <Col xs={24} lg={12}>
               <Form.Item name="dni" label="DNI / NIF">
                 <Input placeholder="Opcional" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Form.Item name="telefonoWhatsapp" label="Móvil (WhatsApp)">
+                <Input placeholder="612 345 678 o +34 612 345 678" inputMode="tel" autoComplete="tel" />
               </Form.Item>
             </Col>
             <Col xs={24} lg={12}>

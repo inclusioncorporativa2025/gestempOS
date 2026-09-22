@@ -22,7 +22,8 @@
 .notif-layout,
 .bu-page,
 .productividad-page,
-.marketplace-page {
+.marketplace-page,
+.marketplace-asignaciones-page {
   background: var(--background);
 }
 

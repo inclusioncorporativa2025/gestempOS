@@ -13,6 +13,7 @@ import {
   message,
   Spin,
   Empty,
+  Input,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -21,7 +22,17 @@ import {
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { APP_ROUTES } from '../../constants/routes';
-import { getUsuariosEmpresa, getHorasTotalesMesByIdUsuario, getMiPerfil, editUsuario } from '../../features/user/usuarioService';
+import {
+  getUsuariosEmpresa,
+  getHorasTotalesMesByIdUsuario,
+  getMiPerfil,
+  editUsuario,
+  editMiPerfil,
+} from '../../features/user/usuarioService';
+import {
+  formatearTelefonoWhatsappDisplay,
+  telefonoWhatsappValido,
+} from '../../utils/telefonoWhatsapp';
 import { listarConveniosEmpresa, obtenerConvenioUsuario } from '../../features/convenios/convenioService';
 import { obtenerJornadas } from '../../features/jornada/jornadaService';
 import { getAusenciasCalendario } from '../../features/ausencias/ausenciasService';
@@ -105,6 +116,8 @@ const FichaPersonal = () => {
   const [convenioResuelto, setConvenioResuelto] = useState(null);
   const [convenioSeleccionado, setConvenioSeleccionado] = useState(undefined);
   const [guardandoConvenio, setGuardandoConvenio] = useState(false);
+  const [telefonoWhatsappInput, setTelefonoWhatsappInput] = useState('');
+  const [guardandoTelefono, setGuardandoTelefono] = useState(false);
 
   useEffect(() => {
     const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
@@ -192,6 +205,11 @@ const FichaPersonal = () => {
       }
 
       setUsuario(encontrado);
+      setTelefonoWhatsappInput(
+        encontrado.telefono_whatsapp
+          ? formatearTelefonoWhatsappDisplay(encontrado.telefono_whatsapp)
+          : '',
+      );
       setConvenioSeleccionado(encontrado.id_empresa_convenio ?? undefined);
 
       try {
@@ -470,6 +488,31 @@ const FichaPersonal = () => {
   const modoConteoVisible = convenioResuelto?.modo_conteo_etiqueta
     || etiquetaModoConteo(usuario.convenio_modo_conteo || convenioResuelto?.reglas?.modo_conteo_vacaciones);
 
+  const guardarTelefonoWhatsapp = async () => {
+    const valor = telefonoWhatsappInput.trim();
+    if (valor && !telefonoWhatsappValido(valor)) {
+      message.warning('Introduce un móvil válido (España: 9 dígitos, p. ej. 612 345 678)');
+      return;
+    }
+
+    setGuardandoTelefono(true);
+    try {
+      const data = await editMiPerfil({
+        telefonoWhatsapp: valor || null,
+      });
+      const guardado = data.perfil?.telefono_whatsapp ?? null;
+      setUsuario((prev) => (prev ? { ...prev, telefono_whatsapp: guardado } : prev));
+      setTelefonoWhatsappInput(
+        guardado ? formatearTelefonoWhatsappDisplay(guardado) : '',
+      );
+      message.success(valor ? 'Teléfono guardado' : 'Teléfono eliminado');
+    } catch (error) {
+      message.error(error.message || 'No se pudo guardar el teléfono');
+    } finally {
+      setGuardandoTelefono(false);
+    }
+  };
+
   const guardarConvenio = async () => {
     if (!usuario) return;
     setGuardandoConvenio(true);
@@ -512,6 +555,32 @@ const FichaPersonal = () => {
         >
           <Descriptions.Item label="Nombre">{usuario.nombre}</Descriptions.Item>
           <Descriptions.Item label="Email">{usuario.email}</Descriptions.Item>
+          <Descriptions.Item label="Móvil (WhatsApp)">
+            {esMiPerfil ? (
+              <div className="fp-telefono-whatsapp">
+                <Input
+                  value={telefonoWhatsappInput}
+                  onChange={(e) => setTelefonoWhatsappInput(e.target.value)}
+                  placeholder="612 345 678 o +34 612 345 678"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  className="fp-telefono-whatsapp__input"
+                />
+                <Button
+                  type="primary"
+                  size="small"
+                  loading={guardandoTelefono}
+                  onClick={guardarTelefonoWhatsapp}
+                >
+                  Guardar
+                </Button>
+              </div>
+            ) : (
+              usuario.telefono_whatsapp
+                ? formatearTelefonoWhatsappDisplay(usuario.telefono_whatsapp)
+                : '—'
+            )}
+          </Descriptions.Item>
           <Descriptions.Item label="DNI">{usuario.dni}</Descriptions.Item>
           <Descriptions.Item label="Tipo">
             {etiquetaTipoUsuario(usuario.tipo_usuario)}

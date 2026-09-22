@@ -16,6 +16,7 @@ import {
   UserOutlined,
   FileTextOutlined,
   BarChartOutlined,
+  BellOutlined,
   ShopOutlined,
 } from '@ant-design/icons';
 import Login from './pages/Login';
@@ -81,6 +82,7 @@ import PagoRedirect from './pages/PagoRedirect';
 import NominasPage from './pages/NominasPage';
 import ProductividadPage from './pages/ProductividadPage';
 import MarketplacePage from './pages/MarketplacePage';
+import MarketplaceAsignacionesPage from './pages/MarketplaceAsignacionesPage';
 import { useTrialStatus } from '../hooks/useTrialStatus';
 import { usePlan } from '../hooks/usePlan';
 
@@ -166,6 +168,13 @@ const pages = [
     icon: <ShopOutlined />,
     path: APP_ROUTES.marketplace,
     tipousuario: [1],
+  },
+  {
+    label: 'Alertas (módulo)',
+    key: '16',
+    icon: <BellOutlined />,
+    path: APP_ROUTES.marketplaceAsignaciones,
+    tipousuario: [1, 3, 4],
   },
   {
     label: 'Mi perfil',
@@ -268,11 +277,21 @@ const AppShell = () => {
       : [];
 
   const paginaActual = pages.find((page) => {
-    if (page.path === APP_ROUTES.settings || page.path === APP_ROUTES.platform || page.path === APP_ROUTES.hub) {
+    if (
+      page.path === APP_ROUTES.settings
+      || page.path === APP_ROUTES.platform
+      || page.path === APP_ROUTES.hub
+    ) {
       return (
         location.pathname === page.path ||
         location.pathname.startsWith(`${page.path}/`)
       );
+    }
+    if (page.path === APP_ROUTES.marketplaceAsignaciones) {
+      return location.pathname === APP_ROUTES.marketplaceAsignaciones;
+    }
+    if (page.path === APP_ROUTES.marketplace) {
+      return location.pathname === APP_ROUTES.marketplace;
     }
     if (page.path === APP_ROUTES.miPerfil) {
       return location.pathname === APP_ROUTES.miPerfil;
@@ -573,6 +592,14 @@ const AppShell = () => {
                   element={
                     <ProtectedRoute allowedTypes={[1, 2, 3, 4]}>
                       <ProductividadPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path={APP_ROUTES.marketplaceAsignaciones}
+                  element={
+                    <ProtectedRoute allowedTypes={[1, 3, 4]}>
+                      <MarketplaceAsignacionesPage />
                     </ProtectedRoute>
                   }
                 />

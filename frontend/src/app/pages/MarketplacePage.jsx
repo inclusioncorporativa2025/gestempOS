@@ -12,7 +12,9 @@ import {
   Typography,
   message,
 } from 'antd';
-import { BellOutlined, ReloadOutlined, ShopOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { BellOutlined, ReloadOutlined, ShopOutlined, TeamOutlined } from '@ant-design/icons';
+import { APP_ROUTES } from '../../constants/routes';
 import { getIdEmpresa } from '../../utils/authSession';
 import {
   activarModuloEmpresa,
@@ -33,6 +35,7 @@ const estadoTag = (estado) => {
 };
 
 const MarketplacePage = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [accionCodigo, setAccionCodigo] = useState(null);
   const [catalogo, setCatalogo] = useState([]);
@@ -196,13 +199,23 @@ const MarketplacePage = () => {
                         Activar empresa
                       </Button>
                     ) : (
-                      <Button
-                        danger
-                        loading={accionCodigo === modulo.codigo}
-                        onClick={() => onCancelar(modulo.codigo)}
-                      >
-                        Cancelar módulo
-                      </Button>
+                      <>
+                        <Button
+                          icon={<TeamOutlined />}
+                          onClick={() => navigate(
+                            `${APP_ROUTES.marketplaceAsignaciones}?idEmpresa=${idEmpresaConsulta}`,
+                          )}
+                        >
+                          Asignar usuarios
+                        </Button>
+                        <Button
+                          danger
+                          loading={accionCodigo === modulo.codigo}
+                          onClick={() => onCancelar(modulo.codigo)}
+                        >
+                          Cancelar módulo
+                        </Button>
+                      </>
                     )}
                   </Space>
                 </Card>

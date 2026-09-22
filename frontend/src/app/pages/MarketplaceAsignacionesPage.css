@@ -1,0 +1,40 @@
+.marketplace-asignaciones-page {
+  width: 100%;
+  min-height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+  background: var(--background);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.marketplace-asignaciones-page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.marketplace-asignaciones-page__title {
+  margin: 0 !important;
+}
+
+.marketplace-asignaciones-page__stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.marketplace-asignaciones-page__nota {
+  margin: 0 !important;
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .marketplace-asignaciones-page {
+    padding: 16px;
+  }
+}
