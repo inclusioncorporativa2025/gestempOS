@@ -9,8 +9,7 @@
  *   node scripts/run-alertas-fichaje.js --id-empresa=105 --hora=10:30
  *   node scripts/run-alertas-fichaje.js --fecha=2026-03-22 --hora=09:20
  *
- * Cron cada 5 min (prod, ejemplo):
- *   */5 7-21 * * 1-5 cd /ruta/gestempOS/backend && node scripts/run-alertas-fichaje.js >> /var/log/timecor-alertas-fichaje.log 2>&1
+ * Cron en VPS: ver docs/marketplace-alertas.md (línea crontab; no incluir aquí por sintaxis del comentario).
  *
  * Requiere SMTP para email; WhatsApp opcional (Meta/OpenWA).
  */

@@ -2,12 +2,21 @@ const dayjs = require('dayjs');
 
 const DIAS_SEMANA_MAP = {
   lunes: 1,
+  lun: 1,
   martes: 2,
+  mar: 2,
   miercoles: 3,
+  miercole: 3,
+  miércoles: 3,
   jueves: 4,
+  jue: 4,
   viernes: 5,
+  vie: 5,
   sabado: 6,
+  sábado: 6,
+  sab: 6,
   domingo: 0,
+  dom: 0,
 };
 
 const normalizarNombreDia = (nombre) => String(nombre || '')

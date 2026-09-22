@@ -35,6 +35,41 @@ const {
 
 const TZ = 'Europe/Madrid';
 
+/** Festivos del mes por empresa (multitenant). */
+const obtenerFestivosSetMes = async (idEmpresa, mesYYYYMM) => {
+  const inicio = dayjs.tz(`${mesYYYYMM}-01`, TZ).startOf('month');
+  const fin = inicio.endOf('month');
+  const festivos = await FestivoEmpresa.findAll({
+    where: {
+      empresa_id: idEmpresa,
+      fecha_baja: null,
+      fecha: { [Op.between]: [inicio.toDate(), fin.toDate()] },
+    },
+  });
+  return new Set(
+    festivos.map((f) => dayjs(f.fecha).tz(TZ).format('YYYY-MM-DD')),
+  );
+};
+
+const parseColumn1Jornada = (jornada) => {
+  if (!jornada) return null;
+  let column1 = jornada.column1;
+  if (typeof column1 === 'string') {
+    try {
+      column1 = JSON.parse(column1);
+    } catch {
+      column1 = null;
+    }
+  }
+  if (column1 == null || typeof column1 !== 'object') {
+    return jornada;
+  }
+  const base = typeof jornada.get === 'function'
+    ? jornada.get({ plain: true })
+    : jornada;
+  return { ...base, column1 };
+};
+
 const normalizarHora = (valor) => {
   if (valor == null || valor === '') return null;
   const str = String(valor).trim();
@@ -57,22 +92,8 @@ const parseConfigModulo = (configJson) => ({
 const canalEmailActivo = (row) => row.canal_email !== false && row.canal_email !== 0;
 const canalWhatsappActivo = (row) => row.canal_whatsapp === true || row.canal_whatsapp === 1;
 
-const obtenerFestivosSetDia = async (idEmpresa, fecha) => {
-  const clave = fecha.format('YYYY-MM-DD');
-  const festivo = await FestivoEmpresa.findOne({
-    where: {
-      empresa_id: idEmpresa,
-      fecha_baja: null,
-      fecha: {
-        [Op.gte]: fecha.startOf('day').toDate(),
-        [Op.lte]: fecha.endOf('day').toDate(),
-      },
-    },
-  });
-  return festivo ? new Set([clave]) : new Set();
-};
-
-const obtenerHoraEntradaPactada = (jornada, fecha) => {
+const obtenerHoraEntradaPactada = (jornadaRaw, fecha) => {
+  const jornada = parseColumn1Jornada(jornadaRaw);
   if (!jornada || !esJornadaFija(jornada)) return null;
   const diasJornada = jornada.column1?.dias || [];
   const diaSemana = fecha.day();
@@ -83,9 +104,10 @@ const obtenerHoraEntradaPactada = (jornada, fecha) => {
   return normalizarHora(horaEntrada);
 };
 
-const esDiaLaborableJornada = async (idEmpresa, jornada, fecha) => {
+/** Laborable = jornada fija del empleado ese día (lun–dom si está en la jornada), menos festivo empresa. */
+const esDiaLaborableJornada = (jornadaRaw, fecha, festivosSet) => {
+  const jornada = parseColumn1Jornada(jornadaRaw);
   if (!jornada || !esJornadaFija(jornada)) return false;
-  const festivosSet = await obtenerFestivosSetDia(idEmpresa, fecha);
   const diasJornada = jornada.column1?.dias || [];
   return minutosJornadaFijaEnFecha(fecha, diasJornada, festivosSet) > 0;
 };
@@ -221,6 +243,7 @@ const procesarEmpresa = async ({
   const config = parseConfigModulo(configJson);
   const minutosGracia = Number(config.minutos_gracia) || 15;
   const recordatorioMinutos = config.recordatorio_minutos;
+  const festivosSet = await obtenerFestivosSetMes(idEmpresa, ahora.format('YYYY-MM'));
 
   const asignaciones = await MarketplaceUsuarioModulo.findAll({
     where: {
@@ -269,7 +292,7 @@ const procesarEmpresa = async ({
     const uj = usuarioJornadas.find((row) => row.id_usuario === asignacion.id_usuario);
     const jornada = uj ? jornadaPorId.get(uj.id_jornada) : null;
 
-    if (!(await esDiaLaborableJornada(idEmpresa, jornada, ahora))) {
+    if (!esDiaLaborableJornada(jornada, ahora, festivosSet)) {
       resumen.omitidos.push({ id_usuario: usuario.id_usuario, motivo: 'no_laborable' });
       continue;
     }
@@ -440,9 +463,14 @@ const ejecutarAlertasFichaje = async ({
     return { ok: false, message: 'Módulo alertas_fichaje no encontrado' };
   }
 
+  const ahoraReal = dayjs().tz(TZ);
   let ahora = fecha
     ? dayjs.tz(fecha, TZ)
-    : dayjs().tz(TZ);
+        .hour(ahoraReal.hour())
+        .minute(ahoraReal.minute())
+        .second(0)
+        .millisecond(0)
+    : ahoraReal;
 
   if (horaReferencia) {
     const hm = String(horaReferencia).match(/^(\d{1,2}):(\d{2})/);
