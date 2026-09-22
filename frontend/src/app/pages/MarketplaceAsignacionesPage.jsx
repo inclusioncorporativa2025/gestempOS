@@ -16,7 +16,10 @@ import {
 } from 'antd';
 import { ArrowLeftOutlined, BellOutlined, ReloadOutlined } from '@ant-design/icons';
 import { APP_ROUTES } from '../../constants/routes';
-import { MARKETPLACE_MODULO_ALERTAS } from '../../constants/marketplace';
+import {
+  MARKETPLACE_MODULO_ALERTAS,
+  marketplaceModuloMenuLabel,
+} from '../../constants/marketplace';
 import { getIdEmpresa } from '../../utils/authSession';
 import { useAuth } from '../../config/AuthContext';
 import {
@@ -141,19 +144,6 @@ const MarketplaceAsignacionesPage = () => {
       ),
     },
     {
-      title: 'Módulo',
-      key: 'asignado',
-      width: 100,
-      align: 'center',
-      render: (_, row) => (
-        <Switch
-          checked={row.asignado}
-          loading={guardandoId === row.id_usuario}
-          onChange={(checked) => persistirFila(row, { asignado: checked })}
-        />
-      ),
-    },
-    {
       title: 'Email',
       key: 'email',
       width: 90,
@@ -204,10 +194,10 @@ const MarketplaceAsignacionesPage = () => {
         <Space direction="vertical" size={4}>
           <Title level={3} className="marketplace-asignaciones-page__title">
             <BellOutlined style={{ marginRight: 8 }} />
-            Alertas de fichaje
+            {marketplaceModuloMenuLabel(CODIGO_MODULO)}
           </Title>
           <Text type="secondary">
-            Asigna el módulo y activa email o WhatsApp por empleado
+            Activa email o WhatsApp por empleado (el módulo se asigna en Personal → editar)
           </Text>
         </Space>
         <Space wrap>

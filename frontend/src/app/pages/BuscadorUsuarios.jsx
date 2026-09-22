@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Tag, Card, Table, Input, Button, Modal, Tooltip, Popconfirm, Form, message, Typography, DatePicker, Switch, Select, Dropdown, Pagination } from 'antd';
+import {
+  Tag, Card, Table, Input, Button, Modal, Tooltip, Popconfirm, Form, message,
+  Typography, DatePicker, Switch, Select, Dropdown, Pagination, Divider,
+} from 'antd';
 import GradientButton from '../components/shared/GradientButton';
 import { SearchOutlined, EditOutlined, StopOutlined, EyeOutlined, DownloadOutlined, UserAddOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -29,6 +32,16 @@ import ExportRegistrosModal from '../components/ExportRegistrosModal';
 import ResumenHorasTotales from '../components/ResumenHorasTotales';
 import JornadaLaboralSelect from '../components/JornadaLaboralSelect';
 import { listarConveniosEmpresa } from '../../features/convenios/convenioService';
+import {
+  guardarAsignacionModulo,
+  listarAsignacionesModulo,
+} from '../../features/marketplace/marketplaceService';
+import { useMarketplaceEmpresaModulos } from '../../hooks/useMarketplaceEmpresaModulos';
+import {
+  MARKETPLACE_MODULO_ALERTAS,
+  empresaModuloVisibleEnEdicionUsuario,
+  marketplaceModuloMenuLabel,
+} from '../../constants/marketplace';
 import { esUsuarioActivo, estaDadoDeBajaEnEmpresa as estaDadoDeBaja } from '../../utils/usuarioActivo';
 import './BuscadorUsuarios.css';
 import '../components/shared/TableAcciones.css';
@@ -47,6 +60,10 @@ const BuscarUsuarios = () => {
     const idUsuarioSesion = getIdUsuario();
     const verFichaPersonal = puedeVerFichaPersonal(tipoUsuario);
     const puedeEditarEmail = esStaffEmpresa(tipoUsuario) || Boolean(user?.impersonado_por_es_root);
+    const puedeGestionarModulos = esStaffEmpresa(tipoUsuario) || Boolean(user?.impersonado_por_es_root);
+    const { estadoFilas } = useMarketplaceEmpresaModulos(puedeGestionarModulos);
+    const [asignacionesMarketplace, setAsignacionesMarketplace] = useState([]);
+    const [moduloAlertasInicial, setModuloAlertasInicial] = useState(false);
     const [usuarios, setUsuarios] = useState([]);
     const [searchText, setSearchText] = useState('');
     const [isModalVisible, setIsModalVisible] = useState(false);
@@ -74,6 +91,30 @@ const BuscarUsuarios = () => {
         const usuarios = await getUsuariosEmpresa();
         setUsuarios(usuarios);
     };
+
+    const filaModuloAlertas = useMemo(
+        () => (estadoFilas ?? []).find((f) => f.modulo?.codigo === MARKETPLACE_MODULO_ALERTAS),
+        [estadoFilas],
+    );
+
+    useEffect(() => {
+        if (!puedeGestionarModulos || filaModuloAlertas?.contrato?.estado !== 'active') {
+            setAsignacionesMarketplace([]);
+            return;
+        }
+        let cancelado = false;
+        (async () => {
+            try {
+                const data = await listarAsignacionesModulo({ codigoModulo: MARKETPLACE_MODULO_ALERTAS });
+                if (!cancelado) {
+                    setAsignacionesMarketplace(data.asignaciones ?? []);
+                }
+            } catch {
+                if (!cancelado) setAsignacionesMarketplace([]);
+            }
+        })();
+        return () => { cancelado = true; };
+    }, [puedeGestionarModulos, filaModuloAlertas?.contrato?.estado]);
 
     useEffect(() => {
         const obtenerJornadasEmpresa = async () => {
@@ -272,6 +313,12 @@ const BuscarUsuarios = () => {
         if(jornada){
             jornadaNombre = jornadas.find(j => j.id_jornada === jornada.id_jornada)?.nombre;
         }
+
+        const filaAsignacion = asignacionesMarketplace.find(
+            (a) => Number(a.id_usuario) === Number(record.id_usuario),
+        );
+        const asignadoAlertas = Boolean(filaAsignacion?.asignado);
+        setModuloAlertasInicial(asignadoAlertas);
     
         form.setFieldsValue({
             id_usuario:record.id_usuario,
@@ -284,6 +331,7 @@ const BuscarUsuarios = () => {
             horario: jornadaNombre? jornadaNombre:"",
             tipoHora: tipoHoraFormValue(record.tipo_hora),
             idEmpresaConvenio: record.id_empresa_convenio ?? undefined,
+            moduloAlertasFichaje: asignadoAlertas,
         });
     
         setJornadasCargadas(true);
@@ -304,6 +352,35 @@ const BuscarUsuarios = () => {
 
             
             await editUsuario(editingRecord.id_usuario, values);
+
+            const mostrarModulos = empresaModuloVisibleEnEdicionUsuario(
+                filaModuloAlertas,
+                moduloAlertasInicial,
+            );
+            const nuevoModuloAlertas = values.moduloAlertasFichaje;
+            if (
+                mostrarModulos
+                && nuevoModuloAlertas !== undefined
+                && nuevoModuloAlertas !== moduloAlertasInicial
+            ) {
+                const filaAsignacion = asignacionesMarketplace.find(
+                    (a) => Number(a.id_usuario) === Number(editingRecord.id_usuario),
+                );
+                await guardarAsignacionModulo({
+                    codigoModulo: MARKETPLACE_MODULO_ALERTAS,
+                    idUsuario: editingRecord.id_usuario,
+                    asignado: nuevoModuloAlertas,
+                    canalEmail: nuevoModuloAlertas ? (filaAsignacion?.canal_email ?? true) : false,
+                    canalWhatsapp: nuevoModuloAlertas ? Boolean(filaAsignacion?.canal_whatsapp) : false,
+                });
+                try {
+                    const data = await listarAsignacionesModulo({ codigoModulo: MARKETPLACE_MODULO_ALERTAS });
+                    setAsignacionesMarketplace(data.asignaciones ?? []);
+                } catch {
+                    /* ignore */
+                }
+            }
+
             message.success("Usuario modificado correctamente");
             setIsModalVisible(false);
             setEditingRecord(null);
@@ -410,6 +487,11 @@ const BuscarUsuarios = () => {
                 />
             </Tooltip>
         </div>
+    );
+
+    const mostrarSeccionModulosEnEdicion = editingRecord && empresaModuloVisibleEnEdicionUsuario(
+        filaModuloAlertas,
+        moduloAlertasInicial,
     );
 
     const columns = [
@@ -710,6 +792,21 @@ const BuscarUsuarios = () => {
                                 />
                             </Form.Item>
                         )}
+                        {mostrarSeccionModulosEnEdicion ? (
+                            <>
+                                <Divider style={{ margin: '12px 0 16px' }} />
+                                <Typography.Title level={5} style={{ marginTop: 0 }}>
+                                    Módulos
+                                </Typography.Title>
+                                <Form.Item
+                                    label={marketplaceModuloMenuLabel(MARKETPLACE_MODULO_ALERTAS)}
+                                    name="moduloAlertasFichaje"
+                                    valuePropName="checked"
+                                >
+                                    <Switch />
+                                </Form.Item>
+                            </>
+                        ) : null}
                     </Form>
                 </Modal>
             </Card>

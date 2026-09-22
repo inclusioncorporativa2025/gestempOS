@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { APP_ROUTES, FACTURACION_ROUTES, LANDING_ROUTES } from '../constants/routes';
 import { Layout, Menu, Drawer, Button } from 'antd';
@@ -16,7 +16,6 @@ import {
   UserOutlined,
   FileTextOutlined,
   BarChartOutlined,
-  BellOutlined,
   ShopOutlined,
 } from '@ant-design/icons';
 import Login from './pages/Login';
@@ -85,6 +84,8 @@ import MarketplacePage from './pages/MarketplacePage';
 import MarketplaceAsignacionesPage from './pages/MarketplaceAsignacionesPage';
 import { useTrialStatus } from '../hooks/useTrialStatus';
 import { usePlan } from '../hooks/usePlan';
+import { useMarketplaceEmpresaModulos } from '../hooks/useMarketplaceEmpresaModulos';
+import { MARKETPLACE_MODULO_ALERTAS } from '../constants/marketplace';
 
 import './App.css';
 import './styles/sidebar.css';
@@ -167,14 +168,8 @@ const pages = [
     key: '15',
     icon: <ShopOutlined />,
     path: APP_ROUTES.marketplace,
-    tipousuario: [1],
-  },
-  {
-    label: 'Alertas (módulo)',
-    key: '16',
-    icon: <BellOutlined />,
-    path: APP_ROUTES.marketplaceAsignaciones,
     tipousuario: [1, 3, 4],
+    marketplaceMenu: true,
   },
   {
     label: 'Mi perfil',
@@ -187,6 +182,9 @@ const pages = [
 
 const COMPACT_DESKTOP_MAX = 1280;
 const MOBILE_MAX = 950;
+const MARKETPLACE_SUBMENU_KEY = '15-marketplace';
+
+const marketplaceModMenuKey = (codigo) => `marketplace-mod-${codigo}`;
 
 const shouldCollapseSidebar = (width) => width >= MOBILE_MAX && width < COMPACT_DESKTOP_MAX;
 
@@ -204,6 +202,9 @@ const AppShell = () => {
   });
   const { trial, bloqueado, mostrarAviso } = useTrialStatus();
   const { tieneFeature } = usePlan();
+  const esRoot = Number(tipousuario) === 1;
+  const puedeVerMarketplaceMenu = [1, 3, 4].includes(Number(tipousuario));
+  const [menuOpenKeys, setMenuOpenKeys] = useState([]);
 
   const authShellPaths = [
     APP_ROUTES.login,
@@ -255,9 +256,21 @@ const AppShell = () => {
     return () => window.removeEventListener(OPEN_SUPPORT_EVENT, openSupport);
   }, []);
 
+  useEffect(() => {
+    if (location.pathname.startsWith('/marketplace')) {
+      setMenuOpenKeys([MARKETPLACE_SUBMENU_KEY]);
+    }
+  }, [location.pathname]);
+
   const isMobile = windowWidth < MOBILE_MAX;
   const isAuthShellPage = authShellPaths.includes(location.pathname)
     || location.pathname.startsWith('/pago/');
+  const { modulosActivos } = useMarketplaceEmpresaModulos(
+    puedeVerMarketplaceMenu && ready && !isAuthShellPage,
+  );
+  const mostrarMarketplaceEnMenu = puedeVerMarketplaceMenu && (
+    esRoot || modulosActivos.length > 0
+  );
   const esRutaFacturacion = FACTURACION_ROUTES.includes(location.pathname);
   const puedeFichar = [1, 2, 3, 4, 5].includes(Number(tipousuario));
 
@@ -277,6 +290,7 @@ const AppShell = () => {
       : [];
 
   const paginaActual = pages.find((page) => {
+    if (page.marketplaceMenu) return false;
     if (
       page.path === APP_ROUTES.settings
       || page.path === APP_ROUTES.platform
@@ -287,27 +301,75 @@ const AppShell = () => {
         location.pathname.startsWith(`${page.path}/`)
       );
     }
-    if (page.path === APP_ROUTES.marketplaceAsignaciones) {
-      return location.pathname === APP_ROUTES.marketplaceAsignaciones;
-    }
-    if (page.path === APP_ROUTES.marketplace) {
-      return location.pathname === APP_ROUTES.marketplace;
-    }
     if (page.path === APP_ROUTES.miPerfil) {
       return location.pathname === APP_ROUTES.miPerfil;
     }
     return page.path.toLowerCase() === location.pathname.toLowerCase();
   });
-  const selectedKeys = paginaActual ? [paginaActual.key] : [];
 
-  const menuItems = filteredPages.map((item) => ({
-    key: item.key,
-    icon: item.icon,
-    label: item.label,
-    title: item.label,
-  }));
+  const selectedKeys = useMemo(() => {
+    if (location.pathname === APP_ROUTES.marketplace) {
+      return ['15'];
+    }
+    if (location.pathname === APP_ROUTES.marketplaceAsignaciones) {
+      return [marketplaceModMenuKey(MARKETPLACE_MODULO_ALERTAS)];
+    }
+    return paginaActual ? [paginaActual.key] : [];
+  }, [location.pathname, paginaActual]);
+
+  const pagesParaMenu = filteredPages.filter((p) => !p.marketplaceMenu);
+
+  const menuItems = useMemo(() => {
+    const items = pagesParaMenu.map((item) => ({
+      key: item.key,
+      icon: item.icon,
+      label: item.label,
+      title: item.label,
+    }));
+
+    if (!mostrarMarketplaceEnMenu) {
+      return items;
+    }
+
+    const activadosChildren = modulosActivos.map((m) => ({
+      key: marketplaceModMenuKey(m.codigo),
+      label: m.nombre,
+    }));
+
+    const marketplaceChildren = [
+      ...(esRoot ? [{ key: '15', label: 'Catálogo' }] : []),
+      ...(activadosChildren.length
+        ? [{ type: 'group', label: 'Activados', children: activadosChildren }]
+        : []),
+    ];
+
+    const marketplaceItem = {
+      key: MARKETPLACE_SUBMENU_KEY,
+      icon: <ShopOutlined />,
+      label: 'Marketplace',
+      children: marketplaceChildren,
+    };
+
+    const idx = items.findIndex((i) => i.key === '14');
+    const insertAt = idx >= 0 ? idx + 1 : items.length;
+    return [...items.slice(0, insertAt), marketplaceItem, ...items.slice(insertAt)];
+  }, [pagesParaMenu, modulosActivos, esRoot, mostrarMarketplaceEnMenu]);
 
   const handleMenuClick = ({ key }) => {
+    if (key === '15') {
+      navigate(APP_ROUTES.marketplace);
+      closeDrawer();
+      return;
+    }
+    if (key.startsWith('marketplace-mod-')) {
+      const codigo = key.slice('marketplace-mod-'.length);
+      if (codigo === MARKETPLACE_MODULO_ALERTAS) {
+        navigate(APP_ROUTES.marketplaceAsignaciones);
+      }
+      closeDrawer();
+      return;
+    }
+
     const page = pages.find((p) => p.key === key);
     if (page) {
       const dest =
@@ -360,6 +422,8 @@ const AppShell = () => {
                   mode="inline"
                   inlineCollapsed={collapsed}
                   selectedKeys={selectedKeys}
+                  openKeys={collapsed ? [] : menuOpenKeys}
+                  onOpenChange={setMenuOpenKeys}
                   onClick={handleMenuClick}
                   items={menuItems}
                 />
@@ -407,6 +471,8 @@ const AppShell = () => {
                 className="app-menu"
                 mode="inline"
                 selectedKeys={selectedKeys}
+                openKeys={menuOpenKeys}
+                onOpenChange={setMenuOpenKeys}
                 onClick={handleMenuClick}
                 items={menuItems}
               />
