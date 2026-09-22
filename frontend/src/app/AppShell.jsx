@@ -16,6 +16,7 @@ import {
   UserOutlined,
   FileTextOutlined,
   BarChartOutlined,
+  ShopOutlined,
 } from '@ant-design/icons';
 import Login from './pages/Login';
 import Home from './pages/Home';
@@ -79,6 +80,7 @@ import RenovarSuscripcion from './pages/facturacion/RenovarSuscripcion';
 import PagoRedirect from './pages/PagoRedirect';
 import NominasPage from './pages/NominasPage';
 import ProductividadPage from './pages/ProductividadPage';
+import MarketplacePage from './pages/MarketplacePage';
 import { useTrialStatus } from '../hooks/useTrialStatus';
 import { usePlan } from '../hooks/usePlan';
 
@@ -157,6 +159,13 @@ const pages = [
     path: APP_ROUTES.productividad,
     tipousuario: [1, 2, 3, 4],
     planFeature: 'informes_productividad',
+  },
+  {
+    label: 'Marketplace',
+    key: '15',
+    icon: <ShopOutlined />,
+    path: APP_ROUTES.marketplace,
+    tipousuario: [1],
   },
   {
     label: 'Mi perfil',
@@ -564,6 +573,14 @@ const AppShell = () => {
                   element={
                     <ProtectedRoute allowedTypes={[1, 2, 3, 4]}>
                       <ProductividadPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path={APP_ROUTES.marketplace}
+                  element={
+                    <ProtectedRoute allowedTypes={[1]}>
+                      <MarketplacePage />
                     </ProtectedRoute>
                   }
                 />

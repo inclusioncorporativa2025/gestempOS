@@ -21,7 +21,8 @@
 .umf-layout,
 .notif-layout,
 .bu-page,
-.productividad-page {
+.productividad-page,
+.marketplace-page {
   background: var(--background);
 }
 

@@ -50,6 +50,7 @@ export const APP_ROUTES = {
   miPerfil: '/mi-perfil',
   nominas: '/nominas',
   productividad: '/informes/productividad',
+  marketplace: '/marketplace',
   facturacion: '/facturacion',
   facturacionExito: '/facturacion/exito',
   facturacionCancelado: '/facturacion/cancelado',
