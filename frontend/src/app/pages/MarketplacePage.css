@@ -26,6 +26,18 @@
   margin-bottom: 4px;
 }
 
+.marketplace-page__toolbar {
+  margin-bottom: 8px;
+}
+
+.marketplace-page__module-meta {
+  margin-top: 8px;
+}
+
+.marketplace-page__module-actions {
+  margin-top: 16px;
+}
+
 .marketplace-page__module-card {
   height: 100%;
   border-radius: 16px !important;
