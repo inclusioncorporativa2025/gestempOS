@@ -6,8 +6,14 @@ export const MARKETPLACE_MODULOS = [
     codigo: MARKETPLACE_MODULO_ALERTAS,
     nombre: 'Alertas de fichaje',
     menuLabel: 'Alerta fichaje',
+    coverClass: 'marketplace-module-card__cover--alertas',
   },
 ];
+
+export const marketplaceModuloCoverClass = (codigo) => {
+  const row = MARKETPLACE_MODULOS.find((m) => m.codigo === codigo);
+  return row?.coverClass ?? 'marketplace-module-card__cover--default';
+};
 
 export const marketplaceModuloMenuLabel = (codigo) => {
   const row = MARKETPLACE_MODULOS.find((m) => m.codigo === codigo);

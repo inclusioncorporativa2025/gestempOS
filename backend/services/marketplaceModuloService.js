@@ -87,6 +87,17 @@ const obtenerEmpresaModuloRow = async (idEmpresa, idModulo) => (
   })
 );
 
+/** Incluye filas canceladas (fecha_baja) para reactivar sin violar uk (id_empresa, id_modulo). */
+const obtenerEmpresaModuloRowHistorico = async (idEmpresa, idModulo) => (
+  MarketplaceEmpresaModulo.findOne({
+    where: {
+      id_empresa: idEmpresa,
+      id_modulo: idModulo,
+    },
+    order: [['id_empresa_modulo', 'DESC']],
+  })
+);
+
 const empresaModuloEstaActivo = async (idEmpresa, codigoModulo) => {
   const modulo = await obtenerModuloPorCodigo(codigoModulo);
   if (!modulo) return false;
@@ -160,7 +171,7 @@ const activarModuloEmpresa = async ({
     ...(configJson && typeof configJson === 'object' ? configJson : {}),
   };
 
-  const existente = await obtenerEmpresaModuloRow(idEmpresa, modulo.id_modulo);
+  const existente = await obtenerEmpresaModuloRowHistorico(idEmpresa, modulo.id_modulo);
   const ahora = new Date();
 
   if (existente) {
@@ -169,6 +180,7 @@ const activarModuloEmpresa = async ({
       config_json: config,
       fecha_baja: null,
       fecha_modificacion: ahora,
+      usuario_baja: null,
       usuario_alta: idUsuarioAlta ?? existente.usuario_alta,
     });
     return listarEstadoEmpresa(idEmpresa);

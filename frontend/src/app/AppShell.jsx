@@ -309,7 +309,7 @@ const AppShell = () => {
 
   const selectedKeys = useMemo(() => {
     if (location.pathname === APP_ROUTES.marketplace) {
-      return ['15'];
+      return [MARKETPLACE_SUBMENU_KEY];
     }
     if (location.pathname === APP_ROUTES.marketplaceAsignaciones) {
       return [marketplaceModMenuKey(MARKETPLACE_MODULO_ALERTAS)];
@@ -336,27 +336,47 @@ const AppShell = () => {
       label: m.nombre,
     }));
 
-    const marketplaceChildren = [
-      ...(esRoot ? [{ key: '15', label: 'Catálogo' }] : []),
-      ...(activadosChildren.length
-        ? [{ type: 'group', label: 'Activados', children: activadosChildren }]
-        : []),
-    ];
+    const marketplaceChildren = activadosChildren.length
+      ? [{ type: 'group', label: 'Activados', children: activadosChildren }]
+      : undefined;
+
+    const marketplaceLabel = esRoot ? (
+      <span
+        className="app-menu-marketplace-title"
+        role="link"
+        tabIndex={0}
+        onClick={(e) => {
+          e.stopPropagation();
+          navigate(APP_ROUTES.marketplace);
+          closeDrawer();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            navigate(APP_ROUTES.marketplace);
+            closeDrawer();
+          }
+        }}
+      >
+        Marketplace
+      </span>
+    ) : 'Marketplace';
 
     const marketplaceItem = {
       key: MARKETPLACE_SUBMENU_KEY,
       icon: <ShopOutlined />,
-      label: 'Marketplace',
-      children: marketplaceChildren,
+      label: marketplaceLabel,
+      title: 'Marketplace',
+      ...(marketplaceChildren ? { children: marketplaceChildren } : {}),
     };
 
     const idx = items.findIndex((i) => i.key === '14');
     const insertAt = idx >= 0 ? idx + 1 : items.length;
     return [...items.slice(0, insertAt), marketplaceItem, ...items.slice(insertAt)];
-  }, [pagesParaMenu, modulosActivos, esRoot, mostrarMarketplaceEnMenu]);
+  }, [pagesParaMenu, modulosActivos, esRoot, mostrarMarketplaceEnMenu, navigate]);
 
   const handleMenuClick = ({ key }) => {
-    if (key === '15') {
+    if (key === MARKETPLACE_SUBMENU_KEY && esRoot) {
       navigate(APP_ROUTES.marketplace);
       closeDrawer();
       return;

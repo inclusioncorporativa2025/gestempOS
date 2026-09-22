@@ -188,6 +188,50 @@
   display: none !important;
 }
 
+/* Marketplace: mismo alineado que ítems de primer nivel */
+.app-sider-menu.ant-menu-inline .ant-menu-submenu-title {
+  width: 100%;
+  margin: 6px 0;
+  height: 46px;
+  line-height: 46px;
+  border-radius: 12px;
+  padding-inline: 14px !important;
+  color: #5a6472;
+}
+
+.app-sider-menu .ant-menu-submenu-title .anticon {
+  font-size: 18px;
+}
+
+.app-sider-menu .ant-menu-sub.ant-menu-inline {
+  background: transparent !important;
+}
+
+.app-sider-menu .ant-menu-sub.ant-menu-inline .ant-menu-item {
+  padding-inline: 14px !important;
+  margin-inline: 0;
+}
+
+.app-sider-menu .ant-menu-item-group-title {
+  padding-inline: 14px !important;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8a929e;
+}
+
+.app-sider-menu .ant-menu-item-group-list .ant-menu-item {
+  padding-inline: 14px !important;
+}
+
+.app-sider-menu .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  color: var(--color-primary);
+}
+
+.app-menu-marketplace-title {
+  display: inline;
+}
+
 /* Pie del sidebar: soporte y cerrar sesión */
 .app-sider-footer {
   flex-shrink: 0;

@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
-  Card,
   Col,
   InputNumber,
   Row,
@@ -13,7 +12,11 @@ import {
   message,
 } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { BellOutlined, ReloadOutlined, ShopOutlined, TeamOutlined } from '@ant-design/icons';
+import {
+  BellOutlined,
+  ReloadOutlined,
+  ShopOutlined,
+} from '@ant-design/icons';
 import { APP_ROUTES } from '../../constants/routes';
 import { getIdEmpresa } from '../../utils/authSession';
 import {
@@ -22,16 +25,27 @@ import {
   getMarketplaceCatalogo,
   getMarketplaceEstadoEmpresa,
 } from '../../features/marketplace/marketplaceService';
+import { marketplaceModuloCoverClass } from '../../constants/marketplace';
 import './MarketplacePage.css';
 
 const { Title, Text, Paragraph } = Typography;
 
-const estadoTag = (estado) => {
-  if (!estado) return <Tag>No contratado</Tag>;
-  if (estado === 'active') return <Tag color="success">Activo</Tag>;
-  if (estado === 'cancelled') return <Tag color="default">Cancelado</Tag>;
-  if (estado === 'pending') return <Tag color="warning">Pendiente</Tag>;
-  return <Tag>{estado}</Tag>;
+const moduloIcon = (codigo) => {
+  if (codigo === 'alertas_fichaje') return <BellOutlined aria-hidden />;
+  return <ShopOutlined aria-hidden />;
+};
+
+const estadoEtiqueta = (estado) => {
+  if (estado === 'active') {
+    return <Tag color="success" className="marketplace-module-card__status">Activo</Tag>;
+  }
+  if (estado === 'cancelled') {
+    return <Tag className="marketplace-module-card__status">Cancelado</Tag>;
+  }
+  if (estado === 'pending') {
+    return <Tag color="warning" className="marketplace-module-card__status">Pendiente</Tag>;
+  }
+  return null;
 };
 
 const MarketplacePage = () => {
@@ -66,14 +80,23 @@ const MarketplacePage = () => {
     cargar();
   }, [cargar]);
 
-  const contratoPorCodigo = (codigo) => {
-    const fila = estadoEmpresa.find((e) => e.modulo?.codigo === codigo);
-    return fila?.contrato ?? null;
-  };
+  const estadoPorCodigo = useMemo(() => {
+    const map = new Map();
+    (estadoEmpresa ?? []).forEach((fila) => {
+      if (fila.modulo?.codigo) {
+        map.set(fila.modulo.codigo, fila);
+      }
+    });
+    return map;
+  }, [estadoEmpresa]);
 
-  const asientosPorCodigo = (codigo) => {
-    const fila = estadoEmpresa.find((e) => e.modulo?.codigo === codigo);
-    return fila?.asientos_activos ?? 0;
+  const aplicarEstadoRespuesta = (data) => {
+    const filas = Array.isArray(data?.modulos) ? data.modulos : data;
+    if (Array.isArray(filas)) {
+      setEstadoEmpresa(filas);
+    } else {
+      cargar();
+    }
   };
 
   const onActivar = async (codigo) => {
@@ -87,7 +110,7 @@ const MarketplacePage = () => {
         idEmpresa: idEmpresaConsulta,
         codigoModulo: codigo,
       });
-      setEstadoEmpresa(data.modulos ?? []);
+      aplicarEstadoRespuesta(data);
       message.success('Módulo activado');
     } catch (error) {
       message.error(error.message || 'No se pudo activar');
@@ -107,7 +130,7 @@ const MarketplacePage = () => {
         idEmpresa: idEmpresaConsulta,
         codigoModulo: codigo,
       });
-      setEstadoEmpresa(data.modulos ?? []);
+      aplicarEstadoRespuesta(data);
       message.success('Módulo cancelado');
     } catch (error) {
       message.error(error.message || 'No se pudo cancelar');
@@ -117,7 +140,7 @@ const MarketplacePage = () => {
   };
 
   return (
-    <div className="marketplace-page">
+    <div className="marketplace-page app-page">
       <div className="marketplace-page__header">
         <Title level={3} className="marketplace-page__title">
           <ShopOutlined style={{ marginRight: 8 }} />
@@ -152,73 +175,86 @@ const MarketplacePage = () => {
       </div>
 
       <Spin spinning={loading}>
-        <Row gutter={[16, 16]}>
+        <Row gutter={[20, 20]} className="marketplace-page__grid">
           {catalogo.map((modulo) => {
-            const contrato = contratoPorCodigo(modulo.codigo);
+            const filaEstado = estadoPorCodigo.get(modulo.codigo);
+            const contrato = filaEstado?.contrato ?? null;
             const activo = contrato?.estado === 'active';
+            const asientos = filaEstado?.asientos_activos ?? 0;
+            const licencias = Number(contrato?.licencias_facturadas) || 0;
+            const asientosLabel = activo
+              ? `${asientos} asiento${asientos === 1 ? '' : 's'} activos`
+              : licencias > 0
+                ? `${licencias} asiento${licencias === 1 ? '' : 's'} al activar`
+                : '0 asientos · se facturan al asignar personal';
+
             const precio = Number(modulo.precio_mensual_eur).toLocaleString('es-ES', {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             });
 
+            const coverClass = marketplaceModuloCoverClass(modulo.codigo);
+
             return (
-              <Col xs={24} lg={12} xl={10} key={modulo.codigo}>
-                <Card className="marketplace-page__module-card">
-                  <div className="marketplace-page__module-head">
-                    <BellOutlined className="marketplace-page__module-icon" />
-                    <div>
-                      <Title level={4} className="marketplace-page__module-title">
-                        {modulo.nombre}
-                      </Title>
-                      {estadoTag(contrato?.estado)}
+              <Col xs={24} sm={12} xl={8} key={modulo.codigo}>
+                <article className="marketplace-module-card">
+                  <div className={`marketplace-module-card__cover ${coverClass}`}>
+                    <span className="marketplace-module-card__cover-icon">
+                      {moduloIcon(modulo.codigo)}
+                    </span>
+                    {activo ? estadoEtiqueta('active') : estadoEtiqueta(contrato?.estado)}
+                  </div>
+                  <div className="marketplace-module-card__body">
+                    <Title level={4} className="marketplace-module-card__title">
+                      {modulo.nombre}
+                    </Title>
+                    <Paragraph type="secondary" className="marketplace-module-card__desc">
+                      {modulo.descripcion}
+                    </Paragraph>
+                    <Text strong className="marketplace-module-card__price">
+                      {precio}
+                      {' '}
+                      € / usuario / mes
+                    </Text>
+                    <div className="marketplace-module-card__footer">
+                      <Text type="secondary" className="marketplace-module-card__seats">
+                        {idEmpresaConsulta ? asientosLabel : '—'}
+                      </Text>
+                      <Space wrap size="small">
+                        {!activo ? (
+                          <Button
+                            type="primary"
+                            size="small"
+                            loading={accionCodigo === modulo.codigo}
+                            onClick={() => onActivar(modulo.codigo)}
+                            disabled={!idEmpresaConsulta}
+                          >
+                            Activar
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              size="small"
+                              onClick={() => navigate(
+                                `${APP_ROUTES.marketplaceAsignaciones}?idEmpresa=${idEmpresaConsulta}`,
+                              )}
+                            >
+                              Canales
+                            </Button>
+                            <Button
+                              size="small"
+                              danger
+                              loading={accionCodigo === modulo.codigo}
+                              onClick={() => onCancelar(modulo.codigo)}
+                            >
+                              Cancelar
+                            </Button>
+                          </>
+                        )}
+                      </Space>
                     </div>
                   </div>
-                  <Paragraph type="secondary">{modulo.descripcion}</Paragraph>
-                  <Text strong>
-                    {precio}
-                    {' '}
-                    € / usuario / mes
-                  </Text>
-                  {idEmpresaConsulta ? (
-                    <div className="marketplace-page__module-meta">
-                      <Text type="secondary">
-                        Asientos activos:
-                        {' '}
-                        {asientosPorCodigo(modulo.codigo)}
-                      </Text>
-                    </div>
-                  ) : null}
-                  <Space wrap className="marketplace-page__module-actions">
-                    {!activo ? (
-                      <Button
-                        type="primary"
-                        loading={accionCodigo === modulo.codigo}
-                        onClick={() => onActivar(modulo.codigo)}
-                        disabled={!idEmpresaConsulta}
-                      >
-                        Activar empresa
-                      </Button>
-                    ) : (
-                      <>
-                        <Button
-                          icon={<TeamOutlined />}
-                          onClick={() => navigate(
-                            `${APP_ROUTES.marketplaceAsignaciones}?idEmpresa=${idEmpresaConsulta}`,
-                          )}
-                        >
-                          Asignar usuarios
-                        </Button>
-                        <Button
-                          danger
-                          loading={accionCodigo === modulo.codigo}
-                          onClick={() => onCancelar(modulo.codigo)}
-                        >
-                          Cancelar módulo
-                        </Button>
-                      </>
-                    )}
-                  </Space>
-                </Card>
+                </article>
               </Col>
             );
           })}

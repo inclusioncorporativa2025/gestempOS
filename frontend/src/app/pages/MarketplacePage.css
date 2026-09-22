@@ -30,50 +30,104 @@
   margin-bottom: 8px;
 }
 
-.marketplace-page__module-meta {
-  margin-top: 8px;
+.marketplace-page__grid {
+  width: 100%;
 }
 
-.marketplace-page__module-actions {
-  margin-top: 16px;
-}
-
-.marketplace-page__module-card {
-  height: 100%;
-  border-radius: 16px !important;
-  background: rgba(255, 255, 255, 0.72) !important;
-  border: 1px solid rgba(var(--color-primary-rgb), 0.08) !important;
-  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.06) !important;
-}
-
-.marketplace-page__module-card .ant-card-body {
-  padding: 20px !important;
-}
-
-.marketplace-page__module-head {
+.marketplace-module-card {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.08);
+  box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.06);
 }
 
-.marketplace-page__module-icon {
-  font-size: 28px;
-  color: var(--color-primary);
-  margin-top: 4px;
+.marketplace-module-card__cover {
+  position: relative;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
-.marketplace-page__module-title {
-  margin: 0 0 8px !important;
+.marketplace-module-card__cover--alertas {
+  background: linear-gradient(
+    135deg,
+    rgba(var(--color-primary-rgb), 0.35) 0%,
+    rgba(var(--color-primary-dark-rgb), 0.55) 100%
+  );
 }
 
-.marketplace-page__module-list {
-  margin: 16px 0 0;
-  padding-left: 20px;
+.marketplace-module-card__cover--default {
+  background: linear-gradient(
+    135deg,
+    rgba(120, 130, 150, 0.25) 0%,
+    rgba(80, 90, 110, 0.4) 100%
+  );
+}
+
+.marketplace-module-card__cover-icon {
+  font-size: 48px;
+  color: rgba(255, 255, 255, 0.92);
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+.marketplace-module-card__status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  margin: 0 !important;
+  border: none;
+}
+
+.marketplace-module-card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px 18px;
+  gap: 8px;
+}
+
+.marketplace-module-card__title {
+  margin: 0 !important;
+}
+
+.marketplace-module-card__desc {
+  margin-bottom: 0 !important;
+  flex: 1;
+  font-size: 13px;
+}
+
+.marketplace-module-card__price {
+  font-size: 14px;
+}
+
+.marketplace-module-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(var(--color-primary-rgb), 0.08);
+}
+
+.marketplace-module-card__seats {
+  font-size: 13px;
+  font-weight: 500;
 }
 
 @media (max-width: 768px) {
   .marketplace-page {
     padding: 16px;
+  }
+
+  .marketplace-module-card__cover {
+    height: 120px;
   }
 }
