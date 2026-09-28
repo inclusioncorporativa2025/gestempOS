@@ -66,6 +66,7 @@ import {
   renderEstadoEmpresa,
 } from './empresaEstadoUtils';
 import './BuscadorEmpresa.css';
+import '../../components/shared/TableAcciones.css';
 
 const { Title, Text } = Typography;
 

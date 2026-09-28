@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Tag, Card, Table, Input, Button, Modal, Tooltip, Popconfirm, Form, message,
-  Typography, DatePicker, Switch, Select, Dropdown, Pagination, Divider,
+  Typography, DatePicker, Switch, Select, Dropdown, Pagination, Row, Col,
 } from 'antd';
 import GradientButton from '../components/shared/GradientButton';
-import { SearchOutlined, EditOutlined, StopOutlined, EyeOutlined, DownloadOutlined, UserAddOutlined, UploadOutlined, MoreOutlined } from '@ant-design/icons';
+import {
+  SearchOutlined, EditOutlined, StopOutlined, EyeOutlined, DownloadOutlined, UserAddOutlined,
+  UploadOutlined, MoreOutlined, CameraOutlined, UserOutlined,
+} from '@ant-design/icons';
+import { getInicialesEmpresa } from '../../utils/empresaBranding';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { getUsuariosEmpresa, deleteUsuario, editUsuario, getHorasTotalesMesByIdUsuario } from "../../features/user/usuarioService";
@@ -22,6 +26,7 @@ import {
   esInspector,
   puedeEnviarRegistrosPorEmail,
   esStaffEmpresa,
+  puedeVerMarketplace,
   valorTipoUsuarioForm,
   etiquetaTipoUsuario,
 } from '../../utils/tipoUsuarioLabel';
@@ -47,7 +52,7 @@ import './BuscadorUsuarios.css';
 import '../components/shared/TableAcciones.css';
 dayjs.locale('es');
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const MOBILE_BREAKPOINT = 950;
 const PAGE_SIZE = 8;
@@ -60,7 +65,8 @@ const BuscarUsuarios = () => {
     const idUsuarioSesion = getIdUsuario();
     const verFichaPersonal = puedeVerFichaPersonal(tipoUsuario);
     const puedeEditarEmail = esStaffEmpresa(tipoUsuario) || Boolean(user?.impersonado_por_es_root);
-    const puedeGestionarModulos = esStaffEmpresa(tipoUsuario) || Boolean(user?.impersonado_por_es_root);
+    const puedeGestionarModulos = puedeVerMarketplace(tipoUsuario)
+      || Boolean(user?.impersonado_por_es_root);
     const { estadoFilas } = useMarketplaceEmpresaModulos(puedeGestionarModulos);
     const [asignacionesMarketplace, setAsignacionesMarketplace] = useState([]);
     const [moduloAlertasInicial, setModuloAlertasInicial] = useState(false);
@@ -409,7 +415,7 @@ const BuscarUsuarios = () => {
         { title: 'Hora Salida', dataIndex: 'hora_salida', key: 'hora_salida' },
         { title: 'Dif. Tiempo', dataIndex: 'dif_tiempo', key: 'dif_tiempo' },
         { 
-                title: 'Tipo', 
+                title: 'Rol', 
                 dataIndex: 'tipo', 
                 key: 'tipo',
                 render: (tipo) => {
@@ -518,12 +524,6 @@ const BuscarUsuarios = () => {
             dataIndex: 'fecha_alta',
             key: 'fecha_alta',
             render: (fecha_alta) => formatDate(fecha_alta),
-        },
-        {
-            title: 'Activo',
-            dataIndex: 'activo',
-            key: 'activo',
-            render: (activo, record) => (esUsuarioActivo(record) ? 'Sí' : 'No'),
         },
         {
             title: 'Acciones',
@@ -638,9 +638,7 @@ const BuscarUsuarios = () => {
                             <p className="bu-mobile-empty">{emptyDescription}</p>
                         ) : (
                             <>
-                                {filteredUsuariosMobile.map((usuario) => {
-                                    const activo = esUsuarioActivo(usuario);
-                                    return (
+                                {filteredUsuariosMobile.map((usuario) => (
                                         <article key={usuario.id_usuario} className="bu-mobile-card">
                                             <div className="bu-mobile-card__header">
                                                 {verFichaPersonal ? (
@@ -660,9 +658,6 @@ const BuscarUsuarios = () => {
                                                     <Tag className="bu-mobile-card__cargo">
                                                         {etiquetaTipoUsuario(usuario.tipo_usuario)}
                                                     </Tag>
-                                                    <Tag color={activo ? 'green' : 'default'} className="bu-mobile-card__estado">
-                                                        {activo ? 'Activo' : 'No activo'}
-                                                    </Tag>
                                                 </div>
                                             </div>
                                             <a
@@ -680,8 +675,7 @@ const BuscarUsuarios = () => {
                                                 {renderAccionesUsuario(usuario)}
                                             </div>
                                         </article>
-                                    );
-                                })}
+                                ))}
                                 {filteredUsuarios.length > PAGE_SIZE && (
                                     <Pagination
                                         className="bu-mobile-pagination"
@@ -708,105 +702,193 @@ const BuscarUsuarios = () => {
 
                 {/* Modal de edición */}
                 <Modal
-                    title="Editar Usuario"
+                    title="Editar usuario"
+                    className="bu-edit-user-modal"
                     open={isModalVisible && jornadasCargadas}
                     onOk={handleSaveEdit}
                     onCancel={() => setIsModalVisible(false)}
                     okText="Guardar"
                     cancelText="Cancelar"
+                    width={880}
+                    forceRender
                 >
-                    <Form form={form} layout="vertical">
-                        <Form.Item label="Nombre" name="nombre" rules={[{ required: true, message: 'Por favor, introduce el nombre' }]}>
-                            <Input />
-                        </Form.Item>
-                        {puedeEditarEmail && (
-                            <Form.Item
-                                label="Correo electrónico"
-                                name="email"
-                                rules={[
-                                    { required: true, message: 'Introduce un email' },
-                                    { type: 'email', message: 'Email no válido' },
-                                ]}
-                            >
-                                <Input inputMode="email" autoComplete="email" />
-                            </Form.Item>
-                        )}
-                        <Form.Item label="DNI" name="dni" rules={[{ required: true, message: 'Por favor, introduce el DNI' }]}>
-                            <Input />
-                        </Form.Item>
-                        <Form.Item label="Fecha Alta" name="fechaAlta">
-                            <Input value={form.getFieldValue('fechaAlta') ? formatDate(form.getFieldValue('fechaAlta')) : ''} disabled />
-                        </Form.Item>
-                        <Form.Item label="Tipo Usuario" name="tipoUsuario">
-                        <Select
-                            disabled={
-                              esAdministradorEmpresa(editingRecord?.tipo_usuario)
-                              || esInspector(editingRecord?.tipo_usuario)
-                            }
-                        >
-                            {esAdministradorEmpresa(editingRecord?.tipo_usuario) ? (
-                            <Select.Option value="3">Administrador</Select.Option>
-                            ) : esInspector(editingRecord?.tipo_usuario) ? (
-                            <Select.Option value="6">Inspector</Select.Option>
-                            ) : (
-                            <>
-                                <Select.Option value="5">Personal</Select.Option>
-                                <Select.Option value="4">Supervisores</Select.Option>
-                            </>
-                            )}
-                        </Select>
-                        </Form.Item>
-                        <Form.Item label="Activo" name="activo" valuePropName="checked">
-                            <Switch />
-                        </Form.Item>
-                        <Form.Item label="Jornada laboral" name="horario">
-                            <JornadaLaboralSelect
-                              jornadas={jornadas}
-                              valueKey="nombre"
-                              onNavigateAway={() => {
-                                setIsModalVisible(false);
-                                setEditingRecord(null);
-                              }}
-                            />
-                        </Form.Item>
-                        <Form.Item
-                            label="Tipo de hora"
-                            name="tipoHora"
-                            tooltip={tooltipTipoHoraFormItem({ includeHeredar: true })}
-                        >
-                            <Select options={opcionesTipoHora} />
-                        </Form.Item>
-                        {conveniosEmpresa.length > 0 && (
-                            <Form.Item
-                                label="Convenio"
-                                name="idEmpresaConvenio"
-                                tooltip="Si no se indica, se aplicará el convenio por defecto de la empresa."
-                            >
-                                <Select
-                                    allowClear
-                                    placeholder="Convenio por defecto de la empresa"
-                                    options={conveniosEmpresa.map((c) => ({
-                                        value: c.id_empresa_convenio,
-                                        label: c.nombre || c.catalogo?.nombre || `Convenio #${c.id_empresa_convenio}`,
-                                    }))}
-                                />
-                            </Form.Item>
-                        )}
+                    <Form form={form} layout="vertical" className="bu-edit-user-form">
+                        <div className="bu-edit-user-form__layout">
+                            <aside className="bu-edit-user-form__aside">
+                                <Tooltip title="Próximamente podrás subir una foto de perfil">
+                                    <button
+                                        type="button"
+                                        className="bu-edit-user-form__avatar"
+                                        disabled
+                                        aria-label="Foto de perfil (próximamente)"
+                                    >
+                                        <span className="bu-edit-user-form__avatar-initials" aria-hidden>
+                                            {editingRecord?.nombre
+                                              ? getInicialesEmpresa(editingRecord.nombre)
+                                              : <UserOutlined />}
+                                        </span>
+                                        <span className="bu-edit-user-form__avatar-badge" aria-hidden>
+                                            <CameraOutlined />
+                                        </span>
+                                    </button>
+                                </Tooltip>
+                                <Text type="secondary" className="bu-edit-user-form__avatar-caption">
+                                    Foto de perfil
+                                </Text>
+                            </aside>
+                            <div className="bu-edit-user-form__main">
+                        <section className="bu-edit-user-form__section">
+                            <Text className="bu-edit-user-form__section-title">Identificación</Text>
+                            <Row gutter={[16, 0]}>
+                                <Col xs={24} md={14}>
+                                    <Form.Item
+                                        label="Nombre"
+                                        name="nombre"
+                                        rules={[{ required: true, message: 'Introduce el nombre' }]}
+                                    >
+                                        <Input autoComplete="name" />
+                                    </Form.Item>
+                                </Col>
+                                <Col xs={24} md={10}>
+                                    <Form.Item
+                                        label="DNI"
+                                        name="dni"
+                                        rules={[{ required: true, message: 'Introduce el DNI' }]}
+                                    >
+                                        <Input autoComplete="off" />
+                                    </Form.Item>
+                                </Col>
+                                {puedeEditarEmail ? (
+                                    <Col xs={24}>
+                                        <Form.Item
+                                            label="Correo electrónico"
+                                            name="email"
+                                            rules={[
+                                                { required: true, message: 'Introduce un email' },
+                                                { type: 'email', message: 'Email no válido' },
+                                            ]}
+                                        >
+                                            <Input inputMode="email" autoComplete="email" />
+                                        </Form.Item>
+                                    </Col>
+                                ) : null}
+                            </Row>
+                        </section>
+
+                        <section className="bu-edit-user-form__section">
+                            <Text className="bu-edit-user-form__section-title">Acceso y estado</Text>
+                            <Row gutter={[16, 0]} align="middle">
+                                <Col xs={24} sm={12} md={10}>
+                                    <Form.Item label="Rol de usuario" name="tipoUsuario">
+                                        <Select
+                                            disabled={
+                                              esAdministradorEmpresa(editingRecord?.tipo_usuario)
+                                              || esInspector(editingRecord?.tipo_usuario)
+                                            }
+                                        >
+                                            {esAdministradorEmpresa(editingRecord?.tipo_usuario) ? (
+                                                <Select.Option value="3">Administrador</Select.Option>
+                                            ) : esInspector(editingRecord?.tipo_usuario) ? (
+                                                <Select.Option value="6">Inspector</Select.Option>
+                                            ) : (
+                                                <>
+                                                    <Select.Option value="5">Personal</Select.Option>
+                                                    <Select.Option value="4">Supervisores</Select.Option>
+                                                </>
+                                            )}
+                                        </Select>
+                                    </Form.Item>
+                                </Col>
+                                <Col xs={24} sm={12} md={8}>
+                                    <Form.Item label="Fecha de alta">
+                                        <Input
+                                            disabled
+                                            readOnly
+                                            value={
+                                              editingRecord?.fecha_alta
+                                                ? formatDate(editingRecord.fecha_alta)
+                                                : '—'
+                                            }
+                                        />
+                                    </Form.Item>
+                                </Col>
+                                <Col xs={24} sm={12} md={6}>
+                                    <Form.Item
+                                        label="Activo"
+                                        name="activo"
+                                        valuePropName="checked"
+                                        className="bu-edit-user-form__switch-item"
+                                    >
+                                        <Switch />
+                                    </Form.Item>
+                                </Col>
+                            </Row>
+                        </section>
+
+                        <section className="bu-edit-user-form__section">
+                            <Text className="bu-edit-user-form__section-title">Jornada y convenio</Text>
+                            <Row gutter={[16, 0]}>
+                                <Col xs={24} md={12}>
+                                    <Form.Item label="Jornada laboral" name="horario">
+                                        <JornadaLaboralSelect
+                                          jornadas={jornadas}
+                                          valueKey="nombre"
+                                          onNavigateAway={() => {
+                                            setIsModalVisible(false);
+                                            setEditingRecord(null);
+                                          }}
+                                        />
+                                    </Form.Item>
+                                </Col>
+                                <Col xs={24} md={12}>
+                                    <Form.Item
+                                        label="Tipo de hora"
+                                        name="tipoHora"
+                                        tooltip={tooltipTipoHoraFormItem({ includeHeredar: true })}
+                                    >
+                                        <Select options={opcionesTipoHora} />
+                                    </Form.Item>
+                                </Col>
+                                {conveniosEmpresa.length > 0 ? (
+                                    <Col xs={24}>
+                                        <Form.Item
+                                            label="Convenio"
+                                            name="idEmpresaConvenio"
+                                            tooltip="Si no se indica, se aplicará el convenio por defecto de la empresa."
+                                        >
+                                            <Select
+                                                allowClear
+                                                placeholder="Convenio por defecto de la empresa"
+                                                options={conveniosEmpresa.map((c) => ({
+                                                    value: c.id_empresa_convenio,
+                                                    label: c.nombre || c.catalogo?.nombre || `Convenio #${c.id_empresa_convenio}`,
+                                                }))}
+                                            />
+                                        </Form.Item>
+                                    </Col>
+                                ) : null}
+                            </Row>
+                        </section>
+
                         {mostrarSeccionModulosEnEdicion ? (
-                            <>
-                                <Divider style={{ margin: '12px 0 16px' }} />
-                                <Typography.Title level={5} style={{ marginTop: 0 }}>
-                                    Módulos
-                                </Typography.Title>
-                                <Form.Item
-                                    label={marketplaceModuloMenuLabel(MARKETPLACE_MODULO_ALERTAS)}
-                                    name="moduloAlertasFichaje"
-                                    valuePropName="checked"
-                                >
-                                    <Switch />
-                                </Form.Item>
-                            </>
+                            <section className="bu-edit-user-form__section bu-edit-user-form__section--last">
+                                <Text className="bu-edit-user-form__section-title">Módulos</Text>
+                                <Row>
+                                    <Col xs={24} md={14}>
+                                        <Form.Item
+                                            label={marketplaceModuloMenuLabel(MARKETPLACE_MODULO_ALERTAS)}
+                                            name="moduloAlertasFichaje"
+                                            valuePropName="checked"
+                                            className="bu-edit-user-form__switch-item"
+                                        >
+                                            <Switch />
+                                        </Form.Item>
+                                    </Col>
+                                </Row>
+                            </section>
                         ) : null}
+                            </div>
+                        </div>
                     </Form>
                 </Modal>
             </Card>

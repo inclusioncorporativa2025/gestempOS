@@ -142,10 +142,16 @@ const listarEstadoEmpresa = async (idEmpresa) => {
       const contratoDto = serializarEmpresaModulo(contrato, modulo);
       contratoDto.asientos_activos = asientos;
 
+      const activo = ESTADOS_EMPRESA_ACTIVOS.includes(String(contrato.estado).toLowerCase());
+      const whatsappUso = activo
+        ? await obtenerResumenWhatsappModulo(idEmpresa, modulo.id_modulo)
+        : null;
+
       return {
         modulo,
         contrato: contratoDto,
         asientos_activos: asientos,
+        whatsapp_uso: whatsappUso,
       };
     }),
   );
@@ -306,8 +312,14 @@ const listarAsignacionesModulo = async (idEmpresa, codigoModulo) => {
     },
   });
 
+  const whatsappUso = await obtenerResumenWhatsappModulo(idEmpresa, modulo.id_modulo);
+
   if (!membresias.length) {
-    return { modulo: serializarModulo(modulo), asignaciones: [] };
+    return {
+      modulo: serializarModulo(modulo),
+      asignaciones: [],
+      whatsapp_uso: whatsappUso,
+    };
   }
 
   const ids = membresias.map((m) => m.id_usuario);
@@ -349,6 +361,7 @@ const listarAsignacionesModulo = async (idEmpresa, codigoModulo) => {
   return {
     modulo: serializarModulo(modulo),
     asignaciones,
+    whatsapp_uso: whatsappUso,
   };
 };
 
@@ -439,6 +452,24 @@ const obtenerUsoWhatsappMes = async (idEmpresa, idModulo, mes) => {
   return row?.mensajes_enviados ?? 0;
 };
 
+const obtenerResumenWhatsappModulo = async (idEmpresa, idModulo, mes = dayjs()) => {
+  const cupo = await calcularCupoWhatsappEmpresa(idEmpresa, idModulo);
+  const mesNorm = dayjs(mes).format('YYYY-MM');
+  const usados = await obtenerUsoWhatsappMes(idEmpresa, idModulo, mesNorm);
+  const tope = Number(cupo.tope) || 0;
+
+  return {
+    mes: mesNorm,
+    mensajes_enviados: usados,
+    tope_mensajes: tope,
+    total_mensajes_empresa: cupo.total_mensajes_empresa,
+    mensajes_restantes: Math.max(0, tope - usados),
+    mensajes_por_usuario: cupo.porUsuario,
+    usuarios_con_whatsapp: cupo.usuarios_whatsapp,
+    tope_absoluto_empresa: cupo.tope_absoluto_empresa,
+  };
+};
+
 const calcularCupoWhatsappEmpresa = async (idEmpresa, idModulo) => {
   const modulo = await obtenerModuloPorId(idModulo);
   if (!modulo) return { tope: 0, porUsuario: 0 };
@@ -456,11 +487,14 @@ const calcularCupoWhatsappEmpresa = async (idEmpresa, idModulo) => {
   const porUsuario = Number(modulo.whatsapp_mensajes_mes_por_usuario) || 30;
   const topeEmpresa = Number(modulo.whatsapp_mensajes_mes_tope_empresa) || 500;
   const calculado = usuariosWa * porUsuario;
+  const tope = calculado > 0 ? Math.min(topeEmpresa, calculado) : 0;
 
   return {
-    tope: Math.min(topeEmpresa, calculado > 0 ? calculado : topeEmpresa),
+    tope,
     porUsuario,
     usuarios_whatsapp: usuariosWa,
+    total_mensajes_empresa: calculado,
+    tope_absoluto_empresa: topeEmpresa,
   };
 };
 
@@ -511,4 +545,5 @@ module.exports = {
   incrementarUsoWhatsapp,
   calcularCupoWhatsappEmpresa,
   obtenerUsoWhatsappMes,
+  obtenerResumenWhatsappModulo,
 };

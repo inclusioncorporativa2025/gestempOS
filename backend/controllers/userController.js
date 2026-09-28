@@ -648,6 +648,46 @@ const editUsuario= async (req, res) => {
             usuarioUpdate.email = emailNormalizado;
         }
 
+        if (
+            Object.prototype.hasOwnProperty.call(values, 'telefonoWhatsapp')
+            || Object.prototype.hasOwnProperty.call(values, 'telefono_whatsapp')
+        ) {
+            if (!puedeEditarEmail) {
+                return res.status(403).json({
+                    message: 'No tienes permiso para cambiar el móvil de este usuario',
+                    codigo: 'TELEFONO_NO_EDITABLE',
+                });
+            }
+
+            const raw = values.telefonoWhatsapp ?? values.telefono_whatsapp;
+            if (raw == null || String(raw).trim() === '') {
+                usuarioUpdate.telefono_whatsapp = null;
+            } else {
+                const telefonoNorm = normalizarTelefonoWhatsapp(raw);
+                if (!telefonoNorm) {
+                    return res.status(400).json({
+                        message: 'Teléfono móvil no válido. Usa un número español (9 dígitos) o formato internacional.',
+                    });
+                }
+
+                const duplicado = await Usuario.findOne({
+                    where: {
+                        telefono_whatsapp: telefonoNorm,
+                        id_usuario: { [Op.ne]: idUsuario },
+                        fecha_baja: null,
+                    },
+                });
+
+                if (duplicado) {
+                    return res.status(409).json({
+                        message: 'Ese número ya está registrado en otra cuenta',
+                    });
+                }
+
+                usuarioUpdate.telefono_whatsapp = telefonoNorm;
+            }
+        }
+
         await Usuario.update(
             usuarioUpdate,
             {

@@ -1,7 +1,8 @@
 .marketplace-asignaciones-page {
+  --marketplace-asignaciones-pad-x: 28px;
   width: 100%;
   min-height: 100%;
-  padding: 24px;
+  padding: 24px var(--marketplace-asignaciones-pad-x);
   box-sizing: border-box;
   background: var(--background);
   display: flex;
@@ -11,30 +12,178 @@
 
 .marketplace-asignaciones-page__header {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: flex-start;
+  gap: 24px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.marketplace-asignaciones-page__header-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.marketplace-asignaciones-page__header-sub {
+  display: block;
 }
 
 .marketplace-asignaciones-page__title {
   margin: 0 !important;
 }
 
-.marketplace-asignaciones-page__stats {
+.marketplace-asignaciones-page__empleado {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
-.marketplace-asignaciones-page__nota {
-  margin: 0 !important;
+.marketplace-asignaciones-page__empleado-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.marketplace-asignaciones-page__empleado-line {
+  font-size: 12px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.marketplace-asignaciones-page__empleado-sep {
+  flex-shrink: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.45));
+}
+
+.marketplace-asignaciones-page__empleado-link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.35;
+  flex-shrink: 0;
+  color: var(--color-primary, #a85ce0);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.marketplace-asignaciones-page__empleado-link:hover {
+  color: #8f3fd4;
+}
+
+.marketplace-asignaciones-page__switch-wrap {
+  display: inline-block;
+  line-height: 0;
+}
+
+.marketplace-asignaciones-page__wa-cupo {
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: right;
+}
+
+.marketplace-asignaciones-page__wa-icon {
+  font-size: 22px;
+  color: #25d366;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.marketplace-asignaciones-page__wa-cupo-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 200px;
+}
+
+.marketplace-asignaciones-page__wa-cupo-detail {
   font-size: 13px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.marketplace-asignaciones-page__wa-progress {
+  margin: 4px 0 0;
+  width: 200px;
+}
+
+.marketplace-asignaciones-page__wa-progress.ant-progress-line {
+  margin-inline-end: 0;
+}
+
+.marketplace-asignaciones-page__wa-col-head {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1;
+}
+
+.marketplace-asignaciones-page__wa-col-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.45));
+}
+
+.marketplace-asignaciones-page__wa-col-info:hover,
+.marketplace-asignaciones-page__wa-col-info:focus-visible {
+  color: var(--color-primary, #a85ce0);
 }
 
 @media (max-width: 768px) {
   .marketplace-asignaciones-page {
-    padding: 16px;
+    --marketplace-asignaciones-pad-x: 16px;
+    padding: 16px var(--marketplace-asignaciones-pad-x);
+  }
+
+  .marketplace-asignaciones-page__header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .marketplace-asignaciones-page__wa-cupo {
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+
+  .marketplace-asignaciones-page__wa-cupo-detail {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 1280px) {
+  .marketplace-asignaciones-page {
+    --marketplace-asignaciones-pad-x: 16px;
   }
 }

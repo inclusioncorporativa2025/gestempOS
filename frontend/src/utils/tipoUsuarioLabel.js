@@ -27,6 +27,12 @@ export const esStaffEmpresa = (tipoUsuario) =>
 export const esStaffEmpresaSesion = (user) =>
   esStaffEmpresa(user?.tipo_usuario);
 
+/** Marketplace y módulos de dirección (no personal ni inspector). */
+export const puedeVerMarketplace = esStaffEmpresa;
+
+export const puedeVerMarketplaceSesion = (user) =>
+  puedeVerMarketplace(user?.tipo_usuario);
+
 /** Enviar registros horarios por correo: admin, supervisor y roles plataforma. */
 export const puedeEnviarRegistrosPorEmail = (tipoUsuario) =>
   esStaffEmpresa(tipoUsuario);

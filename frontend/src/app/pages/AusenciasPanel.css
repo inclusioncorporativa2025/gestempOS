@@ -80,6 +80,19 @@
   overflow: hidden;
 }
 
+.ausencias-panel .ausencias-table .ant-table-thead > tr > th {
+  white-space: nowrap;
+  word-break: normal;
+  vertical-align: middle;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.ausencias-panel .ausencias-table .ant-table-thead > tr > th.ausencias-col-acciones,
+.ausencias-panel .ausencias-table .ant-table-tbody > tr > td.ausencias-col-acciones {
+  text-align: center;
+}
+
 .ausencias-panel .ausencias-col-fecha,
 .ausencias-panel .ausencias-fecha {
   white-space: nowrap;

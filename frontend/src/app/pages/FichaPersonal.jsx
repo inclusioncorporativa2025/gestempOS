@@ -2,9 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   Card,
-  Tabs,
   Select,
-  Descriptions,
   Table,
   Button,
   DatePicker,
@@ -13,12 +11,17 @@ import {
   message,
   Spin,
   Empty,
-  Input,
+  Row,
+  Col,
+  Tooltip,
 } from 'antd';
 import {
   ArrowLeftOutlined,
+  CameraOutlined,
   EyeOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
+import { getInicialesEmpresa } from '../../utils/empresaBranding';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { APP_ROUTES } from '../../constants/routes';
@@ -67,7 +70,11 @@ import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import { parseFechaFichaje } from '../../utils/fechaFichaje';
 import RegistroDiaCard from '../components/cards/RegistroDiaCard';
 import RegistroMensualModal from '../components/RegistroMensualModal';
+import DatoCampoEditable from '../components/DatoCampoEditable';
+import FpSeccionContrasena from '../components/FpSeccionContrasena';
+import { useAuth } from '../../config/AuthContext';
 import './FichaPersonal.css';
+import '../components/shared/TableAcciones.css';
 
 dayjs.locale('es');
 
@@ -78,7 +85,17 @@ const MOBILE_BREAKPOINT = 950;
 const formatearFecha = (fecha) =>
   fecha && dayjs(fecha).isValid() ? dayjs(fecha).format('DD/MM/YYYY HH:mm') : '—';
 
+const DatoCampo = ({ label, children }) => (
+  <div className="fp-dato">
+    <Text type="secondary" className="fp-dato__label">
+      {label}
+    </Text>
+    <div className="fp-dato__valor">{children}</div>
+  </div>
+);
+
 const FichaPersonal = () => {
+  const { patchUser } = useAuth();
   const { tieneFeature } = usePlan();
   const puedeVerVacaciones = tieneFeature('vacaciones');
   const puedeVerAusencias = tieneFeature('ausencias_basicas');
@@ -116,8 +133,32 @@ const FichaPersonal = () => {
   const [convenioResuelto, setConvenioResuelto] = useState(null);
   const [convenioSeleccionado, setConvenioSeleccionado] = useState(undefined);
   const [guardandoConvenio, setGuardandoConvenio] = useState(false);
-  const [telefonoWhatsappInput, setTelefonoWhatsappInput] = useState('');
-  const [guardandoTelefono, setGuardandoTelefono] = useState(false);
+  const [resaltarTelefonoWhatsapp, setResaltarTelefonoWhatsapp] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.focusTelefonoWhatsapp) {
+      setActiveTabKey('datos');
+      setResaltarTelefonoWhatsapp(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state?.focusTelefonoWhatsapp, navigate]);
+
+  useEffect(() => {
+    if (!resaltarTelefonoWhatsapp) return undefined;
+    const timer = window.setTimeout(() => setResaltarTelefonoWhatsapp(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [resaltarTelefonoWhatsapp]);
+
+  useEffect(() => {
+    if (!resaltarTelefonoWhatsapp || activeTabKey !== 'datos') return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('fp-telefono-whatsapp')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeTabKey, resaltarTelefonoWhatsapp]);
 
   useEffect(() => {
     const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
@@ -205,11 +246,6 @@ const FichaPersonal = () => {
       }
 
       setUsuario(encontrado);
-      setTelefonoWhatsappInput(
-        encontrado.telefono_whatsapp
-          ? formatearTelefonoWhatsappDisplay(encontrado.telefono_whatsapp)
-          : '',
-      );
       setConvenioSeleccionado(encontrado.id_empresa_convenio ?? undefined);
 
       try {
@@ -451,6 +487,7 @@ const FichaPersonal = () => {
         <Button
           type="text"
           icon={<EyeOutlined />}
+          className="tbl-accion-btn"
           onClick={() => abrirDetalleCierre(record)}
           aria-label="Ver detalle del cierre"
         />
@@ -488,28 +525,82 @@ const FichaPersonal = () => {
   const modoConteoVisible = convenioResuelto?.modo_conteo_etiqueta
     || etiquetaModoConteo(usuario.convenio_modo_conteo || convenioResuelto?.reglas?.modo_conteo_vacaciones);
 
-  const guardarTelefonoWhatsapp = async () => {
-    const valor = telefonoWhatsappInput.trim();
+  const puedeEditarTelefonoWhatsapp = esMiPerfil || (puedeAjustarBolsa && !esPropio);
+
+  const aplicarPerfilLocal = (perfil) => {
+    if (!perfil) return;
+    setUsuario((prev) => (prev ? { ...prev, ...perfil } : prev));
+  };
+
+  const guardarCampoMiPerfil = async (payload, { mensajeOk = 'Cambios guardados' } = {}) => {
+    try {
+      const data = await editMiPerfil(payload);
+      aplicarPerfilLocal(data.perfil);
+      if (payload.nombre != null) {
+        patchUser({ nombre: data.perfil.nombre });
+      }
+      message.success(mensajeOk);
+      return data.perfil;
+    } catch (error) {
+      message.error(error.message || 'No se pudo guardar');
+      throw error;
+    }
+  };
+
+  const guardarNombreMiPerfil = async (nombreRaw) => {
+    const nombre = String(nombreRaw || '').trim();
+    if (!nombre) {
+      message.warning('Introduce tu nombre');
+      throw new Error('validation');
+    }
+    await guardarCampoMiPerfil({ nombre, dni: usuario.dni || '' }, { mensajeOk: 'Nombre actualizado' });
+  };
+
+  const guardarDniMiPerfil = async (dniRaw) => {
+    const dni = String(dniRaw || '').trim();
+    await guardarCampoMiPerfil(
+      { nombre: usuario.nombre, dni },
+      { mensajeOk: 'DNI actualizado' },
+    );
+  };
+
+  const guardarTelefonoWhatsapp = async (valorRaw) => {
+    const valor = String(valorRaw || '').trim();
     if (valor && !telefonoWhatsappValido(valor)) {
       message.warning('Introduce un móvil válido (España: 9 dígitos, p. ej. 612 345 678)');
-      return;
+      throw new Error('validation');
     }
 
-    setGuardandoTelefono(true);
+    if (!esMiPerfil && usuario) {
+      const idJornada = usuario.jornadas?.[0]?.id_jornada ?? jornadaAsignada?.id_jornada;
+      if (!idJornada) {
+        message.error('Asigna una jornada al empleado antes de guardar el teléfono');
+        throw new Error('validation');
+      }
+    }
+
     try {
-      const data = await editMiPerfil({
-        telefonoWhatsapp: valor || null,
-      });
-      const guardado = data.perfil?.telefono_whatsapp ?? null;
-      setUsuario((prev) => (prev ? { ...prev, telefono_whatsapp: guardado } : prev));
-      setTelefonoWhatsappInput(
-        guardado ? formatearTelefonoWhatsappDisplay(guardado) : '',
-      );
+      if (esMiPerfil) {
+        const data = await editMiPerfil({ telefonoWhatsapp: valor || null });
+        aplicarPerfilLocal(data.perfil);
+      } else if (usuario) {
+        const idJornada = usuario.jornadas?.[0]?.id_jornada ?? jornadaAsignada?.id_jornada;
+        await editUsuario(usuario.id_usuario, {
+          nombre: usuario.nombre,
+          dni: usuario.dni,
+          tipoUsuario: usuario.tipo_usuario,
+          activo: usuario.activo,
+          horario: idJornada,
+          telefonoWhatsapp: valor || null,
+        });
+        await cargarFicha();
+      }
       message.success(valor ? 'Teléfono guardado' : 'Teléfono eliminado');
     } catch (error) {
-      message.error(error.message || 'No se pudo guardar el teléfono');
-    } finally {
-      setGuardandoTelefono(false);
+      if (error.message !== 'validation') {
+        message.error(error.message || 'No se pudo guardar el teléfono');
+      }
+      throw error;
     }
   };
 
@@ -547,105 +638,170 @@ const FichaPersonal = () => {
       key: 'datos',
       label: 'Datos',
       children: (
-        <Descriptions
-          className="fp-datos-grid"
-          bordered
-          column={{ xs: 1, sm: 2 }}
-          size="middle"
-        >
-          <Descriptions.Item label="Nombre">{usuario.nombre}</Descriptions.Item>
-          <Descriptions.Item label="Email">{usuario.email}</Descriptions.Item>
-          <Descriptions.Item label="Móvil (WhatsApp)">
-            {esMiPerfil ? (
-              <div className="fp-telefono-whatsapp">
-                <Input
-                  value={telefonoWhatsappInput}
-                  onChange={(e) => setTelefonoWhatsappInput(e.target.value)}
-                  placeholder="612 345 678 o +34 612 345 678"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  className="fp-telefono-whatsapp__input"
-                />
-                <Button
-                  type="primary"
-                  size="small"
-                  loading={guardandoTelefono}
-                  onClick={guardarTelefonoWhatsapp}
-                >
-                  Guardar
-                </Button>
-              </div>
-            ) : (
-              usuario.telefono_whatsapp
-                ? formatearTelefonoWhatsappDisplay(usuario.telefono_whatsapp)
-                : '—'
-            )}
-          </Descriptions.Item>
-          <Descriptions.Item label="DNI">{usuario.dni}</Descriptions.Item>
-          <Descriptions.Item label="Tipo">
-            {etiquetaTipoUsuario(usuario.tipo_usuario)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Tipo de hora">
-            {usuario.tipo_hora != null
-              ? etiquetaTipoHora(usuario.tipo_hora)
-              : jornadaAsignada?.tipo_hora
-                ? `${etiquetaTipoHora(jornadaAsignada.tipo_hora)} (jornada)`
-                : '—'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Fecha de alta">
-            {usuario.fecha_alta ? dayjs(usuario.fecha_alta).format('DD/MM/YYYY') : '—'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Activo">
-            {usuario.activo ? 'Sí' : 'No'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Convenio" span={2}>
-            {puedeEditarConvenio ? (
-              <div className="fp-convenio-edit">
-                <Select
-                  allowClear
-                  className="fp-convenio-select"
-                  placeholder="Convenio por defecto de la empresa"
-                  value={convenioSeleccionado}
-                  onChange={setConvenioSeleccionado}
-                  options={conveniosEmpresa.map((c) => ({
-                    value: c.id_empresa_convenio,
-                    label: c.nombre || c.catalogo?.nombre || `Convenio #${c.id_empresa_convenio}`,
-                  }))}
-                />
-                <Button
-                  type="primary"
-                  size="small"
-                  loading={guardandoConvenio}
-                  disabled={
-                    (convenioSeleccionado ?? null) === (usuario.id_empresa_convenio ?? null)
+        <div className="fp-datos">
+          <section className="fp-datos__section">
+            <Text className="fp-datos__section-title">Contacto</Text>
+            <Row gutter={[24, 20]}>
+              {esMiPerfil ? (
+                <Col xs={24} md={12}>
+                  <DatoCampoEditable
+                    label="Nombre completo"
+                    value={usuario.nombre || ''}
+                    editable
+                    onSave={guardarNombreMiPerfil}
+                    inputProps={{ autoComplete: 'name', placeholder: 'Tu nombre' }}
+                  />
+                </Col>
+              ) : null}
+              <Col xs={24} md={12}>
+                <DatoCampo label="Correo electrónico">
+                  <a className="fp-dato__link" href={`mailto:${usuario.email}`}>
+                    {usuario.email}
+                  </a>
+                </DatoCampo>
+              </Col>
+              <Col xs={24} md={12}>
+                <DatoCampoEditable
+                  label="Móvil (WhatsApp)"
+                  value={
+                    usuario.telefono_whatsapp
+                      ? formatearTelefonoWhatsappDisplay(usuario.telefono_whatsapp)
+                      : ''
                   }
-                  onClick={guardarConvenio}
-                >
-                  Guardar
-                </Button>
-              </div>
-            ) : (
-              nombreConvenioVisible
-            )}
-          </Descriptions.Item>
-          <Descriptions.Item label="Conteo de vacaciones">
-            {modoConteoVisible}
-          </Descriptions.Item>
-        </Descriptions>
+                  editable={puedeEditarTelefonoWhatsapp}
+                  onSave={guardarTelefonoWhatsapp}
+                  id="fp-telefono-whatsapp"
+                  highlight={resaltarTelefonoWhatsapp}
+                  autoStartEdit={resaltarTelefonoWhatsapp}
+                  emptyLabel="Añadir móvil"
+                  inputProps={{
+                    placeholder: '612 345 678 o +34 612 345 678',
+                    inputMode: 'tel',
+                    autoComplete: 'tel',
+                  }}
+                />
+              </Col>
+              <Col xs={24} sm={12} md={8}>
+                {esMiPerfil ? (
+                  <DatoCampoEditable
+                    label="DNI / NIF"
+                    value={usuario.dni || ''}
+                    editable
+                    onSave={guardarDniMiPerfil}
+                    inputProps={{ autoComplete: 'off', placeholder: 'Opcional' }}
+                  />
+                ) : (
+                  <DatoCampo label="DNI">{usuario.dni || '—'}</DatoCampo>
+                )}
+              </Col>
+            </Row>
+          </section>
+
+          {esMiPerfil ? (
+            <section className="fp-datos__section">
+              <Text className="fp-datos__section-title">Seguridad</Text>
+              <Row gutter={[24, 20]}>
+                <Col xs={24}>
+                  <FpSeccionContrasena />
+                </Col>
+              </Row>
+            </section>
+          ) : null}
+
+          <section className="fp-datos__section">
+            <Text className="fp-datos__section-title">Rol y jornada</Text>
+            <Row gutter={[24, 20]}>
+              <Col xs={24} sm={12} md={8}>
+                <DatoCampo label="Rol de usuario">
+                  {etiquetaTipoUsuario(usuario.tipo_usuario)}
+                </DatoCampo>
+              </Col>
+              <Col xs={24} sm={12} md={8}>
+                <DatoCampo label="Fecha de alta">
+                  {usuario.fecha_alta ? dayjs(usuario.fecha_alta).format('DD/MM/YYYY') : '—'}
+                </DatoCampo>
+              </Col>
+              <Col xs={24} sm={12} md={8}>
+                <DatoCampo label="Estado en la empresa">
+                  <Tag color={usuario.activo ? 'success' : 'default'} className="fp-dato__tag">
+                    {usuario.activo ? 'Activo' : 'No activo'}
+                  </Tag>
+                </DatoCampo>
+              </Col>
+              <Col xs={24} md={12}>
+                <DatoCampo label="Tipo de hora">
+                  {usuario.tipo_hora != null
+                    ? etiquetaTipoHora(usuario.tipo_hora)
+                    : jornadaAsignada?.tipo_hora
+                      ? `${etiquetaTipoHora(jornadaAsignada.tipo_hora)} (jornada)`
+                      : '—'}
+                </DatoCampo>
+              </Col>
+              <Col xs={24} md={12}>
+                <DatoCampo label="Jornada asignada">
+                  {jornadaAsignada?.nombre || '—'}
+                </DatoCampo>
+              </Col>
+            </Row>
+          </section>
+
+          <section className="fp-datos__section fp-datos__section--last">
+            <Text className="fp-datos__section-title">Convenio y vacaciones</Text>
+            <Row gutter={[24, 20]}>
+              <Col xs={24} lg={14}>
+                <DatoCampo label="Convenio">
+                  {puedeEditarConvenio ? (
+                    <div className="fp-convenio-edit">
+                      <Select
+                        allowClear
+                        className="fp-convenio-select"
+                        placeholder="Convenio por defecto de la empresa"
+                        value={convenioSeleccionado}
+                        onChange={setConvenioSeleccionado}
+                        options={conveniosEmpresa.map((c) => ({
+                          value: c.id_empresa_convenio,
+                          label: c.nombre || c.catalogo?.nombre || `Convenio #${c.id_empresa_convenio}`,
+                        }))}
+                      />
+                      <Button
+                        type="primary"
+                        size="small"
+                        loading={guardandoConvenio}
+                        disabled={
+                          (convenioSeleccionado ?? null) === (usuario.id_empresa_convenio ?? null)
+                        }
+                        onClick={guardarConvenio}
+                      >
+                        Guardar
+                      </Button>
+                    </div>
+                  ) : (
+                    nombreConvenioVisible
+                  )}
+                </DatoCampo>
+              </Col>
+              <Col xs={24} lg={10}>
+                <DatoCampo label="Conteo de vacaciones">
+                  {modoConteoVisible}
+                </DatoCampo>
+              </Col>
+            </Row>
+          </section>
+        </div>
       ),
     },
     {
       key: 'horario',
       label: 'Horario',
       children: jornadaAsignada ? (
-        <div>
-          <Title level={5} style={{ marginTop: 0 }}>
+        <div className="fp-horario-tab">
+          <Text type="secondary" className="fp-horario-tab__tipo">
             {jornadaAsignada.nombre}
-          </Title>
+          </Text>
           <RegistroDiaCard
             tipo={jornadaAsignada}
             variant={esPropio ? 'resumen' : 'detalle'}
-            contextoCalendario={esPropio ? contextoCalendario : null}
+            contextoCalendario={contextoCalendario}
           />
         </div>
       ) : (
@@ -764,49 +920,94 @@ const FichaPersonal = () => {
 
   return (
       <div className="fp-page">
-        <div className="fp-header">
-          <div className="fp-header-main">
-            {!esMiPerfil && (
-              <Button
-                type="link"
-                icon={<ArrowLeftOutlined />}
-                onClick={() => navigate(APP_ROUTES.users)}
-                className="fp-back-btn"
-              >
-                Volver al listado
-              </Button>
-            )}
-            <Title level={2} className="fp-title">
-              {esMiPerfil ? 'Mi perfil' : 'Ficha de personal'}
-            </Title>
-            <Text className="fp-subtitle">
-              {usuario.nombre} · {usuario.dni}
-            </Text>
-          </div>
-        </div>
+        {!esMiPerfil && (
+          <Button
+            type="link"
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate(APP_ROUTES.users)}
+            className="fp-back-btn"
+          >
+            Volver al listado
+          </Button>
+        )}
 
-        <Card className="fp-card">
-          {isMobile ? (
-            <>
-              <Select
-                className="fp-tab-select"
-                value={currentTabKey}
-                options={tabItems.map(({ key, label }) => ({ value: key, label }))}
-                onChange={setActiveTabKey}
-                aria-label="Sección del perfil"
-              />
-              <div className="fp-tab-content">
-                {currentTab?.children}
-              </div>
-            </>
-          ) : (
-            <Tabs
-              activeKey={currentTabKey}
-              onChange={setActiveTabKey}
-              items={tabItems}
-              destroyInactiveTabPane={false}
-            />
-          )}
+        <header className="fp-hero">
+          <Tooltip title="Próximamente podrás subir una foto de perfil">
+            <div className="fp-hero__avatar" aria-hidden>
+              <span className="fp-hero__avatar-initials">
+                {getInicialesEmpresa(usuario.nombre) || <UserOutlined />}
+              </span>
+              <span className="fp-hero__avatar-badge">
+                <CameraOutlined />
+              </span>
+            </div>
+          </Tooltip>
+          <div className="fp-hero__body">
+            <Text type="secondary" className="fp-hero__eyebrow">
+              {esMiPerfil ? 'Mi perfil' : 'Ficha de personal'}
+            </Text>
+            <Title level={2} className="fp-hero__title">
+              {usuario.nombre}
+            </Title>
+            <div className="fp-hero__meta">
+              <Tag className="fp-hero__rol">
+                {etiquetaTipoUsuario(usuario.tipo_usuario)}
+              </Tag>
+              {usuario.email ? (
+                <a className="fp-hero__meta-line" href={`mailto:${usuario.email}`}>
+                  {usuario.email}
+                </a>
+              ) : null}
+              {usuario.telefono_whatsapp ? (
+                <>
+                  <span className="fp-hero__sep" aria-hidden>·</span>
+                  <span className="fp-hero__meta-line">
+                    {formatearTelefonoWhatsappDisplay(usuario.telefono_whatsapp)}
+                  </span>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </header>
+
+        {isMobile ? (
+          <Select
+            className="fp-tab-select"
+            value={currentTabKey}
+            options={tabItems.map(({ key, label }) => ({ value: key, label }))}
+            onChange={setActiveTabKey}
+            aria-label="Sección del perfil"
+          />
+        ) : (
+          <div className="fp-submenu-wrap">
+            <nav className="fp-submenu" role="tablist" aria-label="Secciones del perfil">
+              {tabItems.map(({ key, label }) => {
+                const activo = currentTabKey === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={activo}
+                    className={
+                      activo
+                        ? 'fp-submenu__item fp-submenu__item--active'
+                        : 'fp-submenu__item'
+                    }
+                    onClick={() => setActiveTabKey(key)}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        )}
+
+        <Card className="fp-card" bordered={false}>
+          <div className="fp-tab-content" role="tabpanel">
+            {currentTab?.children}
+          </div>
         </Card>
 
         <RegistroMensualModal

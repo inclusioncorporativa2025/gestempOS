@@ -5,10 +5,8 @@ import {
   minutosSemanalesJornadaFija,
   minutosTramosDia,
   construirContextoCalendario,
-  mensajeDestacadoHorario,
-  obtenerAgendaProximosDias,
-  textoAgendaDia,
 } from '../../../utils/jornadaHoras';
+import JornadaSemanaCalendario from './JornadaSemanaCalendario';
 import './RegistroDiaCard.css';
 
 const { Text, Paragraph } = Typography;
@@ -79,16 +77,6 @@ const RegistroDiaCard = ({ tipo, variant = 'detalle', contextoCalendario = null 
     () => contextoCalendario || construirContextoCalendario(),
     [contextoCalendario],
   );
-  const mensajeDestacado = useMemo(
-    () => mensajeDestacadoHorario(diasLaborables, contextoHorario),
-    [diasLaborables, contextoHorario],
-  );
-  const agendaProximos = useMemo(
-    () => obtenerAgendaProximosDias(diasLaborables, contextoHorario, 14)
-      .filter((item) => item.offset >= 0),
-    [diasLaborables, contextoHorario],
-  );
-
   if (variant === 'resumen') {
     if (esFlexible) {
       return (
@@ -110,41 +98,13 @@ const RegistroDiaCard = ({ tipo, variant = 'detalle', contextoCalendario = null 
       );
     }
 
-    const agendaVisible = agendaProximos.filter(
-      (item) => item.tipo === 'laborable' || item.tipo === 'ausencia' || item.tipo === 'festivo',
-    );
-
     return (
       <div className="registro-dia registro-dia--resumen">
-        {mensajeDestacado && (
-          <Paragraph className="registro-dia-resumen-destacado">
-            {mensajeDestacado}
-          </Paragraph>
-        )}
-
-        {agendaVisible.length > 0 && (
-          <div className="registro-dia-resumen-semana">
-            <Text type="secondary" className="registro-dia-resumen-titulo">
-              Próximos días
-            </Text>
-            {agendaVisible.map((item) => (
-              <Text
-                key={item.fechaIso}
-                className={`registro-dia-resumen-linea registro-dia-resumen-linea--${item.tipo}`}
-              >
-                <Text strong>
-                  {item.offset === 0
-                    ? 'Hoy'
-                    : item.offset === 1
-                      ? 'Mañana'
-                      : item.fecha.format('dddd D/M')}
-                  :
-                </Text>{' '}
-                {textoAgendaDia(item)}
-              </Text>
-            ))}
-          </div>
-        )}
+        <JornadaSemanaCalendario
+          diasConfig={dias}
+          diasLaborables={diasLaborables}
+          contextoCalendario={contextoHorario}
+        />
       </div>
     );
   }

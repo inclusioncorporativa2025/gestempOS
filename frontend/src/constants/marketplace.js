@@ -7,8 +7,40 @@ export const MARKETPLACE_MODULOS = [
     nombre: 'Alertas de fichaje',
     menuLabel: 'Alerta fichaje',
     coverClass: 'marketplace-module-card__cover--alertas',
+    panelGestion: true,
+    subtituloPanel: 'Aviso por email o WhatsApp cuando alguien no ficha la entrada',
   },
 ];
+
+export const marketplaceModuloPath = (codigo) => `/marketplace/m/${codigo}`;
+
+export const marketplaceModulosGestion = () => (
+  MARKETPLACE_MODULOS.filter((m) => m.panelGestion !== false)
+);
+
+export const marketplaceRutaGestionPorDefecto = () => {
+  const modulos = marketplaceModulosGestion();
+  return modulos.length ? marketplaceModuloPath(modulos[0].codigo) : '/marketplace';
+};
+
+export const marketplaceCodigoDesdePathname = (pathname) => {
+  const match = String(pathname || '').match(/^\/marketplace\/m\/([^/]+)/);
+  return match?.[1] ?? null;
+};
+
+export const marketplaceEsRutaModulo = (pathname) => (
+  Boolean(marketplaceCodigoDesdePathname(pathname))
+);
+
+export const marketplaceNombreModulo = (codigo) => {
+  const row = MARKETPLACE_MODULOS.find((m) => m.codigo === codigo);
+  return row?.nombre ?? codigo;
+};
+
+export const marketplaceSubtituloModulo = (codigo) => {
+  const row = MARKETPLACE_MODULOS.find((m) => m.codigo === codigo);
+  return row?.subtituloPanel ?? 'Configuración del módulo contratado';
+};
 
 export const marketplaceModuloCoverClass = (codigo) => {
   const row = MARKETPLACE_MODULOS.find((m) => m.codigo === codigo);

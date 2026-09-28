@@ -256,3 +256,227 @@ export const textoAgendaDia = (item) => {
   }
   return item.detalle;
 };
+
+export const minutosDesdeMedianoche = (hora) => {
+  if (hora == null || hora === '') return null;
+  const str = String(hora).trim();
+  const iso = str.match(/T(\d{1,2}):(\d{2})/);
+  const hm = str.match(/^(\d{1,2}):(\d{2})/);
+  const match = iso || hm;
+  if (!match) return null;
+  return Number.parseInt(match[1], 10) * 60 + Number.parseInt(match[2], 10);
+};
+
+export const bloquesHorarioDia = (dia) => {
+  const tramos = Array.isArray(dia?.horario) ? dia.horario : [];
+  return tramos
+    .map((tramo) => {
+      const entradaRaw = tramo?.horaEntrada ?? tramo?.hora_entrada;
+      const salidaRaw = tramo?.horaSalida ?? tramo?.hora_salida;
+      const ini = minutosDesdeMedianoche(entradaRaw);
+      const fin = minutosDesdeMedianoche(salidaRaw);
+      if (ini == null || fin == null || fin <= ini) return null;
+      return {
+        ini,
+        fin,
+        etiqueta: `${formatearHoraLegible(entradaRaw)} – ${formatearHoraLegible(salidaRaw)}`,
+      };
+    })
+    .filter(Boolean);
+};
+
+const agendaItemParaFecha = (fecha, mapaJornada, contextoCalendario) => {
+  const fechaIso = fecha.format('YYYY-MM-DD');
+  const nombreDia = DIAS_SEMANA_ES[fecha.day()];
+  const { ausenciasPorFecha, festivosPorFecha } = contextoCalendario
+    ? contextoCalendario
+    : construirContextoCalendario();
+  const festivo = festivosPorFecha.get(fechaIso);
+  const ausenciasDia = ausenciasPorFecha.get(fechaIso) || [];
+  const ausencia = ausenciasDia[0];
+  const offset = fecha.startOf('day').diff(dayjs().startOf('day'), 'day');
+
+  if (festivo) {
+    return {
+      offset,
+      fecha,
+      fechaIso,
+      nombreDia,
+      tipo: 'festivo',
+      detalle: festivo,
+    };
+  }
+
+  if (ausencia) {
+    return {
+      offset,
+      fecha,
+      fechaIso,
+      nombreDia,
+      tipo: 'ausencia',
+      detalle: etiquetaAusenciaCalendario(ausencia.tipo),
+    };
+  }
+
+  const diaJornada = mapaJornada.get(nombreDia);
+  if (diaJornada && textoHorarioDia(diaJornada)) {
+    return {
+      offset,
+      fecha,
+      fechaIso,
+      nombreDia,
+      tipo: 'laborable',
+      dia: diaJornada,
+      detalle: textoRangoDia(diaJornada),
+      bloques: bloquesHorarioDia(diaJornada),
+    };
+  }
+
+  return {
+    offset,
+    fecha,
+    fechaIso,
+    nombreDia,
+    tipo: 'libre',
+    detalle: null,
+    bloques: [],
+  };
+};
+
+/** Semana calendario (lunes–domingo) con offset de semanas respecto a la actual */
+export const obtenerAgendaSemana = (
+  diasLaborables,
+  contextoCalendario = null,
+  semanaOffset = 0,
+) => {
+  if (!Array.isArray(diasLaborables) || diasLaborables.length === 0) return [];
+
+  const mapaJornada = new Map(diasLaborables.map((dia) => [dia.dia, dia]));
+  const inicioSemana = dayjs().startOf('week').add(semanaOffset, 'week');
+  const dias = [];
+
+  for (let i = 0; i < 7; i += 1) {
+    dias.push(agendaItemParaFecha(inicioSemana.add(i, 'day'), mapaJornada, contextoCalendario));
+  }
+
+  return dias;
+};
+
+export const resumenPatronSemanal = (diasLaborables) => {
+  if (!diasLaborables?.length) return null;
+  const porRango = new Map();
+  diasLaborables.forEach((dia) => {
+    const rango = textoRangoDia(dia);
+    if (!rango) return;
+    const lista = porRango.get(rango) || [];
+    lista.push(dia.dia);
+    porRango.set(rango, lista);
+  });
+  if (porRango.size !== 1) return null;
+  const [[rango, nombres]] = [...porRango.entries()];
+  const orden = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+  const sorted = [...nombres].sort((a, b) => orden.indexOf(a) - orden.indexOf(b));
+  const idx = sorted.map((n) => orden.indexOf(n));
+  const consecutivo = sorted.length > 1
+    && idx.every((v, i) => i === 0 || v === idx[i - 1] + 1);
+  let etiquetaDias;
+  if (sorted.length === 1) {
+    etiquetaDias = sorted[0];
+  } else if (consecutivo) {
+    etiquetaDias = `${sorted[0]} – ${sorted[sorted.length - 1]}`;
+  } else {
+    etiquetaDias = sorted.join(', ');
+  }
+  return { etiquetaDias, rango };
+};
+
+/** Frase legible del patrón semanal, p. ej. «De lunes a viernes, de 9:30 a 13:30». */
+export const fraseHorarioHabitual = (diasLaborables) => {
+  const patron = resumenPatronSemanal(diasLaborables);
+  if (!patron) return null;
+  const horas = patron.rango
+    .replace(/\s*–\s*/g, ' a ')
+    .replace(/(\d)h(?=\s|,|$)/g, '$1')
+    .replace(/(\d:\d{2})h/g, '$1');
+  return `De ${patron.etiquetaDias.toLowerCase()}, de ${horas}`;
+};
+
+export const mensajeDiaHorario = (item, { relativo = 'hoy' } = {}) => {
+  if (!item) return null;
+  const prefijo = relativo === 'hoy' ? 'Hoy' : relativo === 'manana' ? 'Mañana' : item.nombreDia;
+  if (item.tipo === 'festivo') {
+    return `${prefijo} es festivo (${item.detalle}). No hay jornada.`;
+  }
+  if (item.tipo === 'ausencia') {
+    return `${prefijo} tienes ${item.detalle}.`;
+  }
+  if (item.tipo === 'libre') {
+    return `${prefijo} no tienes jornada asignada.`;
+  }
+  if (item.tipo === 'laborable') {
+    const texto = textoHorarioDia(item.dia);
+    if (relativo === 'hoy') return `Hoy ${texto}.`;
+    if (relativo === 'manana') return `Mañana ${texto}.`;
+    return `${prefijo}: ${texto}.`;
+  }
+  return null;
+};
+
+export const DIAS_TARJETA_HORARIO = [
+  'Lunes',
+  'Martes',
+  'Miércoles',
+  'Jueves',
+  'Viernes',
+  'Sábado',
+  'Domingo',
+];
+
+/** Tarjetas fijas lun–dom según la jornada (sin fechas del calendario). */
+export const tarjetasDiasHorario = (diasConfig) => {
+  const mapa = new Map(
+    (Array.isArray(diasConfig) ? diasConfig : []).map((dia) => [dia.dia, dia]),
+  );
+  return DIAS_TARJETA_HORARIO.map((nombre) => {
+    const dia = mapa.get(nombre);
+    const minutos = dia ? minutosTramosDia(dia) : 0;
+    const rango = dia && minutos > 0 ? textoRangoDia(dia) : null;
+    return {
+      nombre,
+      laborable: Boolean(rango),
+      rango,
+    };
+  });
+};
+
+/** Aviso contextual solo para el día de mañana (festivo, ausencia o horario). */
+export const avisoMananaHorario = (diasLaborables, contextoCalendario = null) => {
+  const agenda = obtenerAgendaProximosDias(diasLaborables, contextoCalendario, 4);
+  const manana = agenda.find((item) => item.offset === 1);
+  if (!manana || manana.tipo === 'libre') return null;
+  return mensajeDiaHorario(manana, { relativo: 'manana' });
+};
+
+export const etiquetaCeldaSemana = (item) => {
+  if (!item) return { titulo: '—', subtitulo: null, variante: 'vacio' };
+  if (item.tipo === 'festivo') {
+    return { titulo: 'Festivo', subtitulo: item.detalle, variante: 'festivo' };
+  }
+  if (item.tipo === 'ausencia') {
+    return {
+      titulo: item.detalle.charAt(0).toUpperCase() + item.detalle.slice(1),
+      subtitulo: 'Ausencia',
+      variante: 'ausencia',
+    };
+  }
+  if (item.tipo === 'libre') {
+    return { titulo: 'Descanso', subtitulo: 'Sin jornada', variante: 'libre' };
+  }
+  if (item.tipo === 'laborable') {
+    const horas = item.detalle
+      ? item.detalle.replace(/\s*–\s*/g, ' – ')
+      : '—';
+    return { titulo: horas, subtitulo: 'Horario', variante: 'laborable' };
+  }
+  return { titulo: '—', subtitulo: null, variante: 'vacio' };
+};

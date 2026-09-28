@@ -1,0 +1,13 @@
+.fp-cuenta-loading {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
+.fp-cuenta .config-empresa-block {
+  margin-bottom: 8px;
+}
+
+.fp-cuenta__telefono--highlight {
+  box-shadow: 0 0 0 2px rgba(168, 92, 224, 0.35);
+}

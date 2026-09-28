@@ -45,6 +45,7 @@ import { getAuthToken } from '../utils/authSession';
 import GestionTiempoPage from './pages/GestionTiempoPage';
 import UserManagementForm from './pages/gestor/UserManagementForm';
 import ConfiguracionLayout, { ConfiguracionOrgGate } from './pages/gestor/ConfiguracionLayout';
+import ConfiguracionIndexRedirect from './pages/gestor/ConfiguracionIndexRedirect';
 import ConfiguracionUsuario from './pages/gestor/ConfiguracionUsuario';
 import ConfiguracionEmpresa from './pages/gestor/ConfiguracionEmpresa';
 import ConfiguracionJornada from './pages/gestor/ConfiguracionJornada';
@@ -80,13 +81,12 @@ import RenovarSuscripcion from './pages/facturacion/RenovarSuscripcion';
 import PagoRedirect from './pages/PagoRedirect';
 import NominasPage from './pages/NominasPage';
 import ProductividadPage from './pages/ProductividadPage';
+import { marketplaceModuloPath, MARKETPLACE_MODULO_ALERTAS, marketplaceRutaGestionPorDefecto } from '../constants/marketplace';
+import MarketplaceLayout from './pages/MarketplaceLayout';
 import MarketplacePage from './pages/MarketplacePage';
-import MarketplaceAsignacionesPage from './pages/MarketplaceAsignacionesPage';
+import MarketplaceModuloPage from './pages/MarketplaceModuloPage';
 import { useTrialStatus } from '../hooks/useTrialStatus';
 import { usePlan } from '../hooks/usePlan';
-import { useMarketplaceEmpresaModulos } from '../hooks/useMarketplaceEmpresaModulos';
-import { MARKETPLACE_MODULO_ALERTAS } from '../constants/marketplace';
-
 import './App.css';
 import './styles/sidebar.css';
 import './styles/app-layout.css';
@@ -124,7 +124,7 @@ const pages = [
     key: '9',
     icon: <CalendarOutlined />,
     path: APP_ROUTES.calendar,
-    tipousuario: [1, 2, 3, 4, 5],
+    tipousuario: [1, 2, 3, 4, 5, 6],
   },
   {
     label: 'Configuración',
@@ -168,8 +168,7 @@ const pages = [
     key: '15',
     icon: <ShopOutlined />,
     path: APP_ROUTES.marketplace,
-    tipousuario: [1, 3, 4],
-    marketplaceMenu: true,
+    tipousuario: [1, 2, 3, 4],
   },
   {
     label: 'Mi perfil',
@@ -182,10 +181,6 @@ const pages = [
 
 const COMPACT_DESKTOP_MAX = 1280;
 const MOBILE_MAX = 950;
-const MARKETPLACE_SUBMENU_KEY = '15-marketplace';
-
-const marketplaceModMenuKey = (codigo) => `marketplace-mod-${codigo}`;
-
 const shouldCollapseSidebar = (width) => width >= MOBILE_MAX && width < COMPACT_DESKTOP_MAX;
 
 const AppShell = () => {
@@ -202,8 +197,6 @@ const AppShell = () => {
   });
   const { trial, bloqueado, mostrarAviso } = useTrialStatus();
   const { tieneFeature } = usePlan();
-  const esRoot = Number(tipousuario) === 1;
-  const puedeVerMarketplaceMenu = [1, 3, 4].includes(Number(tipousuario));
   const [menuOpenKeys, setMenuOpenKeys] = useState([]);
 
   const authShellPaths = [
@@ -256,21 +249,9 @@ const AppShell = () => {
     return () => window.removeEventListener(OPEN_SUPPORT_EVENT, openSupport);
   }, []);
 
-  useEffect(() => {
-    if (location.pathname.startsWith('/marketplace')) {
-      setMenuOpenKeys([MARKETPLACE_SUBMENU_KEY]);
-    }
-  }, [location.pathname]);
-
   const isMobile = windowWidth < MOBILE_MAX;
   const isAuthShellPage = authShellPaths.includes(location.pathname)
     || location.pathname.startsWith('/pago/');
-  const { modulosActivos } = useMarketplaceEmpresaModulos(
-    puedeVerMarketplaceMenu && ready && !isAuthShellPage,
-  );
-  const mostrarMarketplaceEnMenu = puedeVerMarketplaceMenu && (
-    esRoot || modulosActivos.length > 0
-  );
   const esRutaFacturacion = FACTURACION_ROUTES.includes(location.pathname);
   const puedeFichar = [1, 2, 3, 4, 5].includes(Number(tipousuario));
 
@@ -285,16 +266,18 @@ const AppShell = () => {
             ? puedeVerNotificacionesSesion(user)
             : page.tipousuario.includes(tipousuario)
         )
+          && (page.path !== APP_ROUTES.settings
+            || [1, 2, 3, 4].includes(Number(tipousuario)))
           && (!page.planFeature || tieneFeature(page.planFeature)),
       )
       : [];
 
   const paginaActual = pages.find((page) => {
-    if (page.marketplaceMenu) return false;
     if (
       page.path === APP_ROUTES.settings
       || page.path === APP_ROUTES.platform
       || page.path === APP_ROUTES.hub
+      || page.path === APP_ROUTES.marketplace
     ) {
       return (
         location.pathname === page.path ||
@@ -307,97 +290,35 @@ const AppShell = () => {
     return page.path.toLowerCase() === location.pathname.toLowerCase();
   });
 
-  const selectedKeys = useMemo(() => {
-    if (location.pathname === APP_ROUTES.marketplace) {
-      return [MARKETPLACE_SUBMENU_KEY];
-    }
-    if (location.pathname === APP_ROUTES.marketplaceAsignaciones) {
-      return [marketplaceModMenuKey(MARKETPLACE_MODULO_ALERTAS)];
-    }
-    return paginaActual ? [paginaActual.key] : [];
-  }, [location.pathname, paginaActual]);
+  const selectedKeys = useMemo(
+    () => (paginaActual ? [paginaActual.key] : []),
+    [paginaActual],
+  );
 
-  const pagesParaMenu = filteredPages.filter((p) => !p.marketplaceMenu);
-
-  const menuItems = useMemo(() => {
-    const items = pagesParaMenu.map((item) => ({
+  const menuItems = useMemo(
+    () => filteredPages.map((item) => ({
       key: item.key,
       icon: item.icon,
       label: item.label,
       title: item.label,
-    }));
-
-    if (!mostrarMarketplaceEnMenu) {
-      return items;
-    }
-
-    const activadosChildren = modulosActivos.map((m) => ({
-      key: marketplaceModMenuKey(m.codigo),
-      label: m.nombre,
-    }));
-
-    const marketplaceChildren = activadosChildren.length
-      ? [{ type: 'group', label: 'Activados', children: activadosChildren }]
-      : undefined;
-
-    const marketplaceLabel = esRoot ? (
-      <span
-        className="app-menu-marketplace-title"
-        role="link"
-        tabIndex={0}
-        onClick={(e) => {
-          e.stopPropagation();
-          navigate(APP_ROUTES.marketplace);
-          closeDrawer();
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            navigate(APP_ROUTES.marketplace);
-            closeDrawer();
-          }
-        }}
-      >
-        Marketplace
-      </span>
-    ) : 'Marketplace';
-
-    const marketplaceItem = {
-      key: MARKETPLACE_SUBMENU_KEY,
-      icon: <ShopOutlined />,
-      label: marketplaceLabel,
-      title: 'Marketplace',
-      ...(marketplaceChildren ? { children: marketplaceChildren } : {}),
-    };
-
-    const idx = items.findIndex((i) => i.key === '14');
-    const insertAt = idx >= 0 ? idx + 1 : items.length;
-    return [...items.slice(0, insertAt), marketplaceItem, ...items.slice(insertAt)];
-  }, [pagesParaMenu, modulosActivos, esRoot, mostrarMarketplaceEnMenu, navigate]);
+    })),
+    [filteredPages],
+  );
 
   const handleMenuClick = ({ key }) => {
-    if (key === MARKETPLACE_SUBMENU_KEY && esRoot) {
-      navigate(APP_ROUTES.marketplace);
-      closeDrawer();
-      return;
-    }
-    if (key.startsWith('marketplace-mod-')) {
-      const codigo = key.slice('marketplace-mod-'.length);
-      if (codigo === MARKETPLACE_MODULO_ALERTAS) {
-        navigate(APP_ROUTES.marketplaceAsignaciones);
-      }
-      closeDrawer();
-      return;
-    }
-
     const page = pages.find((p) => p.key === key);
     if (page) {
+      const puedeConfigOrg = [1, 2, 3, 4].includes(Number(tipousuario));
       const dest =
         page.path === APP_ROUTES.settings
-          ? APP_ROUTES.settingsUsuario
+          ? (puedeConfigOrg ? APP_ROUTES.settingsEmpresa : APP_ROUTES.miPerfil)
           : page.path === APP_ROUTES.platform
             ? APP_ROUTES.platformEmpresas
-            : page.path;
+            : page.path === APP_ROUTES.marketplace
+              ? ([1, 2].includes(Number(tipousuario))
+                  ? APP_ROUTES.marketplace
+                  : marketplaceRutaGestionPorDefecto())
+              : page.path;
       navigate(dest);
       closeDrawer();
     }
@@ -570,7 +491,7 @@ const AppShell = () => {
                     </ProtectedRoute>
                   }
                 >
-                  <Route index element={<Navigate to="usuario" replace />} />
+                  <Route index element={<ConfiguracionIndexRedirect />} />
                   <Route path="usuario" element={<ConfiguracionUsuario />} />
                   <Route
                     path="empresa"
@@ -682,25 +603,29 @@ const AppShell = () => {
                   }
                 />
                 <Route
-                  path={APP_ROUTES.marketplaceAsignaciones}
-                  element={
-                    <ProtectedRoute allowedTypes={[1, 3, 4]}>
-                      <MarketplaceAsignacionesPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
                   path={APP_ROUTES.marketplace}
                   element={
-                    <ProtectedRoute allowedTypes={[1]}>
-                      <MarketplacePage />
+                    <ProtectedRoute allowedTypes={[1, 2, 3, 4]}>
+                      <MarketplaceLayout />
                     </ProtectedRoute>
                   }
-                />
+                >
+                  <Route index element={<MarketplacePage />} />
+                  <Route
+                    path="asignaciones"
+                    element={(
+                      <Navigate
+                        to={marketplaceModuloPath(MARKETPLACE_MODULO_ALERTAS)}
+                        replace
+                      />
+                    )}
+                  />
+                  <Route path="m/:codigoModulo" element={<MarketplaceModuloPage />} />
+                </Route>
                 <Route
                   path={APP_ROUTES.miPerfil}
                   element={
-                    <ProtectedRoute allowedTypes={[1, 2, 3, 4, 5]}>
+                    <ProtectedRoute allowedTypes={[1, 2, 3, 4, 5, 6]}>
                       <FichaPersonal />
                     </ProtectedRoute>
                   }

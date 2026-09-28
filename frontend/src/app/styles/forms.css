@@ -335,9 +335,48 @@ textarea.ant-input:focus {
 
 
 
-/* Botones Ant Design — anillo exterior (halo) */
+/* Botones Ant Design — anillo exterior (halo) en botones “filled”, no en iconos de tabla */
 
-.ant-btn:not(.ant-btn-link) {
+.ant-btn.ant-btn-icon-only,
+.ant-btn.ant-btn-text,
+.ant-btn.tbl-accion-btn,
+.ant-btn.be-accion-btn,
+.ant-btn.tlp-map-btn,
+.ant-btn.tlp-edit-btn,
+.app-sider-edge-toggle.ant-btn {
+  outline: none !important;
+  outline-offset: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.ant-btn.ant-btn-icon-only:hover,
+.ant-btn.ant-btn-icon-only:focus-visible,
+.ant-btn.ant-btn-icon-only:active,
+.ant-btn.ant-btn-text:hover,
+.ant-btn.ant-btn-text:focus-visible,
+.ant-btn.ant-btn-text:active,
+.ant-btn.tbl-accion-btn:hover,
+.ant-btn.tbl-accion-btn:focus-visible,
+.ant-btn.tbl-accion-btn:active,
+.ant-btn.be-accion-btn:hover,
+.ant-btn.be-accion-btn:focus-visible,
+.ant-btn.be-accion-btn:active,
+.ant-btn.tlp-map-btn:hover,
+.ant-btn.tlp-map-btn:focus-visible,
+.ant-btn.tlp-map-btn:active,
+.ant-btn.tlp-edit-btn:hover,
+.ant-btn.tlp-edit-btn:focus-visible,
+.ant-btn.tlp-edit-btn:active,
+.app-sider-edge-toggle.ant-btn:hover,
+.app-sider-edge-toggle.ant-btn:focus-visible,
+.app-sider-edge-toggle.ant-btn:active {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.ant-btn:not(.ant-btn-link):not(.ant-btn-icon-only):not(.ant-btn-text):not(.tbl-accion-btn):not(.be-accion-btn):not(.tlp-map-btn):not(.tlp-edit-btn):not(.app-sider-edge-toggle) {
 
   outline: 1px solid var(--btn-ring-color);
 
@@ -350,21 +389,21 @@ textarea.ant-input:focus {
     box-shadow 0.2s ease;
 }
 
-.ant-btn:not(.ant-btn-link):hover,
+.ant-btn:not(.ant-btn-link):not(.ant-btn-icon-only):not(.ant-btn-text):not(.tbl-accion-btn):not(.be-accion-btn):not(.tlp-map-btn):not(.tlp-edit-btn):not(.app-sider-edge-toggle):hover,
 
-.ant-btn:not(.ant-btn-link):focus-visible {
+.ant-btn:not(.ant-btn-link):not(.ant-btn-icon-only):not(.ant-btn-text):not(.tbl-accion-btn):not(.be-accion-btn):not(.tlp-map-btn):not(.tlp-edit-btn):not(.app-sider-edge-toggle):focus-visible {
 
   outline-color: var(--btn-ring-color-hover);
 }
 
-.ant-btn-dangerous:not(.ant-btn-link) {
+.ant-btn-dangerous:not(.ant-btn-link):not(.ant-btn-icon-only):not(.ant-btn-text):not(.tbl-accion-btn):not(.be-accion-btn) {
 
   outline-color: var(--btn-ring-color-danger);
 }
 
-.ant-btn-dangerous:not(.ant-btn-link):hover,
+.ant-btn-dangerous:not(.ant-btn-link):not(.ant-btn-icon-only):not(.ant-btn-text):not(.tbl-accion-btn):not(.be-accion-btn):hover,
 
-.ant-btn-dangerous:not(.ant-btn-link):focus-visible {
+.ant-btn-dangerous:not(.ant-btn-link):not(.ant-btn-icon-only):not(.ant-btn-text):not(.tbl-accion-btn):not(.be-accion-btn):focus-visible {
 
   outline-color: rgba(207, 74, 74, 0.16);
 }

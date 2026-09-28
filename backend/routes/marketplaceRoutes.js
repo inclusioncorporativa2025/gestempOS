@@ -12,7 +12,7 @@ const { requireRole, ROLES, ROLE_GROUPS } = require('../middleware/authMiddlewar
 
 const router = express.Router();
 
-router.post('/catalogo', requireRole(ROLES.ROOT), getCatalogo);
+router.post('/catalogo', requireRole(ROLE_GROUPS.COMPANY_STAFF), getCatalogo);
 
 router.post('/empresa/estado', requireRole(ROLE_GROUPS.COMPANY_STAFF), getEstadoEmpresa);
 

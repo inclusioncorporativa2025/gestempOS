@@ -1,0 +1,10 @@
+.mp-layout__content .marketplace-page,
+.mp-layout__content .marketplace-asignaciones-page {
+  padding-top: 0;
+  min-height: auto;
+}
+
+.mp-layout__content .marketplace-page__header,
+.mp-layout__content .marketplace-asignaciones-page__header {
+  margin-top: 0;
+}

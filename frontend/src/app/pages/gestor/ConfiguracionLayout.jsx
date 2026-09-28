@@ -6,6 +6,8 @@ import { Menu, Select, Typography } from 'antd';
 
 import { APP_ROUTES } from '../../../constants/routes';
 
+const TIPOS_CONFIG_ORG = [1, 2, 3, 4];
+
 import { useAuth } from '../../../config/AuthContext';
 
 import './Configuracion.css';
@@ -18,14 +20,12 @@ const MOBILE_BREAKPOINT = 950;
 
 
 
-const TIPOS_CONFIG_ORG = [1, 2, 3, 4];
-
 export const ConfiguracionOrgGate = ({ children }) => {
   const { user } = useAuth();
   const tipoUsuario = Number(user?.tipo_usuario);
 
   if (!TIPOS_CONFIG_ORG.includes(tipoUsuario)) {
-    return <Navigate to={APP_ROUTES.settingsUsuario} replace />;
+    return <Navigate to={APP_ROUTES.miPerfil} replace />;
   }
 
   return children;
@@ -57,24 +57,11 @@ const ConfiguracionLayout = () => {
 
   const submenuItems = useMemo(() => {
 
+    if (!puedeConfigOrg) {
+      return [];
+    }
+
     const items = [
-
-      {
-
-        key: APP_ROUTES.settingsUsuario,
-
-        label: 'Mi cuenta',
-
-      },
-
-    ];
-
-
-
-    if (puedeConfigOrg) {
-
-      items.push(
-
         {
 
           key: APP_ROUTES.settingsEmpresa,
@@ -99,11 +86,7 @@ const ConfiguracionLayout = () => {
 
         },
 
-      );
-
-    }
-
-
+    ];
 
     return items;
 
@@ -113,30 +96,25 @@ const ConfiguracionLayout = () => {
 
   const selectedKey =
 
-    submenuItems.find((item) => item.key === location.pathname)?.key ||
+    submenuItems.find((item) => item.key === location.pathname)?.key
 
-    APP_ROUTES.settingsUsuario;
-
-
-
-  const esMiCuenta = location.pathname === APP_ROUTES.settingsUsuario;
-
-
+    || APP_ROUTES.settingsEmpresa;
 
   useEffect(() => {
-
-    if (
-
-      !puedeConfigOrg &&
-
-      [APP_ROUTES.settingsEmpresa, APP_ROUTES.settingsJornada, APP_ROUTES.settingsConvenios].includes(location.pathname)
-
-    ) {
-
-      navigate(APP_ROUTES.settingsUsuario, { replace: true });
-
+    if (location.pathname === APP_ROUTES.settingsUsuario) {
+      navigate(APP_ROUTES.miPerfil, { replace: true });
+      return;
     }
 
+    if (
+      !puedeConfigOrg
+      && (
+        location.pathname.startsWith(`${APP_ROUTES.settings}/`)
+        || location.pathname === APP_ROUTES.settings
+      )
+    ) {
+      navigate(APP_ROUTES.miPerfil, { replace: true });
+    }
   }, [location.pathname, navigate, puedeConfigOrg]);
 
 
@@ -152,17 +130,10 @@ const ConfiguracionLayout = () => {
       </Title>
 
       <Text type="secondary" className="config-layout__subtitle">
-
-        {esMiCuenta
-
-          ? 'Gestiona tu perfil y preferencias personales'
-
-          : 'Ajustes generales de tu organización'}
-
+        Ajustes generales de tu organización
       </Text>
 
-
-
+      {submenuItems.length > 0 ? (
       <div className="config-layout__nav">
         {isMobile ? (
           <Select
@@ -182,8 +153,7 @@ const ConfiguracionLayout = () => {
           />
         )}
       </div>
-
-
+      ) : null}
 
       <div className="config-layout__content">
 

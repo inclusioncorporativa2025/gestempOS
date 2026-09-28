@@ -170,6 +170,8 @@ const AusenciasPanel = () => {
           title: 'Personal',
           dataIndex: 'nombre_usuario',
           key: 'nombre_usuario',
+          width: 160,
+          ellipsis: true,
           render: (nombre) => nombre || '—',
         }]
       : []),
@@ -232,6 +234,7 @@ const AusenciasPanel = () => {
       title: 'Comentario',
       dataIndex: 'comentarios',
       key: 'comentarios',
+      width: 180,
       ellipsis: true,
       render: (text) => text || '—',
     },
@@ -250,8 +253,9 @@ const AusenciasPanel = () => {
     {
       title: 'Acciones',
       key: 'acciones',
-      width: 72,
+      width: 96,
       fixed: 'right',
+      className: 'ausencias-col-acciones',
       render: (_, record) => {
         if (record.fecha_aceptacion && !record.fecha_cancelacion) {
           return (
@@ -505,12 +509,14 @@ const AusenciasPanel = () => {
             </div>
           ) : (
             <Table
+              className="ausencias-table"
               rowKey={(row) => `${row.id_ausencia}-${row.id_usuario}`}
               columns={columns}
               dataSource={filtrado}
               pagination={{ pageSize: 15, showSizeChanger: false }}
               locale={{ emptyText: <Empty description="No hay ausencias solicitadas" /> }}
-              scroll={{ x: verTodaEmpresa ? 960 : 820 }}
+              scroll={{ x: verTodaEmpresa ? 1580 : 1420 }}
+              tableLayout="fixed"
             />
           )}
         </Spin>

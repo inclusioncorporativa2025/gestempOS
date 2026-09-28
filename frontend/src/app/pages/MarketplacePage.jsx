@@ -25,7 +25,10 @@ import {
   getMarketplaceCatalogo,
   getMarketplaceEstadoEmpresa,
 } from '../../features/marketplace/marketplaceService';
-import { marketplaceModuloCoverClass } from '../../constants/marketplace';
+import {
+  marketplaceModuloCoverClass,
+  marketplaceModuloPath,
+} from '../../constants/marketplace';
 import './MarketplacePage.css';
 
 const { Title, Text, Paragraph } = Typography;
@@ -141,16 +144,6 @@ const MarketplacePage = () => {
 
   return (
     <div className="marketplace-page app-page">
-      <div className="marketplace-page__header">
-        <Title level={3} className="marketplace-page__title">
-          <ShopOutlined style={{ marginRight: 8 }} />
-          Marketplace
-        </Title>
-        <Text type="secondary" className="marketplace-page__subtitle">
-          Módulos opcionales — gestión interna ROOT
-        </Text>
-      </div>
-
       <Alert
         type="info"
         showIcon
@@ -182,11 +175,15 @@ const MarketplacePage = () => {
             const activo = contrato?.estado === 'active';
             const asientos = filaEstado?.asientos_activos ?? 0;
             const licencias = Number(contrato?.licencias_facturadas) || 0;
+            const waUso = filaEstado?.whatsapp_uso;
             const asientosLabel = activo
               ? `${asientos} asiento${asientos === 1 ? '' : 's'} activos`
               : licencias > 0
                 ? `${licencias} asiento${licencias === 1 ? '' : 's'} al activar`
                 : '0 asientos · se facturan al asignar personal';
+            const waLabel = activo && waUso
+              ? `WhatsApp ${waUso.mes}: ${waUso.mensajes_enviados}/${waUso.tope_mensajes} msg`
+              : null;
 
             const precio = Number(modulo.precio_mensual_eur).toLocaleString('es-ES', {
               minimumFractionDigits: 2,
@@ -217,9 +214,19 @@ const MarketplacePage = () => {
                       € / usuario / mes
                     </Text>
                     <div className="marketplace-module-card__footer">
-                      <Text type="secondary" className="marketplace-module-card__seats">
-                        {idEmpresaConsulta ? asientosLabel : '—'}
-                      </Text>
+                      <div className="marketplace-module-card__seats">
+                        <Text type="secondary">
+                          {idEmpresaConsulta ? asientosLabel : '—'}
+                        </Text>
+                        {idEmpresaConsulta && waLabel ? (
+                          <>
+                            <br />
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              {waLabel}
+                            </Text>
+                          </>
+                        ) : null}
+                      </div>
                       <Space wrap size="small">
                         {!activo ? (
                           <Button
@@ -236,10 +243,10 @@ const MarketplacePage = () => {
                             <Button
                               size="small"
                               onClick={() => navigate(
-                                `${APP_ROUTES.marketplaceAsignaciones}?idEmpresa=${idEmpresaConsulta}`,
+                                `${marketplaceModuloPath(modulo.codigo)}?idEmpresa=${idEmpresaConsulta}`,
                               )}
                             >
-                              Canales
+                              Gestionar
                             </Button>
                             <Button
                               size="small"
