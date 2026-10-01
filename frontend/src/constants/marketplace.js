@@ -7,8 +7,13 @@ export const MARKETPLACE_MODULOS = [
     nombre: 'Alertas de fichaje',
     menuLabel: 'Alerta fichaje',
     coverClass: 'marketplace-module-card__cover--alertas',
+    coverImage: '/marketplace/alertas-fichaje-catalogo.png',
+    coverImageAlt: 'Recordatorio de registro de jornada laboral',
     panelGestion: true,
-    subtituloPanel: 'Aviso por email o WhatsApp cuando alguien no ficha la entrada',
+    subtituloPanel:
+      'Aviso por email o WhatsApp para registrar la jornada; canales configurables por persona asignada',
+    descripcionCatalogo:
+      'Si una persona trabajadora no ha registrado su jornada a tiempo, recibe un aviso por email o WhatsApp para que la registre. Los canales se configuran por persona al asignar el módulo.',
   },
 ];
 
@@ -42,9 +47,25 @@ export const marketplaceSubtituloModulo = (codigo) => {
   return row?.subtituloPanel ?? 'Configuración del módulo contratado';
 };
 
+export const marketplaceDescripcionCatalogoModulo = (codigo, descripcionApi) => {
+  const row = MARKETPLACE_MODULOS.find((m) => m.codigo === codigo);
+  if (row?.descripcionCatalogo) return row.descripcionCatalogo;
+  return descripcionApi ?? '';
+};
+
 export const marketplaceModuloCoverClass = (codigo) => {
   const row = MARKETPLACE_MODULOS.find((m) => m.codigo === codigo);
   return row?.coverClass ?? 'marketplace-module-card__cover--default';
+};
+
+export const marketplaceModuloCoverImage = (codigo) => {
+  const row = MARKETPLACE_MODULOS.find((m) => m.codigo === codigo);
+  return row?.coverImage ?? null;
+};
+
+export const marketplaceModuloCoverImageAlt = (codigo) => {
+  const row = MARKETPLACE_MODULOS.find((m) => m.codigo === codigo);
+  return row?.coverImageAlt ?? '';
 };
 
 export const marketplaceModuloMenuLabel = (codigo) => {

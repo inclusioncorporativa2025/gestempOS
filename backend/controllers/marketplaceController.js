@@ -164,7 +164,7 @@ const postGuardarAsignacion = async (req, res) => {
       return res.status(403).json({ message: error.message, code: error.code });
     }
     if (error.status === 400 || error.status === 404) {
-      return res.status(error.status).json({ message: error.message });
+      return res.status(error.status).json({ message: error.message, code: error.code });
     }
     console.error('postGuardarAsignacion:', error.message);
     return res.status(500).json({ message: 'Error al guardar la asignación' });

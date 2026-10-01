@@ -32,12 +32,19 @@
 
 .marketplace-page__grid {
   width: 100%;
+  justify-content: flex-start;
+}
+
+.marketplace-page__card-col {
+  max-width: 360px;
 }
 
 .marketplace-module-card {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
+  max-width: 360px;
   border-radius: 16px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.72);
@@ -52,6 +59,25 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+}
+
+.marketplace-module-card__cover--image {
+  height: 160px;
+  background: #e8e0f5;
+}
+
+.marketplace-module-card__cover--image.marketplace-module-card__cover--alertas {
+  background: #e8e0f5;
+}
+
+.marketplace-module-card__cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
 }
 
 .marketplace-module-card__cover--alertas {
@@ -80,6 +106,7 @@
   position: absolute;
   top: 12px;
   right: 12px;
+  z-index: 1;
   margin: 0 !important;
   border: none;
 }
@@ -127,7 +154,16 @@
     padding: 16px;
   }
 
+  .marketplace-page__card-col,
+  .marketplace-module-card {
+    max-width: none;
+  }
+
   .marketplace-module-card__cover {
     height: 120px;
+  }
+
+  .marketplace-module-card__cover--image {
+    height: 132px;
   }
 }

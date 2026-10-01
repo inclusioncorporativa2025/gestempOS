@@ -24,7 +24,7 @@ const {
   incrementarUsoWhatsapp,
 } = require('./marketplaceModuloService');
 const { enviarAlertaFichajeEmpleado, enviarAlertaFichajeSupervisor } = require('../utils/mailService');
-const { sendText } = require('./whatsappMessaging');
+const { sendAlertaFichajeWhatsapp } = require('./whatsappAlertasTemplate');
 const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/ausenciasCompat');
 const { expandirRangoDias } = require('./vacacionesConteoService');
 const {
@@ -439,10 +439,12 @@ const procesarEmpresa = async ({
             });
           } else {
             try {
-              const texto = ventana.tipo === 'recordatorio'
-                ? `${usuario.nombre}, recordatorio: aún no consta tu fichaje de entrada previsto a las ${horaEntradaLabel} (${fechaDia}).`
-                : `${usuario.nombre}, no consta tu fichaje de entrada previsto a las ${horaEntradaLabel} (${fechaDia}). Regístralo en TimeCor.`;
-              await sendText(usuario.telefono_whatsapp, texto);
+              await sendAlertaFichajeWhatsapp(usuario.telefono_whatsapp, {
+                nombre: usuario.nombre,
+                fechaDia,
+                horaEntrada: horaEntradaLabel,
+                tipoEnvio: ventana.tipo,
+              });
               await incrementarUsoWhatsapp(idEmpresa, idModulo, 1);
               await registrarEnvio({
                 idEmpresa,

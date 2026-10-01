@@ -119,6 +119,68 @@ const contarAsientosActivos = async (idEmpresa, idModulo) => (
   })
 );
 
+const obtenerResumenPlazasModulo = async (idEmpresa, idModulo, moduloRow = null) => {
+  const contrato = await obtenerEmpresaModuloRow(idEmpresa, idModulo);
+  const usuariosAsignados = await contarAsientosActivos(idEmpresa, idModulo);
+  const licenciasRaw = contrato?.licencias_facturadas;
+  const licenciasContratadas = licenciasRaw != null && licenciasRaw !== ''
+    ? Number(licenciasRaw)
+    : null;
+  const ilimitado = licenciasContratadas == null
+    || !Number.isFinite(licenciasContratadas)
+    || licenciasContratadas <= 0;
+  const plazasLibres = ilimitado
+    ? null
+    : Math.max(0, licenciasContratadas - usuariosAsignados);
+
+  let modulo = moduloRow;
+  if (!modulo) {
+    modulo = await obtenerModuloPorId(idModulo);
+  }
+  const precioMensual = modulo ? Number(modulo.precio_mensual_eur) : null;
+
+  return {
+    usuarios_asignados: usuariosAsignados,
+    licencias_contratadas: ilimitado ? null : licenciasContratadas,
+    plazas_libres: plazasLibres,
+    ilimitado,
+    precio_mensual_eur: Number.isFinite(precioMensual) ? precioMensual : null,
+    puede_contratar_plaza_stripe: false,
+  };
+};
+
+const assertHayPlazaLibreParaAsignar = async ({
+  idEmpresa,
+  idModulo,
+  idUsuario,
+  activoDeseado,
+}) => {
+  if (!activoDeseado) return;
+
+  const row = await MarketplaceUsuarioModulo.findOne({
+    where: {
+      id_empresa: idEmpresa,
+      id_modulo: idModulo,
+      id_usuario: idUsuario,
+      fecha_baja: null,
+    },
+  });
+  const yaAsignado = row && (row.activo === true || row.activo === 1);
+  if (yaAsignado) return;
+
+  const plazas = await obtenerResumenPlazasModulo(idEmpresa, idModulo);
+  if (plazas.ilimitado) return;
+
+  if ((plazas.plazas_libres ?? 0) <= 0) {
+    const error = new Error(
+      'No quedan plazas libres en el módulo. Contrata otra plaza para añadir un usuario.',
+    );
+    error.status = 400;
+    error.code = 'MARKETPLACE_SIN_PLAZAS_LIBRES';
+    throw error;
+  }
+};
+
 const listarEstadoEmpresa = async (idEmpresa) => {
   const catalogo = await listarCatalogo();
   const contratos = await MarketplaceEmpresaModulo.findAll({
@@ -314,11 +376,14 @@ const listarAsignacionesModulo = async (idEmpresa, codigoModulo) => {
 
   const whatsappUso = await obtenerResumenWhatsappModulo(idEmpresa, modulo.id_modulo);
 
+  const plazas = await obtenerResumenPlazasModulo(idEmpresa, modulo.id_modulo, modulo);
+
   if (!membresias.length) {
     return {
       modulo: serializarModulo(modulo),
       asignaciones: [],
       whatsapp_uso: whatsappUso,
+      plazas,
     };
   }
 
@@ -362,6 +427,7 @@ const listarAsignacionesModulo = async (idEmpresa, codigoModulo) => {
     modulo: serializarModulo(modulo),
     asignaciones,
     whatsapp_uso: whatsappUso,
+    plazas,
   };
 };
 
@@ -403,6 +469,13 @@ const guardarAsignacionUsuario = async ({
   const emailOn = canalEmail !== false && canalEmail !== 0;
   const waOn = canalWhatsapp === true || canalWhatsapp === 1;
 
+  await assertHayPlazaLibreParaAsignar({
+    idEmpresa,
+    idModulo: modulo.id_modulo,
+    idUsuario,
+    activoDeseado: activo,
+  });
+
   let row = await obtenerAsignacionUsuario(idEmpresa, idUsuario, modulo.id_modulo);
 
   if (row) {
@@ -427,20 +500,12 @@ const guardarAsignacionUsuario = async ({
   }
 
   const asientos = await contarAsientosActivos(idEmpresa, modulo.id_modulo);
-  await MarketplaceEmpresaModulo.update(
-    { licencias_facturadas: asientos, fecha_modificacion: ahora },
-    {
-      where: {
-        id_empresa: idEmpresa,
-        id_modulo: modulo.id_modulo,
-        fecha_baja: null,
-      },
-    },
-  );
+  const plazas = await obtenerResumenPlazasModulo(idEmpresa, modulo.id_modulo, modulo);
 
   return {
     id_usuario_modulo: row?.id_usuario_modulo ?? null,
     asientos_activos: asientos,
+    plazas,
   };
 };
 
@@ -546,4 +611,5 @@ module.exports = {
   calcularCupoWhatsappEmpresa,
   obtenerUsoWhatsappMes,
   obtenerResumenWhatsappModulo,
+  obtenerResumenPlazasModulo,
 };

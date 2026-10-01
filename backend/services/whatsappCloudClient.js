@@ -66,6 +66,35 @@ const sendInteractive = async (toPhone, interactive) =>
     interactive,
   });
 
+/**
+ * Plantilla aprobada en Meta (utility/marketing).
+ * @param {object} options
+ * @param {string} options.name - Nombre de plantilla, ej. timecor_alerta_fichaje_entrada
+ * @param {string} options.languageCode - Código idioma, ej. es
+ * @param {Array} [options.components] - Componentes body/button/header
+ */
+const sendTemplate = async (toPhone, { name, languageCode, components }) => {
+  if (!name) {
+    const error = new Error('Nombre de plantilla WhatsApp obligatorio');
+    error.status = 400;
+    throw error;
+  }
+
+  const template = {
+    name: String(name),
+    language: { code: String(languageCode || 'es') },
+  };
+
+  if (Array.isArray(components) && components.length > 0) {
+    template.components = components;
+  }
+
+  return postMessage(toPhone, {
+    type: 'template',
+    template,
+  });
+};
+
 const getConfigStatus = () => ({
   provider: 'meta',
   configured: isConfigured(),
@@ -79,6 +108,7 @@ const getConfigStatus = () => ({
 module.exports = {
   sendText,
   sendInteractive,
+  sendTemplate,
   isConfigured,
   getConfigStatus,
 };

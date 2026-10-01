@@ -88,14 +88,53 @@
   line-height: 0;
 }
 
-.marketplace-asignaciones-page__wa-cupo {
+.marketplace-asignaciones-page__header-aside {
   flex: 0 0 auto;
   margin-left: auto;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 20px 24px;
+}
+
+.marketplace-asignaciones-page__plazas-cupo,
+.marketplace-asignaciones-page__wa-cupo {
+  flex: 0 0 auto;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
   gap: 12px;
   text-align: right;
+}
+
+.marketplace-asignaciones-page__plazas-icon {
+  font-size: 22px;
+  color: var(--color-primary, #a85ce0);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.marketplace-asignaciones-page__plazas-cupo-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  min-width: 0;
+}
+
+.marketplace-asignaciones-page__plazas-detail {
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.marketplace-asignaciones-page__plazas-action.ant-btn {
+  height: auto;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .marketplace-asignaciones-page__wa-icon {
@@ -172,12 +211,14 @@
     gap: 12px;
   }
 
-  .marketplace-asignaciones-page__wa-cupo {
+  .marketplace-asignaciones-page__header-aside {
     margin-left: 0;
+    width: 100%;
     justify-content: flex-end;
   }
 
-  .marketplace-asignaciones-page__wa-cupo-detail {
+  .marketplace-asignaciones-page__wa-cupo-detail,
+  .marketplace-asignaciones-page__plazas-detail {
     white-space: normal;
   }
 }

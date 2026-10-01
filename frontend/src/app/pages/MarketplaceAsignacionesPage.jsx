@@ -1,5 +1,5 @@
 import React, {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -18,11 +18,14 @@ import {
 import {
   BellOutlined,
   InfoCircleOutlined,
+  TeamOutlined,
+  UserAddOutlined,
   WhatsAppOutlined,
 } from '@ant-design/icons';
 import {
   MARKETPLACE_MODULO_ALERTAS,
   marketplaceNombreModulo,
+  marketplaceSubtituloModulo,
 } from '../../constants/marketplace';
 import { APP_ROUTES } from '../../constants/routes';
 import { getIdEmpresa, getIdUsuario } from '../../utils/authSession';
@@ -54,7 +57,10 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
   const [moduloActivo, setModuloActivo] = useState(false);
   const [guardandoId, setGuardandoId] = useState(null);
   const [whatsappUso, setWhatsappUso] = useState(null);
+  const [plazas, setPlazas] = useState(null);
   const [waInfoOpen, setWaInfoOpen] = useState(false);
+  const [plazaStripeOpen, setPlazaStripeOpen] = useState(false);
+  const tablaRef = useRef(null);
 
   const cargar = useCallback(async () => {
     if (!idEmpresa) {
@@ -73,6 +79,7 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
       if (!activo) {
         setAsignaciones([]);
         setWhatsappUso(null);
+        setPlazas(null);
         return;
       }
 
@@ -82,6 +89,7 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
       });
       setAsignaciones(data.asignaciones ?? []);
       setWhatsappUso(data.whatsapp_uso ?? null);
+      setPlazas(data.plazas ?? null);
     } catch (error) {
       message.error(error.message || 'Error al cargar asignaciones');
       setAsignaciones([]);
@@ -122,11 +130,19 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
           : item
       )));
 
+      if (result.plazas) {
+        setPlazas(result.plazas);
+      }
       if (result.asientos_activos != null) {
         message.success(`Guardado · ${result.asientos_activos} usuario(s) con módulo`);
       }
     } catch (error) {
-      message.error(error.message || 'No se pudo guardar');
+      if (error.code === 'MARKETPLACE_SIN_PLAZAS_LIBRES') {
+        message.warning(error.message);
+        setPlazaStripeOpen(true);
+      } else {
+        message.error(error.message || 'No se pudo guardar');
+      }
       await cargar();
     } finally {
       setGuardandoId(null);
@@ -161,6 +177,22 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
 
   const whatsappAgotado = whatsappCupoEmpresa.total > 0
     && whatsappCupoEmpresa.enviados >= whatsappCupoEmpresa.total;
+
+  const plazasIlimitadas = Boolean(plazas?.ilimitado);
+  const plazasLibres = plazasIlimitadas ? null : Number(plazas?.plazas_libres ?? 0);
+  const puedeAsignarNuevo = plazasIlimitadas || (plazasLibres ?? 0) > 0;
+  const precioPlazaLabel = useMemo(() => {
+    const precio = Number(plazas?.precio_mensual_eur ?? 0);
+    if (!Number.isFinite(precio) || precio <= 0) return null;
+    return precio.toLocaleString('es-ES', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }, [plazas?.precio_mensual_eur]);
+
+  const irATablaAsignacion = useCallback(() => {
+    tablaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   const irConfigurarTelefono = useCallback((row) => {
     const esPropio = Number(row.id_usuario) === Number(idUsuarioSesion);
@@ -211,21 +243,30 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
       key: 'email',
       width: 90,
       align: 'center',
-      render: (_, row) => (
-        <Tooltip title="Alertas de fichaje por correo">
-          <span className="marketplace-asignaciones-page__switch-wrap">
-            <Switch
-              size="small"
-              checked={row.asignado && row.canal_email}
-              disabled={guardandoId === row.id_usuario}
-              onChange={(checked) => persistirFila(row, {
-                canal_email: checked,
-                asignado: checked || row.canal_whatsapp,
-              })}
-            />
-          </span>
-        </Tooltip>
-      ),
+      render: (_, row) => {
+        const sinPlaza = !row.asignado && !puedeAsignarNuevo;
+        return (
+          <Tooltip
+            title={
+              sinPlaza
+                ? 'No hay plazas libres. Contrata otra plaza para añadir un usuario.'
+                : 'Alertas de fichaje por correo'
+            }
+          >
+            <span className="marketplace-asignaciones-page__switch-wrap">
+              <Switch
+                size="small"
+                checked={row.asignado && row.canal_email}
+                disabled={sinPlaza || guardandoId === row.id_usuario}
+                onChange={(checked) => persistirFila(row, {
+                  canal_email: checked,
+                  asignado: checked || row.canal_whatsapp,
+                })}
+              />
+            </span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: (
@@ -249,8 +290,11 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
       align: 'center',
       render: (_, row) => {
         const sinTelefono = !row.telefono_whatsapp;
+        const sinPlaza = !row.asignado && !puedeAsignarNuevo;
         let tooltipWa = 'Avisos por WhatsApp (cuentan en el cupo mensual de la empresa)';
-        if (sinTelefono) {
+        if (sinPlaza) {
+          tooltipWa = 'No hay plazas libres. Contrata otra plaza para añadir un usuario.';
+        } else if (sinTelefono) {
           tooltipWa = 'Sin móvil en ficha. Usa «Añadir móvil» en la fila del empleado.';
         }
 
@@ -260,7 +304,7 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
               <Switch
                 size="small"
                 checked={row.asignado && row.canal_whatsapp}
-                disabled={sinTelefono || guardandoId === row.id_usuario}
+                disabled={sinPlaza || sinTelefono || guardandoId === row.id_usuario}
                 onChange={(checked) => persistirFila(row, {
                   canal_whatsapp: checked,
                   asignado: row.canal_email || checked,
@@ -271,7 +315,7 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
         );
       },
     },
-  ], [guardandoId, irConfigurarTelefono, persistirFila]);
+  ], [guardandoId, irConfigurarTelefono, persistirFila, puedeAsignarNuevo]);
 
   return (
     <div className="marketplace-asignaciones-page">
@@ -282,31 +326,88 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
             {marketplaceNombreModulo(CODIGO_MODULO)}
           </Title>
           <Text type="secondary" className="marketplace-asignaciones-page__header-sub">
-            Email y WhatsApp por persona asignada
+            {marketplaceSubtituloModulo(CODIGO_MODULO)}
           </Text>
         </div>
-        {moduloActivo && whatsappUso ? (
-          <div className="marketplace-asignaciones-page__wa-cupo">
-            <WhatsAppOutlined
-              className="marketplace-asignaciones-page__wa-icon"
-              aria-hidden
-            />
-            <div className="marketplace-asignaciones-page__wa-cupo-body">
-              <Text type="secondary" className="marketplace-asignaciones-page__wa-cupo-detail">
-                {whatsappCupoEmpresa.enviados}
-                {' / '}
-                {whatsappCupoEmpresa.total}
-                {' '}
-                envíos WhatsApp
-              </Text>
-              <Progress
-                percent={whatsappProgress}
-                size="small"
-                status={whatsappAgotado ? 'exception' : 'active'}
-                showInfo={false}
-                className="marketplace-asignaciones-page__wa-progress"
-              />
-            </div>
+        {moduloActivo && (plazas || whatsappUso) ? (
+          <div className="marketplace-asignaciones-page__header-aside">
+            {plazas ? (
+              <Tooltip
+                title={
+                  plazasIlimitadas
+                    ? 'Usuarios con alertas activas. Las plazas de pago se gestionarán con Stripe.'
+                    : 'Usuarios con alertas / plazas contratadas / plazas libres para asignar.'
+                }
+              >
+                <div className="marketplace-asignaciones-page__plazas-cupo">
+                  <TeamOutlined
+                    className="marketplace-asignaciones-page__plazas-icon"
+                    aria-hidden
+                  />
+                  <div className="marketplace-asignaciones-page__plazas-cupo-body">
+                    <Text type="secondary" className="marketplace-asignaciones-page__plazas-detail">
+                      {plazas.usuarios_asignados ?? 0}
+                      {' / '}
+                      {plazasIlimitadas ? '—' : (plazas.licencias_contratadas ?? 0)}
+                      {' '}
+                      plazas
+                      {!plazasIlimitadas ? (
+                        <>
+                          {' · '}
+                          {plazasLibres}
+                          {' '}
+                          libres
+                        </>
+                      ) : null}
+                    </Text>
+                    {puedeAsignarNuevo ? (
+                      <Button
+                        type="link"
+                        size="small"
+                        className="marketplace-asignaciones-page__plazas-action"
+                        icon={<UserAddOutlined />}
+                        onClick={irATablaAsignacion}
+                      >
+                        Añadir usuario
+                      </Button>
+                    ) : (
+                      <Button
+                        type="link"
+                        size="small"
+                        className="marketplace-asignaciones-page__plazas-action"
+                        onClick={() => setPlazaStripeOpen(true)}
+                      >
+                        Contratar plaza
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </Tooltip>
+            ) : null}
+            {whatsappUso ? (
+              <div className="marketplace-asignaciones-page__wa-cupo">
+                <WhatsAppOutlined
+                  className="marketplace-asignaciones-page__wa-icon"
+                  aria-hidden
+                />
+                <div className="marketplace-asignaciones-page__wa-cupo-body">
+                  <Text type="secondary" className="marketplace-asignaciones-page__wa-cupo-detail">
+                    {whatsappCupoEmpresa.enviados}
+                    {' / '}
+                    {whatsappCupoEmpresa.total}
+                    {' '}
+                    envíos WhatsApp
+                  </Text>
+                  <Progress
+                    percent={whatsappProgress}
+                    size="small"
+                    status={whatsappAgotado ? 'exception' : 'active'}
+                    showInfo={false}
+                    className="marketplace-asignaciones-page__wa-progress"
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -336,17 +437,57 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
       {moduloActivo ? (
         <>
           <Spin spinning={loading}>
-            <Table
-              rowKey="id_usuario"
-              columns={columnas}
-              dataSource={asignaciones}
-              pagination={{ pageSize: 20, hideOnSinglePage: true }}
-              scroll={{ x: 640 }}
-              locale={{ emptyText: 'No hay personal para asignar' }}
-            />
+            <div ref={tablaRef}>
+              <Table
+                rowKey="id_usuario"
+                columns={columnas}
+                dataSource={asignaciones}
+                pagination={{ pageSize: 20, hideOnSinglePage: true }}
+                scroll={{ x: 640 }}
+                locale={{ emptyText: 'No hay personal para asignar' }}
+              />
+            </div>
           </Spin>
         </>
       ) : null}
+
+      <Modal
+        title="Contratar plaza adicional"
+        open={plazaStripeOpen}
+        onCancel={() => setPlazaStripeOpen(false)}
+        footer={[
+          <Button key="cerrar" onClick={() => setPlazaStripeOpen(false)}>
+            Cerrar
+          </Button>,
+          <Button key="stripe" type="primary" disabled>
+            Pagar con Stripe (próximamente)
+          </Button>,
+        ]}
+        width={520}
+      >
+        <Space direction="vertical" size={12} style={{ width: '100%' }}>
+          <Paragraph style={{ marginBottom: 0 }}>
+            Cada plaza permite activar las alertas de fichaje para
+            {' '}
+            <Text strong>un usuario</Text>
+            {precioPlazaLabel ? (
+              <>
+                {' '}
+                (
+                {precioPlazaLabel}
+                {' '}
+                € / usuario / mes)
+              </>
+            ) : null}
+            .
+          </Paragraph>
+          <Paragraph style={{ marginBottom: 0 }} type="secondary">
+            En la siguiente fase podrás ampliar plazas desde aquí con Stripe, igual que las
+            licencias del plan en Facturación. Hasta entonces, contacta con administración si
+            necesitas más usuarios con alertas.
+          </Paragraph>
+        </Space>
+      </Modal>
 
       <Modal
         title="Cupo WhatsApp — alertas de fichaje"

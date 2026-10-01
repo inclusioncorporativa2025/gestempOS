@@ -26,7 +26,10 @@ import {
   getMarketplaceEstadoEmpresa,
 } from '../../features/marketplace/marketplaceService';
 import {
+  marketplaceDescripcionCatalogoModulo,
   marketplaceModuloCoverClass,
+  marketplaceModuloCoverImage,
+  marketplaceModuloCoverImageAlt,
   marketplaceModuloPath,
 } from '../../constants/marketplace';
 import './MarketplacePage.css';
@@ -173,32 +176,51 @@ const MarketplacePage = () => {
             const filaEstado = estadoPorCodigo.get(modulo.codigo);
             const contrato = filaEstado?.contrato ?? null;
             const activo = contrato?.estado === 'active';
-            const asientos = filaEstado?.asientos_activos ?? 0;
+            const usuariosActivos = filaEstado?.asientos_activos ?? 0;
             const licencias = Number(contrato?.licencias_facturadas) || 0;
-            const waUso = filaEstado?.whatsapp_uso;
-            const asientosLabel = activo
-              ? `${asientos} asiento${asientos === 1 ? '' : 's'} activos`
+            const usuariosLabel = activo
+              ? `${usuariosActivos} usuario${usuariosActivos === 1 ? '' : 's'} activo${usuariosActivos === 1 ? '' : 's'}`
               : licencias > 0
-                ? `${licencias} asiento${licencias === 1 ? '' : 's'} al activar`
-                : '0 asientos · se facturan al asignar personal';
-            const waLabel = activo && waUso
-              ? `WhatsApp ${waUso.mes}: ${waUso.mensajes_enviados}/${waUso.tope_mensajes} msg`
-              : null;
-
+                ? `${licencias} usuario${licencias === 1 ? '' : 's'} al activar`
+                : '0 usuarios · se facturan al asignar personal';
             const precio = Number(modulo.precio_mensual_eur).toLocaleString('es-ES', {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             });
 
             const coverClass = marketplaceModuloCoverClass(modulo.codigo);
+            const coverImage = marketplaceModuloCoverImage(modulo.codigo);
 
             return (
-              <Col xs={24} sm={12} xl={8} key={modulo.codigo}>
+              <Col
+                xs={24}
+                sm={12}
+                lg={8}
+                xl={6}
+                className="marketplace-page__card-col"
+                key={modulo.codigo}
+              >
                 <article className="marketplace-module-card">
-                  <div className={`marketplace-module-card__cover ${coverClass}`}>
-                    <span className="marketplace-module-card__cover-icon">
-                      {moduloIcon(modulo.codigo)}
-                    </span>
+                  <div
+                    className={[
+                      'marketplace-module-card__cover',
+                      coverClass,
+                      coverImage ? 'marketplace-module-card__cover--image' : '',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    {coverImage ? (
+                      <img
+                        className="marketplace-module-card__cover-img"
+                        src={coverImage}
+                        alt={marketplaceModuloCoverImageAlt(modulo.codigo)}
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <span className="marketplace-module-card__cover-icon">
+                        {moduloIcon(modulo.codigo)}
+                      </span>
+                    )}
                     {activo ? estadoEtiqueta('active') : estadoEtiqueta(contrato?.estado)}
                   </div>
                   <div className="marketplace-module-card__body">
@@ -206,7 +228,7 @@ const MarketplacePage = () => {
                       {modulo.nombre}
                     </Title>
                     <Paragraph type="secondary" className="marketplace-module-card__desc">
-                      {modulo.descripcion}
+                      {marketplaceDescripcionCatalogoModulo(modulo.codigo, modulo.descripcion)}
                     </Paragraph>
                     <Text strong className="marketplace-module-card__price">
                       {precio}
@@ -216,16 +238,8 @@ const MarketplacePage = () => {
                     <div className="marketplace-module-card__footer">
                       <div className="marketplace-module-card__seats">
                         <Text type="secondary">
-                          {idEmpresaConsulta ? asientosLabel : '—'}
+                          {idEmpresaConsulta ? usuariosLabel : '—'}
                         </Text>
-                        {idEmpresaConsulta && waLabel ? (
-                          <>
-                            <br />
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              {waLabel}
-                            </Text>
-                          </>
-                        ) : null}
                       </div>
                       <Space wrap size="small">
                         {!activo ? (

@@ -11,7 +11,8 @@
  *
  * Cron en VPS: ver docs/marketplace-alertas.md (línea crontab; no incluir aquí por sintaxis del comentario).
  *
- * Requiere SMTP para email; WhatsApp opcional (Meta/OpenWA).
+ * Requiere SMTP para email; WhatsApp opcional (Meta plantilla u OpenWA texto).
+ * Prueba solo plantilla: scripts/test-wa-alerta-fichaje-template.js
  */
 
 const path = require('path');
