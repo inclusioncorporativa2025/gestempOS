@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { useAuth } from '../../config/AuthContext';
 import { registrarNavegacion } from '../../features/platform/platformService';
+import { marcarPasoOnboarding } from '../../features/onboarding/onboardingService';
+import { getIdEmpresa } from '../../utils/authSession';
 
 const RUTAS_IGNORADAS = new Set([
   APP_ROUTES.login,
@@ -25,6 +27,14 @@ const NavigationTracker = () => {
 
     ultimaRuta.current = path;
     registrarNavegacion(path).catch(() => {});
+
+    if (getIdEmpresa()) {
+      marcarPasoOnboarding({ visitaRuta: path })
+        .then(() => {
+          window.dispatchEvent(new CustomEvent('onboarding:refresh'));
+        })
+        .catch(() => {});
+    }
   }, [location.pathname, ready, user]);
 
   return null;

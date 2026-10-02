@@ -115,6 +115,9 @@ const crearRegistroFichaje = async ({
     });
   });
 
+  const { refrescarOnboardingTrasAccion } = require('./onboardingService');
+  refrescarOnboardingTrasAccion(idUsuario, idEmpresa).catch(() => {});
+
   return { tipoRegistro, tipoEvento };
 };
 

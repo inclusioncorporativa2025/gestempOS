@@ -155,6 +155,7 @@ const Home = () => {
         }
         await refetch();
         notifyJornadaActualizada();
+        window.dispatchEvent(new CustomEvent('onboarding:refresh'));
       }
     } catch (error) {
       console.error('Error al crear registro:', error);

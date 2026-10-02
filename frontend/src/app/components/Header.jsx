@@ -1,22 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { Layout, Input, Badge } from 'antd';
+import { Layout, Badge } from 'antd';
 import {
-  SearchOutlined,
   MailOutlined,
   BellOutlined,
 } from '@ant-design/icons';
-import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { useEstadoJornada } from '../../hooks/useEstadoJornada';
 import { useNotificacionesPendientes } from '../../hooks/useNotificacionesPendientes';
 import { useNovedadPendiente } from '../../hooks/useNovedadPendiente';
-import { getTipoUsuario } from '../../utils/authSession';
-import { puedeVerFichaPersonal } from '../../utils/tipoUsuarioLabel';
 import { useAuth } from '../../config/AuthContext';
 import { tieneAccesoHub } from '../../utils/hubAccess';
 import HeaderEmpresaMenu from './HeaderEmpresaMenu';
 import NovedadesDrawer from './NovedadesDrawer';
 import NovedadesRocketIcon from './NovedadesRocketIcon';
+import OnboardingHeaderPanel from './OnboardingHeaderPanel';
+import useOnboarding from '../../hooks/useOnboarding';
 import './Header.css';
 
 const { Header } = Layout;
@@ -28,12 +27,15 @@ const esRutaFichaje = (pathname) =>
 
 const MyHeader = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user } = useAuth();
-  const tipoUsuario = getTipoUsuario();
   const ocultarSoporte = tieneAccesoHub(user);
-  const mostrarBuscador = puedeVerFichaPersonal(tipoUsuario);
-  const [searchValue, setSearchValue] = useState('');
+  const {
+    data: onboardingData,
+    mostrar: mostrarOnboarding,
+    minimized: onboardingMinimized,
+    toggleMinimized: toggleOnboardingMinimized,
+    recargar: recargarOnboarding,
+  } = useOnboarding();
   const { estadoJornada, horasTrabajadas, refetch } = useEstadoJornada();
   const { pendientes: hayNotificacionesPendientes } = useNotificacionesPendientes();
   const { pendientes: novedadesPendientes } = useNovedadPendiente({ autoFetch: true });
@@ -51,12 +53,6 @@ const MyHeader = () => {
 
   const displayName = user?.nombre || 'Usuario';
 
-  const handleSearch = (value) => {
-    const q = (value ?? searchValue).trim();
-    if (!q) return;
-    navigate(APP_ROUTES.users, { state: { headerSearch: q } });
-  };
-
   const openSupport = () => {
     window.dispatchEvent(new CustomEvent(OPEN_SUPPORT_EVENT));
   };
@@ -64,17 +60,13 @@ const MyHeader = () => {
   return (
     <Header className="app-header">
       <div className="app-header__start">
-        {mostrarBuscador && (
-        <Input
-          className="app-header-search"
-          placeholder="Buscar personal..."
-          prefix={<SearchOutlined />}
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          onPressEnter={() => handleSearch()}
-          allowClear
-          aria-label="Buscar personal"
-        />
+        {mostrarOnboarding && onboardingData && (
+          <OnboardingHeaderPanel
+            data={onboardingData}
+            minimized={onboardingMinimized}
+            onToggleMinimized={toggleOnboardingMinimized}
+            onClosed={recargarOnboarding}
+          />
         )}
 
         {location.pathname !== APP_ROUTES.login && (

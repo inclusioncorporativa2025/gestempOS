@@ -32,12 +32,15 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback((token) => {
     const claims = setAuthToken(token);
     setUser(claimsToUser(claims));
+    window.dispatchEvent(new CustomEvent('onboarding:refresh'));
   }, []);
 
   const refreshSession = useCallback((token) => {
     const claims = setAuthToken(token);
-    setUser(claimsToUser(claims));
-    return claimsToUser(claims);
+    const nextUser = claimsToUser(claims);
+    setUser(nextUser);
+    window.dispatchEvent(new CustomEvent('onboarding:refresh'));
+    return nextUser;
   }, []);
 
   const logout = useCallback(() => {
@@ -48,11 +51,13 @@ export const AuthProvider = ({ children }) => {
   const impersonate = useCallback((token) => {
     const claims = startImpersonation(token);
     setUser(claimsToUser(claims));
+    window.dispatchEvent(new CustomEvent('onboarding:refresh'));
   }, []);
 
   const stopImpersonation = useCallback(() => {
     const claims = exitImpersonation();
     setUser(claimsToUser(claims));
+    window.dispatchEvent(new CustomEvent('onboarding:refresh'));
     return claims;
   }, []);
 
