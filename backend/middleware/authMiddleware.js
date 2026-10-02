@@ -62,7 +62,12 @@ const ROLE_GROUPS = {
     ROLES.INSPECTOR,
   ],
   /** Aprobar/rechazar solicitudes de empresa (horario, cierres, ausencias) */
-  APROBACION_SOLICITUDES: [ROLES.ADMIN_EMPRESA, ROLES.SUPERVISOR],
+  APROBACION_SOLICITUDES: [
+    ROLES.ROOT,
+    ROLES.PLATFORM_ADMIN,
+    ROLES.ADMIN_EMPRESA,
+    ROLES.SUPERVISOR,
+  ],
   ALL: [1, 2, 3, 4, 5, 6],
 };
 

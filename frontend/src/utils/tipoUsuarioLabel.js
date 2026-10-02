@@ -13,6 +13,12 @@ export const esAdministradorEmpresa = (tipoUsuario) =>  normalizarTipoUsuario(ti
 export const esInspector = (tipoUsuario) =>
   normalizarTipoUsuario(tipoUsuario) === 6;
 
+export const esInspectorSesion = (user) =>
+  esInspector(user?.tipo_usuario) || getTipoUsuarioEmpresa(user) === 6;
+
+export const tieneEmpresaEnSesion = (user) =>
+  user?.id_empresa != null && Number(user.id_empresa) > 0;
+
 /** Usuarios que pueden fichar (entrada/salida/descanso). */
 export const puedeUsarFichaje = (tipoUsuario) =>
   [1, 2, 3, 4, 5].includes(normalizarTipoUsuario(tipoUsuario));
@@ -74,17 +80,34 @@ export const getTipoUsuarioEmpresa = (userOrValor) => {
   return userOrValor != null ? normalizarTipoUsuario(userOrValor) : null;
 };
 
-export const puedeAprobarSolicitudesEmpresaSesion = (user) =>
-  puedeAprobarSolicitudesEmpresa(user?.tipo_usuario)
-  || puedeAprobarSolicitudesEmpresa(getTipoUsuarioEmpresa(user));
+export const puedeAprobarSolicitudesEmpresaSesion = (user) => {
+  if (!tieneEmpresaEnSesion(user) || esInspectorSesion(user)) {
+    return false;
+  }
+  const tipo = normalizarTipoUsuario(user?.tipo_usuario);
+  if ([1, 2, 3, 4].includes(tipo)) {
+    return true;
+  }
+  return puedeAprobarSolicitudesEmpresa(user?.tipo_usuario)
+    || puedeAprobarSolicitudesEmpresa(getTipoUsuarioEmpresa(user));
+};
 
-export const esEmpleadoNotificacionesSesion = (user) =>
-  normalizarTipoUsuario(user?.tipo_usuario) === 5
-  || getTipoUsuarioEmpresa(user) === 5;
+export const esEmpleadoNotificacionesSesion = (user) => {
+  if (!tieneEmpresaEnSesion(user) || esInspectorSesion(user)) {
+    return false;
+  }
+  return normalizarTipoUsuario(user?.tipo_usuario) === 5
+    || getTipoUsuarioEmpresa(user) === 5;
+};
 
-export const puedeVerNotificacionesSesion = (user) =>
-  puedeAprobarSolicitudesEmpresaSesion(user)
-  || esEmpleadoNotificacionesSesion(user);
+/** Bandeja de notificaciones: gestor (1–4 con empresa) o personal (5). Inspector (6) excluido. */
+export const puedeVerNotificacionesSesion = (user) => {
+  if (!user || esInspectorSesion(user) || !tieneEmpresaEnSesion(user)) {
+    return false;
+  }
+  return puedeAprobarSolicitudesEmpresaSesion(user)
+    || esEmpleadoNotificacionesSesion(user);
+};
 
 /** Cupo y ajustes de vacaciones en la propia ficha (super-admin y administrador de empresa). */
 export const puedeAutogestionarVacacionesSaldo = (tipoUsuario) =>

@@ -31,7 +31,10 @@ import { useAuth } from '../../config/AuthContext';
 import {
   puedeAprobarSolicitudesEmpresaSesion,
   esEmpleadoNotificacionesSesion,
+  puedeVerNotificacionesSesion,
 } from '../../utils/tipoUsuarioLabel';
+import { Navigate } from 'react-router-dom';
+import { APP_ROUTES } from '../../constants/routes';
 import { generarPdfCierreMensual } from '../../utils/generarPdfCierreMensual';
 import NotificacionesEmpleado from './NotificacionesEmpleado';
 import { usePlan } from '../../hooks/usePlan';
@@ -1569,6 +1572,10 @@ const setVisibleModalDetalles = async (info) => {
 
 const Notificaciones = () => {
   const { user } = useAuth();
+
+  if (!puedeVerNotificacionesSesion(user)) {
+    return <Navigate to={APP_ROUTES.home} replace />;
+  }
 
   if (esEmpleadoNotificacionesSesion(user) && !puedeAprobarSolicitudesEmpresaSesion(user)) {
     return <NotificacionesEmpleado />;

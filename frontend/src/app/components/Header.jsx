@@ -10,6 +10,7 @@ import { useEstadoJornada } from '../../hooks/useEstadoJornada';
 import { useNotificacionesPendientes } from '../../hooks/useNotificacionesPendientes';
 import { useNovedadPendiente } from '../../hooks/useNovedadPendiente';
 import { useAuth } from '../../config/AuthContext';
+import { puedeVerNotificacionesSesion } from '../../utils/tipoUsuarioLabel';
 import { tieneAccesoHub } from '../../utils/hubAccess';
 import HeaderEmpresaMenu from './HeaderEmpresaMenu';
 import NovedadesDrawer from './NovedadesDrawer';
@@ -52,6 +53,7 @@ const MyHeader = () => {
   }, [enHome, location.pathname, refetch]);
 
   const displayName = user?.nombre || 'Usuario';
+  const mostrarNotificaciones = puedeVerNotificacionesSesion(user);
 
   const openSupport = () => {
     window.dispatchEvent(new CustomEvent(OPEN_SUPPORT_EVENT));
@@ -122,6 +124,7 @@ const MyHeader = () => {
           </Badge>
         </button>
 
+        {mostrarNotificaciones && (
         <Link
           to={APP_ROUTES.notifications}
           className="app-header-icon-btn app-header-notificaciones"
@@ -131,6 +134,7 @@ const MyHeader = () => {
             <BellOutlined />
           </Badge>
         </Link>
+        )}
 
         <span className="app-header-divider" aria-hidden="true" />
 
