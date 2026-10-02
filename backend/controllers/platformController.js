@@ -226,7 +226,11 @@ const accederComoUsuario = async (req, res) => {
       ...construirExtrasSuplantacion(req, esRootAdmin),
     };
 
-    if (TIPOS_PLATAFORMA.includes(tipoDestino) && esRootAdmin) {
+    const membresias = esRootAdmin
+      ? await listarMembresiasSuplantacionRoot(usuario.id_usuario)
+      : await listarMembresiasActivas(usuario.id_usuario);
+
+    const emitirTokenPlataformaSinEmpresa = async () => {
       const token = jwt.sign(
         construirClaimsSesion(usuario, null, null, extrasSuplantacion),
         process.env.JWT_SECRET,
@@ -249,13 +253,16 @@ const accederComoUsuario = async (req, res) => {
         usuario: sanitizeUsuario(usuario),
         empresa: null,
       });
+    };
+
+    if (idEmpresaSolicitada && !membresias.length) {
+      return res.status(403).json({ message: 'El usuario no pertenece a esa empresa' });
     }
 
-    const membresias = esRootAdmin
-      ? await listarMembresiasSuplantacionRoot(usuario.id_usuario)
-      : await listarMembresiasActivas(usuario.id_usuario);
-
     if (!membresias.length) {
+      if (TIPOS_PLATAFORMA.includes(tipoDestino) && esRootAdmin) {
+        return emitirTokenPlataformaSinEmpresa();
+      }
       return res.status(403).json({
         message: 'El usuario no está vinculado a ninguna empresa',
       });

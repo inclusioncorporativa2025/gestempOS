@@ -10,7 +10,11 @@ import './Platform.css';
 
 const { Text, Paragraph } = Typography;
 
-const rutaInicioPorTipo = (tipo) => {
+const rutaInicioTrasSuplantacion = (data) => {
+  if (data?.empresa?.id_empresa) {
+    return APP_ROUTES.home;
+  }
+  const tipo = Number(data?.usuario?.tipo_usuario);
   if (tipo === 6) return APP_ROUTES.users;
   if ([1, 2].includes(tipo)) return APP_ROUTES.platformEmpresas;
   return APP_ROUTES.home;
@@ -34,7 +38,7 @@ const PlatformAcceder = () => {
     message.success(
       `Acceso temporal a ${data.usuario?.nombre || emailFallback} (${data.expiraEn || '1h'})`,
     );
-    navigate(rutaInicioPorTipo(Number(data.usuario?.tipo_usuario)));
+    navigate(rutaInicioTrasSuplantacion(data));
   };
 
   const solicitarAcceso = async (email, idEmpresa = null) => {
