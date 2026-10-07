@@ -3,9 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import { Alert, InputNumber, Spin, Typography, message } from 'antd';
 import { CheckCircleFilled } from '@ant-design/icons';
 import GradientButton from '../../components/shared/GradientButton';
+import PlanUnitPrice from '../../../components/PlanUnitPrice';
+import PlanAnnualTotalBreakdown from '../../../components/PlanAnnualTotalBreakdown';
 import {
   PLANS,
   ANNUAL_DISCOUNT_LABEL,
+  ANNUAL_LIST_PRICE_NOTE,
+  calcTotalAnualEfectivo,
   getPlanMinLicencias,
   getPlanLabel,
   normalizePlanId,
@@ -70,12 +74,11 @@ const RenovarSuscripcion = () => {
   const planDisponible = planInfo.available !== false;
 
   const precioEstimado = useMemo(() => {
-    const unitario =
-      ciclo === 'mensual'
-        ? parsePrecio(planInfo.priceMonthly)
-        : parsePrecio(planInfo.priceAnnual);
-    return unitario * licencias;
-  }, [ciclo, licencias, planInfo.priceAnnual, planInfo.priceMonthly]);
+    if (ciclo === 'mensual') {
+      return parsePrecio(planInfo.priceMonthly) * licencias;
+    }
+    return calcTotalAnualEfectivo(planInfo, licencias);
+  }, [ciclo, licencias, planInfo]);
 
   const iniciarCheckout = useCallback(async () => {
     if (!planDisponible) {
@@ -159,7 +162,7 @@ const RenovarSuscripcion = () => {
         showIcon
         className="facturacion-panel__alert"
         message={`Plan anual: ${ANNUAL_DISCOUNT_LABEL}.`}
-        description="Precios por licencia (usuario). El administrador no cuenta como licencia."
+        description="Precios por licencia (usuario). El admin no cuenta como licencia."
       />
 
       <div className="facturacion-panel" style={{ marginTop: 24 }}>
@@ -212,12 +215,11 @@ const RenovarSuscripcion = () => {
                           ) : null}
                         </span>
                         <span className="facturacion-plan-option__price">
-                          {ciclo === 'mensual'
-                            ? `${item.priceMonthly} €`
-                            : `${item.priceAnnual} €`}
-                          <span className="facturacion-plan-option__unit">
-                            {ciclo === 'mensual' ? '/ usuario / mes' : '/ usuario / año'}
-                          </span>
+                          <PlanUnitPrice
+                            plan={item}
+                            ciclo={ciclo}
+                            classPrefix="facturacion-plan-option"
+                          />
                         </span>
                         <span className="facturacion-plan-option__min">
                           Mín. {item.minLicencias} licencias
@@ -259,9 +261,13 @@ const RenovarSuscripcion = () => {
                   </span>
                 </strong>
               </div>
+              {ciclo === 'anual' ? (
+                <PlanAnnualTotalBreakdown plan={planInfo} licencias={licencias} />
+              ) : null}
               <Text type="secondary" className="facturacion-price-summary__note">
-                {PRICES_EXCLUDE_TAX_NOTE}
-                {ciclo === 'anual' ? ` ${ANNUAL_DISCOUNT_LABEL} en el primer año facturado.` : ''}
+                {ciclo === 'anual'
+                  ? `${ANNUAL_LIST_PRICE_NOTE} ${PRICES_EXCLUDE_TAX_NOTE}`
+                  : PRICES_EXCLUDE_TAX_NOTE}
               </Text>
             </div>
 

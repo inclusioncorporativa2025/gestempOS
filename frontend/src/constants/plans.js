@@ -8,16 +8,61 @@ export const PLAN_IDS = ['esencial', 'rrhh', 'completo'];
 /** Descuento anual: pago de 10 meses (2 meses gratis, ~17 %). */
 export const ANNUAL_DISCOUNT_LABEL = 'te regalamos 2 meses';
 export const ANNUAL_FREE_MONTHS_BADGE = '2 meses gratis';
+/** Texto corto: precio “de lista” = 12 × tarifa mensual. */
+export const ANNUAL_LIST_PRICE_NOTE =
+  'Primer año con pago anual: 2 meses gratis (pagas 10 meses al tarifario mensual). '
+  + 'Renovaciones al precio de referencia (12 meses × tarifa mensual por licencia), salvo promoción vigente.';
+
+export const ANNUAL_FIRST_YEAR_LABEL = 'Primer año con pago anual';
+export const ANNUAL_RENEWAL_LABEL = 'Renovación (2.º año en adelante)';
+
+
+export const parsePrecioPlan = (value) =>
+  parseFloat(String(value || '0').replace(',', '.'));
+
+export const formatPrecioPlan = (amount) =>
+  Number(amount).toLocaleString('es-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+/** Anual “sin descuento” (12 × mensual), p. ej. 30 € en Esencial. */
+export const getPrecioAnualLista = (plan) => {
+  const mensual = parsePrecioPlan(plan?.priceMonthly);
+  return Math.round(mensual * 12 * 100) / 100;
+};
+
+/** Anual con 2 meses regalo (precio efectivo), p. ej. 25 € en Esencial. */
+export const getPrecioAnualEfectivo = (plan) => parsePrecioPlan(plan?.priceAnnual);
+
+export const calcTotalAnualLista = (plan, licencias) =>
+  getPrecioAnualLista(plan) * licencias;
+
+export const calcTotalAnualEfectivo = (plan, licencias) =>
+  getPrecioAnualEfectivo(plan) * licencias;
+
+/** Texto promocional en tarjetas de plan (anual). */
+export const mensajePrimerAnoPorUsuario = (plan) => {
+  const precio = plan?.priceAnnual ?? formatPrecioPlan(getPrecioAnualEfectivo(plan));
+  return `¡Primer año ${precio} € por usuario!`;
+};
+
+/** Renovación (12 × tarifa mensual), p. ej. 30 €/usuario en Esencial. */
+export const mensajeRenovacionPorUsuario = (plan) => {
+  const lista = getPrecioAnualLista(plan);
+  const precio = Number.isInteger(lista) ? String(lista) : formatPrecioPlan(lista);
+  return `Precio de renovación: ${precio} € por usuario`;
+};
 
 /** En facturación, cada licencia = un usuario activo en la plataforma. */
 export const LICENSE_IS_USER_NOTE = 'Cada licencia equivale a un usuario.';
 export const PRICES_EXCLUDE_TAX_NOTE = 'Precios sin impuestos (IVA no incluido).';
 export const PLAN_UNAVAILABLE_TOOLTIP =
   'No disponible por el momento, disculpen las molestias';
-export const PRICE_UNIT_MONTHLY = '/ usuario / mes';
-export const PRICE_UNIT_ANNUAL = '/ usuario / año';
+export const PRICE_UNIT_MONTHLY = 'por usuario al mes';
+export const PRICE_UNIT_ANNUAL = 'por usuario al año';
 export const MIN_USERS_LABEL = (count) =>
-  `Mín. ${count} usuarios + administrador`;
+  `Mín. ${count} usuarios + admin`;
 
 /** Qué planes incluyen cada feature (para middleware/UI futuro). */
 export const PLAN_FEATURES = {
@@ -167,15 +212,13 @@ export const getPlanMinLicencias = (planId = 'esencial') => {
   return plan?.minLicenses ?? 5;
 };
 
-/** Importe mínimo anual (licencias mínimas × precio anual por licencia). */
-export const getPlanMinAnnual = (plan) => {
-  const annual = parseFloat(String(plan.priceAnnual).replace(',', '.'));
-  const total = plan.minLicenses * annual;
-  return total.toLocaleString('es-ES', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
+/** Importe mínimo anual efectivo (licencias mínimas × precio anual con descuento). */
+export const getPlanMinAnnual = (plan) =>
+  formatPrecioPlan(plan.minLicenses * getPrecioAnualEfectivo(plan));
+
+/** Importe mínimo anual de referencia (12 meses × mensual). */
+export const getPlanMinAnnualLista = (plan) =>
+  formatPrecioPlan(plan.minLicenses * getPrecioAnualLista(plan));
 
 export const getPlanLabel = (planId = 'esencial') => {
   const plan = PLANS.find((p) => p.id === normalizePlanId(planId));

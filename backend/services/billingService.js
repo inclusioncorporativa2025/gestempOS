@@ -26,6 +26,29 @@ const {
 const { resolverRegimenImpuestoEmpresa } = require('../utils/spanishTax');
 
 let stripeClient = null;
+/** Tras detectar live/test mezclados, no repetir llamadas ni avisos en el listado admin. */
+let stripeModoDistintoDetectado = false;
+
+const esErrorStripeModoDistinto = (error) => {
+  const msg = String(error?.message || '').toLowerCase();
+  return (
+    msg.includes('similar object exists in live mode')
+    || msg.includes('similar object exists in test mode')
+    || msg.includes('a test mode key was used')
+    || msg.includes('a live mode key was used')
+  );
+};
+
+const avisarModoStripeDistintoUnaVez = () => {
+  if (stripeModoDistintoDetectado) return;
+  stripeModoDistintoDetectado = true;
+  const esTest = String(process.env.STRIPE_SECRET_KEY || '').startsWith('sk_test_');
+  console.warn(
+    'billingService: los IDs de Stripe en BD pertenecen a otro entorno '
+    + `(${esTest ? 'live en BD, clave test en .env' : 'test en BD, clave live en .env'}). `
+    + 'Se omite el last4 de tarjeta en el listado. Alinea STRIPE_SECRET_KEY con los datos o usa BD de prueba.',
+  );
+};
 
 const getStripe = () => {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -50,6 +73,194 @@ const toDate = (unixSeconds) => {
   const n = Number(unixSeconds);
   if (!Number.isFinite(n)) return null;
   return new Date(n * 1000);
+};
+
+const extraerLast4DePaymentMethod = (paymentMethod) => {
+  if (!paymentMethod || typeof paymentMethod !== 'object') return null;
+  const last4 = paymentMethod.card?.last4;
+  const digits = String(last4 ?? '').trim();
+  return /^\d{4}$/.test(digits) ? digits : null;
+};
+
+const normalizarLast4 = (value) => {
+  const digits = String(value ?? '').trim();
+  return /^\d{4}$/.test(digits) ? digits : null;
+};
+
+const resolverPaymentMethodStripe = async (paymentMethodRef) => {
+  if (!paymentMethodRef) return null;
+  if (typeof paymentMethodRef === 'object') {
+    return extraerLast4DePaymentMethod(paymentMethodRef);
+  }
+  if (typeof paymentMethodRef === 'string') {
+    try {
+      const pm = await getStripe().paymentMethods.retrieve(paymentMethodRef);
+      return extraerLast4DePaymentMethod(pm);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+const obtenerLast4DesdeUltimaFacturaPagada = async (customerId) => {
+  if (!customerId) return null;
+  try {
+    const invoices = await getStripe().invoices.list({
+      customer: customerId,
+      status: 'paid',
+      limit: 3,
+    });
+    for (const invoice of invoices.data ?? []) {
+      const chargeId = typeof invoice.charge === 'string' ? invoice.charge : invoice.charge?.id;
+      if (!chargeId) continue;
+      const charge = await getStripe().charges.retrieve(chargeId);
+      const last4 = charge.payment_method_details?.card?.last4;
+      const normalizado = normalizarLast4(last4);
+      if (normalizado) return normalizado;
+    }
+  } catch (error) {
+    if (esErrorStripeModoDistinto(error)) {
+      avisarModoStripeDistintoUnaVez();
+    } else {
+      console.warn('billingService: last4 desde factura Stripe:', error.message);
+    }
+  }
+  return null;
+};
+
+const resolverLast4TarjetaStripe = async ({ customerId, subscriptionId } = {}) => {
+  if (!process.env.STRIPE_SECRET_KEY || stripeModoDistintoDetectado) {
+    return { last4: null, customerId: customerId ?? null };
+  }
+
+  let customerIdResuelto = customerId ?? null;
+
+  try {
+    if (subscriptionId) {
+      const sub = await getStripe().subscriptions.retrieve(subscriptionId, {
+        expand: ['default_payment_method'],
+      });
+      if (!customerIdResuelto) {
+        customerIdResuelto = typeof sub.customer === 'string'
+          ? sub.customer
+          : sub.customer?.id ?? null;
+      }
+      const desdeSub = await resolverPaymentMethodStripe(sub.default_payment_method);
+      if (desdeSub) {
+        return { last4: desdeSub, customerId: customerIdResuelto };
+      }
+    }
+
+    if (customerIdResuelto) {
+      const customer = await getStripe().customers.retrieve(customerIdResuelto, {
+        expand: ['invoice_settings.default_payment_method'],
+      });
+
+      const desdeCustomer = await resolverPaymentMethodStripe(
+        customer.invoice_settings?.default_payment_method,
+      );
+      if (desdeCustomer) {
+        return { last4: desdeCustomer, customerId: customerIdResuelto };
+      }
+
+      const listado = await getStripe().paymentMethods.list({
+        customer: customerIdResuelto,
+        type: 'card',
+        limit: 3,
+      });
+      for (const pm of listado.data ?? []) {
+        const last4 = extraerLast4DePaymentMethod(pm);
+        if (last4) {
+          return { last4, customerId: customerIdResuelto };
+        }
+      }
+
+      const desdeFactura = await obtenerLast4DesdeUltimaFacturaPagada(customerIdResuelto);
+      if (desdeFactura) {
+        return { last4: desdeFactura, customerId: customerIdResuelto };
+      }
+    }
+  } catch (error) {
+    if (esErrorStripeModoDistinto(error)) {
+      avisarModoStripeDistintoUnaVez();
+    } else {
+      console.warn('billingService: no se pudo leer last4 de tarjeta Stripe:', error.message);
+    }
+  }
+
+  return { last4: null, customerId: customerIdResuelto };
+};
+
+const persistirStripeCardLast4 = async (idEmpresa, last4) => {
+  if (!idEmpresa || !last4) return;
+  try {
+    await sequelize.query(
+      `UPDATE empresa_facturacion
+       SET stripe_card_last4 = :last4
+       WHERE id_empresa = :idEmpresa`,
+      { replacements: { idEmpresa, last4 } },
+    );
+  } catch (error) {
+    if (String(error.message || '').includes('stripe_card_last4')) {
+      console.warn('billingService: falta columna stripe_card_last4 en empresa_facturacion');
+      return;
+    }
+    throw error;
+  }
+};
+
+const sincronizarTarjetaLast4Empresa = async (
+  idEmpresa,
+  { customerId, subscriptionId } = {},
+) => {
+  const { last4, customerId: customerIdResuelto } = await resolverLast4TarjetaStripe({
+    customerId,
+    subscriptionId,
+  });
+
+  if (customerIdResuelto && !customerId) {
+    try {
+      await sequelize.query(
+        `UPDATE empresa_facturacion
+         SET stripe_customer_id = COALESCE(stripe_customer_id, :customerId)
+         WHERE id_empresa = :idEmpresa`,
+        { replacements: { idEmpresa, customerId: customerIdResuelto } },
+      );
+    } catch (error) {
+      console.warn('billingService: no se pudo guardar stripe_customer_id:', error.message);
+    }
+  }
+
+  if (last4) {
+    await persistirStripeCardLast4(idEmpresa, last4);
+  }
+  return last4;
+};
+
+const empresaListadoNecesitaLast4Tarjeta = (row) => {
+  if (normalizarLast4(row?.stripe_card_last4)) return false;
+  return Boolean(row?.stripe_customer_id || row?.stripe_subscription_id);
+};
+
+/** Rellena last4 en filas del listado admin (ROOT) y persiste en BD. */
+const enriquecerStripeTarjetasListadoEmpresas = async (rows) => {
+  if (!Array.isArray(rows) || !process.env.STRIPE_SECRET_KEY) return;
+  if (stripeModoDistintoDetectado) return;
+
+  const pendientes = rows.filter(empresaListadoNecesitaLast4Tarjeta).slice(0, 50);
+  if (!pendientes.length) return;
+
+  for (const row of pendientes) {
+    if (stripeModoDistintoDetectado) break;
+    const last4 = await sincronizarTarjetaLast4Empresa(row.id_empresa, {
+      customerId: row.stripe_customer_id ?? null,
+      subscriptionId: row.stripe_subscription_id ?? null,
+    });
+    if (last4) {
+      row.stripe_card_last4 = last4;
+    }
+  }
 };
 
 const resolverPlanPorPriceId = async (priceId) => {
@@ -243,6 +454,12 @@ const sincronizarSuscripcion = async (subscription, { motivo, stripeEventId } = 
     stripeEventId,
   });
 
+  const customerIdSync = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
+  await sincronizarTarjetaLast4Empresa(empresaId, {
+    customerId: customerIdSync ?? null,
+    subscriptionId: sub.id,
+  });
+
   return { idEmpresa: empresaId, subscriptionId: sub.id, plan: planFields.plan };
 };
 
@@ -311,6 +528,10 @@ const procesarWebhookEvent = async (event) => {
              WHERE id_empresa = :idEmpresa`,
             { replacements: { idEmpresa, customerId } },
           );
+          await sincronizarTarjetaLast4Empresa(idEmpresa, {
+            customerId,
+            subscriptionId: subscriptionId ?? null,
+          });
         }
 
         if (subscriptionId) {
@@ -1441,4 +1662,5 @@ module.exports = {
   listarFacturasPagadas,
   listarFacturasEmitidas,
   obtenerFacturacionCompleta,
+  enriquecerStripeTarjetasListadoEmpresas,
 };

@@ -22,9 +22,10 @@ import {
   LICENSE_IS_USER_NOTE,
   PRICES_EXCLUDE_TAX_NOTE,
   PRICE_UNIT_MONTHLY,
-  PRICE_UNIT_ANNUAL,
   MIN_USERS_LABEL,
   PLAN_UNAVAILABLE_TOOLTIP,
+  mensajePrimerAnoPorUsuario,
+  mensajeRenovacionPorUsuario,
 } from '../../constants/plans';
 import LandingFooter from '../components/LandingFooter';
 import LandingHeroVisual from '../components/LandingHeroVisual';
@@ -391,33 +392,45 @@ const LandingPage = () => {
                   </div>
                   <div className="landing-plan-card-body">
                     {billingPeriod === 'monthly' ? (
-                      <p className="landing-plan-price">
+                      <p className="landing-plan-price landing-plan-price__main">
                         <span className="landing-plan-price-from">desde</span>{' '}
                         <strong>{plan.priceMonthly} €</strong>
-                        <span className="landing-plan-price-unit">
+                        <span className="landing-plan-price-unit landing-plan-price-unit--inline">
                           {PRICE_UNIT_MONTHLY}
                         </span>
                       </p>
                     ) : (
-                      <p className="landing-plan-price landing-plan-price--annual">
-                        <span className="landing-plan-price-from">desde</span>{' '}
-                        <strong>{plan.priceAnnual} €</strong>
-                        <span className="landing-plan-price-unit">
-                          {PRICE_UNIT_ANNUAL}
-                        </span>
-                        <span className="landing-plan-price-annual-note landing-plan-price-annual-note--inline">
-                          ({ANNUAL_DISCOUNT_LABEL})
-                        </span>
-                      </p>
+                      <div className="landing-plan-price landing-plan-price--annual landing-plan-price--compact">
+                        <p className="landing-plan-price__first-year-promo">
+                          {mensajePrimerAnoPorUsuario(plan)}
+                        </p>
+                        <p className="landing-plan-price__renewal">
+                          {mensajeRenovacionPorUsuario(plan)}
+                        </p>
+                      </div>
                     )}
                     <p className="landing-plan-min">
                       {MIN_USERS_LABEL(plan.minLicenses)}
+                      {billingPeriod === 'annual' ? (
+                        <>
+                          {' '}
+                          · desde
+                          {' '}
+                          <strong>
+                            {getPlanMinAnnual(plan)}
+                            {' '}
+                            €/año
+                          </strong>
+                          {' '}
+                          (1.er año)
+                        </>
+                      ) : null}
                     </p>
-                    <p className="landing-plan-min-total">
-                      {billingPeriod === 'monthly'
-                        ? `Desde ${plan.minMonthly} €/mes`
-                        : `Desde ${getPlanMinAnnual(plan)} €/año`}
-                    </p>
+                    {billingPeriod === 'monthly' ? (
+                      <p className="landing-plan-min-total">
+                        {`Desde ${plan.minMonthly} €/mes`}
+                      </p>
+                    ) : null}
                     <p className="landing-plan-desc">{plan.description}</p>
                     <ul className="landing-plan-features">
                       {plan.features.map((item) => (

@@ -19,7 +19,11 @@ const {
 } = require('../services/planCatalogService');
 const { isValidRegionCode, resolveRegionCode, provinceByCpPrefix } = require('../config/spanishRegions');
 const { extenderPeriodoPruebaEmpresa, TrialExtensionError } = require('../services/trialService');
-const { crearCheckoutTrialPendiente, crearCheckoutPagoPendiente } = require('../services/billingService');
+const {
+  crearCheckoutTrialPendiente,
+  crearCheckoutPagoPendiente,
+  enriquecerStripeTarjetasListadoEmpresas,
+} = require('../services/billingService');
 const { publicarEnlacePagoCorto, construirUrlPublicaPago } = require('../services/enlacePagoService');
 const { purgarEmpresaCompleta } = require('../services/empresaPurgeService');
 const {
@@ -568,8 +572,10 @@ const enriquecerEmpresaListado = (row) => {
   const codigoPago = row.enlace_pago_codigo || null;
   const enlacePagoUrl = codigoPago ? construirUrlPublicaPago(codigoPago) : null;
 
+  const { stripe_customer_id: _stripeCustomerId, ...resto } = row;
+
   return {
-    ...row,
+    ...resto,
     enlace_pago_url: enlacePagoUrl,
     enlace_pago_caducado: Boolean(enlacePagoCaducado),
   };
@@ -583,9 +589,13 @@ const getEmpresasUsuarios = async (req, res)=> {
                 `SELECT e.id_empresa, e.nombre, e.identificador_fiscal, e.fecha_alta, e.licencias,
                         e.id_plan, e.plan, e.activo, e.alias, e.fecha_baja,
                         ef.modo_facturacion,
+                        ef.ciclo_facturacion,
                         ef.estado_suscripcion,
                         ef.trial_ends_at,
+                        ef.current_period_end,
                         ef.stripe_subscription_id,
+                        ef.stripe_customer_id,
+                        TRIM(ef.stripe_card_last4) AS stripe_card_last4,
                         ef.cancel_at_period_end,
                         ef.enlace_pago_codigo,
                         ef.enlace_pago_expira,
@@ -613,6 +623,7 @@ const getEmpresasUsuarios = async (req, res)=> {
                 ORDER BY e.fecha_alta DESC`,
                 { type: sequelize.QueryTypes.SELECT }
               );
+         await enriquecerStripeTarjetasListadoEmpresas(rows);
          const result = rows.map(enriquecerEmpresaListado);
         if(!res){
           return result;

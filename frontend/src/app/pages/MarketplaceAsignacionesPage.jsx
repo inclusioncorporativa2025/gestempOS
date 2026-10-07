@@ -204,8 +204,8 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
 
   const columnas = useMemo(() => [
     {
-      title: 'Empleado',
-      key: 'empleado',
+      title: 'Personal',
+      key: 'personal',
       render: (_, row) => {
         const telefono = row.telefono_whatsapp
           ? formatearTelefonoWhatsappDisplay(row.telefono_whatsapp)
@@ -295,7 +295,7 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
         if (sinPlaza) {
           tooltipWa = 'No hay plazas libres. Contrata otra plaza para añadir un usuario.';
         } else if (sinTelefono) {
-          tooltipWa = 'Sin móvil en ficha. Usa «Añadir móvil» en la fila del empleado.';
+          tooltipWa = 'Sin móvil en ficha. Usa «Añadir móvil» en la fila de personal.';
         }
 
         return (
@@ -518,7 +518,7 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
             envíos/mes).
           </Paragraph>
           <Paragraph style={{ marginBottom: 0 }} type="secondary">
-            El empleado debe tener móvil WhatsApp en su ficha. Las alertas de fichaje
+            El personal debe tener móvil WhatsApp en su ficha. Las alertas de fichaje
             consumen un mensaje del cupo cuando se envían por este canal.
           </Paragraph>
           <Paragraph style={{ marginBottom: 0 }} type="secondary">

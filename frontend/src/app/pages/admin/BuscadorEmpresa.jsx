@@ -60,10 +60,14 @@ import {
 } from '../../../constants/plans';
 import {
   empresaDadaDeBaja,
+  empresaEnPruebaListado,
   empresaEstaActiva,
+  empresaPtePagoListado,
   empresaPuedeAmpliarPrueba,
   empresaRequiereEnlacePago,
+  empresaStripeActivaListado,
   renderEstadoEmpresa,
+  etiquetaFacturacionEmpresa,
 } from './empresaEstadoUtils';
 import './BuscadorEmpresa.css';
 import '../../components/shared/TableAcciones.css';
@@ -76,6 +80,10 @@ const PAGE_SIZE = 10;
 const FILTRO_TODAS = 'todas';
 const FILTRO_ACTIVAS = 'activas';
 const FILTRO_DESACTIVADAS = 'desactivadas';
+
+const SUBFILTRO_ACTIVAS_STRIPE = 'stripe';
+const SUBFILTRO_ACTIVAS_PRUEBA = 'prueba';
+const SUBFILTRO_ACTIVAS_PTE_PAGO = 'pte_pago';
 
 const sumarLicencias = (empresas) =>
   empresas.reduce((acc, empresa) => acc + (Number(empresa.licencias) || 0), 0);
@@ -99,6 +107,7 @@ const BuscadorEmpresa = ({ embedded = false }) => {
   const [data, setData] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState(FILTRO_TODAS);
+  const [subfiltroActivas, setSubfiltroActivas] = useState(null);
   const [editingRecord, setEditingRecord] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isAltaModalVisible, setIsAltaModalVisible] = useState(false);
@@ -131,7 +140,7 @@ const BuscadorEmpresa = ({ embedded = false }) => {
 
   useEffect(() => {
     setMobilePage(1);
-  }, [busqueda, filtroEstado, data.length]);
+  }, [busqueda, filtroEstado, subfiltroActivas, data.length]);
 
   useEffect(() => {
     if (location.state?.abrirAltaEmpresa) {
@@ -156,10 +165,17 @@ const BuscadorEmpresa = ({ embedded = false }) => {
   const contadores = useMemo(() => {
     const empresasActivas = data.filter(empresaEstaActiva);
     const empresasDesactivadas = data.filter((e) => !empresaEstaActiva(e));
+    const activasStripe = data.filter(empresaStripeActivaListado);
+    const activasPrueba = data.filter(empresaEnPruebaListado);
+    const activasPtePago = data.filter(empresaPtePagoListado);
+
     return {
       total: data.length,
       activas: empresasActivas.length,
       desactivadas: empresasDesactivadas.length,
+      activasStripe: activasStripe.length,
+      activasPrueba: activasPrueba.length,
+      activasPtePago: activasPtePago.length,
       licenciasTotal: sumarLicencias(data),
       licenciasActivas: sumarLicencias(empresasActivas),
       licenciasDesactivadas: sumarLicencias(empresasDesactivadas),
@@ -168,11 +184,31 @@ const BuscadorEmpresa = ({ embedded = false }) => {
 
   const filteredData = useMemo(() => {
     return data.filter((empresa) => {
-      if (filtroEstado === FILTRO_ACTIVAS && !empresaEstaActiva(empresa)) return false;
+      if (filtroEstado === FILTRO_ACTIVAS) {
+        if (subfiltroActivas === SUBFILTRO_ACTIVAS_STRIPE) {
+          if (!empresaStripeActivaListado(empresa)) return false;
+        } else if (subfiltroActivas === SUBFILTRO_ACTIVAS_PRUEBA) {
+          if (!empresaEnPruebaListado(empresa)) return false;
+        } else if (subfiltroActivas === SUBFILTRO_ACTIVAS_PTE_PAGO) {
+          if (!empresaPtePagoListado(empresa)) return false;
+        } else if (!empresaEstaActiva(empresa)) {
+          return false;
+        }
+      }
       if (filtroEstado === FILTRO_DESACTIVADAS && empresaEstaActiva(empresa)) return false;
       return coincideBusqueda(empresa, busqueda);
     });
-  }, [data, filtroEstado, busqueda]);
+  }, [data, filtroEstado, subfiltroActivas, busqueda]);
+
+  const seleccionarFiltroEstado = (key) => {
+    setFiltroEstado(key);
+    if (key !== FILTRO_ACTIVAS) setSubfiltroActivas(null);
+  };
+
+  const seleccionarSubfiltroActivas = (key) => {
+    setFiltroEstado(FILTRO_ACTIVAS);
+    setSubfiltroActivas((prev) => (prev === key ? null : key));
+  };
 
   const filteredDataMobile = useMemo(() => {
     const start = (mobilePage - 1) * PAGE_SIZE;
@@ -549,9 +585,17 @@ const BuscadorEmpresa = ({ embedded = false }) => {
       title: 'Plan',
       dataIndex: 'plan',
       key: 'plan',
-      render: (plan) => (
-        <Tag color={getPlanTagColor(plan)}>{getPlanLabel(plan)}</Tag>
-      ),
+      render: (plan, record) => {
+        const facturacion = etiquetaFacturacionEmpresa(record);
+        return (
+          <div className="be-plan-cell">
+            <Tag color={getPlanTagColor(plan)}>{getPlanLabel(plan)}</Tag>
+            {facturacion ? (
+              <Text type="secondary" className="be-plan-cell__ciclo">{facturacion}</Text>
+            ) : null}
+          </div>
+        );
+      },
     },
     { title: 'Licencias', dataIndex: 'licencias', key: 'licencias' },
     {
@@ -603,7 +647,9 @@ const BuscadorEmpresa = ({ embedded = false }) => {
     },
   ];
 
-  const renderEmpresaCard = (record) => (
+  const renderEmpresaCard = (record) => {
+    const facturacionLabel = etiquetaFacturacionEmpresa(record);
+    return (
     <article
       key={record.id_empresa}
       className={[
@@ -621,7 +667,14 @@ const BuscadorEmpresa = ({ embedded = false }) => {
         </button>
         <div className="be-mobile-card__badges">
           {renderEstadoEmpresa(record)}
-          <Tag color={getPlanTagColor(record.plan)}>{getPlanLabel(record.plan)}</Tag>
+          <div className="be-mobile-card__plan">
+            <Tag color={getPlanTagColor(record.plan)}>{getPlanLabel(record.plan)}</Tag>
+            {facturacionLabel ? (
+              <Text type="secondary" className="be-mobile-card__plan-ciclo">
+                {facturacionLabel}
+              </Text>
+            ) : null}
+          </div>
         </div>
       </div>
       <dl className="be-mobile-card__meta">
@@ -668,23 +721,71 @@ const BuscadorEmpresa = ({ embedded = false }) => {
         {renderAccionesEmpresa(record)}
       </div>
     </article>
-  );
+    );
+  };
 
-  const renderStatCard = ({ key, label, count, licenciasLabel, licencias, className }) => (
-    <button
-      type="button"
-      className={`be-stat-card ${className} ${filtroEstado === key ? 'be-stat-card--selected' : ''}`}
-      onClick={() => setFiltroEstado(key)}
-      aria-pressed={filtroEstado === key}
-    >
-      <Text className="be-stat-label">{label}</Text>
-      <span className="be-stat-count">{count}</span>
-      <span className="be-stat-licencias-block">
-        <span className="be-stat-licencias-label">{licenciasLabel}</span>
-        <span className="be-stat-licencias">{licencias}</span>
-      </span>
-    </button>
-  );
+  const subfiltrosActivas = [
+    { key: SUBFILTRO_ACTIVAS_PTE_PAGO, label: 'Pte. pago', count: contadores.activasPtePago },
+    { key: SUBFILTRO_ACTIVAS_STRIPE, label: 'Stripe', count: contadores.activasStripe },
+    { key: SUBFILTRO_ACTIVAS_PRUEBA, label: 'En prueba', count: contadores.activasPrueba },
+  ];
+
+  const renderStatCard = ({ key, label, count, licenciasLabel, licencias, className }) => {
+    const selected = filtroEstado === key;
+    const esActivas = key === FILTRO_ACTIVAS;
+
+    if (esActivas) {
+      return (
+        <div
+          className={`be-stat-card ${className} ${selected ? 'be-stat-card--selected' : ''} be-stat-card--with-subfilters`}
+        >
+          <button
+            type="button"
+            className="be-stat-card__main"
+            onClick={() => seleccionarFiltroEstado(FILTRO_ACTIVAS)}
+            aria-pressed={selected && !subfiltroActivas}
+          >
+            <Text className="be-stat-label">{label}</Text>
+            <span className="be-stat-count">{count}</span>
+            <span className="be-stat-licencias-block">
+              <span className="be-stat-licencias-label">{licenciasLabel}</span>
+              <span className="be-stat-licencias">{licencias}</span>
+            </span>
+          </button>
+          <div className="be-stat-subfilters" role="group" aria-label="Subfiltros activas">
+            {subfiltrosActivas.map(({ key: subKey, label: subLabel, count: subCount }) => (
+              <button
+                key={subKey}
+                type="button"
+                className={`be-stat-subfilter ${subfiltroActivas === subKey ? 'be-stat-subfilter--selected' : ''}`}
+                onClick={() => seleccionarSubfiltroActivas(subKey)}
+                aria-pressed={subfiltroActivas === subKey}
+              >
+                {subLabel}
+                <span className="be-stat-subfilter__count">{subCount}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        className={`be-stat-card ${className} ${selected ? 'be-stat-card--selected' : ''}`}
+        onClick={() => seleccionarFiltroEstado(key)}
+        aria-pressed={selected}
+      >
+        <Text className="be-stat-label">{label}</Text>
+        <span className="be-stat-count">{count}</span>
+        <span className="be-stat-licencias-block">
+          <span className="be-stat-licencias-label">{licenciasLabel}</span>
+          <span className="be-stat-licencias">{licencias}</span>
+        </span>
+      </button>
+    );
+  };
 
   return (
     <Layout className={embedded ? 'be-layout be-layout--embedded' : 'be-layout'}>

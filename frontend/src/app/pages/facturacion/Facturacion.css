@@ -380,6 +380,37 @@
   font-weight: 600;
   line-height: 1.2;
   color: var(--color-dark, #2d1b42);
+  width: 100%;
+}
+
+.facturacion-plan-option--annual {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 400;
+}
+
+.facturacion-plan-option__ref {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+  line-height: 1.3;
+}
+
+.facturacion-plan-option__ref-amount {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.facturacion-plan-option__effective strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.facturacion-plan-option__badge {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--primary, #a85ce0);
+  line-height: 1.2;
 }
 
 .facturacion-plan-option__unit {
@@ -388,6 +419,37 @@
   font-size: 11px;
   font-weight: 400;
   color: rgba(0, 0, 0, 0.5);
+}
+
+.facturacion-price-summary__annual-breakdown {
+  margin: 10px 0 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(var(--color-primary-rgb), 0.06);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.facturacion-price-summary__breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+  color: rgba(0, 0, 0, 0.72);
+}
+
+.facturacion-price-summary__breakdown-row--discount {
+  color: var(--primary, #a85ce0);
+  font-weight: 500;
+}
+
+.facturacion-price-summary__breakdown-row--renewal {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.55);
+  margin-bottom: 0;
 }
 
 .facturacion-plan-option__min {

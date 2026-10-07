@@ -19,9 +19,14 @@ import {
   StopOutlined,
   DownloadOutlined,
 } from '@ant-design/icons';
+import PlanUnitPrice from '../../components/PlanUnitPrice';
+import PlanAnnualTotalBreakdown from '../../components/PlanAnnualTotalBreakdown';
 import {
   PLANS,
   ANNUAL_DISCOUNT_LABEL,
+  ANNUAL_LIST_PRICE_NOTE,
+  calcTotalAnualEfectivo,
+  PRICES_EXCLUDE_TAX_NOTE,
   getPlanMinLicencias,
   getPlanLabel,
   getPlanTagColor,
@@ -166,12 +171,11 @@ const FacturacionPanel = ({ activo = true }) => {
   const planDisponible = planInfo.available !== false;
 
   const precioEstimado = useMemo(() => {
-    const unitario =
-      ciclo === 'mensual'
-        ? parsePrecio(planInfo.priceMonthly)
-        : parsePrecio(planInfo.priceAnnual);
-    return unitario * licencias;
-  }, [ciclo, licencias, planInfo.priceAnnual, planInfo.priceMonthly]);
+    if (ciclo === 'mensual') {
+      return parsePrecio(planInfo.priceMonthly) * licencias;
+    }
+    return calcTotalAnualEfectivo(planInfo, licencias);
+  }, [ciclo, licencias, planInfo]);
 
   const handlePlanChange = (nuevoPlan) => {
     const target = PLANS.find((p) => p.id === nuevoPlan);
@@ -510,10 +514,10 @@ const FacturacionPanel = ({ activo = true }) => {
           </div>
 
           <div className="facturacion-status-admin">
-            <span className="facturacion-status-admin__label">Administrador</span>
+            <span className="facturacion-status-admin__label">Admin</span>
             <span className="facturacion-status-admin__value">1</span>
             <span className="facturacion-status-admin__note">
-              Te regalamos el administrador. No cuenta como licencia.
+              Te regalamos el admin. No cuenta como licencia.
             </span>
           </div>
 
@@ -647,12 +651,11 @@ const FacturacionPanel = ({ activo = true }) => {
                         ) : null}
                       </span>
                       <span className="facturacion-plan-option__price">
-                        {ciclo === 'mensual'
-                          ? `${item.priceMonthly} €`
-                          : `${item.priceAnnual} €`}
-                        <span className="facturacion-plan-option__unit">
-                          {ciclo === 'mensual' ? '/ usuario / mes' : '/ usuario / año'}
-                        </span>
+                        <PlanUnitPrice
+                          plan={item}
+                          ciclo={ciclo}
+                          classPrefix="facturacion-plan-option"
+                        />
                       </span>
                       <span className="facturacion-plan-option__min">
                         Mín. {item.minLicenses} licencias
@@ -685,7 +688,7 @@ const FacturacionPanel = ({ activo = true }) => {
               className="facturacion-panel__licencias-input"
             />
             <Text type="secondary" className="facturacion-panel__hint">
-              Mínimo {minLicencias}. Te regalamos el administrador; no cuenta como licencia.
+              Mínimo {minLicencias}. Te regalamos el admin; no cuenta como licencia.
             </Text>
           </div>
 
@@ -715,6 +718,9 @@ const FacturacionPanel = ({ activo = true }) => {
                 )}
               </strong>
             </div>
+            {!puedeCambiarPlan && ciclo === 'anual' ? (
+              <PlanAnnualTotalBreakdown plan={planInfo} licencias={licencias} />
+            ) : null}
             <Text type="secondary" className="facturacion-price-summary__note">
               {puedeCambiarPlan
                 ? previewCambioPlan?.importe_iva_eur > 0
@@ -723,7 +729,7 @@ const FacturacionPanel = ({ activo = true }) => {
                     ? `${previewCambioPlan.regimen_impuesto_etiqueta}. Según los días restantes del periodo.`
                     : 'Según los días restantes del periodo.'
                 : ciclo === 'anual'
-                  ? `Precio con descuento anual (${ANNUAL_DISCOUNT_LABEL}) en el primer año.`
+                  ? `${ANNUAL_LIST_PRICE_NOTE} ${PRICES_EXCLUDE_TAX_NOTE}`
                   : `${planInfo.priceMonthly} € por usuario al mes.`}
             </Text>
           </div>

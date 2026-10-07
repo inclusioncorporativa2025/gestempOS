@@ -8,10 +8,13 @@ import {
   getPlanMinLicencias,
   getPlanLabel,
   getPlanMinAnnual,
+  formatPrecioPlan,
+  getPrecioAnualLista,
   PRICE_UNIT_MONTHLY,
   PRICE_UNIT_ANNUAL,
   ANNUAL_FREE_MONTHS_BADGE,
   LICENSE_IS_USER_NOTE,
+  mensajePrimerAnoPorUsuario,
 } from '../../../constants/plans';
 import {
   PROVINCIAS,
@@ -101,12 +104,26 @@ const PlanCardPicker = ({
         >
           <span className="alta-plan-option-name">{plan.name}</span>
           <span className="alta-plan-option-price">
-            desde <strong>{esAnual ? plan.priceAnnual : plan.priceMonthly} €</strong>
+            desde{' '}
+            {esAnual ? (
+              <>
+                <s>{formatPrecioPlan(getPrecioAnualLista(plan))} €</s>
+                {' → '}
+                <strong>{plan.priceAnnual} €</strong>
+              </>
+            ) : (
+              <strong>{plan.priceMonthly} €</strong>
+            )}
             <span className="alta-plan-option-unit">
               {esAnual ? PRICE_UNIT_ANNUAL : PRICE_UNIT_MONTHLY}
             </span>
             {esAnual && (
-              <span className="alta-plan-option-annual-badge">{ANNUAL_FREE_MONTHS_BADGE}</span>
+              <>
+                <span className="alta-plan-option-first-year">
+                  {mensajePrimerAnoPorUsuario(plan)}
+                </span>
+                <span className="alta-plan-option-annual-badge">{ANNUAL_FREE_MONTHS_BADGE}</span>
+              </>
             )}
           </span>
           <span className="alta-plan-option-min">
