@@ -34,6 +34,7 @@ const PlatformLayout = () => {
       if (esRoot) {
         items.splice(1, 0, { key: APP_ROUTES.platformConvenios, label: 'Convenios' });
         items.splice(2, 0, { key: APP_ROUTES.platformNovedades, label: 'Novedades' });
+        items.splice(3, 0, { key: APP_ROUTES.platformWhatsappGasto, label: 'WhatsApp (gasto)' });
       }
       return items;
     },
@@ -49,6 +50,7 @@ const PlatformLayout = () => {
   const esAccesos = location.pathname === APP_ROUTES.platformAccesos;
   const esConvenios = location.pathname === APP_ROUTES.platformConvenios;
   const esNovedades = location.pathname === APP_ROUTES.platformNovedades;
+  const esWhatsappGasto = location.pathname === APP_ROUTES.platformWhatsappGasto;
 
   const subtitulo = esEmpresas
     ? 'Alta y administración de empresas cliente'
@@ -56,11 +58,13 @@ const PlatformLayout = () => {
       ? 'Catálogo global de convenios colectivos'
       : esNovedades
         ? 'Centro de novedades segmentadas por rol y plan'
-    : esAcceder
-      ? 'Acceso temporal a cuentas de usuario por correo'
-      : esAccesos
-        ? 'Auditoría de accesos y navegación de usuarios'
-        : 'Herramientas de administración de la plataforma';
+        : esWhatsappGasto
+          ? 'Gasto actual de la línea WhatsApp Cloud (Meta pricing_analytics)'
+          : esAcceder
+            ? 'Acceso temporal a cuentas de usuario por correo'
+            : esAccesos
+              ? 'Auditoría de accesos y navegación de usuarios'
+              : 'Herramientas de administración de la plataforma';
 
   return (
     <div className="config-layout">

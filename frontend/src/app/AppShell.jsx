@@ -61,6 +61,7 @@ import PlatformLayout from './pages/platform/PlatformLayout';
 import PlatformAccesos from './pages/platform/PlatformAccesos';
 import PlatformConvenios from './pages/platform/PlatformConvenios';
 import PlatformNovedades from './pages/platform/PlatformNovedades';
+import PlatformWhatsappGasto from './pages/platform/PlatformWhatsappGasto';
 import PlatformAcceder from './pages/platform/PlatformAcceder';
 import HubLayout from './pages/hub/HubLayout';
 import HubVentas from './pages/hub/HubVentas';
@@ -543,6 +544,14 @@ const AppShell = () => {
                     element={
                       <ProtectedRoute allowedTypes={[1]}>
                         <PlatformNovedades />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="whatsapp-gasto"
+                    element={
+                      <ProtectedRoute allowedTypes={[1]}>
+                        <PlatformWhatsappGasto />
                       </ProtectedRoute>
                     }
                   />

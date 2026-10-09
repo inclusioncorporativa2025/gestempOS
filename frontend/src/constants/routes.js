@@ -41,6 +41,7 @@ export const APP_ROUTES = {
   platformAcceder: '/platform/acceder',
   platformConvenios: '/platform/convenios',
   platformNovedades: '/platform/novedades',
+  platformWhatsappGasto: '/platform/whatsapp-gasto',
   platformEmpresas: '/platform/empresas',
   hub: '/hub',
   hubVentas: '/hub/ventas',

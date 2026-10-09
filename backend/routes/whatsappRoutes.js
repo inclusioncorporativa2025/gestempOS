@@ -1,10 +1,11 @@
 const express = require('express');
-const { requireAuth, requireRole, ROLE_GROUPS } = require('../middleware/authMiddleware');
+const { requireAuth, requireRole, ROLE_GROUPS, ROLES } = require('../middleware/authMiddleware');
 const { assertEmpresaTieneFeature } = require('../services/planService');
 const { normalizarTelefonoWhatsapp } = require('../utils/telefonoWhatsapp');
 const Usuario = require('../models/Usuario');
 const { Op } = require('sequelize');
 const { useMetaProvider, getProviderStatus } = require('../services/whatsappMessaging');
+const { getWhatsappMetaGasto } = require('../services/whatsappMetaAnalyticsService');
 const {
   getSessionStatus,
   listWebhooks,
@@ -106,6 +107,30 @@ router.get('/estado', requireAuth, requireRole(ROLE_GROUPS.COMPANY_STAFF), async
   } catch (error) {
     const status = error.status || 500;
     return res.status(status).json({ error: error.message || 'No se pudo consultar WhatsApp' });
+  }
+});
+
+/** Gasto WABA (Meta pricing_analytics). Solo ROOT. */
+router.get('/meta/gasto', requireAuth, requireRole(ROLES.ROOT), async (req, res) => {
+  try {
+    if (!useMetaProvider()) {
+      return res.status(503).json({
+        error: 'Proveedor WhatsApp Meta no activo',
+      });
+    }
+
+    const result = await getWhatsappMetaGasto({
+      from: req.query?.from,
+      to: req.query?.to,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    const status = error.status || 500;
+    return res.status(status).json({
+      error: error.message || 'No se pudo consultar gasto WhatsApp',
+      details: error.details,
+    });
   }
 });
 
