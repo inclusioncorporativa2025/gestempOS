@@ -4,6 +4,7 @@ import {
   ANNUAL_RENEWAL_LABEL,
   formatPrecioPlan,
   calcTotalAnualLista,
+  calcTotalAnualEfectivo,
 } from '../constants/plans';
 
 const PlanAnnualTotalBreakdown = ({
