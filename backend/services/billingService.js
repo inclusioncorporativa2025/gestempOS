@@ -263,6 +263,56 @@ const enriquecerStripeTarjetasListadoEmpresas = async (rows) => {
   }
 };
 
+const esPriceIdSeatPlan = (row, priceId) => {
+  if (priceId === row.stripe_price_seat_mensual || priceId === row.stripe_price_seat_anual) {
+    return true;
+  }
+  if (row.stripe_price_seat_mensual || row.stripe_price_seat_anual) {
+    return false;
+  }
+  return priceId === row.stripe_price_id_mensual || priceId === row.stripe_price_id_anual;
+};
+
+const esPriceIdBasePlan = (row, priceId) =>
+  priceId === row.stripe_price_base_mensual || priceId === row.stripe_price_base_anual;
+
+const obtenerParPreciosPlan = (planRow, ciclo) => {
+  const esAnual = ciclo === 'anual';
+  const basePriceId = esAnual
+    ? planRow.stripe_price_base_anual
+    : planRow.stripe_price_base_mensual;
+  const seatPriceId = esAnual
+    ? planRow.stripe_price_seat_anual
+    : planRow.stripe_price_seat_mensual;
+
+  if (basePriceId && seatPriceId) {
+    return { modo: 'base_seat', basePriceId, seatPriceId };
+  }
+
+  const legacyPriceId = esAnual
+    ? planRow.stripe_price_id_anual
+    : planRow.stripe_price_id_mensual;
+  if (legacyPriceId) {
+    return { modo: 'legacy', basePriceId: null, seatPriceId: legacyPriceId };
+  }
+
+  return null;
+};
+
+const construirLineItemsCheckout = (parPrecios, qty, taxRateIds) => {
+  const wrap = (lineItem) =>
+    (taxRateIds?.length ? aplicarImpuestoManualLineItem(lineItem, taxRateIds) : lineItem);
+
+  if (parPrecios.modo === 'base_seat') {
+    return [
+      wrap({ price: parPrecios.basePriceId, quantity: 1 }),
+      wrap({ price: parPrecios.seatPriceId, quantity: qty }),
+    ];
+  }
+
+  return [wrap({ price: parPrecios.seatPriceId, quantity: qty })];
+};
+
 const resolverPlanPorPriceId = async (priceId) => {
   if (!priceId) return null;
 
@@ -271,6 +321,10 @@ const resolverPlanPorPriceId = async (priceId) => {
       [Op.or]: [
         { stripe_price_id_mensual: priceId },
         { stripe_price_id_anual: priceId },
+        { stripe_price_base_mensual: priceId },
+        { stripe_price_seat_mensual: priceId },
+        { stripe_price_base_anual: priceId },
+        { stripe_price_seat_anual: priceId },
       ],
     },
     raw: true,
@@ -279,9 +333,34 @@ const resolverPlanPorPriceId = async (priceId) => {
   if (!row) return null;
 
   const ciclo =
-    row.stripe_price_id_anual === priceId ? 'anual' : 'mensual';
+    priceId === row.stripe_price_id_anual
+    || priceId === row.stripe_price_base_anual
+    || priceId === row.stripe_price_seat_anual
+      ? 'anual'
+      : 'mensual';
 
   return { row, ciclo };
+};
+
+const resolverItemsBaseSeatEnSuscripcion = async (subscriptionRef) => {
+  const sub = typeof subscriptionRef === 'string'
+    ? await getStripe().subscriptions.retrieve(subscriptionRef, { expand: ['items.data.price'] })
+    : subscriptionRef;
+  const items = sub.items?.data ?? [];
+  let baseItemId = null;
+  let seatItemId = null;
+
+  for (const item of items) {
+    const priceId = item?.price?.id ?? null;
+    const planInfo = await resolverPlanPorPriceId(priceId);
+    if (!planInfo) continue;
+    if (esPriceIdBasePlan(planInfo.row, priceId)) baseItemId = item.id;
+    if (esPriceIdSeatPlan(planInfo.row, priceId)) seatItemId = item.id;
+  }
+
+  if (!seatItemId) seatItemId = items[0]?.id ?? null;
+
+  return { sub, baseItemId, seatItemId, items };
 };
 
 const obtenerFacturacionCompleta = async (idEmpresa) => {
@@ -380,10 +459,25 @@ const sincronizarSuscripcion = async (subscription, { motivo, stripeEventId } = 
     return null;
   }
 
-  const item = sub.items?.data?.[0];
+  const items = sub.items?.data ?? [];
+  let planInfo = null;
+  let seatItem = null;
+
+  for (const subItem of items) {
+    const subPriceId = subItem?.price?.id ?? null;
+    const info = await resolverPlanPorPriceId(subPriceId);
+    if (info && !planInfo) planInfo = info;
+    if (info?.row && esPriceIdSeatPlan(info.row, subPriceId)) {
+      seatItem = subItem;
+    }
+  }
+
+  const item = seatItem ?? items[0];
   const priceId = item?.price?.id ?? null;
-  const quantity = Math.max(1, Number(item?.quantity) || 1);
-  const planInfo = await resolverPlanPorPriceId(priceId);
+  if (!planInfo && priceId) {
+    planInfo = await resolverPlanPorPriceId(priceId);
+  }
+  const quantity = Math.max(1, Number(seatItem?.quantity ?? item?.quantity) || 1);
 
   const facturacionPrev = await obtenerFacturacionCompleta(empresaId);
   const empresa = await Empresa.findByPk(empresaId);
@@ -829,17 +923,18 @@ const crearCheckoutSession = async ({
 
   const cicloNormalizado = ciclo === 'anual' ? 'anual' : 'mensual';
   const esAnual = cicloNormalizado === 'anual';
-  const priceId = esAnual
-    ? planRow.stripe_price_id_anual
-    : planRow.stripe_price_id_mensual;
+  const parPrecios = obtenerParPreciosPlan(planRow, cicloNormalizado);
 
-  if (!priceId) {
+  if (!parPrecios) {
     const error = new Error('Precio de Stripe no configurado para este plan');
     error.status = 503;
     throw error;
   }
 
-  await validarPrecioSuscripcion(priceId, cicloNormalizado);
+  await validarPrecioSuscripcion(parPrecios.seatPriceId, cicloNormalizado);
+  if (parPrecios.modo === 'base_seat') {
+    await validarPrecioSuscripcion(parPrecios.basePriceId, cicloNormalizado);
+  }
 
   const empresa = await Empresa.findByPk(idEmpresa);
   if (!empresa) {
@@ -860,14 +955,16 @@ const crearCheckoutSession = async ({
   );
   await sincronizarCustomerStripeDesdeEmpresa(customerId, empresa, email);
 
-  const lineItem = impuestoManual
-    ? aplicarImpuestoManualLineItem({ price: priceId, quantity: qty }, impuestoManual.taxRateIds)
-    : { price: priceId, quantity: qty };
+  const lineItems = construirLineItemsCheckout(
+    parPrecios,
+    qty,
+    impuestoManual?.taxRateIds,
+  );
 
   const sessionParams = {
     mode: 'subscription',
     customer: customerId,
-    line_items: [lineItem],
+    line_items: lineItems,
     success_url: successUrl,
     cancel_url: cancelUrl,
     metadata: {
@@ -1138,20 +1235,27 @@ const resolverPriceIdPlan = async (planCodigo, ciclo) => {
   }
 
   const cicloNormalizado = ciclo === 'anual' ? 'anual' : 'mensual';
-  const priceId = cicloNormalizado === 'anual'
-    ? planRow.stripe_price_id_anual
-    : planRow.stripe_price_id_mensual;
+  const parPrecios = obtenerParPreciosPlan(planRow, cicloNormalizado);
 
-  if (!priceId) {
+  if (!parPrecios) {
     const error = new Error('Precio de Stripe no configurado para este plan');
     error.status = 503;
     error.code = 'STRIPE_PRICE_NOT_CONFIGURED';
     throw error;
   }
 
-  await validarPrecioSuscripcion(priceId, cicloNormalizado);
+  await validarPrecioSuscripcion(parPrecios.seatPriceId, cicloNormalizado);
+  if (parPrecios.modo === 'base_seat') {
+    await validarPrecioSuscripcion(parPrecios.basePriceId, cicloNormalizado);
+  }
 
-  return { planRow, planId, priceId, ciclo: cicloNormalizado };
+  return {
+    planRow,
+    planId,
+    priceId: parPrecios.seatPriceId,
+    parPrecios,
+    ciclo: cicloNormalizado,
+  };
 };
 
 const resolverCambioPlanStripe = async (idEmpresa, { plan: planCodigo, licencias } = {}) => {
@@ -1179,7 +1283,12 @@ const resolverCambioPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
     ? 'anual'
     : 'mensual';
 
-  const { planRow, planId: planNuevo, priceId } = await resolverPriceIdPlan(planCodigo, ciclo);
+  const {
+    planRow,
+    planId: planNuevo,
+    priceId,
+    parPrecios,
+  } = await resolverPriceIdPlan(planCodigo, ciclo);
   const disponibilidad = await obtenerDisponibilidadLicencias(idEmpresa);
   const minLicencias = Math.max(
     getPlanMinLicencias(planNuevo),
@@ -1203,14 +1312,11 @@ const resolverCambioPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
     throw error;
   }
 
-  let itemId = facturacion.stripe_subscription_item_id;
   const subscriptionId = facturacion.stripe_subscription_id;
   const customerId = facturacion.stripe_customer_id;
 
-  if (!itemId) {
-    const sub = await getStripe().subscriptions.retrieve(subscriptionId);
-    itemId = sub.items?.data?.[0]?.id ?? null;
-  }
+  const { baseItemId, seatItemId } = await resolverItemsBaseSeatEnSuscripcion(subscriptionId);
+  let itemId = seatItemId || facturacion.stripe_subscription_item_id;
 
   if (!itemId) {
     const error = new Error('No se encontró el ítem de suscripción en Stripe');
@@ -1235,14 +1341,53 @@ const resolverCambioPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
     planNuevo,
     planRow,
     priceId,
+    parPrecios,
     ciclo,
     nuevaCantidad,
     licenciasAnterior,
     itemId,
+    baseItemId,
     subscriptionId,
     customerId,
     disponibilidad,
   };
+};
+
+const construirItemsUpdateSuscripcion = ({
+  parPrecios,
+  priceId,
+  itemId,
+  baseItemId,
+  nuevaCantidad,
+  taxRateIds,
+}) => {
+  const wrap = (updateItem) => {
+    if (taxRateIds?.length) {
+      return { ...updateItem, tax_rates: taxRateIds };
+    }
+    return updateItem;
+  };
+
+  if (parPrecios?.modo === 'base_seat') {
+    const items = [];
+    if (baseItemId) {
+      items.push(wrap({
+        id: baseItemId,
+        price: parPrecios.basePriceId,
+        quantity: 1,
+      }));
+    } else {
+      items.push(wrap({ price: parPrecios.basePriceId, quantity: 1 }));
+    }
+    items.push(wrap({
+      id: itemId,
+      price: parPrecios.seatPriceId,
+      quantity: nuevaCantidad,
+    }));
+    return items;
+  }
+
+  return [wrap({ id: itemId, price: priceId, quantity: nuevaCantidad })];
 };
 
 const centimosAEur = (centimos) => Number(centimos || 0) / 100;
@@ -1260,10 +1405,12 @@ const previewCambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
     planActual,
     planNuevo,
     priceId,
+    parPrecios,
     ciclo,
     nuevaCantidad,
     licenciasAnterior,
     itemId,
+    baseItemId,
     subscriptionId,
     customerId,
   } = resolved;
@@ -1285,11 +1432,20 @@ const previewCambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
     };
   }
 
+  const previewItems = construirItemsUpdateSuscripcion({
+    parPrecios,
+    priceId,
+    itemId,
+    baseItemId,
+    nuevaCantidad,
+    taxRateIds: null,
+  });
+
   const previewParams = {
     customer: customerId,
     subscription: subscriptionId,
     subscription_details: {
-      items: [{ id: itemId, price: priceId, quantity: nuevaCantidad }],
+      items: previewItems,
       proration_behavior: 'create_prorations',
     },
   };
@@ -1327,10 +1483,12 @@ const cambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias } = {}
     planActual,
     planNuevo,
     priceId,
+    parPrecios,
     ciclo,
     nuevaCantidad,
     licenciasAnterior,
     itemId,
+    baseItemId,
     subscriptionId,
     disponibilidad,
   } = resolved;
@@ -1343,13 +1501,17 @@ const cambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias } = {}
   }
 
   const impuestoManual = resolverImpuestoManualEmpresa(resolved.empresa);
-  const updateItem = { id: itemId, price: priceId, quantity: nuevaCantidad };
-  if (impuestoManual) {
-    updateItem.tax_rates = impuestoManual.taxRateIds;
-  }
+  const updateItems = construirItemsUpdateSuscripcion({
+    parPrecios,
+    priceId,
+    itemId,
+    baseItemId,
+    nuevaCantidad,
+    taxRateIds: impuestoManual?.taxRateIds,
+  });
 
   await getStripe().subscriptions.update(subscriptionId, {
-    items: [updateItem],
+    items: updateItems,
     proration_behavior: 'create_prorations',
     ...(impuestoManual ? { default_tax_rates: impuestoManual.taxRateIds } : {}),
     metadata: {
@@ -1422,13 +1584,9 @@ const ampliarLicenciasStripe = async (idEmpresa, { licencias } = {}) => {
     throw error;
   }
 
-  let itemId = facturacion.stripe_subscription_item_id;
   const subscriptionId = facturacion.stripe_subscription_id;
-
-  if (!itemId) {
-    const sub = await getStripe().subscriptions.retrieve(subscriptionId);
-    itemId = sub.items?.data?.[0]?.id ?? null;
-  }
+  const { seatItemId } = await resolverItemsBaseSeatEnSuscripcion(subscriptionId);
+  const itemId = seatItemId || facturacion.stripe_subscription_item_id;
 
   if (!itemId) {
     const error = new Error('No se encontró el ítem de suscripción en Stripe');

@@ -25,11 +25,31 @@ const Plan = sequelize.define('Plan', {
     allowNull: false,
     defaultValue: true,
   },
+  stripe_product_id: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+  },
   stripe_price_id_mensual: {
     type: DataTypes.STRING(100),
     allowNull: true,
   },
   stripe_price_id_anual: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+  },
+  stripe_price_base_mensual: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+  },
+  stripe_price_seat_mensual: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+  },
+  stripe_price_base_anual: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+  },
+  stripe_price_seat_anual: {
     type: DataTypes.STRING(100),
     allowNull: true,
   },
