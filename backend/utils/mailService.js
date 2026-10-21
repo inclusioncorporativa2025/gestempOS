@@ -778,7 +778,7 @@ const buildRenewalEmailHtml = ({
         <td style="padding:14px 12px; border-bottom:1px solid #eee; font-family:Arial,Helvetica,sans-serif; vertical-align:top;">
           <strong style="font-size:15px; color:#0f1020;">${escapeHtml(plan.name)}</strong>
           ${disabled ? '<br /><span style="font-size:12px; color:#999;">Próximamente</span>' : ''}
-          <br /><span style="font-size:13px; color:#666;">Mín. ${plan.minLicencias} licencias</span>
+          <br /><span style="font-size:13px; color:#666;">Cuota base + licencias por usuario</span>
         </td>
         <td style="padding:14px 12px; border-bottom:1px solid #eee; font-size:13px; color:#444; white-space:nowrap;">
           ${plan.priceMonthly} € / mes

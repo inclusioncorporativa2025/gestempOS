@@ -908,7 +908,9 @@ const crearCheckoutSession = async ({
 
   if (!Number.isFinite(qty) || qty < minLicencias) {
     const error = new Error(
-      `El plan ${getPlanLabel(planId)} requiere al menos ${minLicencias} licencias`,
+      minLicencias > 0
+        ? `Se requieren al menos ${minLicencias} licencias`
+        : 'Se requiere al menos 1 licencia (usuario con acceso)',
     );
     error.status = 400;
     throw error;
@@ -1290,10 +1292,7 @@ const resolverCambioPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
     parPrecios,
   } = await resolverPriceIdPlan(planCodigo, ciclo);
   const disponibilidad = await obtenerDisponibilidadLicencias(idEmpresa);
-  const minLicencias = Math.max(
-    getPlanMinLicencias(planNuevo),
-    Number(planRow.min_licencias) || getPlanMinLicencias(planNuevo),
-  );
+  const minLicencias = getPlanMinLicencias(planNuevo);
   const licenciasAnterior = Number(empresa.licencias) || Number(facturacion.licencias_facturadas) || 0;
 
   let nuevaCantidad = licencias != null ? Number(licencias) : licenciasAnterior;

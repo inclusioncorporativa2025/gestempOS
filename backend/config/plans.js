@@ -20,10 +20,13 @@ const PLAN_FEATURES = {
   informes_productividad: ['completo'],
 };
 
+/** Mínimo 1 licencia en checkout (no base+0 con solo admin). */
+const MIN_LICENCIAS = 1;
+
 const PLAN_MIN_LICENCIAS = {
-  esencial: 5,
-  rrhh: 10,
-  completo: 15,
+  esencial: MIN_LICENCIAS,
+  rrhh: MIN_LICENCIAS,
+  completo: MIN_LICENCIAS,
 };
 
 const PLAN_LABELS = {
@@ -39,7 +42,7 @@ const PLAN_CATALOG = [
     name: 'Esencial',
     priceMonthly: '2,50',
     priceAnnual: '25',
-    minLicencias: 5,
+    minLicencias: MIN_LICENCIAS,
     available: true,
   },
   {
@@ -47,7 +50,7 @@ const PLAN_CATALOG = [
     name: 'RRHH',
     priceMonthly: '3,90',
     priceAnnual: '39',
-    minLicencias: 10,
+    minLicencias: MIN_LICENCIAS,
     available: true,
   },
   {
@@ -55,8 +58,8 @@ const PLAN_CATALOG = [
     name: 'Completo',
     priceMonthly: '5,90',
     priceAnnual: '59',
-    minLicencias: 15,
-    available: false,
+    minLicencias: MIN_LICENCIAS,
+    available: true,
   },
 ];
 
@@ -70,8 +73,7 @@ const normalizePlanId = (plan) => {
 const planIncluyeFeature = (planId, featureKey) =>
   (PLAN_FEATURES[featureKey] || []).includes(normalizePlanId(planId));
 
-const getPlanMinLicencias = (planId) =>
-  PLAN_MIN_LICENCIAS[normalizePlanId(planId)] ?? PLAN_MIN_LICENCIAS.esencial;
+const getPlanMinLicencias = (_planId) => MIN_LICENCIAS;
 
 const getPlanLabel = (planId) =>
   PLAN_LABELS[normalizePlanId(planId)] ?? PLAN_LABELS.esencial;
@@ -81,6 +83,7 @@ module.exports = {
   DEFAULT_PLAN,
   DEFAULT_PLAN_ID,
   PLAN_FEATURES,
+  MIN_LICENCIAS,
   PLAN_MIN_LICENCIAS,
   PLAN_LABELS,
   PLAN_CATALOG,

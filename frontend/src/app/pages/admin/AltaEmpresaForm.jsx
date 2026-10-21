@@ -5,15 +5,18 @@ import GradientButton from '../../components/shared/GradientButton';
 import { LANDING_ROUTES } from '../../../constants/routes';
 import {
   PLANS,
+  DEFAULT_LICENCIAS,
   getPlanMinLicencias,
+  MIN_LICENCIAS,
+  USUARIOS_ACCESO_FIELD_LABEL,
   getPlanLabel,
   getPlanMinAnnual,
   formatPrecioPlan,
   getPrecioAnualLista,
+  getPrecioAnualEfectivo,
   PRICE_UNIT_MONTHLY,
   PRICE_UNIT_ANNUAL,
   ANNUAL_FREE_MONTHS_BADGE,
-  LICENSE_IS_USER_NOTE,
   mensajePrimerAnoPorUsuario,
 } from '../../../constants/plans';
 import {
@@ -109,7 +112,7 @@ const PlanCardPicker = ({
               <>
                 <s>{formatPrecioPlan(getPrecioAnualLista(plan))} €</s>
                 {' → '}
-                <strong>{plan.priceAnnual} €</strong>
+                <strong>{formatPrecioPlan(getPrecioAnualEfectivo(plan))} €</strong>
               </>
             ) : (
               <strong>{plan.priceMonthly} €</strong>
@@ -122,12 +125,11 @@ const PlanCardPicker = ({
                 <span className="alta-plan-option-first-year">
                   {mensajePrimerAnoPorUsuario(plan)}
                 </span>
-                <span className="alta-plan-option-annual-badge">{ANNUAL_FREE_MONTHS_BADGE}</span>
               </>
             )}
           </span>
           <span className="alta-plan-option-min">
-            Mín. {plan.minLicenses} usuarios
+            Cuota base + usuarios
             {esAnual && (
               <span className="alta-plan-option-min-total">
                 {' '}· desde {getPlanMinAnnual(plan)} €/año
@@ -176,6 +178,8 @@ const AltaEmpresaForm = ({
   invitacionPagoInmediato = false,
   invitacionPlan = null,
   bloquearCicloFacturacion = false,
+  nombreEmpresaLabel = 'Nombre de la empresa',
+  aliasEmpresaLabel = 'Alias de la empresa',
 }) => {
   const planEfectivo = registroPublico ? 'rrhh' : planId;
   const mostrarSelectorPlan = showPlanSelect && !registroPublico;
@@ -191,20 +195,14 @@ const AltaEmpresaForm = ({
   const mostrarCicloFacturacion = registroPublico
     || esPagoInmediato
     || (mostrarSelectorPlan && planSelectVariant === 'cards');
-  const minLicencias = minLicenciasProp ?? getPlanMinLicencias(planSeleccionado);
+  const minLicencias = minLicenciasProp ?? MIN_LICENCIAS;
   const isCompact = !registroPublico && planSelectVariant === 'cards';
   const rowGutter = isCompact ? [12, 0] : [16, 16];
-  const usuariosExtra = registroPublico
-    ? `Mínimo ${minLicencias} usuarios. ${LICENSE_IS_USER_NOTE}`
-    : isCompact
-      ? `Mínimo ${minLicencias} usuarios (plan ${getPlanLabel(planSeleccionado)})`
-      : `Mínimo ${minLicencias} usuarios (plan ${getPlanLabel(planSeleccionado)}). ${LICENSE_IS_USER_NOTE}`;
 
-  const handlePlanChange = (nuevoPlan) => {
-    const min = getPlanMinLicencias(nuevoPlan);
+  const handlePlanChange = (_nuevoPlan) => {
     const actuales = form.getFieldValue('numLicencias');
-    if (actuales == null || Number(actuales) < min) {
-      form.setFieldsValue({ numLicencias: min });
+    if (actuales == null || Number(actuales) < MIN_LICENCIAS) {
+      form.setFieldsValue({ numLicencias: DEFAULT_LICENCIAS });
     }
   };
 
@@ -225,22 +223,24 @@ const AltaEmpresaForm = ({
 
   useEffect(() => {
     if (!registroPublico || invitacionPagoInmediato) return;
-    const minRrhh = getPlanMinLicencias('rrhh');
     const actuales = form.getFieldValue('numLicencias');
     form.setFieldsValue({
       plan: 'rrhh',
       cicloFacturacion: form.getFieldValue('cicloFacturacion') || 'mensual',
-      ...(actuales == null || Number(actuales) < minRrhh ? { numLicencias: minRrhh } : {}),
+      ...(actuales == null || Number(actuales) < MIN_LICENCIAS
+        ? { numLicencias: DEFAULT_LICENCIAS }
+        : {}),
     });
   }, [form, registroPublico, invitacionPagoInmediato]);
 
   useEffect(() => {
     if (!invitacionPagoInmediato || !invitacionPlan) return;
-    const min = getPlanMinLicencias(invitacionPlan);
     const actuales = form.getFieldValue('numLicencias');
     form.setFieldsValue({
       plan: invitacionPlan,
-      ...(actuales == null || Number(actuales) < min ? { numLicencias: min } : {}),
+      ...(actuales == null || Number(actuales) < MIN_LICENCIAS
+        ? { numLicencias: DEFAULT_LICENCIAS }
+        : {}),
     });
   }, [form, invitacionPagoInmediato, invitacionPlan]);
 
@@ -262,7 +262,7 @@ const AltaEmpresaForm = ({
     initialValues={{
       plan: planEfectivo,
       cicloFacturacion: 'mensual',
-      numLicencias: getPlanMinLicencias(planEfectivo),
+      numLicencias: DEFAULT_LICENCIAS,
       ...(requireTermsAcceptance ? { acceptTerms: false } : {}),
     }}
   >
@@ -287,7 +287,6 @@ const AltaEmpresaForm = ({
           name="plan"
           label="Plan contratado"
           className="alta-plan-form-item"
-          extra={LICENSE_IS_USER_NOTE}
         >
           <PlanCardPicker
             readOnly={bloquearCicloFacturacion}
@@ -317,7 +316,6 @@ const AltaEmpresaForm = ({
           label="Elige tu plan"
           rules={[{ required: true, message: 'Selecciona un plan' }]}
           className="alta-plan-form-item"
-          extra={LICENSE_IS_USER_NOTE}
         >
           <PlanCardPicker
             onPlanChange={handlePlanChange}
@@ -362,7 +360,7 @@ const AltaEmpresaForm = ({
       <Col xs={24} sm={12}>
         <Form.Item
           name="nombre_empresa"
-          label="Nombre de la empresa"
+          label={nombreEmpresaLabel}
           rules={[{ required: true, message: 'Campo requerido!' }]}
         >
           <Input placeholder="Ej. Empresa.SA" />
@@ -371,7 +369,7 @@ const AltaEmpresaForm = ({
       <Col xs={24} sm={12}>
         <Form.Item
           name="alias"
-          label="Alias de la empresa"
+          label={aliasEmpresaLabel}
           rules={[{ required: true, message: 'Campo requerido!' }]}
         >
           <Input placeholder="Ej. Empresa1" />
@@ -416,18 +414,17 @@ const AltaEmpresaForm = ({
       <Col xs={24} sm={12}>
         <Form.Item
           name="numLicencias"
-          label="Número de usuarios"
-          extra={usuariosExtra}
+          label={USUARIOS_ACCESO_FIELD_LABEL}
           rules={[
             { required: true, message: 'Campo requerido!' },
             {
               type: 'number',
-              min: minLicencias,
-              message: `El mínimo es ${minLicencias} usuarios`,
+              min: MIN_LICENCIAS,
+              message: 'Indica al menos 1 usuario con acceso',
             },
           ]}
         >
-          <InputNumber min={minLicencias} className="alta-input-number" />
+          <InputNumber min={MIN_LICENCIAS} className="alta-input-number" />
         </Form.Item>
       </Col>
       <Col xs={24} sm={12}>
@@ -455,7 +452,7 @@ const AltaEmpresaForm = ({
         <>
           <Col xs={24}>
             <p className="alta-fiscal-note">
-              Necesitamos la dirección fiscal para calcular el IVA y emitir facturas en Stripe.
+              Necesitamos la dirección fiscal para calcular el IVA y emitir facturas.
             </p>
           </Col>
           <Col xs={24}>

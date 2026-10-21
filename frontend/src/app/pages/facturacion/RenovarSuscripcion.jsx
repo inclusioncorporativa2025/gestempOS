@@ -4,17 +4,22 @@ import { Alert, InputNumber, Spin, Typography, message } from 'antd';
 import { CheckCircleFilled } from '@ant-design/icons';
 import GradientButton from '../../components/shared/GradientButton';
 import PlanUnitPrice from '../../../components/PlanUnitPrice';
-import PlanAnnualTotalBreakdown from '../../../components/PlanAnnualTotalBreakdown';
+import PlanBillingBreakdown from '../../../components/PlanBillingBreakdown';
+import PlanFeaturesInfo from '../../../components/PlanFeaturesInfo';
+import PlanBillingCycleToggle from '../../../components/PlanBillingCycleToggle';
 import {
   PLANS,
   ANNUAL_DISCOUNT_LABEL,
-  ANNUAL_LIST_PRICE_NOTE,
-  calcTotalAnualEfectivo,
+  USUARIOS_ACCESO_FIELD_LABEL,
+  calcTotalMensual,
+  calcTotalAnualPrimerAno,
+  DEFAULT_LICENCIAS,
+  MIN_LICENCIAS,
   getPlanMinLicencias,
   getPlanLabel,
   normalizePlanId,
   PLAN_UNAVAILABLE_TOOLTIP,
-  PRICES_EXCLUDE_TAX_NOTE,
+  PRICE_SUMMARY_TAX_LABEL,
 } from '../../../constants/plans';
 import {
   crearCheckoutRenovacion,
@@ -23,9 +28,6 @@ import {
 import './Facturacion.css';
 
 const { Text, Title } = Typography;
-
-const parsePrecio = (value) =>
-  parseFloat(String(value || '0').replace(',', '.'));
 
 const RenovarSuscripcion = () => {
   const [searchParams] = useSearchParams();
@@ -39,7 +41,7 @@ const RenovarSuscripcion = () => {
   const [info, setInfo] = useState(null);
   const [plan, setPlan] = useState(planUrl);
   const [ciclo, setCiclo] = useState(cicloUrl);
-  const [licencias, setLicencias] = useState(5);
+  const [licencias, setLicencias] = useState(DEFAULT_LICENCIAS);
   const autoCheckoutRef = useRef(false);
 
   const cargar = useCallback(async () => {
@@ -57,7 +59,11 @@ const RenovarSuscripcion = () => {
       const planInicial = normalizePlanId(searchParams.get('plan') || data.empresa?.plan_actual || 'esencial');
       setPlan(planInicial);
       setCiclo(searchParams.get('ciclo') === 'mensual' ? 'mensual' : 'anual');
-      setLicencias(Math.max(data.licencias || 0, getPlanMinLicencias(planInicial)));
+      setLicencias(Math.max(
+        data.licencias ?? 0,
+        data.licencias_usadas ?? 0,
+        getPlanMinLicencias(planInicial),
+      ));
     } catch (err) {
       setError(err.message || 'No se pudo cargar la renovación');
     } finally {
@@ -69,15 +75,18 @@ const RenovarSuscripcion = () => {
     cargar();
   }, [cargar]);
 
-  const minLicencias = getPlanMinLicencias(plan);
+  const minLicencias = Math.max(
+    getPlanMinLicencias(plan),
+    info?.licencias_usadas ?? 0,
+  );
   const planInfo = PLANS.find((p) => p.id === plan) || PLANS[0];
   const planDisponible = planInfo.available !== false;
 
   const precioEstimado = useMemo(() => {
     if (ciclo === 'mensual') {
-      return parsePrecio(planInfo.priceMonthly) * licencias;
+      return calcTotalMensual(planInfo, licencias);
     }
-    return calcTotalAnualEfectivo(planInfo, licencias);
+    return calcTotalAnualPrimerAno(planInfo, licencias);
   }, [ciclo, licencias, planInfo]);
 
   const iniciarCheckout = useCallback(async () => {
@@ -86,7 +95,7 @@ const RenovarSuscripcion = () => {
       return;
     }
     if (licencias < minLicencias) {
-      message.warning(`Mínimo ${minLicencias} licencias para ${getPlanLabel(plan)}`);
+      message.warning(`Indica al menos ${minLicencias} usuario(s) con acceso`);
       return;
     }
 
@@ -127,7 +136,7 @@ const RenovarSuscripcion = () => {
     const target = PLANS.find((p) => p.id === nuevoPlan);
     if (!target || target.available === false) return;
     setPlan(nuevoPlan);
-    setLicencias((prev) => Math.max(prev, getPlanMinLicencias(nuevoPlan)));
+    setLicencias((prev) => Math.max(prev, getPlanMinLicencias(nuevoPlan), info?.licencias_usadas ?? 0));
   };
 
   if (loading) {
@@ -168,24 +177,11 @@ const RenovarSuscripcion = () => {
       <div className="facturacion-panel" style={{ marginTop: 24 }}>
         <div className="facturacion-panel__grid" style={{ gridTemplateColumns: '1fr' }}>
           <section className="facturacion-panel__card facturacion-panel__card--checkout">
-            <Text className="facturacion-panel__section-title">Configurar plan</Text>
-
-            <div className="facturacion-billing-toggle" role="group" aria-label="Ciclo de suscripción">
-              <button
-                type="button"
-                className={`facturacion-billing-toggle__option${ciclo === 'mensual' ? ' is-active' : ''}`}
-                onClick={() => setCiclo('mensual')}
-              >
-                Mensual
-              </button>
-              <button
-                type="button"
-                className={`facturacion-billing-toggle__option${ciclo === 'anual' ? ' is-active' : ''}`}
-                onClick={() => setCiclo('anual')}
-              >
-                Anual
-                <span className="facturacion-billing-toggle__badge">{ANNUAL_DISCOUNT_LABEL}</span>
-              </button>
+            <div className="facturacion-plan-section-head">
+              <Text className="facturacion-panel__section-title facturacion-panel__section-title--inline">
+                Configurar plan
+              </Text>
+              <PlanBillingCycleToggle value={ciclo} onChange={setCiclo} />
             </div>
 
             <div className="facturacion-plan-picker">
@@ -209,7 +205,10 @@ const RenovarSuscripcion = () => {
                         onClick={() => handlePlanChange(item.id)}
                       >
                         <span className="facturacion-plan-option__head">
-                          <span className="facturacion-plan-option__name">{item.name}</span>
+                          <span className="facturacion-plan-option__name-row">
+                            <span className="facturacion-plan-option__name">{item.name}</span>
+                            <PlanFeaturesInfo planName={item.name} features={item.features} />
+                          </span>
                           {selected && disponible ? (
                             <CheckCircleFilled className="facturacion-plan-option__check" />
                           ) : null}
@@ -218,11 +217,13 @@ const RenovarSuscripcion = () => {
                           <PlanUnitPrice
                             plan={item}
                             ciclo={ciclo}
+                            layout="stack"
+                            omitPeriodInLabels
                             classPrefix="facturacion-plan-option"
                           />
                         </span>
                         <span className="facturacion-plan-option__min">
-                          Mín. {item.minLicencias} licencias
+                          Cuota base + usuarios
                         </span>
                       </button>
                     </span>
@@ -233,7 +234,7 @@ const RenovarSuscripcion = () => {
 
             <div className="facturacion-panel__field">
               <Text type="secondary" className="facturacion-panel__field-label">
-                Número de licencias
+                {USUARIOS_ACCESO_FIELD_LABEL}
               </Text>
               <InputNumber
                 min={minLicencias}
@@ -242,14 +243,16 @@ const RenovarSuscripcion = () => {
                 onChange={(v) => setLicencias(Number(v) || minLicencias)}
                 className="facturacion-panel__licencias-input"
               />
-              <Text type="secondary" className="facturacion-panel__hint">
-                En uso: {info?.licencias_usadas ?? 0}. Mínimo {minLicencias} para {getPlanLabel(plan)}.
-              </Text>
             </div>
 
             <div className="facturacion-price-summary">
               <div className="facturacion-price-summary__row">
-                <Text>Importe estimado</Text>
+                <div className="facturacion-price-summary__heading">
+                  <Text>Importe estimado</Text>
+                  <span className="facturacion-price-summary__tax-label">
+                    {PRICE_SUMMARY_TAX_LABEL}
+                  </span>
+                </div>
                 <strong className="facturacion-price-summary__total">
                   {precioEstimado.toLocaleString('es-ES', {
                     minimumFractionDigits: 2,
@@ -261,14 +264,11 @@ const RenovarSuscripcion = () => {
                   </span>
                 </strong>
               </div>
-              {ciclo === 'anual' ? (
-                <PlanAnnualTotalBreakdown plan={planInfo} licencias={licencias} />
-              ) : null}
-              <Text type="secondary" className="facturacion-price-summary__note">
-                {ciclo === 'anual'
-                  ? `${ANNUAL_LIST_PRICE_NOTE} ${PRICES_EXCLUDE_TAX_NOTE}`
-                  : PRICES_EXCLUDE_TAX_NOTE}
-              </Text>
+              <PlanBillingBreakdown
+                plan={planInfo}
+                licencias={licencias}
+                ciclo={ciclo}
+              />
             </div>
 
             <GradientButton

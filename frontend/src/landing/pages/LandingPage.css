@@ -550,6 +550,34 @@
   background: transparent;
 }
 
+.landing-plans-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.landing-plans-head__copy {
+  width: 100%;
+  max-width: 40rem;
+}
+
+.landing-plans-head .landing-plans-title {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.landing-plans-head .landing-plans-lead {
+  margin: 0 auto;
+  text-align: center;
+}
+
+.landing-plans-billing-toggle {
+  flex-shrink: 0;
+  margin: 0 auto;
+}
+
 .landing-plans-title {
   font-size: clamp(1.75rem, 4vw, 2.25rem);
   font-weight: var(--font-weight-medium);
@@ -566,14 +594,6 @@
   line-height: 1.55;
   color: rgba(0, 21, 41, 0.65);
   text-align: center;
-}
-
-.landing-plans-license-note {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 0.875rem;
-  font-weight: var(--font-weight-medium);
-  color: rgba(0, 21, 41, 0.55);
 }
 
 .landing-plans-tax-note {
@@ -676,6 +696,260 @@
 .landing-plans--single .landing-plan-item {
   max-width: 28rem;
   margin: 0 auto;
+}
+
+.landing-plan-simulator {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  margin: 2rem 0 2.5rem;
+  padding: 1.35rem 1.5rem 1.5rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 28px rgba(0, 21, 41, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.landing-plan-simulator .plan-price-simulator__layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.landing-plan-simulator .plan-price-simulator__form {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.landing-plan-simulator .plan-price-simulator__group {
+  margin: 0;
+  padding: 0 0 1.15rem;
+  border: none;
+  border-bottom: 1px solid rgba(0, 21, 41, 0.08);
+}
+
+.landing-plan-simulator .plan-price-simulator__group:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.landing-plan-simulator .plan-price-simulator__question {
+  display: block;
+  margin: 0 0 0.65rem;
+  padding: 0;
+  font-size: 0.9375rem;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.4;
+  color: var(--color-dark);
+  text-align: left;
+}
+
+.landing-plan-simulator .plan-price-simulator__slider-wrap {
+  width: 100%;
+  max-width: 320px;
+}
+
+.landing-plan-simulator .plan-price-simulator__slider-value {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: rgba(0, 21, 41, 0.62);
+}
+
+.landing-plan-simulator .plan-price-simulator__slider-value strong {
+  font-size: 1.25rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-dark);
+}
+
+.landing-plan-simulator .plan-price-simulator__slider-wrap .ant-slider {
+  margin: 0.35rem 0 0.25rem;
+}
+
+.landing-plan-simulator .plan-price-simulator__slider-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: rgba(0, 21, 41, 0.45);
+}
+
+@media (min-width: 768px) {
+  .landing-plan-simulator.plan-price-simulator {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    column-gap: 2rem;
+    row-gap: 0.75rem;
+    align-items: start;
+  }
+
+  .landing-plan-simulator .plan-price-simulator__title {
+    grid-column: 1 / -1;
+  }
+
+  .landing-plan-simulator .plan-price-simulator__layout {
+    display: contents;
+  }
+
+  .landing-plan-simulator .plan-price-simulator__plans {
+    justify-content: flex-start;
+  }
+
+  .landing-plan-simulator .plan-price-simulator__summary {
+    min-height: 100%;
+  }
+}
+
+.landing-plan-simulator .plan-price-simulator__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.125rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-dark);
+  text-align: center;
+}
+
+.landing-plan-simulator .plan-price-simulator__lead {
+  margin: 0 0 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: rgba(0, 21, 41, 0.58);
+  text-align: center;
+}
+
+.landing-plan-simulator .plan-price-simulator__plans {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.landing-plan-simulator .plan-price-simulator__plan {
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 21, 41, 0.12);
+  background: rgba(255, 255, 255, 0.85);
+  color: rgba(0, 21, 41, 0.72);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.landing-plan-simulator .plan-price-simulator__plan.is-selected {
+  border-color: rgba(45, 27, 66, 0.35);
+  box-shadow: 0 2px 10px rgba(45, 27, 66, 0.1);
+  color: var(--color-dark);
+}
+
+.landing-plan-simulator .plan-price-simulator__plan--purple.is-selected {
+  border-color: var(--primary, #a85ce0);
+}
+
+.landing-plan-simulator .plan-price-simulator__billing-toggle {
+  width: 100%;
+  max-width: none;
+}
+
+.plan-billing-form-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.plan-billing-form-toggle__option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1.5px solid rgba(0, 21, 41, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.plan-billing-form-toggle__option:hover {
+  border-color: rgba(0, 21, 41, 0.22);
+  background: #fff;
+}
+
+.plan-billing-form-toggle__option.is-selected {
+  border-color: var(--primary, #a85ce0);
+  background: rgba(var(--color-primary-rgb, 168, 92, 224), 0.08);
+  box-shadow: 0 0 0 1px rgba(var(--color-primary-rgb, 168, 92, 224), 0.15);
+}
+
+.plan-billing-form-toggle__control {
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.15rem;
+  border: 2px solid rgba(0, 21, 41, 0.25);
+  border-radius: 50%;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.plan-billing-form-toggle__option.is-selected .plan-billing-form-toggle__control {
+  border-color: var(--primary, #a85ce0);
+  border-width: 5px;
+}
+
+.plan-billing-form-toggle__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.plan-billing-form-toggle__label-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+
+.plan-billing-form-toggle__label {
+  font-size: 0.9375rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-dark);
+  line-height: 1.25;
+}
+
+.plan-billing-form-toggle__hint {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: rgba(0, 21, 41, 0.52);
+}
+
+.plan-billing-form-toggle__badge {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(var(--color-primary-rgb, 168, 92, 224), 0.14);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--primary, #a85ce0);
+  line-height: 1.3;
+}
+
+.landing-plan-simulator .plan-price-simulator__summary {
+  margin: 0;
 }
 
 .landing-plans-grid {
@@ -805,6 +1079,19 @@
   text-align: center;
 }
 
+.landing-plan-badge-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.landing-plan-badge-row .ant-tooltip-open,
+.landing-plan-badge-row .ant-tooltip-disabled-compatible-wrapper {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+
 .landing-plan-badge {
   display: inline-block;
   align-self: center;
@@ -818,12 +1105,107 @@
   box-shadow: 0 2px 8px rgba(0, 21, 41, 0.06);
 }
 
+.landing-plan-badge__info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(0, 21, 41, 0.35);
+  border-radius: 50%;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  line-height: 0;
+  font-size: 0.8125rem;
+  cursor: help;
+  vertical-align: middle;
+}
+
+.landing-plan-badge__info .anticon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  line-height: 1;
+}
+
+.landing-plan-badge__info .anticon svg {
+  display: block;
+}
+
+.landing-plan-badge__info:hover,
+.landing-plan-badge__info:focus-visible {
+  color: #fff;
+  background: rgba(0, 21, 41, 0.55);
+}
+
+.landing-plan-price-block {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 0.85rem;
+}
+
 .landing-plan-price {
-  margin: 0.85rem 0 0;
-  font-size: 0.9375rem;
-  color: rgba(0, 21, 41, 0.7);
+  margin: 0;
+  font-size: 0.8125rem;
+  color: rgba(0, 21, 41, 0.62);
   line-height: 1.35;
   text-align: center;
+  white-space: normal;
+}
+
+.landing-plan-price--base-seat {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.landing-plan-price__cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 0;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  align-items: start;
+}
+
+.landing-plan-price__col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0 0.85rem;
+  text-align: center;
+}
+
+.landing-plan-price__col:first-child {
+  padding-left: 0;
+  min-width: max-content;
+}
+
+.landing-plan-price__col:last-child {
+  border-left: 1px solid rgba(0, 21, 41, 0.14);
+}
+
+.landing-plan-price__amount {
+  font-size: 1.125rem;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+  color: var(--color-dark);
+}
+
+.landing-plan-price__unit {
+  display: block;
+  margin-top: 0;
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-medium);
+  color: rgba(0, 21, 41, 0.52);
+  line-height: 1.25;
   white-space: nowrap;
 }
 
@@ -1524,6 +1906,20 @@
   .landing-plans-lead {
     margin-bottom: 1.5rem;
     font-size: 0.9375rem;
+  }
+
+  .landing-plans-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .landing-plans-head .landing-plans-title,
+  .landing-plans-head .landing-plans-lead {
+    text-align: center;
+  }
+
+  .landing-plans-billing-toggle {
+    margin: 0 auto;
   }
 
   .landing-plans-billing--in-card {

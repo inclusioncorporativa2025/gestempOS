@@ -28,6 +28,7 @@ const {
 } = require('../services/trialService');
 const { crearCheckoutTrialPendiente, crearCheckoutPagoPendiente } = require('../services/billingService');
 const { publicarEnlacePagoCorto } = require('../services/enlacePagoService');
+const { validarCredencialesLogin } = require('../services/iamcorBridgeService');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const BCRYPT_ROUNDS = 10;
@@ -200,8 +201,16 @@ const login = async (req, res) => {
       return res.status(403).json(respuesta);
     }
 
-    const passwordValido = await bcrypt.compare(password, usuario.password_hash);
-    if (!passwordValido) {
+    const credenciales = await validarCredencialesLogin(usuario, email, password);
+    if (credenciales.code === 'APP_ACCESS_DENIED') {
+      return res.status(403).json({
+        code: credenciales.code,
+        message:
+          credenciales.message ||
+          'Tu cuenta no tiene acceso a TimeCor en IAMCOR. Contacta con administración.',
+      });
+    }
+    if (!credenciales.ok) {
       return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 
@@ -217,7 +226,7 @@ const login = async (req, res) => {
         message: 'Selecciona la empresa con la que deseas acceder',
         preAuthToken: emitirPreAuthToken(usuario.id_usuario),
         empresas,
-        usuario: sanitizeUsuario(usuario, membresia),
+        usuario: sanitizeUsuario(usuario, null),
       });
     }
 

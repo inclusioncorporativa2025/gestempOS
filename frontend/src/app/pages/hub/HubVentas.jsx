@@ -51,7 +51,6 @@ import {
   buildWhatsAppInvitacionUrl,
   telefonoValidoWhatsApp,
 } from '../../../utils/hubInvitacionWhatsApp';
-import { LICENSE_IS_USER_NOTE } from '../../../constants/plans';
 import { PlanBillingToggle, PlanCardPicker } from '../admin/AltaEmpresaForm';
 import '../admin/AltaEmpresa.css';
 import './Hub.css';
@@ -1038,7 +1037,7 @@ const HubVentas = () => {
                   }))}
                 />
                 <Text type="secondary" style={{ display: 'block', fontSize: 12, marginTop: 4 }}>
-                  {LICENSE_IS_USER_NOTE} Venta privada: sin prueba. Tras el registro podrás copiar el enlace de pago Stripe.
+                  Venta privada: sin prueba. Tras el registro podrás copiar el enlace de pago Stripe.
                 </Text>
               </div>
             )}

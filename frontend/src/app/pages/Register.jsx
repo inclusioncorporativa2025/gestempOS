@@ -4,7 +4,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { registrarEmpresaPublica } from '../../features/auth/authService';
 import { previewInvitacionHub } from '../../features/hub/hubService';
-import { getPlanMinLicencias } from '../../constants/plans';
+import { DEFAULT_LICENCIAS, MIN_LICENCIAS } from '../../constants/plans';
+import { REGISTER_PUBLIC_LEAD } from '../../constants/trial';
 import AltaEmpresaForm from './admin/AltaEmpresaForm';
 import './Register.css';
 
@@ -37,10 +38,9 @@ const Register = () => {
         }
         if (esPagoInv && data.plan) {
           fields.plan = data.plan;
-          const minPlan = getPlanMinLicencias(data.plan);
           const actuales = form.getFieldValue('numLicencias');
-          if (actuales == null || Number(actuales) < minPlan) {
-            fields.numLicencias = minPlan;
+          if (actuales == null || Number(actuales) < MIN_LICENCIAS) {
+            fields.numLicencias = DEFAULT_LICENCIAS;
           }
         }
         if (Object.keys(fields).length > 0) {
@@ -69,7 +69,7 @@ const Register = () => {
       if (data?.checkoutUrl) {
         notification.info({
           message: 'Completa el pago',
-          description: 'Te redirigimos a Stripe para activar tu suscripción.',
+          description: 'Te redirigimos para completar el pago y activar tu suscripción.',
           duration: 4,
         });
         window.location.href = data.checkoutUrl;
@@ -123,45 +123,66 @@ const Register = () => {
   return (
     <div className="register-page gradient-bg">
       <div className="register-glass-panel">
-        <Title level={2} className="register-title">
-          {esPagoInmediatoInv ? 'Activa tu suscripción' : 'Empieza gratis'}
-        </Title>
-        <Text className="register-lead">
-          {esPagoInmediatoInv ? (
-            <>
-              <strong>Venta privada acordada con tu comercial.</strong>{' '}
-              Tras crear la empresa deberás completar el pago (
-              {invitacionPreview.ciclo_facturacion === 'anual' ? 'facturación anual' : 'facturación mensual'}
-              ) para activar TimeCor.
-            </>
-          ) : (
-            <>
-              <strong className="register-trial">15 días de prueba gratis.</strong>{' '}
-              Crea tu empresa en minutos y empieza a registrar la jornada de tu equipo sin coste
-              durante la prueba. Recibirás un correo para activar tu cuenta y acceder al panel.
-            </>
-          )}
-        </Text>
-        <ul className="register-trust" aria-label="Ventajas del registro">
-          <li>Sin permanencia</li>
-          <li>Control horario conforme a la normativa</li>
-          <li>Soporte en español</li>
-        </ul>
+        {!esPagoInmediatoInv ? (
+          <div
+            className="register-trial-sign"
+            role="status"
+            aria-label="15 días de prueba gratis, sin tarjeta"
+          >
+            <span className="register-trial-sign__string" aria-hidden="true" />
+            <div className="register-trial-sign__board">
+              <span className="register-trial-sign__line">15 días</span>
+              <span className="register-trial-sign__line register-trial-sign__line--accent">gratis</span>
+              <span className="register-trial-sign__tag">Sin tarjeta</span>
+            </div>
+          </div>
+        ) : null}
 
-        <AltaEmpresaForm
-          form={form}
-          loading={loading}
-          onFinish={handleFinish}
-          onCancel={() => form.resetFields()}
-          submitLabel="Registrar empresa"
-          className="register-form-glass"
-          registroPublico
-          requireTermsAcceptance
-          collectFiscalAddress
-          invitacionPagoInmediato={esPagoInmediatoInv}
-          invitacionPlan={invitacionPreview?.plan || null}
-          bloquearCicloFacturacion={esPagoInmediatoInv}
-        />
+        <div
+          className={`register-intro${!esPagoInmediatoInv ? ' register-intro--trial' : ''}`}
+        >
+          {esPagoInmediatoInv ? (
+            <Title level={2} className="register-title">
+              Activa tu suscripción
+            </Title>
+          ) : null}
+          <Text className="register-lead">
+            {esPagoInmediatoInv ? (
+              <>
+                <strong>Venta privada acordada con tu comercial.</strong>{' '}
+                Tras crear la empresa deberás completar el pago (
+                {invitacionPreview.ciclo_facturacion === 'anual' ? 'facturación anual' : 'facturación mensual'}
+                ) para activar TimeCor.
+              </>
+            ) : (
+              REGISTER_PUBLIC_LEAD
+            )}
+          </Text>
+          <ul className="register-trust" aria-label="Ventajas del registro">
+            <li>Sin permanencia</li>
+            <li>Control horario conforme a la normativa</li>
+            <li>Soporte en español</li>
+          </ul>
+        </div>
+
+        <div className="register-form-section">
+          <AltaEmpresaForm
+            form={form}
+            loading={loading}
+            onFinish={handleFinish}
+            onCancel={() => form.resetFields()}
+            submitLabel="Registrar empresa"
+            className="register-form-glass"
+            nombreEmpresaLabel="Razón social de la empresa"
+            aliasEmpresaLabel="Nombre comercial de la empresa"
+            registroPublico
+            requireTermsAcceptance
+            collectFiscalAddress
+            invitacionPagoInmediato={esPagoInmediatoInv}
+            invitacionPlan={invitacionPreview?.plan || null}
+            bloquearCicloFacturacion={esPagoInmediatoInv}
+          />
+        </div>
 
         <p className="register-footer">
           ¿Ya tienes cuenta? <Link to={APP_ROUTES.login}>Acceder</Link>

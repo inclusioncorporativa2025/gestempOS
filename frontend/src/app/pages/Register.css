@@ -11,6 +11,9 @@
 }
 
 .register-glass-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 900px;
   padding: 1.75rem 1.75rem 3.25rem;
@@ -31,33 +34,164 @@
   }
 }
 
-.register-title {
+.register-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  margin-bottom: 0;
   text-align: center;
-  margin-bottom: 0.5rem !important;
+}
+
+@media (min-width: 641px) {
+  .register-intro--trial {
+    padding-top: 3.25rem;
+  }
+}
+
+.register-title {
+  margin: 0 0 0.15rem !important;
   color: var(--color-dark) !important;
+}
+
+.register-trial-sign {
+  position: absolute;
+  top: 1.1rem;
+  right: 1.25rem;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  user-select: none;
+}
+
+.register-trial-sign__string {
+  width: 2px;
+  height: 16px;
+  border-radius: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--color-primary-dark-rgb), 0.55) 0%,
+    rgba(var(--color-secondary-rgb), 0.45) 100%
+  );
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.register-trial-sign__string::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -3px;
+  border-radius: 50%;
+  background: rgba(var(--color-primary-rgb), 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 1px 4px rgba(var(--color-primary-dark-rgb), 0.2);
+}
+
+.register-trial-sign__board {
+  margin-top: 2px;
+  padding: 0.55rem 0.95rem 0.65rem;
+  min-width: 6.75rem;
+  text-align: center;
+  line-height: 1.12;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(var(--color-secondary-rgb), 0.38) 42%,
+    rgba(var(--color-primary-rgb), 0.28) 100%
+  );
+  border: 1px solid rgba(var(--color-primary-rgb), 0.38);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 4px 14px rgba(var(--color-primary-dark-rgb), 0.16);
+  transform: rotate(4deg);
+}
+
+.register-trial-sign__line {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--color-dark);
+}
+
+.register-trial-sign__line--accent {
+  margin-top: 0.15rem;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--color-primary-dark);
+  text-transform: lowercase;
+}
+
+.register-trial-sign__tag {
+  display: block;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(var(--color-primary-rgb), 0.22);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(45, 27, 66, 0.72);
+}
+
+@media (max-width: 640px) {
+  .register-trial-sign {
+    position: static;
+    order: -1;
+    align-self: flex-end;
+    margin: 0 0 0.25rem;
+  }
+
+  .register-intro--trial {
+    padding-top: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .register-trial-sign__board {
+    padding: 0.45rem 0.75rem 0.55rem;
+    min-width: 6.1rem;
+    transform: rotate(3deg);
+  }
+
+  .register-trial-sign__line {
+    font-size: 0.75rem;
+  }
+
+  .register-trial-sign__line--accent {
+    font-size: 0.9375rem;
+  }
 }
 
 .register-lead {
   display: block;
   text-align: center;
-  margin-bottom: 1.15rem;
+  max-width: 34rem;
+  margin: 0 !important;
   color: rgba(0, 21, 41, 0.68) !important;
   font-size: 0.9375rem;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
-.register-trial {
-  color: var(--color-secondary);
-  font-weight: var(--font-weight-medium);
+.register-form-section {
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(var(--color-primary-rgb), 0.14);
 }
 
 .register-trust {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.5rem 1rem;
-  margin: 0 0 1.15rem;
-  padding: 0;
+  gap: 0.35rem 1.25rem;
+  margin: 0;
+  padding: 0 0.25rem;
   list-style: none;
 }
 
@@ -93,6 +227,15 @@
 }
 
 /* Campos del formulario con cristal */
+.register-form-glass {
+  margin-top: 0;
+  padding-top: 0.15rem;
+}
+
+.register-form-glass .ant-row {
+  row-gap: 0.35rem !important;
+}
+
 .register-form-glass .ant-form-item-label > label {
   color: rgba(0, 21, 41, 0.8);
   font-weight: var(--font-weight-medium);
@@ -151,7 +294,7 @@
 }
 
 .register-form-glass .ant-form-item {
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.9rem;
 }
 
 .register-form-glass .ant-form-item-label {
@@ -169,8 +312,8 @@
 }
 
 .register-form-glass .alta-form-actions {
-  margin-top: 0.35rem;
-  padding-top: 0.25rem;
+  margin-top: 0.65rem;
+  padding-top: 0.45rem;
   padding-bottom: 0.75rem;
   display: flex;
   justify-content: center;

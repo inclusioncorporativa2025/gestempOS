@@ -1,39 +1,92 @@
 import React from 'react';
 import {
-  ANNUAL_DISCOUNT_LABEL,
+  PRICE_BASE_ANNUAL_LABEL,
+  PRICE_BASE_BILLING_LABEL,
+  PRICE_BASE_MONTHLY_LABEL,
   PRICE_UNIT_ANNUAL,
+  PRICE_UNIT_BILLING_LABEL,
   PRICE_UNIT_MONTHLY,
   formatPrecioPlan,
-  getPrecioAnualLista,
+  getPlanBaseAnnual,
+  getPlanBaseMonthly,
+  getPlanSeatAnnual,
+  getPlanSeatMonthly,
 } from '../constants/plans';
 
+const PriceCol = ({ amount, unitLabel, classPrefix }) => (
+  <span className={`${classPrefix}__col`}>
+    <strong className={`${classPrefix}__amount`}>{amount}</strong>
+    <span className={`${classPrefix}__unit`}>{unitLabel}</span>
+  </span>
+);
+
 /**
- * Precio unitario en tarjetas de plan (landing, facturación, renovación).
+ * Precio en tarjetas de plan (landing, facturación, renovación): base + licencia/usuario.
+ * @param {'columns'|'stack'} layout — columns: base | usuario (landing); stack: base arriba, usuario abajo.
  */
-const PlanUnitPrice = ({ plan, ciclo, classPrefix = 'plan-unit-price' }) => {
+const PlanUnitPrice = ({
+  plan,
+  ciclo,
+  classPrefix = 'plan-unit-price',
+  layout = 'columns',
+  /** Sin «/ mes» ni «/ año» (p. ej. facturación con toggle arriba). */
+  omitPeriodInLabels = false,
+}) => {
+  const baseUnitLabel = omitPeriodInLabels
+    ? PRICE_BASE_BILLING_LABEL
+    : ciclo === 'mensual'
+      ? PRICE_BASE_MONTHLY_LABEL
+      : PRICE_BASE_ANNUAL_LABEL;
+  const seatUnitLabel = omitPeriodInLabels
+    ? PRICE_UNIT_BILLING_LABEL
+    : ciclo === 'mensual'
+      ? PRICE_UNIT_MONTHLY
+      : PRICE_UNIT_ANNUAL;
+
+  const colsClass =
+    layout === 'stack'
+      ? `${classPrefix}__cols ${classPrefix}__cols--stack`
+      : `${classPrefix}__cols`;
+
   if (ciclo === 'mensual') {
+    const base = formatPrecioPlan(getPlanBaseMonthly(plan));
+    const seat = plan.priceSeatMonthly ?? plan.priceMonthly;
+
     return (
-      <span className={`${classPrefix} ${classPrefix}--monthly`}>
-        <strong>{plan.priceMonthly} €</strong>
-        <span className={`${classPrefix}__unit`}>{PRICE_UNIT_MONTHLY}</span>
+      <span className={`${classPrefix} ${classPrefix}--monthly ${classPrefix}--base-seat`}>
+        <span className={colsClass}>
+          <PriceCol
+            classPrefix={classPrefix}
+            amount={`${base} €`}
+            unitLabel={baseUnitLabel}
+          />
+          <PriceCol
+            classPrefix={classPrefix}
+            amount={`+ ${seat} €`}
+            unitLabel={seatUnitLabel}
+          />
+        </span>
       </span>
     );
   }
 
-  const lista = formatPrecioPlan(getPrecioAnualLista(plan));
+  const base = formatPrecioPlan(getPlanBaseAnnual(plan));
+  const seat = formatPrecioPlan(getPlanSeatAnnual(plan));
 
   return (
-    <span className={`${classPrefix} ${classPrefix}--annual`}>
-      <span className={`${classPrefix}__ref`}>
-        <span className={`${classPrefix}__ref-label`}>12 meses:</span>
-        {' '}
-        <s className={`${classPrefix}__ref-amount`}>{lista} €</s>
+    <span className={`${classPrefix} ${classPrefix}--annual ${classPrefix}--base-seat`}>
+      <span className={colsClass}>
+        <PriceCol
+          classPrefix={classPrefix}
+          amount={`${base} €`}
+          unitLabel={baseUnitLabel}
+        />
+        <PriceCol
+          classPrefix={classPrefix}
+          amount={`+ ${seat} €`}
+          unitLabel={seatUnitLabel}
+        />
       </span>
-      <span className={`${classPrefix}__effective`}>
-        <strong>{plan.priceAnnual} €</strong>
-        <span className={`${classPrefix}__unit`}>{PRICE_UNIT_ANNUAL}</span>
-      </span>
-      <span className={`${classPrefix}__badge`}>({ANNUAL_DISCOUNT_LABEL})</span>
     </span>
   );
 };

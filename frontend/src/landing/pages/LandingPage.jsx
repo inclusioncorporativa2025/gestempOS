@@ -17,16 +17,16 @@ import { getAppLoginHref, getAppRegisterHref } from '../../utils/appLinks';
 import {
   PLANS,
   PLAN_COMPARISON_ROWS,
-  ANNUAL_DISCOUNT_LABEL,
-  getPlanMinAnnual,
-  LICENSE_IS_USER_NOTE,
+  PLANS_SECTION_SEO_TITLE,
+  PLANS_SECTION_SEO_LEAD,
   PRICES_EXCLUDE_TAX_NOTE,
-  PRICE_UNIT_MONTHLY,
-  MIN_USERS_LABEL,
   PLAN_UNAVAILABLE_TOOLTIP,
-  mensajePrimerAnoPorUsuario,
-  mensajeRenovacionPorUsuario,
 } from '../../constants/plans';
+import PlanUnitPrice from '../../components/PlanUnitPrice';
+import PlanFeaturesInfo from '../../components/PlanFeaturesInfo';
+import PlanBillingCycleToggle from '../../components/PlanBillingCycleToggle';
+import PlanPriceSimulator from '../../components/PlanPriceSimulator';
+import { ANNUAL_RECOMMENDED_BADGE, DEFAULT_LICENCIAS } from '../../constants/plans';
 import LandingFooter from '../components/LandingFooter';
 import LandingHeroVisual from '../components/LandingHeroVisual';
 import LandingDemoFormModal from '../components/LandingDemoFormModal';
@@ -35,6 +35,7 @@ import LandingReveal from '../components/LandingReveal';
 import LandingStats from '../components/LandingStats';
 import BrandLogo from '../../components/BrandLogo';
 import { syncLandingCampaignFromUrl } from '../utils/calendlyLeadNotify';
+import '../../app/pages/facturacion/Facturacion.css';
 import './LandingPage.css';
 
 /** Capturas del producto en el hero (rotación automática). */
@@ -81,41 +82,6 @@ const PlanCompareCell = ({ included }) => {
   }
   return (
     <span className="landing-compare-check" aria-hidden>✓</span>
-  );
-};
-
-const PlanBillingToggle = ({ billingPeriod, onChange, variant = 'standalone' }) => {
-  const isInCard = variant === 'in-card';
-  const monthlyLabel = isInCard ? 'Mensual' : 'Pago por mes';
-
-  return (
-    <div
-      className={`landing-plans-billing landing-plans-billing--${variant}`}
-      role="group"
-      aria-label="Periodo de facturación"
-    >
-      <button
-        type="button"
-        className={`landing-plans-billing-option${
-          billingPeriod === 'monthly' ? ' landing-plans-billing-option--active' : ''
-        }`}
-        aria-pressed={billingPeriod === 'monthly'}
-        onClick={() => onChange('monthly')}
-      >
-        {monthlyLabel}
-      </button>
-      <button
-        type="button"
-        className={`landing-plans-billing-option${
-          billingPeriod === 'annual' ? ' landing-plans-billing-option--active' : ''
-        }`}
-        aria-pressed={billingPeriod === 'annual'}
-        onClick={() => onChange('annual')}
-      >
-        Anual
-        <span className="landing-plans-billing-note">({ANNUAL_DISCOUNT_LABEL})</span>
-      </button>
-    </div>
   );
 };
 
@@ -200,6 +166,8 @@ const LandingPage = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [billingPeriod, setBillingPeriod] = useState('monthly');
+  const [simulatorPlanId, setSimulatorPlanId] = useState('rrhh');
+  const [simulatorLicencias, setSimulatorLicencias] = useState(DEFAULT_LICENCIAS);
   const [demoFormOpen, setDemoFormOpen] = useState(
     () => syncLandingCampaignFromUrl().openDemo,
   );
@@ -342,19 +310,19 @@ const LandingPage = () => {
         aria-labelledby="landing-plans-title"
       >
         <div className="landing-container">
-          <h2 id="landing-plans-title" className="landing-plans-title">
-            Compara todos los planes.
-          </h2>
-          <p className="landing-plans-lead">
-            Elige qué incluye cada plan y encuentra el que mejor se adapta a tu negocio.{' '}
-            <span className="landing-plans-license-note">{LICENSE_IS_USER_NOTE}</span>
-          </p>
-
-          <PlanBillingToggle
-            billingPeriod={billingPeriod}
-            onChange={setBillingPeriod}
-            variant="standalone"
-          />
+          <div className="landing-plans-head">
+            <div className="landing-plans-head__copy">
+              <h2 id="landing-plans-title" className="landing-plans-title">
+                {PLANS_SECTION_SEO_TITLE}
+              </h2>
+              <p className="landing-plans-lead">{PLANS_SECTION_SEO_LEAD}</p>
+            </div>
+            <PlanBillingCycleToggle
+              className="landing-plans-billing-toggle"
+              value={billingPeriod === 'annual' ? 'anual' : 'mensual'}
+              onChange={(ciclo) => setBillingPeriod(ciclo === 'anual' ? 'annual' : 'monthly')}
+            />
+          </div>
 
           <p className="landing-plans-tax-note">{PRICES_EXCLUDE_TAX_NOTE}</p>
 
@@ -375,68 +343,27 @@ const LandingPage = () => {
                 >
                   <div className="landing-plan-card-top">
                     <div className="landing-plan-card-gradient" aria-hidden />
-                    <div
-                      className={`landing-plan-card-top-row${
-                        plan.featured ? '' : ' landing-plan-card-top-row--centered'
-                      }`}
-                    >
-                      <span className="landing-plan-badge">{plan.name}</span>
-                      {plan.featured && (
-                        <PlanBillingToggle
-                          billingPeriod={billingPeriod}
-                          onChange={setBillingPeriod}
-                          variant="in-card"
+                    <div className="landing-plan-card-top-row landing-plan-card-top-row--centered">
+                      <span className="landing-plan-badge-row">
+                        <span className="landing-plan-badge">{plan.name}</span>
+                        <PlanFeaturesInfo
+                          planName={plan.name}
+                          features={plan.features}
+                          className="landing-plan-badge__info"
                         />
-                      )}
+                      </span>
                     </div>
                   </div>
                   <div className="landing-plan-card-body">
-                    {billingPeriod === 'monthly' ? (
-                      <p className="landing-plan-price landing-plan-price__main">
-                        <span className="landing-plan-price-from">desde</span>{' '}
-                        <strong>{plan.priceMonthly} €</strong>
-                        <span className="landing-plan-price-unit landing-plan-price-unit--inline">
-                          {PRICE_UNIT_MONTHLY}
-                        </span>
-                      </p>
-                    ) : (
-                      <div className="landing-plan-price landing-plan-price--annual landing-plan-price--compact">
-                        <p className="landing-plan-price__first-year-promo">
-                          {mensajePrimerAnoPorUsuario(plan)}
-                        </p>
-                        <p className="landing-plan-price__renewal">
-                          {mensajeRenovacionPorUsuario(plan)}
-                        </p>
-                      </div>
-                    )}
-                    <p className="landing-plan-min">
-                      {MIN_USERS_LABEL(plan.minLicenses)}
-                      {billingPeriod === 'annual' ? (
-                        <>
-                          {' '}
-                          · desde
-                          {' '}
-                          <strong>
-                            {getPlanMinAnnual(plan)}
-                            {' '}
-                            €/año
-                          </strong>
-                          {' '}
-                          (1.er año)
-                        </>
-                      ) : null}
-                    </p>
-                    {billingPeriod === 'monthly' ? (
-                      <p className="landing-plan-min-total">
-                        {`Desde ${plan.minMonthly} €/mes`}
-                      </p>
-                    ) : null}
+                    <div className="landing-plan-price-block">
+                      <PlanUnitPrice
+                        plan={plan}
+                        ciclo={billingPeriod === 'annual' ? 'anual' : 'mensual'}
+                        classPrefix="landing-plan-price"
+                      />
+                    </div>
+                    <p className="landing-plan-min">Cuota base + usuarios</p>
                     <p className="landing-plan-desc">{plan.description}</p>
-                    <ul className="landing-plan-features">
-                      {plan.features.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
                     <div className="landing-plan-cta-wrap">
                       {plan.available ? (
                         <PlanCta
@@ -466,10 +393,24 @@ const LandingPage = () => {
             ))}
           </ul>
 
+          <LandingReveal delay={160}>
+            <PlanPriceSimulator
+              className="landing-plan-simulator"
+              planId={simulatorPlanId}
+              onPlanIdChange={setSimulatorPlanId}
+              ciclo={billingPeriod === 'annual' ? 'anual' : 'mensual'}
+              onCicloChange={(ciclo) => setBillingPeriod(ciclo === 'anual' ? 'annual' : 'monthly')}
+              licencias={simulatorLicencias}
+              onLicenciasChange={setSimulatorLicencias}
+              showBillingToggle
+              annualBadgeLabel={ANNUAL_RECOMMENDED_BADGE}
+            />
+          </LandingReveal>
+
           <LandingReveal className="landing-plan-compare" delay={200}>
             <h3 className="landing-plan-compare-title">Comparativa detallada</h3>
             <p className="landing-plan-compare-lead">
-              Consulta qué incluye cada plan. El plan Completo estará disponible próximamente.
+              Consulta qué incluye cada plan antes de registrarte.
             </p>
 
             <div className="landing-plan-compare-scroll landing-plan-compare-scroll--desktop">

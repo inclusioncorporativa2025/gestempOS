@@ -20,13 +20,17 @@ import {
   DownloadOutlined,
 } from '@ant-design/icons';
 import PlanUnitPrice from '../../components/PlanUnitPrice';
-import PlanAnnualTotalBreakdown from '../../components/PlanAnnualTotalBreakdown';
+import PlanBillingBreakdown from '../../components/PlanBillingBreakdown';
+import PlanFeaturesInfo from '../../components/PlanFeaturesInfo';
+import PlanBillingCycleToggle from '../../components/PlanBillingCycleToggle';
 import {
   PLANS,
-  ANNUAL_DISCOUNT_LABEL,
-  ANNUAL_LIST_PRICE_NOTE,
-  calcTotalAnualEfectivo,
-  PRICES_EXCLUDE_TAX_NOTE,
+  ADMIN_CUENTA_REGALO_NOTE,
+  USUARIOS_ACCESO_FIELD_LABEL,
+  calcTotalMensual,
+  calcTotalAnualPrimerAno,
+  PRICE_SUMMARY_TAX_LABEL,
+  DEFAULT_LICENCIAS,
   getPlanMinLicencias,
   getPlanLabel,
   getPlanTagColor,
@@ -103,7 +107,7 @@ const FacturacionPanel = ({ activo = true }) => {
   const [tieneClienteStripe, setTieneClienteStripe] = useState(false);
   const [plan, setPlan] = useState('esencial');
   const [ciclo, setCiclo] = useState('mensual');
-  const [licencias, setLicencias] = useState(5);
+  const [licencias, setLicencias] = useState(DEFAULT_LICENCIAS);
 
   const cargar = useCallback(async () => {
     if (!activo) return;
@@ -118,8 +122,9 @@ const FacturacionPanel = ({ activo = true }) => {
       setPlan(planSeleccionable);
       setLicencias(
         Math.max(
-          data.licencias || 0,
-          data.min_licencias || getPlanMinLicencias(planSeleccionable),
+          data.licencias ?? 0,
+          data.licencias_usadas ?? 0,
+          getPlanMinLicencias(planSeleccionable),
         ),
       );
       if (data.ciclo_facturacion === 'anual') {
@@ -166,23 +171,25 @@ const FacturacionPanel = ({ activo = true }) => {
     }
   };
 
-  const minLicencias = getPlanMinLicencias(plan);
+  const minLicencias = Math.max(
+    getPlanMinLicencias(plan),
+    estado?.licencias_usadas ?? 0,
+  );
   const planInfo = PLANS.find((p) => p.id === plan) || PLANS[0];
   const planDisponible = planInfo.available !== false;
 
   const precioEstimado = useMemo(() => {
     if (ciclo === 'mensual') {
-      return parsePrecio(planInfo.priceMonthly) * licencias;
+      return calcTotalMensual(planInfo, licencias);
     }
-    return calcTotalAnualEfectivo(planInfo, licencias);
+    return calcTotalAnualPrimerAno(planInfo, licencias);
   }, [ciclo, licencias, planInfo]);
 
   const handlePlanChange = (nuevoPlan) => {
     const target = PLANS.find((p) => p.id === nuevoPlan);
     if (!target || target.available === false) return;
     setPlan(nuevoPlan);
-    const min = getPlanMinLicencias(nuevoPlan);
-    setLicencias((prev) => Math.max(prev, min));
+    setLicencias((prev) => Math.max(prev, getPlanMinLicencias(nuevoPlan)));
   };
 
   const handleCheckout = async () => {
@@ -191,7 +198,7 @@ const FacturacionPanel = ({ activo = true }) => {
       return;
     }
     if (licencias < minLicencias) {
-      message.warning(`Mínimo ${minLicencias} licencias para el plan ${getPlanLabel(plan)}`);
+      message.warning(`Indica al menos ${minLicencias} usuario(s) con acceso`);
       return;
     }
 
@@ -297,7 +304,7 @@ const FacturacionPanel = ({ activo = true }) => {
       return;
     }
     if (licencias < minLicencias) {
-      message.warning(`Mínimo ${minLicencias} licencias para el plan ${getPlanLabel(plan)}`);
+      message.warning(`Indica al menos ${minLicencias} usuario(s) con acceso`);
       return;
     }
     if (!hayCambiosPendientes) {
@@ -517,7 +524,7 @@ const FacturacionPanel = ({ activo = true }) => {
             <span className="facturacion-status-admin__label">Admin</span>
             <span className="facturacion-status-admin__value">1</span>
             <span className="facturacion-status-admin__note">
-              Te regalamos el admin. No cuenta como licencia.
+              {ADMIN_CUENTA_REGALO_NOTE}
             </span>
           </div>
 
@@ -588,9 +595,14 @@ const FacturacionPanel = ({ activo = true }) => {
         </section>
 
         <section className="facturacion-panel__card facturacion-panel__card--checkout">
-          <Text className="facturacion-panel__section-title">
-            {puedeCambiarPlan ? 'Cambiar de plan' : 'Configurar plan'}
-          </Text>
+          <div className="facturacion-plan-section-head">
+            <Text className="facturacion-panel__section-title facturacion-panel__section-title--inline">
+              {puedeCambiarPlan ? 'Cambiar de plan' : 'Configurar plan'}
+            </Text>
+            {!puedeCambiarPlan ? (
+              <PlanBillingCycleToggle value={ciclo} onChange={setCiclo} />
+            ) : null}
+          </div>
 
           {puedeCambiarPlan ? (
             <Text type="secondary" className="facturacion-panel__hint facturacion-panel__hint--block">
@@ -598,30 +610,9 @@ const FacturacionPanel = ({ activo = true }) => {
               <strong>{ciclo === 'anual' ? 'Anual' : 'Mensual'}</strong>
               . El cambio de plan mantiene el mismo ciclo hasta la próxima renovación.
             </Text>
-          ) : (
-            <div className="facturacion-billing-toggle" role="group" aria-label="Ciclo de suscripción">
-              <button
-                type="button"
-                className={`facturacion-billing-toggle__option${ciclo === 'mensual' ? ' is-active' : ''}`}
-                onClick={() => setCiclo('mensual')}
-              >
-                Mensual
-              </button>
-              <button
-                type="button"
-                className={`facturacion-billing-toggle__option${ciclo === 'anual' ? ' is-active' : ''}`}
-                onClick={() => setCiclo('anual')}
-              >
-                Anual
-                <span className="facturacion-billing-toggle__badge">{ANNUAL_DISCOUNT_LABEL}</span>
-              </button>
-            </div>
-          )}
+          ) : null}
 
           <div className="facturacion-plan-picker">
-            <Text type="secondary" className="facturacion-panel__field-label">
-              Plan
-            </Text>
             <div className="facturacion-plan-picker__grid">
               {PLANS.map((item) => {
                 const selected = plan === item.id;
@@ -645,7 +636,10 @@ const FacturacionPanel = ({ activo = true }) => {
                       onClick={() => handlePlanChange(item.id)}
                     >
                       <span className="facturacion-plan-option__head">
-                        <span className="facturacion-plan-option__name">{item.name}</span>
+                        <span className="facturacion-plan-option__name-row">
+                          <span className="facturacion-plan-option__name">{item.name}</span>
+                          <PlanFeaturesInfo planName={item.name} features={item.features} />
+                        </span>
                         {selected && disponible ? (
                           <CheckCircleFilled className="facturacion-plan-option__check" />
                         ) : null}
@@ -654,11 +648,13 @@ const FacturacionPanel = ({ activo = true }) => {
                         <PlanUnitPrice
                           plan={item}
                           ciclo={ciclo}
+                          layout="stack"
+                          omitPeriodInLabels
                           classPrefix="facturacion-plan-option"
                         />
                       </span>
                       <span className="facturacion-plan-option__min">
-                        Mín. {item.minLicenses} licencias
+                        Cuota base + usuarios
                       </span>
                     </button>
                   </span>
@@ -679,7 +675,7 @@ const FacturacionPanel = ({ activo = true }) => {
 
           <div className="facturacion-panel__field">
             <Text type="secondary" className="facturacion-panel__field-label">
-              Número de licencias
+              {USUARIOS_ACCESO_FIELD_LABEL}
             </Text>
             <InputNumber
               min={minLicencias}
@@ -687,16 +683,20 @@ const FacturacionPanel = ({ activo = true }) => {
               onChange={(v) => setLicencias(v ?? minLicencias)}
               className="facturacion-panel__licencias-input"
             />
-            <Text type="secondary" className="facturacion-panel__hint">
-              Mínimo {minLicencias}. Te regalamos el admin; no cuenta como licencia.
-            </Text>
           </div>
 
           <div className="facturacion-price-summary">
             <div className="facturacion-price-summary__row">
-              <span>
-                {puedeCambiarPlan ? 'Importe a cobrar ahora (prorrateo)' : 'Importe estimado'}
-              </span>
+              <div className="facturacion-price-summary__heading">
+                <span>
+                  {puedeCambiarPlan ? 'Importe a cobrar ahora (prorrateo)' : 'Importe estimado'}
+                </span>
+                {!puedeCambiarPlan ? (
+                  <span className="facturacion-price-summary__tax-label">
+                    {PRICE_SUMMARY_TAX_LABEL}
+                  </span>
+                ) : null}
+              </div>
               <strong className="facturacion-price-summary__total">
                 {puedeCambiarPlan ? (
                   previewLoading ? (
@@ -718,20 +718,22 @@ const FacturacionPanel = ({ activo = true }) => {
                 )}
               </strong>
             </div>
-            {!puedeCambiarPlan && ciclo === 'anual' ? (
-              <PlanAnnualTotalBreakdown plan={planInfo} licencias={licencias} />
+            {!puedeCambiarPlan ? (
+              <PlanBillingBreakdown
+                plan={planInfo}
+                licencias={licencias}
+                ciclo={ciclo}
+              />
             ) : null}
-            <Text type="secondary" className="facturacion-price-summary__note">
-              {puedeCambiarPlan
-                ? previewCambioPlan?.importe_iva_eur > 0
+            {puedeCambiarPlan ? (
+              <Text type="secondary" className="facturacion-price-summary__note">
+                {previewCambioPlan?.importe_iva_eur > 0
                   ? `Incluye ${formatEuro(previewCambioPlan.importe_iva_eur)} € de IVA${previewCambioPlan.regimen_impuesto_etiqueta ? ` (${previewCambioPlan.regimen_impuesto_etiqueta})` : ''}. Según los días restantes del periodo.`
                   : previewCambioPlan?.regimen_impuesto_etiqueta
                     ? `${previewCambioPlan.regimen_impuesto_etiqueta}. Según los días restantes del periodo.`
-                    : 'Según los días restantes del periodo.'
-                : ciclo === 'anual'
-                  ? `${ANNUAL_LIST_PRICE_NOTE} ${PRICES_EXCLUDE_TAX_NOTE}`
-                  : `${planInfo.priceMonthly} € por usuario al mes.`}
-            </Text>
+                    : 'Según los días restantes del periodo.'}
+              </Text>
+            ) : null}
           </div>
 
           {puedeCambiarPlan ? (

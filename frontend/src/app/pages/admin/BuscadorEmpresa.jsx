@@ -54,7 +54,7 @@ import EmpresaFichaDrawer from './EmpresaFichaDrawer';
 import {
   PLANS,
   getPlanLabel,
-  getPlanMinLicencias,
+  MIN_LICENCIAS,
   getPlanTagColor,
   normalizePlanId,
 } from '../../../constants/plans';
@@ -258,7 +258,7 @@ const BuscadorEmpresa = ({ embedded = false }) => {
   };
 
   const planSeleccionado = Form.useWatch('plan', form);
-  const minLicenciasEdicion = getPlanMinLicencias(planSeleccionado || 'esencial');
+  const minLicenciasEdicion = MIN_LICENCIAS;
 
   const handleSave = async () => {
     try {
@@ -968,13 +968,7 @@ const BuscadorEmpresa = ({ embedded = false }) => {
                     label: plan.name,
                     disabled: plan.available === false,
                   }))}
-                  onChange={(planId) => {
-                    const min = getPlanMinLicencias(planId);
-                    const actuales = form.getFieldValue('licencias');
-                    if (actuales == null || Number(actuales) < min) {
-                      form.setFieldsValue({ licencias: min });
-                    }
-                  }}
+                  onChange={() => {}}
                 />
               </Form.Item>
             </Col>
@@ -982,13 +976,13 @@ const BuscadorEmpresa = ({ embedded = false }) => {
               <Form.Item
                 name="licencias"
                 label="Licencias"
-                extra={`Mínimo ${minLicenciasEdicion} para el plan seleccionado`}
+                extra="Mínimo 1 licencia. No puede ser menor que usuarios en uso."
                 rules={[
                   { required: true, message: 'Campo requerido' },
                   {
                     type: 'number',
                     min: minLicenciasEdicion,
-                    message: `Mínimo ${minLicenciasEdicion} licencias`,
+                    message: 'Mínimo 1 licencia',
                   },
                 ]}
               >
