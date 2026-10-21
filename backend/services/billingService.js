@@ -1069,11 +1069,29 @@ const buscarSuscripcionStripeDelCliente = async (customerId) => {
 };
 
 const asegurarSuscripcionSincronizada = async (idEmpresa) => {
-  const facturacion = await obtenerFacturacionCompleta(idEmpresa);
+  let facturacion = await obtenerFacturacionCompleta(idEmpresa);
   if (!facturacion) return facturacion;
 
   if (facturacion.stripe_subscription_id) {
-    return facturacion;
+    try {
+      const sub = await getStripe().subscriptions.retrieve(facturacion.stripe_subscription_id);
+      const estadoBd = String(facturacion.estado_suscripcion || '').toLowerCase();
+      const estadoStripe = String(sub.status || '').toLowerCase();
+      if (estadoStripe && estadoStripe !== estadoBd) {
+        await sincronizarSuscripcion(sub, { motivo: 'refresh_estado_suscripcion' });
+        return obtenerFacturacionCompleta(idEmpresa);
+      }
+      return facturacion;
+    } catch (error) {
+      if (error?.statusCode === 404 || error?.code === 'resource_missing') {
+        console.warn(
+          `Suscripción ${facturacion.stripe_subscription_id} no existe en Stripe; buscando otra…`,
+        );
+      } else {
+        console.warn('No se pudo refrescar suscripción Stripe:', error.message);
+        return facturacion;
+      }
+    }
   }
 
   if (!facturacion.stripe_customer_id) {
@@ -1091,6 +1109,42 @@ const asegurarSuscripcionSincronizada = async (idEmpresa) => {
   }
 
   return facturacion;
+};
+
+/** Listado admin: enlaza suscripción Stripe si hay customer pero falta subscription_id en BD. */
+const sincronizarSuscripcionesStripeListadoEmpresas = async (rows) => {
+  if (!Array.isArray(rows) || !process.env.STRIPE_SECRET_KEY) return;
+  if (stripeModoDistintoDetectado) return;
+
+  const pendientes = rows
+    .filter((row) => {
+      if (!row?.stripe_customer_id || row?.stripe_subscription_id) return false;
+      const modo = String(row.modo_facturacion || '').toLowerCase();
+      return modo === 'stripe' || modo === 'trial' || modo === 'pendiente_pago';
+    })
+    .slice(0, 25);
+
+  for (const row of pendientes) {
+    if (stripeModoDistintoDetectado) break;
+    try {
+      await asegurarSuscripcionSincronizada(row.id_empresa);
+      const actualizada = await obtenerFacturacionCompleta(row.id_empresa);
+      if (!actualizada) continue;
+      row.stripe_subscription_id = actualizada.stripe_subscription_id;
+      row.stripe_customer_id = actualizada.stripe_customer_id;
+      row.estado_suscripcion = actualizada.estado_suscripcion;
+      row.modo_facturacion = actualizada.modo_facturacion;
+      row.ciclo_facturacion = actualizada.ciclo_facturacion;
+      row.current_period_end = actualizada.current_period_end;
+      row.trial_ends_at = actualizada.trial_ends_at;
+      row.cancel_at_period_end = actualizada.cancel_at_period_end;
+    } catch (error) {
+      console.warn(
+        `Listado empresas: sync Stripe falló para id_empresa ${row.id_empresa}:`,
+        error.message,
+      );
+    }
+  }
 };
 
 const sincronizarFacturacionLegacy = async (idEmpresa, empresa) => {
@@ -1677,9 +1731,9 @@ const obtenerEstadoFacturacion = async (idEmpresa) => {
     throw error;
   }
 
-  const facturacion = await asegurarSuscripcionSincronizada(idEmpresa);
-  const facturacionLegacy = await sincronizarFacturacionLegacy(idEmpresa, empresa);
-  const facturacionFinal = facturacionLegacy ?? facturacion;
+  await asegurarSuscripcionSincronizada(idEmpresa);
+  await sincronizarFacturacionLegacy(idEmpresa, empresa);
+  const facturacionFinal = await asegurarSuscripcionSincronizada(idEmpresa);
   const licencias = await obtenerDisponibilidadLicencias(idEmpresa);
   const trial = await obtenerEstadoTrialEmpresa(idEmpresa);
   const planCodigo = normalizePlanId(empresa.plan);
@@ -1708,6 +1762,7 @@ const obtenerEstadoFacturacion = async (idEmpresa) => {
     current_period_end: facturacionFinal?.current_period_end ?? null,
     cancel_at_period_end: Boolean(facturacionFinal?.cancel_at_period_end),
     tiene_stripe: Boolean(facturacionFinal?.stripe_subscription_id),
+    suscripcion_stripe_activa: puedeAmpliarLicenciasStripe(facturacionFinal),
     puede_ampliar_stripe: puedeAmpliarLicenciasStripe(facturacionFinal),
     puede_cambiar_plan: puedeAmpliarLicenciasStripe(facturacionFinal),
     puede_portal: Boolean(facturacionFinal?.stripe_customer_id),
@@ -1864,4 +1919,5 @@ module.exports = {
   listarFacturasEmitidas,
   obtenerFacturacionCompleta,
   enriquecerStripeTarjetasListadoEmpresas,
+  sincronizarSuscripcionesStripeListadoEmpresas,
 };

@@ -23,6 +23,7 @@ const {
   crearCheckoutTrialPendiente,
   crearCheckoutPagoPendiente,
   enriquecerStripeTarjetasListadoEmpresas,
+  sincronizarSuscripcionesStripeListadoEmpresas,
 } = require('../services/billingService');
 const { publicarEnlacePagoCorto, construirUrlPublicaPago } = require('../services/enlacePagoService');
 const { purgarEmpresaCompleta } = require('../services/empresaPurgeService');
@@ -623,6 +624,7 @@ const getEmpresasUsuarios = async (req, res)=> {
                 ORDER BY e.fecha_alta DESC`,
                 { type: sequelize.QueryTypes.SELECT }
               );
+         await sincronizarSuscripcionesStripeListadoEmpresas(rows);
          await enriquecerStripeTarjetasListadoEmpresas(rows);
          const result = rows.map(enriquecerEmpresaListado);
         if(!res){

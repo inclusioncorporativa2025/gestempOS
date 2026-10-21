@@ -411,9 +411,14 @@ const FacturacionPanel = ({
     ? estado?.trial_ends_at || estado?.current_period_end
     : estado?.current_period_end;
 
+  const modoFacturacion = String(estado?.modo_facturacion || '').toLowerCase();
+  const stripeSinSuscripcionActiva =
+    modoFacturacion === 'stripe' && !estado?.puede_cambiar_plan;
   const modoSuscripcionLabel = enPruebaStripe
     ? 'Prueba gratuita'
-    : MODO_LABELS[estado?.modo_facturacion] || estado?.modo_facturacion || '—';
+    : stripeSinSuscripcionActiva
+      ? 'Pendiente de activación'
+      : MODO_LABELS[estado?.modo_facturacion] || estado?.modo_facturacion || '—';
 
   const contenidoFacturas = (
     <section className="facturacion-panel__card facturacion-panel__card--invoices">
@@ -586,6 +591,12 @@ const FacturacionPanel = ({
                 <dd>{(estado.ciclo_facturacion || 'anual') === 'anual' ? 'Anual' : 'Mensual'}</dd>
               </div>
             )}
+            {stripeSinSuscripcionActiva && estado?.estado_suscripcion ? (
+              <div className="facturacion-status-list__row">
+                <dt>Estado en Stripe</dt>
+                <dd>{ESTADO_LABELS[estado.estado_suscripcion] || estado.estado_suscripcion}</dd>
+              </div>
+            ) : null}
           </dl>
 
           {estado && puedeCambiarPlan ? (
