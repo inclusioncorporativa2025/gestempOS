@@ -375,41 +375,57 @@ const resolverLayoutSuscripcionStripe = async (subscriptionRef, parPrecios) => {
   const itemIdPlazas = itemPlazas?.id ?? seatItemId ?? null;
   const priceIds = new Set(items.map((i) => i.price?.id).filter(Boolean));
 
-  if (parPrecios?.modo === 'base_seat') {
-    const alineadaCatalogo =
-      priceIds.has(parPrecios.basePriceId) && priceIds.has(parPrecios.seatPriceId);
-    if (alineadaCatalogo) {
-      return {
-        layout: 'base_seat',
-        items,
-        itemIdPlazas,
-        cantidadStripe,
-        baseItemId,
-        seatItemId,
-        forzarSoloCantidadItem: false,
-      };
-    }
+  const usaModeloNuevoEnStripe =
+    parPrecios?.modo === 'base_seat'
+    && parPrecios.basePriceId
+    && parPrecios.seatPriceId
+    && priceIds.has(parPrecios.basePriceId)
+    && priceIds.has(parPrecios.seatPriceId);
+
+  if (usaModeloNuevoEnStripe) {
     return {
-      layout: 'legacy',
+      layout: 'base_seat',
       items,
       itemIdPlazas,
       cantidadStripe,
-      baseItemId: null,
-      seatItemId: itemIdPlazas,
-      forzarSoloCantidadItem: true,
+      baseItemId,
+      seatItemId,
+      forzarSoloCantidadItem: false,
     };
   }
 
-  const alineadaLegacy = parPrecios?.seatPriceId && priceIds.has(parPrecios.seatPriceId);
   return {
-    layout: alineadaLegacy ? 'legacy_catalogo' : 'legacy',
+    layout: 'legacy',
     items,
     itemIdPlazas,
     cantidadStripe,
-    baseItemId,
+    baseItemId: null,
     seatItemId: itemIdPlazas,
-    forzarSoloCantidadItem: !alineadaLegacy || items.length === 1,
+    forzarSoloCantidadItem: true,
   };
+};
+
+const crearPreviewInvoiceActualizacionSuscripcion = async ({
+  subscriptionId,
+  previewItems,
+  automaticTax = false,
+}) => {
+  const subscriptionDetails = {
+    items: previewItems,
+    proration_behavior: 'create_prorations',
+    billing_cycle_anchor: 'unchanged',
+  };
+
+  const previewParams = {
+    subscription: subscriptionId,
+    subscription_details: subscriptionDetails,
+  };
+
+  if (automaticTax) {
+    previewParams.automatic_tax = { enabled: true };
+  }
+
+  return getStripe().invoices.createPreview(previewParams);
 };
 
 const obtenerFacturacionCompleta = async (idEmpresa) => {
@@ -1397,7 +1413,7 @@ const resolverCambioPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
 
   assertDatosFiscalesEmpresa(empresa);
 
-  const planActual = normalizePlanId(empresa.plan);
+  const planActual = normalizePlanId(empresa.plan || planCodigo);
   const ciclo = String(facturacion.ciclo_facturacion || 'mensual').toLowerCase() === 'anual'
     ? 'anual'
     : 'mensual';
@@ -1591,31 +1607,35 @@ const previewCambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
     };
   }
 
-  const previewItems = construirItemsUpdateSuscripcion({
-    parPrecios,
-    priceId,
-    itemId,
-    baseItemId,
-    nuevaCantidad,
-    taxRateIds: null,
-    cambioSoloPlazas,
-    forzarSoloCantidadItem: forzarSoloCantidadItem && planNuevo === planActual,
-  });
+  const impuestoManualPreview = resolverImpuestoManualEmpresa(resolved.empresa);
+  const soloCantidadLegacy =
+    forzarSoloCantidadItem && nuevaCantidad !== cantidadStripe;
 
-  const previewParams = {
-    customer: customerId,
-    subscription: subscriptionId,
-    subscription_details: {
-      items: previewItems,
-      proration_behavior: 'create_prorations',
-    },
-  };
-
-  if (impuestosAutomaticosActivos()) {
-    previewParams.automatic_tax = { enabled: true };
+  let previewItems;
+  if (soloCantidadLegacy) {
+    const line = { id: itemId, quantity: nuevaCantidad };
+    previewItems = impuestoManualPreview?.taxRateIds?.length
+      ? [{ ...line, tax_rates: impuestoManualPreview.taxRateIds }]
+      : [line];
+    cambioSoloPlazas = true;
+  } else {
+    previewItems = construirItemsUpdateSuscripcion({
+      parPrecios,
+      priceId,
+      itemId,
+      baseItemId,
+      nuevaCantidad,
+      taxRateIds: impuestoManualPreview?.taxRateIds ?? null,
+      cambioSoloPlazas,
+      forzarSoloCantidadItem,
+    });
   }
 
-  const preview = await getStripe().invoices.createPreview(previewParams);
+  const preview = await crearPreviewInvoiceActualizacionSuscripcion({
+    subscriptionId,
+    previewItems,
+    automaticTax: impuestosAutomaticosActivos(),
+  });
 
   const importeIva = (preview.total_tax_amounts || []).reduce(
     (sum, tax) => sum + Number(tax.amount || 0),
@@ -1679,20 +1699,29 @@ const cambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias } = {}
     cambioSoloPlazas = true;
   }
 
-  const updateItems = construirItemsUpdateSuscripcion({
-    parPrecios,
-    priceId,
-    itemId,
-    baseItemId,
-    nuevaCantidad,
-    taxRateIds: impuestoManual?.taxRateIds,
-    cambioSoloPlazas,
-    forzarSoloCantidadItem: forzarSoloCantidadItem && planNuevo === planActual,
-  });
+  let updateItems;
+  if (forzarSoloCantidadItem && nuevaCantidad !== cantidadStripe) {
+    const line = { id: itemId, quantity: nuevaCantidad };
+    updateItems = impuestoManual?.taxRateIds?.length
+      ? [{ ...line, tax_rates: impuestoManual.taxRateIds }]
+      : [line];
+  } else {
+    updateItems = construirItemsUpdateSuscripcion({
+      parPrecios,
+      priceId,
+      itemId,
+      baseItemId,
+      nuevaCantidad,
+      taxRateIds: impuestoManual?.taxRateIds,
+      cambioSoloPlazas,
+      forzarSoloCantidadItem,
+    });
+  }
 
   await getStripe().subscriptions.update(subscriptionId, {
     items: updateItems,
     proration_behavior: 'create_prorations',
+    billing_cycle_anchor: 'unchanged',
     ...(impuestoManual ? { default_tax_rates: impuestoManual.taxRateIds } : {}),
     metadata: {
       id_empresa: String(idEmpresa),
@@ -1781,16 +1810,24 @@ const ampliarLicenciasStripe = async (idEmpresa, { licencias } = {}) => {
 
   const impuestoManual = resolverImpuestoManualEmpresa(empresa);
 
-  const updateItems = construirItemsUpdateSuscripcion({
-    parPrecios,
-    priceId: parPrecios?.seatPriceId,
-    itemId,
-    baseItemId: layoutSub.baseItemId,
-    nuevaCantidad,
-    taxRateIds: impuestoManual?.taxRateIds,
-    cambioSoloPlazas: true,
-    forzarSoloCantidadItem: layoutSub.forzarSoloCantidadItem,
-  });
+  let updateItems;
+  if (layoutSub.forzarSoloCantidadItem) {
+    const line = { id: itemId, quantity: nuevaCantidad };
+    updateItems = impuestoManual?.taxRateIds?.length
+      ? [{ ...line, tax_rates: impuestoManual.taxRateIds }]
+      : [line];
+  } else {
+    updateItems = construirItemsUpdateSuscripcion({
+      parPrecios,
+      priceId: parPrecios?.seatPriceId,
+      itemId,
+      baseItemId: layoutSub.baseItemId,
+      nuevaCantidad,
+      taxRateIds: impuestoManual?.taxRateIds,
+      cambioSoloPlazas: true,
+      forzarSoloCantidadItem: false,
+    });
+  }
 
   await sincronizarCustomerStripeDesdeEmpresa(
     facturacion.stripe_customer_id,
@@ -1801,6 +1838,7 @@ const ampliarLicenciasStripe = async (idEmpresa, { licencias } = {}) => {
   await getStripe().subscriptions.update(subscriptionId, {
     items: updateItems,
     proration_behavior: 'create_prorations',
+    billing_cycle_anchor: 'unchanged',
     ...(impuestoManual ? { default_tax_rates: impuestoManual.taxRateIds } : {}),
   });
 
