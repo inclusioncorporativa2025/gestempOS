@@ -54,6 +54,13 @@
   font-weight: 600;
 }
 
+.mp-contratar-plazas__recurrente {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .mp-contratar-plazas__hint {
   margin-bottom: 0 !important;
   font-size: 13px;

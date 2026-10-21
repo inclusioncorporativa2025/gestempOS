@@ -433,18 +433,47 @@ const crearPreviewInvoiceActualizacionSuscripcion = async ({
   return getStripe().invoices.createPreview(previewParams);
 };
 
-/** amount_due del preview a veces incluye renovación; en legacy usar neto de líneas prorrateo. */
-const calcularImporteCobrarPreviewStripe = (invoice, { soloProrrateoLegacy = false } = {}) => {
+/**
+ * amount_due del preview a veces incluye la renovación completa de la suscripción.
+ * Usar solo líneas prorrateo (opcionalmente filtradas por price id del add-on).
+ */
+const calcularImporteCobrarPreviewStripe = (
+  invoice,
+  { soloProrrateoLegacy = false, priceIdsProrrateo = null } = {},
+) => {
   const lines = invoice?.lines?.data || [];
-  if (soloProrrateoLegacy && lines.length) {
+  const filtrarPorPrecio = Array.isArray(priceIdsProrrateo) && priceIdsProrrateo.length > 0;
+  const priceSet = filtrarPorPrecio ? new Set(priceIdsProrrateo) : null;
+  const usarSoloProrrateo = soloProrrateoLegacy || filtrarPorPrecio;
+
+  if (usarSoloProrrateo && lines.length) {
     const netProracionCentimos = lines
-      .filter((line) => line.proration)
+      .filter((line) => {
+        if (!line.proration) return false;
+        if (priceSet && !priceSet.has(line.price?.id)) return false;
+        return true;
+      })
       .reduce((sum, line) => sum + Number(line.amount || 0), 0);
-    if (netProracionCentimos !== 0) {
+    if (netProracionCentimos !== 0 || lines.some((line) => line.proration)) {
       return centimosAEur(netProracionCentimos);
     }
   }
   return centimosAEur(invoice?.amount_due);
+};
+
+const filtrarLineasPreviewPorPrecio = (invoice, priceIds) => {
+  if (!Array.isArray(priceIds) || !priceIds.length) {
+    return mapearLineasPreviewStripe(invoice);
+  }
+  const priceSet = new Set(priceIds);
+  const lines = (invoice?.lines?.data || []).filter(
+    (line) => line.proration && priceSet.has(line.price?.id),
+  );
+  return lines.map((line) => ({
+    descripcion: line.description || 'Concepto',
+    importe_eur: centimosAEur(line.amount),
+    prorrateo: Boolean(line.proration),
+  }));
 };
 
 const obtenerFacturacionCompleta = async (idEmpresa) => {
@@ -2088,6 +2117,7 @@ module.exports = {
   asegurarSuscripcionSincronizada,
   crearPreviewInvoiceActualizacionSuscripcion,
   calcularImporteCobrarPreviewStripe,
+  filtrarLineasPreviewPorPrecio,
   mapearLineasPreviewStripe,
   obtenerEstadoFacturacion,
   verificarSesionCheckout,

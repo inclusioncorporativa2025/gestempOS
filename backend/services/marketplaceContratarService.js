@@ -5,7 +5,7 @@ const {
   puedeAmpliarLicenciasStripe,
   crearPreviewInvoiceActualizacionSuscripcion,
   calcularImporteCobrarPreviewStripe,
-  mapearLineasPreviewStripe,
+  filtrarLineasPreviewPorPrecio,
 } = require('./billingService');
 const {
   impuestosAutomaticosActivos,
@@ -31,11 +31,26 @@ const normalizarPlazasObjetivo = (raw) => {
   return Math.floor(n);
 };
 
+const moduloPlain = (modulo) => (modulo?.get ? modulo.get({ plain: true }) : modulo);
+
+const precioPlazaModuloPorCiclo = (modulo, ciclo) => {
+  const row = moduloPlain(modulo);
+  const esAnual = String(ciclo || '').toLowerCase() === 'anual';
+  if (esAnual) {
+    const anual = Number(row.precio_anual_eur);
+    if (Number.isFinite(anual) && anual > 0) return anual;
+    const mensual = Number(row.precio_mensual_eur);
+    return Number.isFinite(mensual) ? mensual * 12 : 0;
+  }
+  return Number(row.precio_mensual_eur) || 0;
+};
+
 const resolverPriceIdModulo = (modulo, ciclo) => {
+  const row = moduloPlain(modulo);
   const anual = String(ciclo || '').toLowerCase() === 'anual';
   const priceId = anual
-    ? modulo.stripe_price_id_anual
-    : modulo.stripe_price_id_mensual;
+    ? row.stripe_price_id_anual
+    : row.stripe_price_id_mensual;
   if (!priceId) {
     const error = new Error('Precio de Stripe no configurado para este módulo');
     error.status = 503;
@@ -43,6 +58,46 @@ const resolverPriceIdModulo = (modulo, ciclo) => {
     throw error;
   }
   return priceId;
+};
+
+/** Ciclo de la suscripción del plan (Stripe), no el del add-on. */
+const resolverCicloFacturacionStripe = async (facturacion) => {
+  const fallback = String(facturacion?.ciclo_facturacion || 'mensual').toLowerCase() === 'anual'
+    ? 'anual'
+    : 'mensual';
+  const subscriptionId = facturacion?.stripe_subscription_id;
+  if (!subscriptionId) {
+    return {
+      ciclo: fallback,
+      currentPeriodEnd: facturacion?.current_period_end ?? null,
+    };
+  }
+
+  try {
+    const sub = await getStripe().subscriptions.retrieve(subscriptionId, {
+      expand: ['items.data.price'],
+    });
+    const items = sub.items?.data || [];
+    const itemPlan = items.find((line) => line.id === facturacion.stripe_subscription_item_id)
+      || items.find((line) => line.price?.recurring?.interval)
+      || items[0];
+    const interval = itemPlan?.price?.recurring?.interval;
+    let ciclo = fallback;
+    if (interval === 'year') ciclo = 'anual';
+    else if (interval === 'month') ciclo = 'mensual';
+
+    const periodEnd = sub.current_period_end != null
+      ? new Date(Number(sub.current_period_end) * 1000)
+      : facturacion.current_period_end;
+
+    return { ciclo, currentPeriodEnd: periodEnd };
+  } catch (error) {
+    console.warn('marketplaceContratar: no se pudo leer ciclo Stripe:', error.message);
+    return {
+      ciclo: fallback,
+      currentPeriodEnd: facturacion?.current_period_end ?? null,
+    };
+  }
 };
 
 const construirLineaItemMarketplace = ({ itemId, priceId, quantity, taxRateIds }) => {
@@ -99,10 +154,9 @@ const resolverContextoContratar = async (idEmpresa, codigoModulo, plazasObjetivo
     throw error;
   }
 
-  const ciclo = String(facturacion.ciclo_facturacion || 'mensual').toLowerCase() === 'anual'
-    ? 'anual'
-    : 'mensual';
+  const { ciclo, currentPeriodEnd } = await resolverCicloFacturacionStripe(facturacion);
   const priceId = resolverPriceIdModulo(modulo, ciclo);
+  const precioPlazaCicloEur = precioPlazaModuloPorCiclo(modulo, ciclo);
   const subscriptionId = facturacion.stripe_subscription_id;
   const customerId = facturacion.stripe_customer_id;
 
@@ -144,7 +198,9 @@ const resolverContextoContratar = async (idEmpresa, codigoModulo, plazasObjetivo
     empresa,
     facturacion,
     ciclo,
+    currentPeriodEnd,
     priceId,
+    precioPlazaCicloEur,
     subscriptionId,
     customerId,
     plazasActuales,
@@ -167,10 +223,13 @@ const previewContratarPlazasModulo = async (idEmpresa, codigoModulo, plazasObjet
     automaticTax: impuestosAutomaticosActivos(),
   });
 
-  const importeIva = (preview.total_tax_amounts || []).reduce(
-    (sum, tax) => sum + Number(tax.amount || 0),
-    0,
-  );
+  const lineas = filtrarLineasPreviewPorPrecio(preview, [ctx.priceId]);
+  const importeCobrar = calcularImporteCobrarPreviewStripe(preview, {
+    priceIdsProrrateo: [ctx.priceId],
+  });
+  const importeSubtotal = lineas.reduce((sum, line) => sum + Number(line.importe_eur || 0), 0);
+
+  const importeRecurrenteEur = ctx.precioPlazaCicloEur * ctx.plazasObjetivo;
 
   return {
     codigo_modulo: ctx.modulo.codigo,
@@ -178,12 +237,17 @@ const previewContratarPlazasModulo = async (idEmpresa, codigoModulo, plazasObjet
     plazas_objetivo: ctx.plazasObjetivo,
     plazas_anadir: ctx.plazasObjetivo - ctx.plazasActuales,
     ciclo_facturacion: ctx.ciclo,
-    precio_mensual_eur: Number(ctx.modulo.precio_mensual_eur),
-    importe_cobrar_ahora_eur: calcularImporteCobrarPreviewStripe(preview),
-    importe_subtotal_eur: Number(preview.subtotal || 0) / 100,
-    importe_iva_eur: importeIva / 100,
+    precio_plaza_ciclo_eur: ctx.precioPlazaCicloEur,
+    precio_mensual_eur: Number(moduloPlain(ctx.modulo).precio_mensual_eur),
+    importe_recurrente_ciclo_eur: importeRecurrenteEur,
+    proxima_factura: ctx.currentPeriodEnd
+      ? new Date(ctx.currentPeriodEnd).toISOString()
+      : null,
+    importe_cobrar_ahora_eur: importeCobrar,
+    importe_subtotal_eur: importeSubtotal,
+    importe_iva_eur: null,
     moneda: String(preview.currency || 'eur').toUpperCase(),
-    lineas: mapearLineasPreviewStripe(preview),
+    lineas,
   };
 };
 

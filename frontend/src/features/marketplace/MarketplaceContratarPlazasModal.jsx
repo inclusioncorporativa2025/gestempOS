@@ -45,11 +45,30 @@ const MarketplaceContratarPlazasModal = ({
   const plazasObjetivo = Number(plazasActuales) + Number(plazasAnadir || 1);
   const esPrimeraContratacion = Number(plazasActuales) < MARKETPLACE_MIN_PLAZAS;
 
-  const precioLabel = useMemo(() => {
-    const precio = Number(precioMensualEur);
-    if (!Number.isFinite(precio) || precio <= 0) return null;
-    return formatEuro(precio);
-  }, [precioMensualEur]);
+  const cicloFacturacion = preview?.ciclo_facturacion;
+  const esCicloAnual = cicloFacturacion === 'anual';
+
+  const precioPlazaCiclo = useMemo(() => {
+    const desdePreview = Number(preview?.precio_plaza_ciclo_eur);
+    if (Number.isFinite(desdePreview) && desdePreview > 0) return desdePreview;
+    const mensual = Number(precioMensualEur);
+    if (!Number.isFinite(mensual) || mensual <= 0) return null;
+    return esCicloAnual ? mensual * 12 : mensual;
+  }, [preview?.precio_plaza_ciclo_eur, precioMensualEur, esCicloAnual]);
+
+  const proximaFacturaLabel = useMemo(() => {
+    if (!preview?.proxima_factura) return null;
+    const d = new Date(preview.proxima_factura);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  }, [preview?.proxima_factura]);
+
+  const unidadCiclo = esCicloAnual ? 'año' : 'mes';
+  const cicloLabel = esCicloAnual ? 'anual' : 'mensual';
 
   useEffect(() => {
     if (!open) {
@@ -149,16 +168,31 @@ const MarketplaceContratarPlazasModal = ({
         <Paragraph className="mp-contratar-plazas__lead">
           {esPrimeraContratacion ? (
             <>
-              Elige cuántas plazas quieres contratar. Cada plaza permite asignar el módulo a
+              Elige cuántas plazas contratar (una plaza =
               {' '}
               <Text strong>un usuario</Text>
-              {precioLabel ? (
+              ). Se usa el
+              {' '}
+              <Text strong>mismo ciclo que tu suscripción en Stripe</Text>
+              {cicloFacturacion ? (
                 <>
                   {' '}
                   (
-                  {precioLabel}
+                  {cicloLabel}
+                  )
+                </>
+              ) : null}
+              {precioPlazaCiclo != null ? (
+                <>
+                  :
                   {' '}
-                  € / usuario / mes, alineado con tu ciclo de facturación)
+                  <Text strong>
+                    {formatEuro(precioPlazaCiclo)}
+                    {' '}
+                    € / usuario /
+                    {' '}
+                    {unidadCiclo}
+                  </Text>
                 </>
               ) : null}
               .
@@ -174,7 +208,11 @@ const MarketplaceContratarPlazasModal = ({
               {' '}
               contratada
               {plazasActuales === 1 ? '' : 's'}
-              . Indica cuántas plazas adicionales necesitas.
+              {' '}
+              (ciclo
+              {' '}
+              {cicloLabel || '—'}
+              ). Indica cuántas plazas adicionales necesitas.
             </>
           )}
         </Paragraph>
@@ -200,7 +238,19 @@ const MarketplaceContratarPlazasModal = ({
         </div>
 
         <div className="mp-contratar-plazas__importe">
-          <Text type="secondary">Importe a cobrar ahora (prorrateo)</Text>
+          <Text type="secondary">
+            Ahora — prorrateo
+            {proximaFacturaLabel ? (
+              <>
+                {' '}
+                hasta la próxima factura (
+                {proximaFacturaLabel}
+                )
+              </>
+            ) : (
+              ' hasta la próxima factura'
+            )}
+          </Text>
           <div className="mp-contratar-plazas__importe-valor">
             {previewLoading ? (
               <Spin size="small" />
@@ -210,11 +260,36 @@ const MarketplaceContratarPlazasModal = ({
               '—'
             )}
           </div>
+          {preview?.importe_recurrente_ciclo_eur != null && precioPlazaCiclo != null ? (
+            <Text type="secondary" className="mp-contratar-plazas__recurrente">
+              Después, en cada renovación
+              {' '}
+              {cicloLabel}
+              :
+              {' '}
+              <Text strong>
+                {formatEuro(preview.importe_recurrente_ciclo_eur)}
+                {' '}
+                €
+              </Text>
+              {' '}
+              (
+              {plazasObjetivo}
+              {' '}
+              ×
+              {' '}
+              {formatEuro(precioPlazaCiclo)}
+              {' '}
+              €)
+            </Text>
+          ) : null}
         </div>
 
         <Paragraph type="secondary" className="mp-contratar-plazas__hint">
-          El cargo se añade a tu suscripción de TimeCor en Stripe. El módulo quedará activo en cuanto
-          haya al menos una plaza contratada.
+          El módulo se suma a tu suscripción TimeCor en Stripe: hoy pagas solo el tramo hasta la
+          próxima factura; luego el total del ciclo (
+          {cicloLabel || 'mensual o anual'}
+          ) en cada renovación.
         </Paragraph>
       </Space>
     </Modal>
