@@ -9,6 +9,19 @@ const UsuarioEmpresa = require('../models/UsuarioEmpresa');
 
 const ESTADOS_EMPRESA_ACTIVOS = ['active'];
 const CODIGO_ALERTAS = 'alertas_fichaje';
+const MIN_PLAZAS_CONTRATADAS = 1;
+
+const plazasContratoActivas = (licenciasRaw) => {
+  if (licenciasRaw == null || licenciasRaw === '') return false;
+  const n = Number(licenciasRaw);
+  return Number.isFinite(n) && n >= MIN_PLAZAS_CONTRATADAS;
+};
+
+const contratoEmpresaModuloOperativo = (row) => {
+  if (!row) return false;
+  if (!ESTADOS_EMPRESA_ACTIVOS.includes(String(row.estado).toLowerCase())) return false;
+  return plazasContratoActivas(row.licencias_facturadas);
+};
 
 const DEFAULT_CONFIG_ALERTAS = {
   minutos_gracia: 15,
@@ -105,7 +118,7 @@ const empresaModuloEstaActivo = async (idEmpresa, codigoModulo) => {
   const row = await obtenerEmpresaModuloRow(idEmpresa, modulo.id_modulo);
   if (!row) return false;
 
-  return ESTADOS_EMPRESA_ACTIVOS.includes(String(row.estado).toLowerCase());
+  return contratoEmpresaModuloOperativo(row);
 };
 
 const contarAsientosActivos = async (idEmpresa, idModulo) => (
@@ -125,13 +138,9 @@ const obtenerResumenPlazasModulo = async (idEmpresa, idModulo, moduloRow = null)
   const licenciasRaw = contrato?.licencias_facturadas;
   const licenciasContratadas = licenciasRaw != null && licenciasRaw !== ''
     ? Number(licenciasRaw)
-    : null;
-  const ilimitado = licenciasContratadas == null
-    || !Number.isFinite(licenciasContratadas)
-    || licenciasContratadas <= 0;
-  const plazasLibres = ilimitado
-    ? null
-    : Math.max(0, licenciasContratadas - usuariosAsignados);
+    : 0;
+  const ilimitado = false;
+  const plazasLibres = Math.max(0, licenciasContratadas - usuariosAsignados);
 
   let modulo = moduloRow;
   if (!modulo) {
@@ -141,11 +150,11 @@ const obtenerResumenPlazasModulo = async (idEmpresa, idModulo, moduloRow = null)
 
   return {
     usuarios_asignados: usuariosAsignados,
-    licencias_contratadas: ilimitado ? null : licenciasContratadas,
+    licencias_contratadas: licenciasContratadas,
     plazas_libres: plazasLibres,
     ilimitado,
     precio_mensual_eur: Number.isFinite(precioMensual) ? precioMensual : null,
-    puede_contratar_plaza_stripe: false,
+    puede_contratar_plaza_stripe: null,
   };
 };
 
@@ -169,7 +178,6 @@ const assertHayPlazaLibreParaAsignar = async ({
   if (yaAsignado) return;
 
   const plazas = await obtenerResumenPlazasModulo(idEmpresa, idModulo);
-  if (plazas.ilimitado) return;
 
   if ((plazas.plazas_libres ?? 0) <= 0) {
     const error = new Error(
@@ -204,7 +212,7 @@ const listarEstadoEmpresa = async (idEmpresa) => {
       const contratoDto = serializarEmpresaModulo(contrato, modulo);
       contratoDto.asientos_activos = asientos;
 
-      const activo = ESTADOS_EMPRESA_ACTIVOS.includes(String(contrato.estado).toLowerCase());
+      const activo = contratoEmpresaModuloOperativo(contrato);
       const whatsappUso = activo
         ? await obtenerResumenWhatsappModulo(idEmpresa, modulo.id_modulo)
         : null;
@@ -355,6 +363,8 @@ const assertUsuarioTieneModulo = async (idEmpresa, idUsuario, codigoModulo) => {
   }
 };
 
+const { puedeAmpliarLicenciasStripe, obtenerFacturacionCompleta } = require('./billingService');
+
 const listarAsignacionesModulo = async (idEmpresa, codigoModulo) => {
   const modulo = await obtenerModuloPorCodigo(codigoModulo);
   if (!modulo) {
@@ -377,6 +387,8 @@ const listarAsignacionesModulo = async (idEmpresa, codigoModulo) => {
   const whatsappUso = await obtenerResumenWhatsappModulo(idEmpresa, modulo.id_modulo);
 
   const plazas = await obtenerResumenPlazasModulo(idEmpresa, modulo.id_modulo, modulo);
+  const facturacion = await obtenerFacturacionCompleta(idEmpresa);
+  plazas.puede_contratar_plaza_stripe = puedeAmpliarLicenciasStripe(facturacion);
 
   if (!membresias.length) {
     return {
@@ -594,9 +606,13 @@ const incrementarUsoWhatsapp = async (idEmpresa, idModulo, incremento = 1) => {
 module.exports = {
   CODIGO_ALERTAS,
   DEFAULT_CONFIG_ALERTAS,
+  MIN_PLAZAS_CONTRATADAS,
+  plazasContratoActivas,
+  contratoEmpresaModuloOperativo,
   listarCatalogo,
   listarEstadoEmpresa,
   obtenerModuloPorCodigo,
+  obtenerEmpresaModuloRowHistorico,
   empresaModuloEstaActivo,
   activarModuloEmpresa,
   cancelarModuloEmpresa,

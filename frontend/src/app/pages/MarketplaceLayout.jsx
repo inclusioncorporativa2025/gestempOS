@@ -3,12 +3,13 @@ import { Menu, Typography } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { APP_ROUTES } from '../../constants/routes';
 import { getTipoUsuario } from '../../utils/authSession';
+import { useMarketplaceEmpresaModulos } from '../../hooks/useMarketplaceEmpresaModulos';
 import {
+  MARKETPLACE_CATALOGO_INTRO,
   marketplaceCodigoDesdePathname,
   marketplaceEsRutaModulo,
   marketplaceModuloPath,
   marketplaceModulosGestion,
-  marketplaceRutaGestionPorDefecto,
   marketplaceSubtituloModulo,
 } from '../../constants/marketplace';
 import './GestionTiempoPage.css';
@@ -22,14 +23,51 @@ const MarketplaceLayout = () => {
   const tipoUsuario = Number(getTipoUsuario());
   const puedeVerCatalogo = [1, 2].includes(tipoUsuario);
 
-  const modulosEnTabs = useMemo(() => marketplaceModulosGestion(), []);
+  const { modulosActivos, loading: loadingModulos, recargar } = useMarketplaceEmpresaModulos(true);
+
+  const codigosGestion = useMemo(
+    () => new Set(marketplaceModulosGestion().map((m) => m.codigo)),
+    [],
+  );
+
+  const modulosEnTabs = useMemo(
+    () => modulosActivos.filter((m) => codigosGestion.has(m.codigo)),
+    [modulosActivos, codigosGestion],
+  );
 
   useEffect(() => {
+    recargar();
+  }, [location.pathname, recargar]);
+
+  useEffect(() => {
+    if (loadingModulos) return;
     if (location.pathname !== APP_ROUTES.marketplace) return;
-    if (!puedeVerCatalogo) {
-      navigate(marketplaceRutaGestionPorDefecto(), { replace: true });
+    if (puedeVerCatalogo) return;
+    const first = modulosEnTabs[0];
+    if (first) {
+      navigate(marketplaceModuloPath(first.codigo), { replace: true });
     }
-  }, [location.pathname, navigate, puedeVerCatalogo]);
+  }, [location.pathname, loadingModulos, modulosEnTabs, navigate, puedeVerCatalogo]);
+
+  useEffect(() => {
+    if (loadingModulos) return;
+    if (!marketplaceEsRutaModulo(location.pathname)) return;
+    const codigo = marketplaceCodigoDesdePathname(location.pathname);
+    if (!codigo || !codigosGestion.has(codigo)) return;
+    const activo = modulosEnTabs.some((m) => m.codigo === codigo);
+    if (activo) return;
+    const dest = puedeVerCatalogo
+      ? APP_ROUTES.marketplace
+      : (modulosEnTabs[0] ? marketplaceModuloPath(modulosEnTabs[0].codigo) : APP_ROUTES.marketplace);
+    navigate(dest, { replace: true });
+  }, [
+    codigosGestion,
+    loadingModulos,
+    location.pathname,
+    modulosEnTabs,
+    navigate,
+    puedeVerCatalogo,
+  ]);
 
   const submenuItems = useMemo(() => {
     const items = [];
@@ -59,23 +97,29 @@ const MarketplaceLayout = () => {
     return submenuItems[0]?.key ?? APP_ROUTES.marketplace;
   }, [location.pathname, submenuItems]);
 
+  const enCatalogo = activeKey === APP_ROUTES.marketplace;
+
   const subtitulo = useMemo(() => {
-    if (activeKey === APP_ROUTES.marketplace) {
-      return 'Catálogo de módulos (activación por empresa)';
-    }
+    if (enCatalogo) return null;
     const codigo = marketplaceCodigoDesdePathname(activeKey);
     if (codigo) return marketplaceSubtituloModulo(codigo);
     return 'Módulos opcionales de la empresa';
-  }, [activeKey]);
+  }, [activeKey, enCatalogo]);
 
   return (
     <div className="gt-layout mp-layout">
       <Title level={3} className="gt-layout__title">
         Marketplace
       </Title>
-      <Text type="secondary" className="gt-layout__subtitle">
-        {subtitulo}
-      </Text>
+      {enCatalogo ? (
+        <Text type="secondary" className="gt-layout__subtitle mp-layout__catalogo-intro">
+          {MARKETPLACE_CATALOGO_INTRO}
+        </Text>
+      ) : (
+        <Text type="secondary" className="gt-layout__subtitle">
+          {subtitulo}
+        </Text>
+      )}
 
       {submenuItems.length > 0 ? (
         <Menu

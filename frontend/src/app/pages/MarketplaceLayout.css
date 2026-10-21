@@ -8,3 +8,12 @@
 .mp-layout__content .marketplace-asignaciones-page__header {
   margin-top: 0;
 }
+
+.mp-layout__catalogo-intro {
+  display: block;
+  max-width: none;
+  width: 100%;
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: normal;
+}

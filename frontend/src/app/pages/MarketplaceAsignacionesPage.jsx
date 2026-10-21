@@ -24,6 +24,7 @@ import {
 } from '@ant-design/icons';
 import {
   MARKETPLACE_MODULO_ALERTAS,
+  marketplaceModuloContratoActivo,
   marketplaceNombreModulo,
   marketplaceSubtituloModulo,
 } from '../../constants/marketplace';
@@ -36,6 +37,7 @@ import {
   guardarAsignacionModulo,
   listarAsignacionesModulo,
 } from '../../features/marketplace/marketplaceService';
+import MarketplaceContratarPlazasModal from '../../features/marketplace/MarketplaceContratarPlazasModal';
 import './MarketplaceAsignacionesPage.css';
 
 const { Title, Text, Paragraph } = Typography;
@@ -58,6 +60,7 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
   const [guardandoId, setGuardandoId] = useState(null);
   const [whatsappUso, setWhatsappUso] = useState(null);
   const [plazas, setPlazas] = useState(null);
+  const [precioModuloMensual, setPrecioModuloMensual] = useState(null);
   const [waInfoOpen, setWaInfoOpen] = useState(false);
   const [plazaStripeOpen, setPlazaStripeOpen] = useState(false);
   const tablaRef = useRef(null);
@@ -73,8 +76,11 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
     try {
       const estado = await getMarketplaceEstadoEmpresa(idEmpresa);
       const fila = (estado.modulos ?? []).find((m) => m.modulo?.codigo === CODIGO_MODULO);
-      const activo = fila?.contrato?.estado === 'active';
+      const activo = marketplaceModuloContratoActivo(fila);
       setModuloActivo(activo);
+      setPrecioModuloMensual(
+        fila?.modulo?.precio_mensual_eur != null ? Number(fila.modulo.precio_mensual_eur) : null,
+      );
 
       if (!activo) {
         setAsignaciones([]);
@@ -178,18 +184,8 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
   const whatsappAgotado = whatsappCupoEmpresa.total > 0
     && whatsappCupoEmpresa.enviados >= whatsappCupoEmpresa.total;
 
-  const plazasIlimitadas = Boolean(plazas?.ilimitado);
-  const plazasLibres = plazasIlimitadas ? null : Number(plazas?.plazas_libres ?? 0);
-  const puedeAsignarNuevo = plazasIlimitadas || (plazasLibres ?? 0) > 0;
-  const precioPlazaLabel = useMemo(() => {
-    const precio = Number(plazas?.precio_mensual_eur ?? 0);
-    if (!Number.isFinite(precio) || precio <= 0) return null;
-    return precio.toLocaleString('es-ES', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  }, [plazas?.precio_mensual_eur]);
-
+  const plazasLibres = Number(plazas?.plazas_libres ?? 0);
+  const puedeAsignarNuevo = plazasLibres > 0;
   const irATablaAsignacion = useCallback(() => {
     tablaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
@@ -333,11 +329,7 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
           <div className="marketplace-asignaciones-page__header-aside">
             {plazas ? (
               <Tooltip
-                title={
-                  plazasIlimitadas
-                    ? 'Usuarios con alertas activas. Las plazas de pago se gestionarán con Stripe.'
-                    : 'Usuarios con alertas / plazas contratadas / plazas libres para asignar.'
-                }
+                title="Usuarios con alertas / plazas contratadas / plazas libres para asignar."
               >
                 <div className="marketplace-asignaciones-page__plazas-cupo">
                   <TeamOutlined
@@ -348,17 +340,13 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
                     <Text type="secondary" className="marketplace-asignaciones-page__plazas-detail">
                       {plazas.usuarios_asignados ?? 0}
                       {' / '}
-                      {plazasIlimitadas ? '—' : (plazas.licencias_contratadas ?? 0)}
+                      {plazas.licencias_contratadas ?? 0}
                       {' '}
                       plazas
-                      {!plazasIlimitadas ? (
-                        <>
-                          {' · '}
-                          {plazasLibres}
-                          {' '}
-                          libres
-                        </>
-                      ) : null}
+                      {' · '}
+                      {plazasLibres}
+                      {' '}
+                      libres
                     </Text>
                     {puedeAsignarNuevo ? (
                       <Button
@@ -426,11 +414,12 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
           type="info"
           showIcon
           message="Módulo no activo"
-          description={
-            esRoot
-              ? 'Activa «Alertas de fichaje» en Marketplace para esta empresa antes de asignar usuarios.'
-              : 'Tu empresa aún no tiene contratado el módulo de alertas. Contacta con administración.'
-          }
+          description="Contrata al menos una plaza en el catálogo del Marketplace para asignar usuarios."
+          action={(
+            <Button type="primary" size="small" onClick={() => setPlazaStripeOpen(true)}>
+              Contratar plazas
+            </Button>
+          )}
         />
       ) : null}
 
@@ -451,43 +440,19 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
         </>
       ) : null}
 
-      <Modal
-        title="Contratar plaza adicional"
+      <MarketplaceContratarPlazasModal
         open={plazaStripeOpen}
-        onCancel={() => setPlazaStripeOpen(false)}
-        footer={[
-          <Button key="cerrar" onClick={() => setPlazaStripeOpen(false)}>
-            Cerrar
-          </Button>,
-          <Button key="stripe" type="primary" disabled>
-            Pagar con Stripe (próximamente)
-          </Button>,
-        ]}
-        width={520}
-      >
-        <Space direction="vertical" size={12} style={{ width: '100%' }}>
-          <Paragraph style={{ marginBottom: 0 }}>
-            Cada plaza permite activar las alertas de fichaje para
-            {' '}
-            <Text strong>un usuario</Text>
-            {precioPlazaLabel ? (
-              <>
-                {' '}
-                (
-                {precioPlazaLabel}
-                {' '}
-                € / usuario / mes)
-              </>
-            ) : null}
-            .
-          </Paragraph>
-          <Paragraph style={{ marginBottom: 0 }} type="secondary">
-            En la siguiente fase podrás ampliar plazas desde aquí con Stripe, igual que las
-            licencias del plan en Facturación. Hasta entonces, contacta con administración si
-            necesitas más usuarios con alertas.
-          </Paragraph>
-        </Space>
-      </Modal>
+        onClose={() => setPlazaStripeOpen(false)}
+        codigoModulo={CODIGO_MODULO}
+        nombreModulo={marketplaceNombreModulo(CODIGO_MODULO)}
+        precioMensualEur={plazas?.precio_mensual_eur ?? precioModuloMensual}
+        plazasActuales={Number(plazas?.licencias_contratadas) || 0}
+        idEmpresa={idEmpresa}
+        onContratado={async () => {
+          setPlazaStripeOpen(false);
+          await cargar();
+        }}
+      />
 
       <Modal
         title="Cupo WhatsApp — alertas de fichaje"

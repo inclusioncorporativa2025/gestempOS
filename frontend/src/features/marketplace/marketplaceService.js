@@ -76,6 +76,40 @@ export const listarAsignacionesModulo = async ({ idEmpresa, codigoModulo }) => {
   return parseResponse(response);
 };
 
+export const previewContratarPlazasModulo = async ({
+  idEmpresa,
+  codigoModulo,
+  plazas,
+}) => {
+  const response = await fetch(`${API_BASE_URL}/empresa/plazas/preview`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      idEmpresa: idEmpresa ?? getIdEmpresa(),
+      codigoModulo,
+      plazas,
+    }),
+  });
+  return parseResponse(response);
+};
+
+export const contratarPlazasModulo = async ({
+  idEmpresa,
+  codigoModulo,
+  plazas,
+}) => {
+  const response = await fetch(`${API_BASE_URL}/empresa/plazas/contratar`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({
+      idEmpresa: idEmpresa ?? getIdEmpresa(),
+      codigoModulo,
+      plazas,
+    }),
+  });
+  return parseResponse(response);
+};
+
 export const guardarAsignacionModulo = async ({
   idEmpresa,
   codigoModulo,

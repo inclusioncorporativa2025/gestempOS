@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getMarketplaceEstadoEmpresa } from '../features/marketplace/marketplaceService';
-import { marketplaceModuloMenuLabel } from '../constants/marketplace';
+import {
+  marketplaceModuloContratoActivo,
+  marketplaceModuloMenuLabel,
+} from '../constants/marketplace';
 
 export const useMarketplaceEmpresaModulos = (enabled) => {
   const [modulosActivos, setModulosActivos] = useState([]);
@@ -20,7 +23,7 @@ export const useMarketplaceEmpresaModulos = (enabled) => {
       setEstadoFilas(filas);
       setModulosActivos(
         filas
-          .filter((f) => f.contrato?.estado === 'active' && f.modulo?.codigo)
+          .filter((f) => marketplaceModuloContratoActivo(f) && f.modulo?.codigo)
           .map((f) => ({
             codigo: f.modulo.codigo,
             nombre: marketplaceModuloMenuLabel(f.modulo.codigo),

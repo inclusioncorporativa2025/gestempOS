@@ -6,6 +6,10 @@ const {
   listarAsignacionesModulo,
   guardarAsignacionUsuario,
 } = require('../services/marketplaceModuloService');
+const {
+  previewContratarPlazasModulo,
+  contratarPlazasModulo,
+} = require('../services/marketplaceContratarService');
 const { ejecutarAlertasFichaje } = require('../services/alertasFichajeService');
 
 const resolveIdEmpresa = (req) => {
@@ -70,6 +74,62 @@ const postActivarModulo = async (req, res) => {
     }
     console.error('postActivarModulo:', error.message);
     return res.status(500).json({ message: 'Error al activar el módulo' });
+  }
+};
+
+const postPreviewContratarPlazas = async (req, res) => {
+  const idEmpresa = resolveIdEmpresa(req);
+  const codigoModulo = req.body?.codigoModulo ?? req.body?.codigo_modulo;
+  const plazas = req.body?.plazas ?? req.body?.licencias;
+
+  if (!idEmpresa) {
+    return res.status(400).json({ message: 'idEmpresa es obligatorio' });
+  }
+  if (!codigoModulo) {
+    return res.status(400).json({ message: 'codigoModulo es obligatorio' });
+  }
+
+  try {
+    const preview = await previewContratarPlazasModulo(idEmpresa, codigoModulo, plazas);
+    return res.status(200).json({ preview });
+  } catch (error) {
+    if (error.status === 400 || error.status === 404 || error.status === 503) {
+      return res.status(error.status).json({ message: error.message, code: error.code });
+    }
+    console.error('postPreviewContratarPlazas:', error.message);
+    return res.status(500).json({ message: 'Error al calcular el importe' });
+  }
+};
+
+const postContratarPlazas = async (req, res) => {
+  const idEmpresa = resolveIdEmpresa(req);
+  const codigoModulo = req.body?.codigoModulo ?? req.body?.codigo_modulo;
+  const plazas = req.body?.plazas ?? req.body?.licencias;
+
+  if (!idEmpresa) {
+    return res.status(400).json({ message: 'idEmpresa es obligatorio' });
+  }
+  if (!codigoModulo) {
+    return res.status(400).json({ message: 'codigoModulo es obligatorio' });
+  }
+
+  try {
+    const result = await contratarPlazasModulo({
+      idEmpresa,
+      codigoModulo,
+      plazasObjetivo: plazas,
+      idUsuarioAlta: req.user?.id_usuario,
+    });
+    return res.status(200).json({
+      message: 'Plazas contratadas correctamente',
+      ...result,
+    });
+  } catch (error) {
+    if (error.status === 400 || error.status === 404 || error.status === 503) {
+      return res.status(error.status).json({ message: error.message, code: error.code });
+    }
+    console.error('postContratarPlazas:', error.message);
+    return res.status(500).json({ message: 'Error al contratar plazas del módulo' });
   }
 };
 
@@ -199,6 +259,8 @@ module.exports = {
   getCatalogo,
   getEstadoEmpresa,
   postActivarModulo,
+  postPreviewContratarPlazas,
+  postContratarPlazas,
   postCancelarModulo,
   postListarAsignaciones,
   postGuardarAsignacion,

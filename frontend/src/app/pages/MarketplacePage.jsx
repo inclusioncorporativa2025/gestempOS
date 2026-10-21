@@ -3,7 +3,6 @@ import {
   Alert,
   Button,
   Col,
-  InputNumber,
   Row,
   Space,
   Spin,
@@ -14,24 +13,23 @@ import {
 import { useNavigate } from 'react-router-dom';
 import {
   BellOutlined,
-  ReloadOutlined,
   ShopOutlined,
 } from '@ant-design/icons';
-import { APP_ROUTES } from '../../constants/routes';
 import { getIdEmpresa } from '../../utils/authSession';
 import {
-  activarModuloEmpresa,
-  cancelarModuloEmpresa,
   getMarketplaceCatalogo,
   getMarketplaceEstadoEmpresa,
 } from '../../features/marketplace/marketplaceService';
 import {
   marketplaceDescripcionCatalogoModulo,
+  marketplaceModuloContratoActivo,
   marketplaceModuloCoverClass,
   marketplaceModuloCoverImage,
   marketplaceModuloCoverImageAlt,
   marketplaceModuloPath,
+  marketplaceNombreModulo,
 } from '../../constants/marketplace';
+import MarketplaceContratarPlazasModal from '../../features/marketplace/MarketplaceContratarPlazasModal';
 import './MarketplacePage.css';
 
 const { Title, Text, Paragraph } = Typography;
@@ -41,34 +39,29 @@ const moduloIcon = (codigo) => {
   return <ShopOutlined aria-hidden />;
 };
 
-const estadoEtiqueta = (estado) => {
-  if (estado === 'active') {
-    return <Tag color="success" className="marketplace-module-card__status">Activo</Tag>;
-  }
-  if (estado === 'cancelled') {
-    return <Tag className="marketplace-module-card__status">Cancelado</Tag>;
-  }
-  if (estado === 'pending') {
-    return <Tag color="warning" className="marketplace-module-card__status">Pendiente</Tag>;
-  }
-  return null;
-};
+const estadoEtiquetaCatalogo = (activo) => (
+  activo ? (
+    <Tag color="success" className="marketplace-module-card__status">Activo</Tag>
+  ) : (
+    <Tag className="marketplace-module-card__status">No activo</Tag>
+  )
+);
 
 const MarketplacePage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [accionCodigo, setAccionCodigo] = useState(null);
   const [catalogo, setCatalogo] = useState([]);
   const [estadoEmpresa, setEstadoEmpresa] = useState([]);
-  const [idEmpresaConsulta, setIdEmpresaConsulta] = useState(() => getIdEmpresa() || null);
+  const [contratarModulo, setContratarModulo] = useState(null);
+  const idEmpresa = getIdEmpresa();
 
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
       const [cat, estado] = await Promise.all([
         getMarketplaceCatalogo(),
-        idEmpresaConsulta
-          ? getMarketplaceEstadoEmpresa(idEmpresaConsulta)
+        idEmpresa
+          ? getMarketplaceEstadoEmpresa(idEmpresa)
           : Promise.resolve({ modulos: [] }),
       ]);
       setCatalogo(cat.modulos ?? []);
@@ -80,7 +73,7 @@ const MarketplacePage = () => {
     } finally {
       setLoading(false);
     }
-  }, [idEmpresaConsulta]);
+  }, [idEmpresa]);
 
   useEffect(() => {
     cargar();
@@ -96,93 +89,14 @@ const MarketplacePage = () => {
     return map;
   }, [estadoEmpresa]);
 
-  const aplicarEstadoRespuesta = (data) => {
-    const filas = Array.isArray(data?.modulos) ? data.modulos : data;
-    if (Array.isArray(filas)) {
-      setEstadoEmpresa(filas);
-    } else {
-      cargar();
-    }
-  };
-
-  const onActivar = async (codigo) => {
-    if (!idEmpresaConsulta) {
-      message.warning('Indica el id de empresa');
-      return;
-    }
-    setAccionCodigo(codigo);
-    try {
-      const data = await activarModuloEmpresa({
-        idEmpresa: idEmpresaConsulta,
-        codigoModulo: codigo,
-      });
-      aplicarEstadoRespuesta(data);
-      message.success('Módulo activado');
-    } catch (error) {
-      message.error(error.message || 'No se pudo activar');
-    } finally {
-      setAccionCodigo(null);
-    }
-  };
-
-  const onCancelar = async (codigo) => {
-    if (!idEmpresaConsulta) {
-      message.warning('Indica el id de empresa');
-      return;
-    }
-    setAccionCodigo(codigo);
-    try {
-      const data = await cancelarModuloEmpresa({
-        idEmpresa: idEmpresaConsulta,
-        codigoModulo: codigo,
-      });
-      aplicarEstadoRespuesta(data);
-      message.success('Módulo cancelado');
-    } catch (error) {
-      message.error(error.message || 'No se pudo cancelar');
-    } finally {
-      setAccionCodigo(null);
-    }
-  };
-
   return (
     <div className="marketplace-page app-page">
-      <Alert
-        type="info"
-        showIcon
-        className="marketplace-page__banner"
-        message="Vista interna ROOT"
-        description="Activa módulos por empresa (sin Stripe en esta fase). Sin periodo de prueba."
-      />
-
-      <div className="marketplace-page__toolbar">
-        <Space wrap align="center">
-          <Text>Empresa (id_empresa):</Text>
-          <InputNumber
-            min={1}
-            value={idEmpresaConsulta}
-            onChange={setIdEmpresaConsulta}
-            placeholder="ID empresa"
-          />
-          <Button icon={<ReloadOutlined />} onClick={cargar} loading={loading}>
-            Actualizar
-          </Button>
-        </Space>
-      </div>
-
       <Spin spinning={loading}>
         <Row gutter={[20, 20]} className="marketplace-page__grid">
           {catalogo.map((modulo) => {
             const filaEstado = estadoPorCodigo.get(modulo.codigo);
-            const contrato = filaEstado?.contrato ?? null;
-            const activo = contrato?.estado === 'active';
-            const usuariosActivos = filaEstado?.asientos_activos ?? 0;
-            const licencias = Number(contrato?.licencias_facturadas) || 0;
-            const usuariosLabel = activo
-              ? `${usuariosActivos} usuario${usuariosActivos === 1 ? '' : 's'} activo${usuariosActivos === 1 ? '' : 's'}`
-              : licencias > 0
-                ? `${licencias} usuario${licencias === 1 ? '' : 's'} al activar`
-                : '0 usuarios · se facturan al asignar personal';
+            const activo = marketplaceModuloContratoActivo(filaEstado);
+            const estadoLabel = activo ? 'Activo' : 'No activo';
             const precio = Number(modulo.precio_mensual_eur).toLocaleString('es-ES', {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
@@ -221,7 +135,7 @@ const MarketplacePage = () => {
                         {moduloIcon(modulo.codigo)}
                       </span>
                     )}
-                    {activo ? estadoEtiqueta('active') : estadoEtiqueta(contrato?.estado)}
+                    {estadoEtiquetaCatalogo(activo)}
                   </div>
                   <div className="marketplace-module-card__body">
                     <Title level={4} className="marketplace-module-card__title">
@@ -237,40 +151,27 @@ const MarketplacePage = () => {
                     </Text>
                     <div className="marketplace-module-card__footer">
                       <div className="marketplace-module-card__seats">
-                        <Text type="secondary">
-                          {idEmpresaConsulta ? usuariosLabel : '—'}
+                        <Text type={activo ? undefined : 'secondary'} strong={activo}>
+                          {estadoLabel}
                         </Text>
                       </div>
                       <Space wrap size="small">
-                        {!activo ? (
+                        {activo ? (
                           <Button
                             type="primary"
                             size="small"
-                            loading={accionCodigo === modulo.codigo}
-                            onClick={() => onActivar(modulo.codigo)}
-                            disabled={!idEmpresaConsulta}
+                            onClick={() => navigate(marketplaceModuloPath(modulo.codigo))}
                           >
-                            Activar
+                            Gestionar
                           </Button>
                         ) : (
-                          <>
-                            <Button
-                              size="small"
-                              onClick={() => navigate(
-                                `${marketplaceModuloPath(modulo.codigo)}?idEmpresa=${idEmpresaConsulta}`,
-                              )}
-                            >
-                              Gestionar
-                            </Button>
-                            <Button
-                              size="small"
-                              danger
-                              loading={accionCodigo === modulo.codigo}
-                              onClick={() => onCancelar(modulo.codigo)}
-                            >
-                              Cancelar
-                            </Button>
-                          </>
+                          <Button
+                            type="primary"
+                            size="small"
+                            onClick={() => setContratarModulo(modulo)}
+                          >
+                            Contratar
+                          </Button>
                         )}
                       </Space>
                     </div>
@@ -281,9 +182,31 @@ const MarketplacePage = () => {
           })}
         </Row>
         {!loading && !catalogo.length ? (
-          <Alert type="warning" message="Catálogo vacío. Revisa marketplace_modulos en BD." />
+          <Alert type="warning" message="No hay módulos disponibles en el catálogo." />
         ) : null}
       </Spin>
+
+      <MarketplaceContratarPlazasModal
+        open={Boolean(contratarModulo)}
+        onClose={() => setContratarModulo(null)}
+        codigoModulo={contratarModulo?.codigo}
+        nombreModulo={
+          contratarModulo
+            ? marketplaceNombreModulo(contratarModulo.codigo)
+            : ''
+        }
+        precioMensualEur={contratarModulo?.precio_mensual_eur}
+        plazasActuales={
+          contratarModulo
+            ? Number(estadoPorCodigo.get(contratarModulo.codigo)?.contrato?.licencias_facturadas) || 0
+            : 0
+        }
+        idEmpresa={idEmpresa}
+        onContratado={async () => {
+          setContratarModulo(null);
+          await cargar();
+        }}
+      />
     </div>
   );
 };

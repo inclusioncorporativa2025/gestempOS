@@ -1,6 +1,22 @@
 /** Módulos del marketplace (alineado con marketplace_modulos.codigo). */
 export const MARKETPLACE_MODULO_ALERTAS = 'alertas_fichaje';
 
+export const MARKETPLACE_MIN_PLAZAS = 1;
+export const MARKETPLACE_MAX_PLAZAS = 500;
+
+/** Módulo contratado: estado active y al menos una plaza facturada. */
+export const marketplaceModuloContratoActivo = (filaEstado) => {
+  const contrato = filaEstado?.contrato;
+  if (!contrato || String(contrato.estado).toLowerCase() !== 'active') return false;
+  const plazas = Number(contrato.licencias_facturadas);
+  return Number.isFinite(plazas) && plazas >= MARKETPLACE_MIN_PLAZAS;
+};
+
+/** Texto introductorio del catálogo (pestaña Catálogo). */
+export const MARKETPLACE_CATALOGO_INTRO =
+  'Funciones opcionales facturadas por usuario: contrata plazas en el catálogo '
+  + 'y asigna cada plaza al personal en la ficha del módulo.';
+
 export const MARKETPLACE_MODULOS = [
   {
     codigo: MARKETPLACE_MODULO_ALERTAS,
@@ -23,10 +39,8 @@ export const marketplaceModulosGestion = () => (
   MARKETPLACE_MODULOS.filter((m) => m.panelGestion !== false)
 );
 
-export const marketplaceRutaGestionPorDefecto = () => {
-  const modulos = marketplaceModulosGestion();
-  return modulos.length ? marketplaceModuloPath(modulos[0].codigo) : '/marketplace';
-};
+/** Entrada al marketplace sin catálogo (p. ej. menú lateral). El layout redirige al primer módulo activo. */
+export const marketplaceRutaGestionPorDefecto = () => '/marketplace';
 
 export const marketplaceCodigoDesdePathname = (pathname) => {
   const match = String(pathname || '').match(/^\/marketplace\/m\/([^/]+)/);
@@ -75,7 +89,7 @@ export const marketplaceModuloMenuLabel = (codigo) => {
 
 /** Módulo activo en empresa y hay plaza para asignar (o el usuario ya lo tiene). */
 export const empresaModuloVisibleEnEdicionUsuario = (estadoFila, usuarioAsignado) => {
-  if (estadoFila?.contrato?.estado !== 'active') return false;
+  if (!marketplaceModuloContratoActivo(estadoFila)) return false;
   if (usuarioAsignado) return true;
   const licencias = Number(estadoFila.contrato?.licencias_facturadas) || 0;
   const asientos = Number(estadoFila.asientos_activos) || 0;
