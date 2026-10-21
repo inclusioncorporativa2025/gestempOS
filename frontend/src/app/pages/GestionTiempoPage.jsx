@@ -87,6 +87,7 @@ const GestionTiempoPage = () => {
             <Menu
               className="gt-layout__menu"
               mode="horizontal"
+              disabledOverflow
               selectedKeys={[activeKey]}
               items={submenuItems}
               onClick={({ key }) => setActiveKey(key)}

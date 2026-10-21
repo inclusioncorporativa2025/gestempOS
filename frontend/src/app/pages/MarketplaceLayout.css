@@ -17,3 +17,7 @@
   line-height: 1.5;
   white-space: normal;
 }
+
+.mp-layout__menu.ant-menu-horizontal > .ant-menu-item {
+  flex: 0 0 auto;
+}

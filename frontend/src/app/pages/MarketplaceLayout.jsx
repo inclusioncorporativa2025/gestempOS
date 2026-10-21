@@ -123,8 +123,9 @@ const MarketplaceLayout = () => {
 
       {submenuItems.length > 0 ? (
         <Menu
-          className="gt-layout__menu"
+          className="gt-layout__menu mp-layout__menu"
           mode="horizontal"
+          disabledOverflow
           selectedKeys={[activeKey]}
           items={submenuItems}
           onClick={({ key }) => navigate(key)}

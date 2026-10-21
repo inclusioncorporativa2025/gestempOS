@@ -18,8 +18,9 @@
 }
 
 .gt-layout__menu {
-  display: inline-flex !important;
-  width: fit-content;
+  display: flex !important;
+  flex-wrap: wrap;
+  width: auto !important;
   max-width: 100%;
   margin-bottom: 24px;
   padding: 5px;
@@ -29,10 +30,16 @@
   border-radius: 999px;
   box-shadow: 0 2px 12px rgba(var(--color-primary-dark-rgb), 0.08);
   line-height: 1;
+  overflow: visible !important;
 }
 
 .gt-layout__menu.ant-menu-horizontal {
   border-bottom: none !important;
+}
+
+/* Evita el botón "⋯" cuando el menú cree que no hay espacio */
+.gt-layout__menu.ant-menu-horizontal .ant-menu-overflow-item {
+  display: none !important;
 }
 
 .gt-layout__menu .ant-menu-item {
