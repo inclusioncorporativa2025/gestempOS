@@ -407,6 +407,7 @@ const resolverLayoutSuscripcionStripe = async (subscriptionRef, parPrecios) => {
 
 const crearPreviewInvoiceActualizacionSuscripcion = async ({
   subscriptionId,
+  customerId,
   previewItems,
   automaticTax = false,
 }) => {
@@ -421,11 +422,29 @@ const crearPreviewInvoiceActualizacionSuscripcion = async ({
     subscription_details: subscriptionDetails,
   };
 
+  if (customerId) {
+    previewParams.customer = customerId;
+  }
+
   if (automaticTax) {
     previewParams.automatic_tax = { enabled: true };
   }
 
   return getStripe().invoices.createPreview(previewParams);
+};
+
+/** amount_due del preview a veces incluye renovación; en legacy usar neto de líneas prorrateo. */
+const calcularImporteCobrarPreviewStripe = (invoice, { soloProrrateoLegacy = false } = {}) => {
+  const lines = invoice?.lines?.data || [];
+  if (soloProrrateoLegacy && lines.length) {
+    const netProracionCentimos = lines
+      .filter((line) => line.proration)
+      .reduce((sum, line) => sum + Number(line.amount || 0), 0);
+    if (netProracionCentimos !== 0) {
+      return centimosAEur(netProracionCentimos);
+    }
+  }
+  return centimosAEur(invoice?.amount_due);
 };
 
 const obtenerFacturacionCompleta = async (idEmpresa) => {
@@ -1633,14 +1652,34 @@ const previewCambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
 
   const preview = await crearPreviewInvoiceActualizacionSuscripcion({
     subscriptionId,
+    customerId,
     previewItems,
     automaticTax: impuestosAutomaticosActivos(),
+  });
+
+  const lineas = mapearLineasPreviewStripe(preview);
+  const soloProrrateoLegacy = Boolean(soloCantidadLegacy || forzarSoloCantidadItem);
+  const importeCobrarAhora = calcularImporteCobrarPreviewStripe(preview, {
+    soloProrrateoLegacy,
   });
 
   const importeIva = (preview.total_tax_amounts || []).reduce(
     (sum, tax) => sum + Number(tax.amount || 0),
     0,
   );
+
+  if (soloProrrateoLegacy) {
+    console.info('billingService preview legacy', {
+      idEmpresa,
+      subscriptionId,
+      itemId,
+      cantidadStripe,
+      nuevaCantidad,
+      previewItems,
+      amount_due: preview.amount_due,
+      importe_cobrar_ahora_eur: importeCobrarAhora,
+    });
+  }
 
   return {
     sin_cambios: false,
@@ -1650,11 +1689,12 @@ const previewCambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
     licencias: nuevaCantidad,
     licencias_anterior: licenciasAnterior,
     cambio_solo_plazas: cambioSoloPlazas,
-    importe_cobrar_ahora_eur: centimosAEur(preview.amount_due),
+    importe_cobrar_ahora_eur: importeCobrarAhora,
     importe_subtotal_eur: centimosAEur(preview.subtotal),
     importe_iva_eur: centimosAEur(importeIva),
+    importe_amount_due_stripe_eur: centimosAEur(preview.amount_due),
     moneda: String(preview.currency || 'eur').toUpperCase(),
-    lineas: mapearLineasPreviewStripe(preview),
+    lineas,
     ciclo_facturacion: ciclo,
     suscripcion_legacy: forzarSoloCantidadItem,
     cambio_solo_plazas: cambioSoloPlazas,
