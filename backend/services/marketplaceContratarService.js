@@ -24,6 +24,8 @@ const MarketplaceEmpresaModulo = require('../models/MarketplaceEmpresaModulo');
 
 const MIN_PLAZAS = 1;
 const MAX_PLAZAS = 500;
+const CHECKOUT_TIPO_MARKETPLACE = 'marketplace_plazas';
+const MIN_IMPORTE_CHECKOUT_EUR = 0.5;
 
 const normalizarPlazasObjetivo = (raw) => {
   const n = Number(raw);
@@ -293,17 +295,56 @@ const persistirContratoPlazas = async ({
   });
 };
 
-const contratarPlazasModulo = async ({
-  idEmpresa,
-  codigoModulo,
-  plazasObjetivo,
-  idUsuarioAlta,
-}) => {
-  const ctx = await resolverContextoContratar(idEmpresa, codigoModulo, plazasObjetivo);
+const resolverUrlsCheckoutMarketplace = () => {
+  const base = (process.env.FRONTEND_URL || 'http://localhost:3001').replace(/\/$/, '');
+  return {
+    successUrl:
+      process.env.STRIPE_MARKETPLACE_SUCCESS_URL
+      || `${base}/marketplace/exito?session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl:
+      process.env.STRIPE_MARKETPLACE_CANCEL_URL
+      || `${base}/marketplace?contratar=cancelado`,
+  };
+};
+
+const importeCheckoutDesdePreview = async (ctx) => {
+  const preview = await crearPreviewInvoiceActualizacionSuscripcion({
+    subscriptionId: ctx.subscriptionId,
+    customerId: ctx.customerId,
+    previewItems: ctx.previewItems,
+    automaticTax: impuestosAutomaticosActivos(),
+  });
+  const importeEur = calcularImporteCobrarPreviewStripe(preview, {
+    priceIdsProrrateo: [ctx.priceId],
+  });
+  return { preview, importeEur };
+};
+
+const aplicarPlazasEnSuscripcionStripe = async (ctx) => {
+  const subAntes = await getStripe().subscriptions.retrieve(ctx.subscriptionId, {
+    expand: ['items.data.price'],
+  });
+  let itemId = ctx.itemId;
+  if (!itemId) {
+    const existente = resolverItemMarketplaceEnSuscripcion(subAntes, {
+      itemId: null,
+      priceId: ctx.priceId,
+    });
+    itemId = existente?.id ?? null;
+  }
+
+  const previewItems = [
+    construirLineaItemMarketplace({
+      itemId,
+      priceId: ctx.priceId,
+      quantity: ctx.plazasObjetivo,
+      taxRateIds: ctx.impuestoManual?.taxRateIds,
+    }),
+  ];
 
   await getStripe().subscriptions.update(ctx.subscriptionId, {
-    items: ctx.previewItems,
-    proration_behavior: 'create_prorations',
+    items: previewItems,
+    proration_behavior: 'none',
     billing_cycle_anchor: 'unchanged',
     ...(ctx.impuestoManual ? { default_tax_rates: ctx.impuestoManual.taxRateIds } : {}),
   });
@@ -323,11 +364,65 @@ const contratarPlazasModulo = async ({
     throw error;
   }
 
+  return item.id;
+};
+
+const contratoMarketplaceYaAplicado = (rowHistorico, plazasObjetivo, stripeItemId) => {
+  if (!rowHistorico || rowHistorico.fecha_baja) return false;
+  if (Number(rowHistorico.licencias_facturadas) !== plazasObjetivo) return false;
+  if (!rowHistorico.stripe_subscription_item_id) return false;
+  if (stripeItemId && rowHistorico.stripe_subscription_item_id !== stripeItemId) return false;
+  return String(rowHistorico.estado).toLowerCase() === 'active';
+};
+
+const completarContratoMarketplaceDesdeCheckout = async (
+  session,
+  { idUsuarioAltaFallback } = {},
+) => {
+  const meta = session?.metadata || {};
+  if (meta.checkout_tipo !== CHECKOUT_TIPO_MARKETPLACE) {
+    return null;
+  }
+
+  if (session.payment_status !== 'paid') {
+    return {
+      pendiente: true,
+      payment_status: session.payment_status,
+    };
+  }
+
+  const idEmpresa = Number(meta.id_empresa);
+  const codigoModulo = meta.codigo_modulo;
+  const plazasObjetivo = Number(meta.plazas_objetivo);
+  if (!idEmpresa || !codigoModulo || !Number.isFinite(plazasObjetivo)) {
+    const error = new Error('Sesión de checkout incompleta');
+    error.status = 400;
+    throw error;
+  }
+
+  const moduloPrevio = await obtenerModuloPorCodigo(codigoModulo);
+  const rowPrevio = moduloPrevio
+    ? await obtenerEmpresaModuloRowHistorico(idEmpresa, moduloPrevio.id_modulo)
+    : null;
+  if (contratoMarketplaceYaAplicado(rowPrevio, plazasObjetivo, null)) {
+    return {
+      ya_aplicado: true,
+      codigo_modulo: codigoModulo,
+      plazas: plazasObjetivo,
+      modulos: await listarEstadoEmpresa(idEmpresa),
+    };
+  }
+
+  const ctx = await resolverContextoContratar(idEmpresa, codigoModulo, plazasObjetivo);
+  const idUsuarioAlta = Number(meta.id_usuario_alta) || idUsuarioAltaFallback || null;
+
+  const stripeItemId = await aplicarPlazasEnSuscripcionStripe(ctx);
+
   await persistirContratoPlazas({
     idEmpresa,
     modulo: ctx.modulo,
-    plazasObjetivo: ctx.plazasObjetivo,
-    stripeItemId: item.id,
+    plazasObjetivo,
+    stripeItemId,
     idUsuarioAlta,
     rowHistorico: ctx.rowHistorico,
   });
@@ -335,17 +430,113 @@ const contratarPlazasModulo = async ({
   const modulos = await listarEstadoEmpresa(idEmpresa);
 
   return {
-    codigo_modulo: ctx.modulo.codigo,
-    plazas: ctx.plazasObjetivo,
-    plazas_anterior: ctx.plazasActuales,
-    stripe_subscription_item_id: item.id,
+    aplicado: true,
+    codigo_modulo: codigoModulo,
+    plazas: plazasObjetivo,
+    stripe_subscription_item_id: stripeItemId,
     modulos,
+  };
+};
+
+const crearCheckoutContratarPlazasModulo = async ({
+  idEmpresa,
+  codigoModulo,
+  plazasObjetivo,
+  idUsuarioAlta,
+}) => {
+  const ctx = await resolverContextoContratar(idEmpresa, codigoModulo, plazasObjetivo);
+  const { importeEur } = await importeCheckoutDesdePreview(ctx);
+
+  if (!Number.isFinite(importeEur) || importeEur < MIN_IMPORTE_CHECKOUT_EUR) {
+    const error = new Error(
+      `No se pudo calcular el importe del prorrateo (mínimo ${MIN_IMPORTE_CHECKOUT_EUR} €).`,
+    );
+    error.status = 400;
+    error.code = 'MARKETPLACE_IMPORTE_CHECKOUT_INVALIDO';
+    throw error;
+  }
+
+  const { successUrl, cancelUrl } = resolverUrlsCheckoutMarketplace();
+  const nombreModulo = moduloPlain(ctx.modulo).nombre || codigoModulo;
+  const cicloLabel = ctx.ciclo === 'anual' ? 'anual' : 'mensual';
+
+  const lineItem = {
+    price_data: {
+      currency: 'eur',
+      product_data: {
+        name: `Prorrateo — ${nombreModulo}`,
+        description:
+          `${ctx.plazasObjetivo} plaza(s) hasta la próxima factura (${cicloLabel}). `
+          + 'El total del ciclo se cobrará en la renovación de tu suscripción TimeCor.',
+      },
+      unit_amount: Math.round(importeEur * 100),
+    },
+    quantity: 1,
+  };
+
+  if (ctx.impuestoManual?.taxRateIds?.length) {
+    lineItem.tax_rates = ctx.impuestoManual.taxRateIds;
+  }
+
+  const sessionParams = {
+    mode: 'payment',
+    customer: ctx.customerId,
+    line_items: [lineItem],
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    metadata: {
+      id_empresa: String(idEmpresa),
+      checkout_tipo: CHECKOUT_TIPO_MARKETPLACE,
+      codigo_modulo: String(codigoModulo).trim().toLowerCase(),
+      plazas_objetivo: String(ctx.plazasObjetivo),
+      subscription_id: ctx.subscriptionId,
+      price_id: ctx.priceId,
+      subscription_item_id: ctx.itemId || '',
+      id_usuario_alta: idUsuarioAlta ? String(idUsuarioAlta) : '',
+    },
+  };
+
+  if (impuestosAutomaticosActivos()) {
+    sessionParams.automatic_tax = { enabled: true };
+    sessionParams.customer_update = { address: 'auto' };
+  }
+
+  const session = await getStripe().checkout.sessions.create(sessionParams);
+
+  return {
+    url: session.url,
+    sessionId: session.id,
+    importe_checkout_eur: importeEur,
+  };
+};
+
+const verificarCheckoutContratarPlazas = async (sessionId, { idEmpresa, idUsuarioAlta } = {}) => {
+  const session = await getStripe().checkout.sessions.retrieve(sessionId);
+  const metaEmpresa = Number(session.metadata?.id_empresa);
+  if (idEmpresa && metaEmpresa && metaEmpresa !== Number(idEmpresa)) {
+    const error = new Error('La sesión de pago no corresponde a esta empresa');
+    error.status = 403;
+    throw error;
+  }
+
+  const resultado = await completarContratoMarketplaceDesdeCheckout(session, {
+    idUsuarioAltaFallback: idUsuarioAlta,
+  });
+
+  return {
+    status: session.status,
+    payment_status: session.payment_status,
+    checkout_tipo: session.metadata?.checkout_tipo ?? null,
+    resultado,
   };
 };
 
 module.exports = {
   MIN_PLAZAS,
   MAX_PLAZAS,
+  CHECKOUT_TIPO_MARKETPLACE,
   previewContratarPlazasModulo,
-  contratarPlazasModulo,
+  crearCheckoutContratarPlazasModulo,
+  completarContratoMarketplaceDesdeCheckout,
+  verificarCheckoutContratarPlazas,
 };

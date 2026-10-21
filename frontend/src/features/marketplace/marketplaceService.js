@@ -93,12 +93,12 @@ export const previewContratarPlazasModulo = async ({
   return parseResponse(response);
 };
 
-export const contratarPlazasModulo = async ({
+export const crearCheckoutContratarPlazasModulo = async ({
   idEmpresa,
   codigoModulo,
   plazas,
 }) => {
-  const response = await fetch(`${API_BASE_URL}/empresa/plazas/contratar`, {
+  const response = await fetch(`${API_BASE_URL}/empresa/plazas/checkout`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({
@@ -107,6 +107,17 @@ export const contratarPlazasModulo = async ({
       plazas,
     }),
   });
+  return parseResponse(response);
+};
+
+export const verificarCheckoutMarketplacePlazas = async (sessionId) => {
+  const response = await fetch(
+    `${API_BASE_URL}/checkout/session/${encodeURIComponent(sessionId)}/verify`,
+    {
+      method: 'GET',
+      headers: authHeaders(),
+    },
+  );
   return parseResponse(response);
 };
 

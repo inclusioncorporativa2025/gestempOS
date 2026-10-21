@@ -4,6 +4,36 @@ export const MARKETPLACE_MODULO_ALERTAS = 'alertas_fichaje';
 export const MARKETPLACE_MIN_PLAZAS = 1;
 export const MARKETPLACE_MAX_PLAZAS = 500;
 
+export const marketplaceNormalizarCiclo = (ciclo) => (
+  String(ciclo || '').toLowerCase() === 'anual' ? 'anual' : 'mensual'
+);
+
+export const marketplaceUnidadCiclo = (ciclo) => (
+  marketplaceNormalizarCiclo(ciclo) === 'anual' ? 'año' : 'mes'
+);
+
+export const marketplacePrecioPlazaEnCiclo = (modulo, ciclo) => {
+  const esAnual = marketplaceNormalizarCiclo(ciclo) === 'anual';
+  if (esAnual) {
+    const anual = Number(modulo?.precio_anual_eur);
+    if (Number.isFinite(anual) && anual > 0) return anual;
+    const mensual = Number(modulo?.precio_mensual_eur);
+    return Number.isFinite(mensual) ? mensual * 12 : null;
+  }
+  const mensual = Number(modulo?.precio_mensual_eur);
+  return Number.isFinite(mensual) ? mensual : null;
+};
+
+export const marketplaceEtiquetaPrecioPlaza = (modulo, ciclo) => {
+  const precio = marketplacePrecioPlazaEnCiclo(modulo, ciclo);
+  if (precio == null) return null;
+  const importe = precio.toLocaleString('es-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${importe} € / usuario / ${marketplaceUnidadCiclo(ciclo)}`;
+};
+
 /** Módulo contratado: estado active y al menos una plaza facturada. */
 export const marketplaceModuloContratoActivo = (filaEstado) => {
   const contrato = filaEstado?.contrato;

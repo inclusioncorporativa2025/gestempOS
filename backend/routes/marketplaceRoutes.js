@@ -4,7 +4,8 @@ const {
   getEstadoEmpresa,
   postActivarModulo,
   postPreviewContratarPlazas,
-  postContratarPlazas,
+  postCheckoutContratarPlazas,
+  getVerificarCheckoutPlazas,
   postCancelarModulo,
   postListarAsignaciones,
   postGuardarAsignacion,
@@ -28,7 +29,13 @@ router.post('/empresa/activar', requireRole(ROLES.ROOT), postActivarModulo);
 
 router.post('/empresa/plazas/preview', requireMarketplaceContratar, postPreviewContratarPlazas);
 
-router.post('/empresa/plazas/contratar', requireMarketplaceContratar, postContratarPlazas);
+router.post('/empresa/plazas/checkout', requireMarketplaceContratar, postCheckoutContratarPlazas);
+
+router.get(
+  '/checkout/session/:sessionId/verify',
+  requireMarketplaceContratar,
+  getVerificarCheckoutPlazas,
+);
 
 router.post('/empresa/cancelar', requireRole(ROLES.ROOT), postCancelarModulo);
 

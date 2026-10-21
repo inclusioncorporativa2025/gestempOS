@@ -8,7 +8,8 @@ const {
 } = require('../services/marketplaceModuloService');
 const {
   previewContratarPlazasModulo,
-  contratarPlazasModulo,
+  crearCheckoutContratarPlazasModulo,
+  verificarCheckoutContratarPlazas,
 } = require('../services/marketplaceContratarService');
 const { ejecutarAlertasFichaje } = require('../services/alertasFichajeService');
 
@@ -101,7 +102,7 @@ const postPreviewContratarPlazas = async (req, res) => {
   }
 };
 
-const postContratarPlazas = async (req, res) => {
+const postCheckoutContratarPlazas = async (req, res) => {
   const idEmpresa = resolveIdEmpresa(req);
   const codigoModulo = req.body?.codigoModulo ?? req.body?.codigo_modulo;
   const plazas = req.body?.plazas ?? req.body?.licencias;
@@ -114,22 +115,45 @@ const postContratarPlazas = async (req, res) => {
   }
 
   try {
-    const result = await contratarPlazasModulo({
+    const checkout = await crearCheckoutContratarPlazasModulo({
       idEmpresa,
       codigoModulo,
       plazasObjetivo: plazas,
       idUsuarioAlta: req.user?.id_usuario,
     });
     return res.status(200).json({
-      message: 'Plazas contratadas correctamente',
-      ...result,
+      message: 'Redirige al cliente a Stripe Checkout para confirmar el pago',
+      ...checkout,
     });
   } catch (error) {
     if (error.status === 400 || error.status === 404 || error.status === 503) {
       return res.status(error.status).json({ message: error.message, code: error.code });
     }
-    console.error('postContratarPlazas:', error.message);
-    return res.status(500).json({ message: 'Error al contratar plazas del módulo' });
+    console.error('postCheckoutContratarPlazas:', error.message);
+    return res.status(500).json({ message: 'Error al iniciar el pago en Stripe' });
+  }
+};
+
+const getVerificarCheckoutPlazas = async (req, res) => {
+  const sessionId = req.params?.sessionId;
+  const idEmpresa = resolveIdEmpresa(req);
+
+  if (!sessionId) {
+    return res.status(400).json({ message: 'sessionId es obligatorio' });
+  }
+
+  try {
+    const data = await verificarCheckoutContratarPlazas(sessionId, {
+      idEmpresa,
+      idUsuarioAlta: req.user?.id_usuario,
+    });
+    return res.status(200).json(data);
+  } catch (error) {
+    if (error.status === 403 || error.status === 400) {
+      return res.status(error.status).json({ message: error.message, code: error.code });
+    }
+    console.error('getVerificarCheckoutPlazas:', error.message);
+    return res.status(500).json({ message: 'Error al verificar el pago' });
   }
 };
 
@@ -260,7 +284,8 @@ module.exports = {
   getEstadoEmpresa,
   postActivarModulo,
   postPreviewContratarPlazas,
-  postContratarPlazas,
+  postCheckoutContratarPlazas,
+  getVerificarCheckoutPlazas,
   postCancelarModulo,
   postListarAsignaciones,
   postGuardarAsignacion,

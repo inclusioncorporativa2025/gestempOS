@@ -22,13 +22,16 @@ import {
 } from '../../features/marketplace/marketplaceService';
 import {
   marketplaceDescripcionCatalogoModulo,
+  marketplaceEtiquetaPrecioPlaza,
   marketplaceModuloContratoActivo,
   marketplaceModuloCoverClass,
   marketplaceModuloCoverImage,
   marketplaceModuloCoverImageAlt,
   marketplaceModuloPath,
   marketplaceNombreModulo,
+  marketplaceNormalizarCiclo,
 } from '../../constants/marketplace';
+import { getEstadoFacturacion } from '../../features/billing/billingService';
 import MarketplaceContratarPlazasModal from '../../features/marketplace/MarketplaceContratarPlazasModal';
 import './MarketplacePage.css';
 
@@ -53,19 +56,24 @@ const MarketplacePage = () => {
   const [catalogo, setCatalogo] = useState([]);
   const [estadoEmpresa, setEstadoEmpresa] = useState([]);
   const [contratarModulo, setContratarModulo] = useState(null);
+  const [cicloFacturacion, setCicloFacturacion] = useState('mensual');
   const idEmpresa = getIdEmpresa();
 
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const [cat, estado] = await Promise.all([
+      const [cat, estado, facturacion] = await Promise.all([
         getMarketplaceCatalogo(),
         idEmpresa
           ? getMarketplaceEstadoEmpresa(idEmpresa)
           : Promise.resolve({ modulos: [] }),
+        getEstadoFacturacion().catch(() => null),
       ]);
       setCatalogo(cat.modulos ?? []);
       setEstadoEmpresa(estado.modulos ?? []);
+      if (facturacion?.ciclo_facturacion) {
+        setCicloFacturacion(marketplaceNormalizarCiclo(facturacion.ciclo_facturacion));
+      }
     } catch (error) {
       message.error(error.message || 'Error al cargar marketplace');
       setCatalogo([]);
@@ -97,10 +105,7 @@ const MarketplacePage = () => {
             const filaEstado = estadoPorCodigo.get(modulo.codigo);
             const activo = marketplaceModuloContratoActivo(filaEstado);
             const estadoLabel = activo ? 'Activo' : 'No activo';
-            const precio = Number(modulo.precio_mensual_eur).toLocaleString('es-ES', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            });
+            const precioLabel = marketplaceEtiquetaPrecioPlaza(modulo, cicloFacturacion);
 
             const coverClass = marketplaceModuloCoverClass(modulo.codigo);
             const coverImage = marketplaceModuloCoverImage(modulo.codigo);
@@ -145,9 +150,7 @@ const MarketplacePage = () => {
                       {marketplaceDescripcionCatalogoModulo(modulo.codigo, modulo.descripcion)}
                     </Paragraph>
                     <Text strong className="marketplace-module-card__price">
-                      {precio}
-                      {' '}
-                      € / usuario / mes
+                      {precioLabel ?? '—'}
                     </Text>
                     <div className="marketplace-module-card__footer">
                       <div className="marketplace-module-card__seats">
@@ -196,16 +199,14 @@ const MarketplacePage = () => {
             : ''
         }
         precioMensualEur={contratarModulo?.precio_mensual_eur}
+        precioAnualEur={contratarModulo?.precio_anual_eur}
+        cicloFacturacionEmpresa={cicloFacturacion}
         plazasActuales={
           contratarModulo
             ? Number(estadoPorCodigo.get(contratarModulo.codigo)?.contrato?.licencias_facturadas) || 0
             : 0
         }
         idEmpresa={idEmpresa}
-        onContratado={async () => {
-          setContratarModulo(null);
-          await cargar();
-        }}
       />
     </div>
   );

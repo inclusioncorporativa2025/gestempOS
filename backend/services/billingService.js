@@ -728,6 +728,12 @@ const procesarWebhookEvent = async (event) => {
         const customerId = session.customer;
         const subscriptionId = session.subscription;
 
+        if (session.metadata?.checkout_tipo === 'marketplace_plazas') {
+          const { completarContratoMarketplaceDesdeCheckout } = require('./marketplaceContratarService');
+          await completarContratoMarketplaceDesdeCheckout(session);
+          break;
+        }
+
         if (idEmpresa && customerId) {
           await sequelize.query(
             `UPDATE empresa_facturacion

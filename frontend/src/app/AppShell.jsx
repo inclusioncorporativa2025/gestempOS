@@ -86,6 +86,7 @@ import { marketplaceModuloPath, MARKETPLACE_MODULO_ALERTAS, marketplaceRutaGesti
 import MarketplaceLayout from './pages/MarketplaceLayout';
 import MarketplacePage from './pages/MarketplacePage';
 import MarketplaceModuloPage from './pages/MarketplaceModuloPage';
+import MarketplaceCheckoutExito from './pages/MarketplaceCheckoutExito';
 import { useTrialStatus } from '../hooks/useTrialStatus';
 import { usePlan } from '../hooks/usePlan';
 import './App.css';
@@ -207,6 +208,7 @@ const AppShell = () => {
     APP_ROUTES.resetPassword,
     APP_ROUTES.facturacionExito,
     APP_ROUTES.facturacionCancelado,
+    APP_ROUTES.marketplaceExito,
     APP_ROUTES.renovarSuscripcion,
     APP_ROUTES.pagoCaducado,
     APP_ROUTES.pagoError,
@@ -451,6 +453,7 @@ const AppShell = () => {
                 <Route path={APP_ROUTES.resetPassword} element={<ResetPassword />} />
                 <Route path={APP_ROUTES.facturacionExito} element={<FacturacionExito />} />
                 <Route path={APP_ROUTES.facturacionCancelado} element={<FacturacionCancelado />} />
+                <Route path={APP_ROUTES.marketplaceExito} element={<MarketplaceCheckoutExito />} />
                 <Route path={APP_ROUTES.renovarSuscripcion} element={<RenovarSuscripcion />} />
                 <Route
                   path={APP_ROUTES.timeLogs}

@@ -26,8 +26,10 @@ import {
   MARKETPLACE_MODULO_ALERTAS,
   marketplaceModuloContratoActivo,
   marketplaceNombreModulo,
+  marketplaceNormalizarCiclo,
   marketplaceSubtituloModulo,
 } from '../../constants/marketplace';
+import { getEstadoFacturacion } from '../../features/billing/billingService';
 import { APP_ROUTES } from '../../constants/routes';
 import { getIdEmpresa, getIdUsuario } from '../../utils/authSession';
 import { formatearTelefonoWhatsappDisplay } from '../../utils/telefonoWhatsapp';
@@ -61,6 +63,8 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
   const [whatsappUso, setWhatsappUso] = useState(null);
   const [plazas, setPlazas] = useState(null);
   const [precioModuloMensual, setPrecioModuloMensual] = useState(null);
+  const [precioModuloAnual, setPrecioModuloAnual] = useState(null);
+  const [cicloFacturacion, setCicloFacturacion] = useState('mensual');
   const [waInfoOpen, setWaInfoOpen] = useState(false);
   const [plazaStripeOpen, setPlazaStripeOpen] = useState(false);
   const tablaRef = useRef(null);
@@ -74,12 +78,21 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
 
     setLoading(true);
     try {
-      const estado = await getMarketplaceEstadoEmpresa(idEmpresa);
+      const [estado, facturacion] = await Promise.all([
+        getMarketplaceEstadoEmpresa(idEmpresa),
+        getEstadoFacturacion().catch(() => null),
+      ]);
+      if (facturacion?.ciclo_facturacion) {
+        setCicloFacturacion(marketplaceNormalizarCiclo(facturacion.ciclo_facturacion));
+      }
       const fila = (estado.modulos ?? []).find((m) => m.modulo?.codigo === CODIGO_MODULO);
       const activo = marketplaceModuloContratoActivo(fila);
       setModuloActivo(activo);
       setPrecioModuloMensual(
         fila?.modulo?.precio_mensual_eur != null ? Number(fila.modulo.precio_mensual_eur) : null,
+      );
+      setPrecioModuloAnual(
+        fila?.modulo?.precio_anual_eur != null ? Number(fila.modulo.precio_anual_eur) : null,
       );
 
       if (!activo) {
@@ -446,12 +459,10 @@ const MarketplaceAsignacionesPage = ({ codigoModulo = MARKETPLACE_MODULO_ALERTAS
         codigoModulo={CODIGO_MODULO}
         nombreModulo={marketplaceNombreModulo(CODIGO_MODULO)}
         precioMensualEur={plazas?.precio_mensual_eur ?? precioModuloMensual}
+        precioAnualEur={precioModuloAnual}
+        cicloFacturacionEmpresa={cicloFacturacion}
         plazasActuales={Number(plazas?.licencias_contratadas) || 0}
         idEmpresa={idEmpresa}
-        onContratado={async () => {
-          setPlazaStripeOpen(false);
-          await cargar();
-        }}
       />
 
       <Modal

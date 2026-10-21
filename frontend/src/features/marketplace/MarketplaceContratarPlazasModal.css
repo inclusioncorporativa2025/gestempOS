@@ -48,8 +48,21 @@
   border: 1px solid #e2e8f0;
 }
 
+.mp-contratar-plazas__importe-titulo {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.mp-contratar-plazas__importe-periodo {
+  display: block;
+  font-size: 13px;
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+
 .mp-contratar-plazas__importe-valor {
-  margin-top: 4px;
+  margin-top: 0;
   font-size: 20px;
   font-weight: 600;
 }
