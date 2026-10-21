@@ -8,7 +8,7 @@ import {
 export const useMarketplaceEmpresaModulos = (enabled) => {
   const [modulosActivos, setModulosActivos] = useState([]);
   const [estadoFilas, setEstadoFilas] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => Boolean(enabled));
 
   const cargar = useCallback(async () => {
     if (!enabled) {

@@ -10,7 +10,7 @@ import {
   Typography,
   message,
 } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   BellOutlined,
   ShopOutlined,
@@ -52,6 +52,7 @@ const estadoEtiquetaCatalogo = (activo) => (
 
 const MarketplacePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [catalogo, setCatalogo] = useState([]);
   const [estadoEmpresa, setEstadoEmpresa] = useState([]);
@@ -86,6 +87,33 @@ const MarketplacePage = () => {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  useEffect(() => {
+    if (!location.state?.marketplaceModuloInactivo) return;
+    message.warning(
+      'El módulo no está activo. Contrata al menos una plaza para acceder a la configuración.',
+    );
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
+
+  const irAGestionarModulo = useCallback(async (modulo) => {
+    try {
+      const estado = idEmpresa
+        ? await getMarketplaceEstadoEmpresa(idEmpresa)
+        : { modulos: [] };
+      const fila = (estado.modulos ?? []).find((m) => m.modulo?.codigo === modulo.codigo);
+      if (!marketplaceModuloContratoActivo(fila)) {
+        message.warning(
+          'El módulo no está activo. Contrata al menos una plaza para gestionarlo.',
+        );
+        await cargar();
+        return;
+      }
+      navigate(marketplaceModuloPath(modulo.codigo));
+    } catch (error) {
+      message.error(error.message || 'No se pudo comprobar el estado del módulo');
+    }
+  }, [cargar, idEmpresa, navigate]);
 
   const estadoPorCodigo = useMemo(() => {
     const map = new Map();
@@ -163,7 +191,7 @@ const MarketplacePage = () => {
                           <Button
                             type="primary"
                             size="small"
-                            onClick={() => navigate(marketplaceModuloPath(modulo.codigo))}
+                            onClick={() => irAGestionarModulo(modulo)}
                           >
                             Gestionar
                           </Button>
