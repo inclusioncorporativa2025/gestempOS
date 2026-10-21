@@ -217,6 +217,103 @@
   text-align: right;
 }
 
+.facturacion-ampliar-plazas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.facturacion-ampliar-plazas__title {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-dark, #2d1b42);
+}
+
+.facturacion-ampliar-plazas__hint {
+  display: block;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.facturacion-ampliar-plazas__combo {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin: 0 -10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(var(--color-primary-rgb), 0.06);
+}
+
+.facturacion-ampliar-plazas__combo-half {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.facturacion-ampliar-plazas__combo-half--total {
+  padding-left: 10px;
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.facturacion-ampliar-plazas__combo-label {
+  font-size: 12px;
+  line-height: 1.25;
+  color: rgba(0, 0, 0, 0.55);
+  margin: 0;
+  cursor: pointer;
+}
+
+.facturacion-ampliar-plazas__combo-half--total .facturacion-ampliar-plazas__combo-label {
+  cursor: default;
+}
+
+.facturacion-ampliar-plazas__combo-total {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-dark, #2d1b42);
+}
+
+.facturacion-ampliar-plazas__input {
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.facturacion-ampliar-plazas__importe-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0 0;
+  margin: 0;
+  border-top: none;
+}
+
+.facturacion-ampliar-plazas__importe-row dt {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.55);
+  font-weight: 400;
+}
+
+.facturacion-ampliar-plazas__importe-row dd {
+  margin: 0;
+  text-align: right;
+}
+
+.facturacion-ampliar-plazas__importe {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-dark, #2d1b42);
+}
+
 .facturacion-billing-toggle {
   position: relative;
   display: inline-grid;
@@ -869,7 +966,24 @@
 
 .app-sider-facturacion-modal .ant-modal-body {
   padding: 0 20px 18px;
-  overflow: visible;
+  max-height: min(85vh, 820px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.facturacion-panel__section--focus {
+  animation: facturacion-section-focus 2.1s ease-out;
+}
+
+@keyframes facturacion-section-focus {
+  0%,
+  15% {
+    box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.45);
+  }
+  100% {
+    box-shadow: none;
+  }
 }
 
 .facturacion-page {

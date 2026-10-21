@@ -88,32 +88,7 @@ const UserManagementForm = () => {
       const response = await intentarAlta();
       if (!response.creada) {
         if (response.codigo === 'LICENCIAS_AGOTADAS') {
-          mostrarModalLicenciasAgotadas({
-            response,
-            onAmpliado: async () => {
-              const reintento = await intentarAlta();
-              if (!reintento.creada) {
-                notification.error({
-                  message: reintento.message || 'No se pudo completar el alta tras ampliar licencias',
-                });
-                return;
-              }
-              if (reintento.emailInvitacionEnviado === false) {
-                inspectorForm.resetFields();
-                notification.warning({
-                  message: 'Usuario creado sin correo',
-                  description:
-                    reintento.message
-                    || `Inspector creado, pero no se pudo enviar el email a ${values.email}. Puede usar "Olvidé mi contraseña".`,
-                });
-              } else {
-                inspectorForm.resetFields();
-                notification.success({
-                  message: `Inspector "${values.nombreCompleto}" creado, se le ha enviado el email de invitación.`,
-                });
-              }
-            },
-          });
+          mostrarModalLicenciasAgotadas({ response });
         } else {
           notification.error({
             message: response.message,

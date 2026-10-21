@@ -957,6 +957,20 @@ const crearCheckoutSession = async ({
   );
   await sincronizarCustomerStripeDesdeEmpresa(customerId, empresa, email);
 
+  const facturacionExistente = await obtenerFacturacionCompleta(idEmpresa);
+  if (facturacionExistente?.stripe_subscription_id) {
+    const estadoSub = String(facturacionExistente.estado_suscripcion || '').toLowerCase();
+    if (estadoSub === 'active' || estadoSub === 'trialing') {
+      const error = new Error(
+        'Ya tiene una suscripción activa en Stripe. Amplíe plazas desde Facturación; '
+        + 'solo se cobrará el prorrateo de las plazas nuevas.',
+      );
+      error.status = 400;
+      error.code = 'STRIPE_SUBSCRIPTION_ALREADY_ACTIVE';
+      throw error;
+    }
+  }
+
   const lineItems = construirLineItemsCheckout(
     parPrecios,
     qty,
@@ -1359,6 +1373,8 @@ const construirItemsUpdateSuscripcion = ({
   baseItemId,
   nuevaCantidad,
   taxRateIds,
+  /** Mismo plan: solo sube/baja plazas; no tocar precios ni cuota base (prorrateo de asientos). */
+  cambioSoloPlazas = false,
 }) => {
   const wrap = (updateItem) => {
     if (taxRateIds?.length) {
@@ -1366,6 +1382,15 @@ const construirItemsUpdateSuscripcion = ({
     }
     return updateItem;
   };
+
+  if (cambioSoloPlazas && itemId) {
+    const items = [];
+    if (parPrecios?.modo === 'base_seat' && baseItemId) {
+      items.push(wrap({ id: baseItemId }));
+    }
+    items.push(wrap({ id: itemId, quantity: nuevaCantidad }));
+    return items;
+  }
 
   if (parPrecios?.modo === 'base_seat') {
     const items = [];
@@ -1414,6 +1439,9 @@ const previewCambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
     customerId,
   } = resolved;
 
+  const cambioSoloPlazas =
+    planNuevo === planActual && nuevaCantidad !== licenciasAnterior;
+
   if (planNuevo === planActual && nuevaCantidad === licenciasAnterior) {
     return {
       sin_cambios: true,
@@ -1438,6 +1466,7 @@ const previewCambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
     baseItemId,
     nuevaCantidad,
     taxRateIds: null,
+    cambioSoloPlazas,
   });
 
   const previewParams = {
@@ -1467,6 +1496,7 @@ const previewCambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias
     plan_label: getPlanLabel(planNuevo),
     licencias: nuevaCantidad,
     licencias_anterior: licenciasAnterior,
+    cambio_solo_plazas: cambioSoloPlazas,
     importe_cobrar_ahora_eur: centimosAEur(preview.amount_due),
     importe_subtotal_eur: centimosAEur(preview.subtotal),
     importe_iva_eur: centimosAEur(importeIva),
@@ -1500,6 +1530,9 @@ const cambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias } = {}
   }
 
   const impuestoManual = resolverImpuestoManualEmpresa(resolved.empresa);
+  const cambioSoloPlazas =
+    planNuevo === planActual && nuevaCantidad !== licenciasAnterior;
+
   const updateItems = construirItemsUpdateSuscripcion({
     parPrecios,
     priceId,
@@ -1507,6 +1540,7 @@ const cambiarPlanStripe = async (idEmpresa, { plan: planCodigo, licencias } = {}
     baseItemId,
     nuevaCantidad,
     taxRateIds: impuestoManual?.taxRateIds,
+    cambioSoloPlazas,
   });
 
   await getStripe().subscriptions.update(subscriptionId, {
@@ -1584,7 +1618,11 @@ const ampliarLicenciasStripe = async (idEmpresa, { licencias } = {}) => {
   }
 
   const subscriptionId = facturacion.stripe_subscription_id;
-  const { seatItemId } = await resolverItemsBaseSeatEnSuscripcion(subscriptionId);
+  const ciclo = String(facturacion.ciclo_facturacion || 'mensual').toLowerCase() === 'anual'
+    ? 'anual'
+    : 'mensual';
+  const { parPrecios } = await resolverPriceIdPlan(planId, ciclo);
+  const { baseItemId, seatItemId } = await resolverItemsBaseSeatEnSuscripcion(subscriptionId);
   const itemId = seatItemId || facturacion.stripe_subscription_item_id;
 
   if (!itemId) {
@@ -1595,10 +1633,16 @@ const ampliarLicenciasStripe = async (idEmpresa, { licencias } = {}) => {
   }
 
   const impuestoManual = resolverImpuestoManualEmpresa(empresa);
-  const updateItem = { id: itemId, quantity: nuevaCantidad };
-  if (impuestoManual) {
-    updateItem.tax_rates = impuestoManual.taxRateIds;
-  }
+
+  const updateItems = construirItemsUpdateSuscripcion({
+    parPrecios,
+    priceId: parPrecios?.seatPriceId,
+    itemId,
+    baseItemId,
+    nuevaCantidad,
+    taxRateIds: impuestoManual?.taxRateIds,
+    cambioSoloPlazas: true,
+  });
 
   await sincronizarCustomerStripeDesdeEmpresa(
     facturacion.stripe_customer_id,
@@ -1607,7 +1651,7 @@ const ampliarLicenciasStripe = async (idEmpresa, { licencias } = {}) => {
   );
 
   await getStripe().subscriptions.update(subscriptionId, {
-    items: [updateItem],
+    items: updateItems,
     proration_behavior: 'create_prorations',
     ...(impuestoManual ? { default_tax_rates: impuestoManual.taxRateIds } : {}),
   });

@@ -1,5 +1,5 @@
-import { Modal, message } from 'antd';
-import { ampliarLicencias } from './billingService';
+import { Modal } from 'antd';
+import { dispatchOpenFacturacion } from '../../constants/facturacion';
 import { SUPPORT_EMAIL } from '../../constants/support';
 
 const formatEuro = (amount) =>
@@ -8,12 +8,15 @@ const formatEuro = (amount) =>
     maximumFractionDigits: 2,
   });
 
-export const mostrarModalLicenciasAgotadas = ({ response, onAmpliado }) => {
+/**
+ * Informa de falta de plazas y dirige a Facturación (preview de prorrateo allí).
+ * @param {{ response?: object }} options
+ */
+export const mostrarModalLicenciasAgotadas = ({ response }) => {
   const puedeAmpliar = Boolean(response?.puede_ampliar_stripe);
   const esLegacy = Boolean(response?.es_legacy);
   const licenciasNecesarias =
     response?.licencias_necesarias ?? (Number(response?.usadas || 0) + 1);
-  const prorrateo = response?.prorrateo_estimado_eur;
 
   const contenido = esLegacy && !puedeAmpliar ? (
     <div>
@@ -25,9 +28,10 @@ export const mostrarModalLicenciasAgotadas = ({ response, onAmpliado }) => {
           En uso: <strong>{response.usadas}</strong>
         </p>
       )}
-      {prorrateo != null && (
+      {response?.prorrateo_estimado_eur != null && (
         <p style={{ marginTop: 12 }}>
-          Importe estimado de la licencia extra: <strong>{formatEuro(prorrateo)} €</strong>
+          Importe estimado de la licencia extra:{' '}
+          <strong>{formatEuro(response.prorrateo_estimado_eur)} €</strong>
           {' '}
           (precio anual prorrateado hasta la fecha de fin de periodo).
         </p>
@@ -53,18 +57,26 @@ export const mostrarModalLicenciasAgotadas = ({ response, onAmpliado }) => {
       )}
       {puedeAmpliar ? (
         <p style={{ marginTop: 12 }}>
-          Se añadirá <strong>1 licencia</strong> a su suscripción (
-          {licenciasNecesarias} en total). Stripe cargará el importe prorrateado
-          en su método de pago.
+          Para añadir al menos <strong>1 plaza</strong> ({licenciasNecesarias} licencias en
+          total), abra <strong>Facturación</strong> y use «Ampliar plazas en tu plan» en su
+          suscripción. Verá el importe prorrateado antes de confirmar.
         </p>
       ) : (
         <p style={{ marginTop: 12 }}>
-          Active una suscripción en Facturación o contacte con soporte en{' '}
+          En <strong>Facturación</strong>, indique cuántos usuarios accederán (columna «Configurar
+          plan») y active la suscripción, o contacte con soporte en{' '}
           <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
         </p>
       )}
     </div>
   );
+
+  const irAFacturacion = () => {
+    dispatchOpenFacturacion({
+      focusLicencias: true,
+      licenciasSugeridas: licenciasNecesarias,
+    });
+  };
 
   if (!puedeAmpliar) {
     Modal.warning({
@@ -75,22 +87,10 @@ export const mostrarModalLicenciasAgotadas = ({ response, onAmpliado }) => {
     return;
   }
 
-  Modal.confirm({
+  Modal.info({
     title: 'Sin plazas disponibles',
     content: contenido,
-    okText: 'Añadir licencia y continuar',
-    cancelText: 'Cancelar',
-    onOk: async () => {
-      try {
-        await ampliarLicencias(licenciasNecesarias);
-        message.success(
-          'Licencia añadida. El importe prorrateado se cargará en su método de pago.',
-        );
-        await onAmpliado?.();
-      } catch (error) {
-        message.error(error.message || 'No se pudo ampliar las licencias');
-        throw error;
-      }
-    },
+    okText: 'Ir a Facturación',
+    onOk: irAFacturacion,
   });
 };

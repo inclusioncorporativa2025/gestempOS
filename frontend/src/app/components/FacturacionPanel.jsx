@@ -49,7 +49,9 @@ import {
   previewCambiarPlan,
 } from '../../features/billing/billingService';
 import { TRIAL_EXPIRED_EVENT } from '../../hooks/useTrialStatus';
+import { scrollFacturacionSection } from '../../constants/facturacion';
 import { APP_ROUTES } from '../../constants/routes';
+import FacturacionAmpliarPlazasBlock from './FacturacionAmpliarPlazasBlock';
 import '../pages/facturacion/Facturacion.css';
 
 const { Text } = Typography;
@@ -87,7 +89,11 @@ const formatEuro = (amount) =>
     maximumFractionDigits: 2,
   });
 
-const FacturacionPanel = ({ activo = true }) => {
+const FacturacionPanel = ({
+  activo = true,
+  focusLicencias = false,
+  licenciasSugeridasAlAbrir = null,
+}) => {
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [cambiarPlanLoading, setCambiarPlanLoading] = useState(false);
@@ -156,6 +162,20 @@ const FacturacionPanel = ({ activo = true }) => {
     cargar();
   }, [cargar]);
 
+  useEffect(() => {
+    if (!activo || loading || !focusLicencias) return;
+    if (licenciasSugeridasAlAbrir != null && Number.isFinite(licenciasSugeridasAlAbrir)) {
+      setLicencias((prev) => Math.max(prev, licenciasSugeridasAlAbrir));
+    }
+    const timer = window.setTimeout(() => {
+      const destino = document.getElementById('facturacion-ampliar-plazas')
+        ? 'facturacion-ampliar-plazas'
+        : 'facturacion-configurar-plan';
+      scrollFacturacionSection(destino);
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [activo, loading, focusLicencias, licenciasSugeridasAlAbrir]);
+
   const handleCambioVista = (key) => {
     setVista(key);
     if (key === 'facturas') {
@@ -195,6 +215,17 @@ const FacturacionPanel = ({ activo = true }) => {
   const handleCheckout = async () => {
     if (!planDisponible) {
       message.info(PLAN_UNAVAILABLE_TOOLTIP);
+      return;
+    }
+    if (estado?.puede_cambiar_plan) {
+      message.info(
+        'Ya tienes suscripción activa en Stripe. Amplía plazas a la izquierda o confirma el total prorrateo aquí; no hace falta volver a pagar el plan completo.',
+      );
+      scrollFacturacionSection(
+        document.getElementById('facturacion-ampliar-plazas')
+          ? 'facturacion-ampliar-plazas'
+          : 'facturacion-configurar-plan',
+      );
       return;
     }
     if (licencias < minLicencias) {
@@ -292,11 +323,13 @@ const FacturacionPanel = ({ activo = true }) => {
   const esLegacy = estado?.modo_facturacion === 'legacy' || estado?.es_legacy;
 
   const puedeCambiarPlan =
-    Boolean(estado?.puede_cambiar_plan) && suscripcionActiva && !esLegacy;
+    Boolean(estado?.puede_cambiar_plan) && !esLegacy;
   const planActual = normalizePlanId(estado?.plan || plan);
   const licenciasActuales = estado?.licencias ?? licencias;
   const hayCambiosPendientes =
     plan !== planActual || Number(licencias) !== Number(licenciasActuales);
+  const soloAmpliacionPlazas =
+    plan === planActual && Number(licencias) > Number(licenciasActuales);
 
   const abrirConfirmacionCambioPlan = () => {
     if (!planDisponible) {
@@ -555,6 +588,16 @@ const FacturacionPanel = ({ activo = true }) => {
             )}
           </dl>
 
+          {estado && puedeCambiarPlan ? (
+            <FacturacionAmpliarPlazasBlock
+              estado={estado}
+              planActual={planActual}
+              licenciasActuales={licenciasActuales}
+              puedeCambiarPlan={puedeCambiarPlan}
+              onActualizado={cargar}
+            />
+          ) : null}
+
           {(estado?.puede_portal || estado?.puede_cancelar) && (
             <div className="facturacion-panel__card-footer">
               {estado?.puede_cancelar && !estado?.cancel_at_period_end ? (
@@ -594,7 +637,10 @@ const FacturacionPanel = ({ activo = true }) => {
           )}
         </section>
 
-        <section className="facturacion-panel__card facturacion-panel__card--checkout">
+        <section
+          id="facturacion-configurar-plan"
+          className="facturacion-panel__card facturacion-panel__card--checkout"
+        >
           <div className="facturacion-plan-section-head">
             <Text className="facturacion-panel__section-title facturacion-panel__section-title--inline">
               {puedeCambiarPlan ? 'Cambiar de plan' : 'Configurar plan'}
@@ -689,7 +735,7 @@ const FacturacionPanel = ({ activo = true }) => {
             <div className="facturacion-price-summary__row">
               <div className="facturacion-price-summary__heading">
                 <span>
-                  {puedeCambiarPlan ? 'Importe a cobrar ahora (prorrateo)' : 'Importe estimado'}
+                  {puedeCambiarPlan ? 'Total prorrateo' : 'Importe estimado'}
                 </span>
                 {!puedeCambiarPlan ? (
                   <span className="facturacion-price-summary__tax-label">
@@ -727,11 +773,15 @@ const FacturacionPanel = ({ activo = true }) => {
             ) : null}
             {puedeCambiarPlan ? (
               <Text type="secondary" className="facturacion-price-summary__note">
+                {soloAmpliacionPlazas || previewCambioPlan?.cambio_solo_plazas
+                  ? 'Solo se prorratean las plazas nuevas; no se vuelve a cobrar la cuota base ni el descuento del primer año. '
+                  : ''}
                 {previewCambioPlan?.importe_iva_eur > 0
-                  ? `Incluye ${formatEuro(previewCambioPlan.importe_iva_eur)} € de IVA${previewCambioPlan.regimen_impuesto_etiqueta ? ` (${previewCambioPlan.regimen_impuesto_etiqueta})` : ''}. Según los días restantes del periodo.`
+                  ? `Incluye ${formatEuro(previewCambioPlan.importe_iva_eur)} € de IVA${previewCambioPlan.regimen_impuesto_etiqueta ? ` (${previewCambioPlan.regimen_impuesto_etiqueta})` : ''}. `
                   : previewCambioPlan?.regimen_impuesto_etiqueta
-                    ? `${previewCambioPlan.regimen_impuesto_etiqueta}. Según los días restantes del periodo.`
-                    : 'Según los días restantes del periodo.'}
+                    ? `${previewCambioPlan.regimen_impuesto_etiqueta}. `
+                    : ''}
+                Según los días restantes del periodo.
               </Text>
             ) : null}
           </div>
@@ -747,7 +797,7 @@ const FacturacionPanel = ({ activo = true }) => {
               onClick={abrirConfirmacionCambioPlan}
               className="facturacion-panel__cta"
             >
-              Cambiar de plan
+              {soloAmpliacionPlazas ? 'Ampliar plazas (prorrateo)' : 'Cambiar de plan'}
             </Button>
           ) : (
             <Button
@@ -809,7 +859,7 @@ const FacturacionPanel = ({ activo = true }) => {
           </ul>
         )}
         <p className="facturacion-cancel-modal__text">
-          <strong>Total a cobrar ahora:</strong>{' '}
+          <strong>Total prorrateo:</strong>{' '}
           {previewCambioPlan
             ? `${formatEuro(previewCambioPlan.importe_cobrar_ahora_eur)} €`
             : '—'}

@@ -65,9 +65,18 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
     }
   }, [empresaActiva, cargarEmpresas]);
 
+  const [facturacionFocusLicencias, setFacturacionFocusLicencias] = useState(false);
+  const [licenciasSugeridasAlAbrir, setLicenciasSugeridasAlAbrir] = useState(null);
+
   useEffect(() => {
-    const abrir = () => {
+    const abrir = (event) => {
       if (puedeGestionarSuscripcion) {
+        setFacturacionFocusLicencias(Boolean(event?.detail?.focusLicencias));
+        setLicenciasSugeridasAlAbrir(
+          event?.detail?.licenciasSugeridas != null
+            ? Number(event.detail.licenciasSugeridas)
+            : null,
+        );
         setFacturacionAbierta(true);
       }
     };
@@ -75,8 +84,16 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
     return () => window.removeEventListener(OPEN_FACTURACION_EVENT, abrir);
   }, [puedeGestionarSuscripcion]);
 
-  const abrirFacturacion = () => setFacturacionAbierta(true);
-  const cerrarFacturacion = () => setFacturacionAbierta(false);
+  const abrirFacturacion = () => {
+    setFacturacionFocusLicencias(false);
+    setLicenciasSugeridasAlAbrir(null);
+    setFacturacionAbierta(true);
+  };
+  const cerrarFacturacion = () => {
+    setFacturacionAbierta(false);
+    setFacturacionFocusLicencias(false);
+    setLicenciasSugeridasAlAbrir(null);
+  };
 
   const irAnadirEmpresa = () => {
     navigate(APP_ROUTES.platformEmpresas, { state: { abrirAltaEmpresa: true } });
@@ -255,7 +272,11 @@ const SidebarEmpresaBrand = ({ collapsed = false }) => {
           destroyOnClose
           className="app-sider-facturacion-modal"
         >
-          <FacturacionPanel activo={facturacionAbierta} />
+          <FacturacionPanel
+            activo={facturacionAbierta}
+            focusLicencias={facturacionFocusLicencias}
+            licenciasSugeridasAlAbrir={licenciasSugeridasAlAbrir}
+          />
         </Modal>
       ) : null}
     </>

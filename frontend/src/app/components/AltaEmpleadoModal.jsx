@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Form, Input, Select, notification, message } from 'antd';
+import { Modal, Form, Input, Select, notification, message, Spin, Button } from 'antd';
 import GradientButton from './shared/GradientButton';
 import { crearUsuario } from '../../features/user/usuarioService';
 import { obtenerJornadas } from '../../features/jornada/jornadaService';
 import { listarConveniosEmpresa } from '../../features/convenios/convenioService';
 import { mostrarModalLicenciasAgotadas } from '../../features/billing/licenciasAgotadasModal';
+import AmpliarPlazaUsuarioPanel from '../../features/billing/AmpliarPlazaUsuarioPanel';
+import { useEstadoPlazasUsuario } from '../../features/billing/useEstadoPlazasUsuario';
 import { opcionesTipoHora, TIPO_HORA_INHERIT } from '../../utils/tipoHora';
 import { tooltipTipoHoraFormItem } from '../../utils/tipoHoraTooltip';
 import JornadaLaboralSelect from './JornadaLaboralSelect';
@@ -22,6 +24,7 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
   const [jornadas, setJornadas] = useState([]);
   const [conveniosEmpresa, setConveniosEmpresa] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const { estado: estadoPlazas, loading: loadingPlazas, hayPlaza } = useEstadoPlazasUsuario(open);
 
   useEffect(() => {
     if (!open) return;
@@ -68,27 +71,7 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
 
       if (!response.creada) {
         if (response.codigo === 'LICENCIAS_AGOTADAS') {
-          mostrarModalLicenciasAgotadas({
-            response,
-            onAmpliado: async () => {
-              const reintento = await crearUsuario(
-                values.email,
-                values.nombreCompleto,
-                values.dni,
-                values.tipoUsuario,
-                values.tipoHorario,
-                values.tipoHora,
-                values.idEmpresaConvenio,
-              );
-              if (!reintento.creada) {
-                notification.error({
-                  message: reintento.message || 'No se pudo completar el alta tras ampliar licencias',
-                });
-                return;
-              }
-              await completarAlta(values, reintento);
-            },
-          });
+          mostrarModalLicenciasAgotadas({ response });
         } else {
           notification.error({
             message: response.message,
@@ -120,6 +103,18 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
       destroyOnClose
       width={520}
     >
+      {loadingPlazas ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
+          <Spin tip="Comprobando plazas disponibles…" />
+        </div>
+      ) : !hayPlaza ? (
+        <>
+          <AmpliarPlazaUsuarioPanel estado={estadoPlazas} />
+          <Button block style={{ marginTop: 16 }} onClick={onClose}>
+            Cerrar
+          </Button>
+        </>
+      ) : (
       <Form
         form={form}
         layout="vertical"
@@ -207,6 +202,7 @@ const AltaEmpleadoModal = ({ open, onClose, onSuccess }) => {
           />
         </Form.Item>
       </Form>
+      )}
     </Modal>
   );
 };
