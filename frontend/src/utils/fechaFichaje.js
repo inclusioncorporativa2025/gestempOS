@@ -7,23 +7,12 @@ dayjs.extend(timezone);
 
 const ZONA = 'Europe/Madrid';
 
-/**
- * Convierte fechas de fichaje del API a hora local España.
- * MySQL guarda hora de pared; Sequelize usa offset fijo +02:00 y en CET (invierno)
- * el renderizado queda 1h por detrás si se interpreta como UTC puro.
- */
+/** Fecha/hora de fichaje del API interpretada en hora de España */
 export function parseFechaFichaje(fecha) {
   if (!fecha) return null;
 
   const d = dayjs(fecha).tz(ZONA);
-  if (!d.isValid()) return null;
-
-  // CET = UTC+1 (60 min). Sequelize usa +02:00 fijo y desfasa 1h en invierno.
-  if (d.utcOffset() === 60) {
-    return d.add(1, 'hour');
-  }
-
-  return d;
+  return d.isValid() ? d : null;
 }
 
 export function formatHoraFichaje(fecha) {

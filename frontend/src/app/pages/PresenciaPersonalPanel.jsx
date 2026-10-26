@@ -45,7 +45,7 @@ const formatHora = (fecha) => {
 const minutosEntreFechas = (entrada, salida) => {
   const inicio = parseFechaFichaje(entrada);
   if (!inicio?.isValid()) return 0;
-  const fin = salida ? parseFechaFichaje(salida) : dayjs();
+  const fin = salida ? parseFechaFichaje(salida) : dayjs().tz('Europe/Madrid');
   if (!fin?.isValid()) return 0;
   const diffMs = fin.diff(inicio);
   return diffMs > 0 ? Math.floor(diffMs / (1000 * 60)) : 0;

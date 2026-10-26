@@ -1,5 +1,14 @@
 require('dotenv').config();
 const { Sequelize } = require('sequelize');
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+/** Offset actual de España (CET/CEST) para DATETIME en MySQL vía Sequelize */
+const sequelizeTimezone = dayjs().tz('Europe/Madrid').format('Z');
 
 const requiredEnv = ['DB_NAME', 'DB_USER', 'DB_HOST'];
 const missingEnv = requiredEnv.filter((key) => !process.env[key]);
@@ -20,7 +29,7 @@ const sequelize = new Sequelize(
     dialect: 'mysql',
     port: Number(process.env.DB_PORT) || 3306,
     logging: false,
-    timezone: '+02:00',
+    timezone: sequelizeTimezone,
     pool: {
       max: 10,
       min: 0,

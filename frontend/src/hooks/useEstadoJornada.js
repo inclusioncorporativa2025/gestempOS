@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getUltimoRegistroById } from '../features/empresas/empresasService';
 import { getFechaEuropeMadrid } from '../utils/Helper';
+import { parseFechaFichaje } from '../utils/fechaFichaje';
 import { useAuth } from '../config/AuthContext';
 import { puedeUsarFichajeSesion } from '../utils/tipoUsuarioLabel';
 
@@ -35,8 +36,8 @@ const calcularTiempoPausa = (inicioMs) => {
 };
 
 const parseFechaRegistro = (fecha) => {
-  if (!fecha) return null;
-  return new Date(new Date(fecha).getTime());
+  const d = parseFechaFichaje(fecha);
+  return d?.isValid() ? d.toDate() : null;
 };
 
 /**
