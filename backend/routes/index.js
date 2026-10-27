@@ -19,12 +19,14 @@ const pagoRoutes = require('./pagoRoutes');
 const informesRoutes = require('./informesRoutes');
 const marketplaceRoutes = require('./marketplaceRoutes');
 const onboardingRoutes = require('./onboardingRoutes');
+const iamcorInternalRoutes = require('./iamcorInternalRoutes');
 const { requireAuth, requireOwnEmpresa } = require('../middleware/authMiddleware');
 
 /** Rutas con ámbito de empresa: el JWT debe coincidir con idEmpresa del body (tipos 3–6) */
 const empresaScope = [requireAuth, requireOwnEmpresa];
 
 const configureRoutes = (app) => {
+  app.use('/api/internal/iamcor', iamcorInternalRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/user', ...empresaScope, userRoutes);
   app.use('/api/empresas', requireAuth, companyRoutes);

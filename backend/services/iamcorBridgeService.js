@@ -11,15 +11,26 @@ const {
 const bridgeEnabled = () =>
   String(process.env.IAMCOR_BRIDGE_ENABLED || 'true').trim().toLowerCase() !== 'false';
 
-async function usuarioTienePuenteIam(idUsuario) {
+async function obtenerPuenteIam(idUsuario) {
   const rows = await sequelize.query(
-    `SELECT id_usuario, iam_user_id, iam_uuid
+    `SELECT id_usuario, iam_user_id, iam_uuid, estado
      FROM m_usuario_iamcor
      WHERE id_usuario = ?
      LIMIT 1`,
     { replacements: [idUsuario], type: QueryTypes.SELECT },
   );
   return rows[0] || null;
+}
+
+async function usuarioTienePuenteIam(idUsuario) {
+  const row = await obtenerPuenteIam(idUsuario);
+  if (!row) {
+    return null;
+  }
+  if (row.estado === 'INACTIVE') {
+    return null;
+  }
+  return row;
 }
 
 async function actualizarPuenteIam(idUsuario, iamUserId, iamUuid) {
@@ -47,6 +58,17 @@ async function validarPasswordLocal(usuario, password) {
  * El resto sigue con bcrypt local.
  */
 async function validarCredencialesLogin(usuario, email, password) {
+  if (bridgeEnabled()) {
+    const puenteRow = await obtenerPuenteIam(usuario.id_usuario);
+    if (puenteRow?.estado === 'INACTIVE') {
+      return {
+        ok: false,
+        code: 'APP_ACCESS_DENIED',
+        message: 'Acceso a la aplicación revocado en IAMCOR',
+      };
+    }
+  }
+
   const puente = bridgeEnabled() ? await usuarioTienePuenteIam(usuario.id_usuario) : null;
 
   if (!puente) {
