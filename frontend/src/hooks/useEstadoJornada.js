@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getUltimoRegistroById } from '../features/empresas/empresasService';
 import { getFechaEuropeMadrid } from '../utils/Helper';
-import { parseFechaFichaje } from '../utils/fechaFichaje';
+import { parseInstanteFichaje } from '../utils/fechaFichaje';
 import { useAuth } from '../config/AuthContext';
 import { puedeUsarFichajeSesion } from '../utils/tipoUsuarioLabel';
 
@@ -20,7 +20,7 @@ export const notifyGestionTiempoRefresh = () => {
 const calcularHorasDesde = (entrada) => {
   if (!entrada) return '00:00';
   const ahora = getFechaEuropeMadrid();
-  const diffMs = ahora.getTime() - entrada.getTime();
+  const diffMs = Math.max(0, ahora.getTime() - entrada.getTime());
   const horas = Math.floor(diffMs / (1000 * 60 * 60));
   const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
   return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
@@ -36,7 +36,7 @@ const calcularTiempoPausa = (inicioMs) => {
 };
 
 const parseFechaRegistro = (fecha) => {
-  const d = parseFechaFichaje(fecha);
+  const d = parseInstanteFichaje(fecha);
   return d?.isValid() ? d.toDate() : null;
 };
 

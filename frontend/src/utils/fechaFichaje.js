@@ -26,6 +26,16 @@ function parseDesdeIsoSequelize(value) {
   );
 }
 
+/**
+ * Instante real del fichaje (ISO/API) para cronómetros y duraciones.
+ * No aplicar el ajuste +2h de hora de pared MySQL.
+ */
+export function parseInstanteFichaje(fecha) {
+  if (fecha == null || fecha === '') return null;
+  const d = dayjs(fecha);
+  return d.isValid() ? d : null;
+}
+
 /** Fecha/hora de fichaje del API → hora de pared España (como en MySQL) */
 export function parseFechaFichaje(fecha) {
   if (fecha == null || fecha === '') return null;
