@@ -261,6 +261,18 @@ const procesarEmpresa = async ({
   if (!asignaciones.length) return;
 
   const ids = asignaciones.map((a) => a.id_usuario);
+
+  const membresiasActivas = await UsuarioEmpresa.findAll({
+    where: {
+      id_empresa: idEmpresa,
+      id_usuario: { [Op.in]: ids },
+      fecha_baja: null,
+      activo: true,
+    },
+    attributes: ['id_usuario'],
+  });
+  const idsMembresiaActiva = new Set(membresiasActivas.map((m) => m.id_usuario));
+
   const usuarios = await Usuario.findAll({
     where: { id_usuario: { [Op.in]: ids }, fecha_baja: null },
   });
@@ -287,6 +299,16 @@ const procesarEmpresa = async ({
 
   for (const asignacion of asignaciones) {
     resumen.evaluados += 1;
+    if (!idsMembresiaActiva.has(asignacion.id_usuario)) {
+      if (!dryRun) {
+        await MarketplaceUsuarioModulo.update(
+          { activo: false, fecha_modificacion: new Date() },
+          { where: { id_usuario_modulo: asignacion.id_usuario_modulo } },
+        );
+      }
+      resumen.omitidos.push({ id_usuario: asignacion.id_usuario, motivo: 'sin_membresia_activa' });
+      continue;
+    }
     const usuario = usuarioPorId.get(asignacion.id_usuario);
     if (!usuario) {
       resumen.omitidos.push({ id_usuario: asignacion.id_usuario, motivo: 'usuario_no_encontrado' });

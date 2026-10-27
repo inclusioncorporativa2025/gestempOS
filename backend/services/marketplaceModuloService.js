@@ -443,6 +443,22 @@ const listarAsignacionesModulo = async (idEmpresa, codigoModulo) => {
   };
 };
 
+/** Desactiva módulos marketplace del usuario en la empresa (p. ej. al baja o activo=0). */
+const desactivarAsignacionesMarketplaceUsuario = async (idEmpresa, idUsuario) => {
+  const ahora = new Date();
+  await MarketplaceUsuarioModulo.update(
+    { activo: false, fecha_modificacion: ahora },
+    {
+      where: {
+        id_empresa: idEmpresa,
+        id_usuario: idUsuario,
+        fecha_baja: null,
+        activo: true,
+      },
+    },
+  );
+};
+
 const guardarAsignacionUsuario = async ({
   idEmpresa,
   codigoModulo,
@@ -620,6 +636,7 @@ module.exports = {
   assertUsuarioTieneModulo,
   usuarioTieneModulo,
   listarAsignacionesModulo,
+  desactivarAsignacionesMarketplaceUsuario,
   guardarAsignacionUsuario,
   contarAsientosActivos,
   puedeEnviarWhatsappAlerta,

@@ -31,6 +31,7 @@ const {
   registrarAjusteManual,
 } = require('../services/bolsaHorasService');
 const { empresaTieneFeature } = require('../services/planService');
+const { desactivarAsignacionesMarketplaceUsuario } = require('../services/marketplaceModuloService');
 const { normalizarTipoHoraInput } = require('../utils/tipoHora');
 const {
   findMembresiaActivaEnEmpresa,
@@ -724,6 +725,10 @@ const editUsuario= async (req, res) => {
             },
         );
 
+        if (!membresiaEstaActiva({ activo: values.activo, fecha_baja: null })) {
+            await desactivarAsignacionesMarketplaceUsuario(idEmpresa, idUsuario);
+        }
+
         const usuarioJornadaResult =  await UsuarioJornada.findOne({
             where: {
                 empresa_id: idEmpresa, id_usuario: idUsuario , fecha_baja: null
@@ -817,6 +822,8 @@ const deleteUsuario= async (req, res) => {
                 },
             },
         );
+
+        await desactivarAsignacionesMarketplaceUsuario(idEmpresa, idUsuario);
 
         const otrasMembresiasActivas = await UsuarioEmpresa.count({
             where: {
