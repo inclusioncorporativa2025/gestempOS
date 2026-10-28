@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
+const { serializarPared } = require('../utils/fechaMadrid');
 
 const Descansos = sequelize.define('Descansos', {
     empresa_id: {
@@ -19,10 +20,16 @@ const Descansos = sequelize.define('Descansos', {
     fecha_entrada: {
         type: DataTypes.DATE,
         allowNull: true,
+        get() {
+            return serializarPared(this.getDataValue('fecha_entrada'));
+        },
     },
     fecha_salida: {
         type: DataTypes.DATE,
         allowNull: true,
+        get() {
+            return serializarPared(this.getDataValue('fecha_salida'));
+        },
     },
     ubicacion_entrada: {
         type: DataTypes.STRING(255),

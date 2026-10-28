@@ -1,5 +1,14 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
+const { serializarPared } = require('../utils/fechaMadrid');
+
+const fechaPared = (campo) => ({
+    type: DataTypes.DATE,
+    allowNull: true,
+    get() {
+        return serializarPared(this.getDataValue(campo));
+    },
+});
 
 const Peticiones = sequelize.define('Peticiones', {
     empresa_id: {
@@ -28,22 +37,10 @@ const Peticiones = sequelize.define('Peticiones', {
         type: DataTypes.INTEGER,
         allowNull: true,
     },
-    nueva_entrada: {
-        type: DataTypes.DATE,
-        allowNull: true,
-    },
-    nueva_salida: {
-        type: DataTypes.DATE,
-        allowNull: true,
-    },
-    entrada_original: {
-        type: DataTypes.DATE,
-        allowNull: true,
-    },
-    salida_original: {
-        type: DataTypes.DATE,
-        allowNull: true,
-    },
+    nueva_entrada: fechaPared('nueva_entrada'),
+    nueva_salida: fechaPared('nueva_salida'),
+    entrada_original: fechaPared('entrada_original'),
+    salida_original: fechaPared('salida_original'),
     justificacion: {
         type: DataTypes.TEXT,
         allowNull: true,

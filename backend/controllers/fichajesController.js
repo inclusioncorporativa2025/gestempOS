@@ -67,7 +67,7 @@ const {
   parseMadridSql,
   rangoDiaMadridSql,
   rangoMesMadridSql,
-  instanteAMadridSql,
+  comoDatetimeSql,
   ZONA: TZ_MADRID,
 } = require('../utils/fechaMadrid');
 
@@ -600,10 +600,10 @@ const crearPeticionEdicion = async (req, res) => {
       fecha_alta: fechaConOffset,
       id_fichaje: idFichaje,
       id_descanso: idDescanso,
-      nueva_entrada,
-      nueva_salida,
-      entrada_original,
-      salida_original,
+      nueva_entrada: comoDatetimeSql(nueva_entrada),
+      nueva_salida: comoDatetimeSql(nueva_salida),
+      entrada_original: comoDatetimeSql(entrada_original),
+      salida_original: comoDatetimeSql(salida_original),
       justificacion: values.justificacion,
     });
 
@@ -1120,12 +1120,12 @@ const editarHoras = async (req, res) => {
     const idFichaje = peticion.id_fichaje || idFichajeBody || null;
 
     const updateData = {
-      fecha_entrada: instanteAMadridSql(horaEntrada),
+      fecha_entrada: comoDatetimeSql(horaEntrada),
       fecha_modificacion: fecha,
       usuario_modificacion: id_usuario_gestor,
     };
     if (horaSalida != null) {
-      updateData.fecha_salida = instanteAMadridSql(horaSalida);
+      updateData.fecha_salida = comoDatetimeSql(horaSalida);
     }
 
     const result = await sequelize.transaction(async (transaction) => {

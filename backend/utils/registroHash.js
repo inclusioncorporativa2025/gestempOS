@@ -35,6 +35,15 @@ const normalizarHoraCampo = (hora) => {
 };
 
 const normalizarFechaHora = (fechaInput) => {
+  if (typeof fechaInput === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(fechaInput.trim())) {
+    const texto = fechaInput.trim().slice(0, 19);
+    const [fecha, hora = '00:00:00'] = texto.split(' ');
+    const [hh = '00', mm = '00', ss = '00'] = hora.split(':');
+    return {
+      fecha,
+      hora: `${hh.padStart(2, '0')}:${mm.padStart(2, '0')}:${ss.padStart(2, '0')}`,
+    };
+  }
   const d = dayjs(fechaInput).tz(TZ);
   return {
     fecha: d.format('YYYY-MM-DD'),

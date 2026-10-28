@@ -5,7 +5,7 @@ const { createConId } = require('../utils/empresaScope');
 const { formatUbicacionStorage } = require('../utils/ubicacion');
 const { TIPO_REGISTRO_A_EVENTO } = require('../utils/registroHash');
 const { registrarEventoFichaje } = require('../repositorios/fichajeRegistroEventosRepository');
-const { instanteAMadridSql } = require('../utils/fechaMadrid');
+const { instanteAMadridSql, comoDatetimeSql } = require('../utils/fechaMadrid');
 
 /** Fichaje vigente: jornada abierta (sin salida); si no hay, el último cerrado. */
 const getUltimoRegistro = async (idUsuario, idEmpresa) => {
@@ -54,7 +54,8 @@ const crearRegistroFichaje = async ({
   fecha = new Date(),
   usuarioAccion = idUsuario,
 }) => {
-  const fechaRegistro = instanteAMadridSql(fecha);
+  const fechaPared = instanteAMadridSql(fecha);
+  const fechaRegistro = comoDatetimeSql(fechaPared);
   const tipoEvento = TIPO_REGISTRO_A_EVENTO[tipoRegistro];
   if (!tipoEvento) {
     const error = new Error('Tipo de registro no válido');
@@ -120,7 +121,7 @@ const crearRegistroFichaje = async ({
       empresaId: idEmpresa,
       idUsuario,
       tipo: tipoEvento,
-      fechaInput: fechaRegistro,
+      fechaInput: fechaPared,
       ubicacion: ubicacionSt,
       idFichaje: idFichajeRef,
       idDescanso: idDescansoRef,
