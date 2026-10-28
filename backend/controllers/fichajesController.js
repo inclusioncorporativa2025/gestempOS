@@ -16,7 +16,11 @@ const { TIPO_REGISTRO_A_EVENTO } = require('../utils/registroHash');
 const { registrarEventoFichaje, verificarEventosMes } = require('../repositorios/fichajeRegistroEventosRepository');
 const {getTipoRegistro} = require('./companyController');
 const { empresaTieneFeature } = require('../services/planService');
-const { crearRegistroFichaje } = require('../services/fichajeRegistroService');
+const {
+  crearRegistroFichaje,
+  getUltimoRegistro,
+  getUltimoDescanso,
+} = require('../services/fichajeRegistroService');
 const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/ausenciasCompat');
 const moment = require('moment-timezone');
 const dayjs = require('dayjs');
@@ -424,37 +428,6 @@ const crearRegistro = async (req, res) => {
     res.status(500).json({ error: error.message || 'Error creando registro' });
   }
 };
-
-const getUltimoRegistro= async (idUsuario, idEmpresa) => {
-
-  try{
-    const info = await Fichajes.findOne({
-      where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
-      order: [['fecha_alta', 'DESC']],
-    });
-
-    return info;
-
-  }catch(error){
-   console.error(error);
-  }
-
-}
-
-const getUltimoDescanso= async (idUsuario, idEmpresa) => {
-
-  try{
-    const descanso = await Descansos.findOne({
-      where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_salida: null },
-      order: [['fecha_entrada', 'DESC']],
-    });
-    return descanso;
-
-  }catch(error){
-   console.error(error);
-  }
-
-}
 
 const getTipoRegistroByIdUsuario = async (req, res)=> {
 
@@ -1057,18 +1030,11 @@ const getUltimoRegistroById= async (req, res) => {
   const idEmpresa = resolveIdEmpresa(req)
     || parseInt(String(esquema || '').replace('empresa', ''), 10);
 
-  try{
-    const info = await Fichajes.findOne({
-      where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
-      order: [['fecha_entrada', 'DESC']],
-    });
+  try {
+    const info = await getUltimoRegistro(idUsuario, idEmpresa);
+    const descanso = await getUltimoDescanso(idUsuario, idEmpresa);
 
-    const descanso = await Descansos.findOne({
-      where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_salida: null },
-      order: [['fecha_entrada', 'DESC']],
-    });
-
-    res.status(200).json({ message: 'Datos recuperados correctamente',info,descanso });
+    res.status(200).json({ message: 'Datos recuperados correctamente', info, descanso });
 
   }catch(error){
     console.error('Error al obtener tipos de acceso:', error);

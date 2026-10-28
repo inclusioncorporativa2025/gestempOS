@@ -40,6 +40,13 @@ const parseFechaRegistro = (fecha) => {
   return d?.isValid() ? d.toDate() : null;
 };
 
+/** Jornada abierta: sin salida o salida incoherente (anterior a la entrada). */
+const jornadaAbierta = (entrada, salida) => {
+  if (!entrada) return false;
+  if (!salida) return true;
+  return salida.getTime() < entrada.getTime();
+};
+
 /**
  * Estado de jornada del usuario: out | in | break
  * y acciones de fichaje disponibles según último registro.
@@ -75,7 +82,7 @@ export const useEstadoJornada = () => {
         const entrada = parseFechaRegistro(fecha_entrada);
         const salida = parseFechaRegistro(fecha_salida);
 
-        if (entrada && !salida && ultimoRegistro.descanso == null) {
+        if (jornadaAbierta(entrada, salida) && ultimoRegistro.descanso == null) {
           setEntradaMs(entrada.getTime());
           setPausaInicioMs(null);
           setHorasTrabajadas(calcularHorasDesde(entrada));

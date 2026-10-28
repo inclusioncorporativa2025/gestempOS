@@ -7,11 +7,24 @@ const { TIPO_REGISTRO_A_EVENTO } = require('../utils/registroHash');
 const { registrarEventoFichaje } = require('../repositorios/fichajeRegistroEventosRepository');
 const { instanteAMadridSql } = require('../utils/fechaMadrid');
 
-const getUltimoRegistro = async (idUsuario, idEmpresa) =>
-  Fichajes.findOne({
-    where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
-    order: [['fecha_alta', 'DESC']],
+/** Fichaje vigente: jornada abierta (sin salida); si no hay, el último cerrado. */
+const getUltimoRegistro = async (idUsuario, idEmpresa) => {
+  const abierto = await Fichajes.findOne({
+    where: {
+      empresa_id: idEmpresa,
+      id_usuario: idUsuario,
+      fecha_baja: null,
+      fecha_salida: null,
+    },
+    order: [['fecha_entrada', 'DESC']],
   });
+  if (abierto) return abierto;
+
+  return Fichajes.findOne({
+    where: { empresa_id: idEmpresa, id_usuario: idUsuario, fecha_baja: null },
+    order: [['fecha_entrada', 'DESC']],
+  });
+};
 
 const getUltimoDescanso = async (idUsuario, idEmpresa) =>
   Descansos.findOne({
