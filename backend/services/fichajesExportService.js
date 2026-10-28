@@ -24,6 +24,8 @@ dayjs.extend(duration);
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+const { FORMAT, parseMadridSql } = require('../utils/fechaMadrid');
+
 const ZONA_HORARIA = 'Europe/Madrid';
 const locationCache = new NodeCache({ stdTTL: 86400 });
 const BRAND_BLUE = 'FF2BA9E0';
@@ -159,8 +161,10 @@ const generarExcelRegistrosHorarios = async ({ id_usuario, startDate, endDate, i
     throw new FichajesExportError('Faltan parámetros necesarios', 400);
   }
 
-  const start = dayjs(startDate).startOf('day');
-  const end = dayjs(endDate).endOf('day');
+  const start = dayjs.tz(startDate, ZONA_HORARIA).startOf('day');
+  const end = dayjs.tz(endDate, ZONA_HORARIA).endOf('day');
+  const inicioRango = start.format(FORMAT);
+  const finRango = end.format(FORMAT);
 
   const [usuario, empresa] = await Promise.all([
     Usuario.findOne({ where: { id_usuario } }),
@@ -183,8 +187,8 @@ const generarExcelRegistrosHorarios = async ({ id_usuario, startDate, endDate, i
         id_usuario,
         fecha_baja: null,
         fecha_entrada: {
-          [Op.gte]: start.toDate(),
-          [Op.lte]: end.toDate(),
+          [Op.gte]: inicioRango,
+          [Op.lte]: finRango,
         },
       },
     }),
@@ -206,8 +210,8 @@ const generarExcelRegistrosHorarios = async ({ id_usuario, startDate, endDate, i
         id_usuario,
         fecha_baja: null,
         fecha_entrada: {
-          [Op.gte]: start.toDate(),
-          [Op.lte]: end.toDate(),
+          [Op.gte]: inicioRango,
+          [Op.lte]: finRango,
         },
       },
     }),
@@ -348,8 +352,8 @@ const generarExcelRegistrosHorarios = async ({ id_usuario, startDate, endDate, i
     let totalMinutes = 0;
 
     for (const fichaje of fichajesPorMes[mes]) {
-      const entrada = fichaje.fecha_entrada ? dayjs(fichaje.fecha_entrada).tz(ZONA_HORARIA) : null;
-      const salida = fichaje.fecha_salida ? dayjs(fichaje.fecha_salida).tz(ZONA_HORARIA) : null;
+      const entrada = parseMadridSql(fichaje.fecha_entrada);
+      const salida = parseMadridSql(fichaje.fecha_salida);
 
       let diferencia = '-';
 

@@ -1,62 +1,41 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.extend(customParseFormat);
 
 const ZONA = 'Europe/Madrid';
+const FORMAT = 'YYYY-MM-DD HH:mm:ss';
 
-/** Debe coincidir con `timezone` en backend/config/db.js (Sequelize + MySQL) */
-const SEQUELIZE_MYSQL_OFFSET_H = 2;
+const NAIVE_MYSQL_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/;
 
-/**
- * Convierte el ISO UTC que devuelve Sequelize a la hora de pared guardada en MySQL
- * (la misma que ves en SELECT fecha_entrada FROM fichajes).
- */
-function parseDesdeIsoSequelize(value) {
-  const enUtc = dayjs.utc(value);
-  if (!enUtc.isValid()) return null;
-
-  const pared = enUtc.add(SEQUELIZE_MYSQL_OFFSET_H, 'hour');
-  return dayjs.tz(
-    pared.format('YYYY-MM-DD HH:mm:ss'),
-    'YYYY-MM-DD HH:mm:ss',
-    ZONA,
-  );
-}
-
-/**
- * Instante real del fichaje (ISO/API) para cronómetros y duraciones.
- * No aplicar el ajuste +2h de hora de pared MySQL.
- */
-export function parseInstanteFichaje(fecha) {
-  if (fecha == null || fecha === '') return null;
-  const d = dayjs(fecha);
-  return d.isValid() ? d : null;
-}
-
-/** Fecha/hora de fichaje del API → hora de pared España (como en MySQL) */
-export function parseFechaFichaje(fecha) {
+function parseComoMadrid(fecha) {
   if (fecha == null || fecha === '') return null;
 
   if (typeof fecha === 'string') {
     const trimmed = fecha.trim();
-    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(trimmed)) {
-      const d = dayjs.tz(trimmed.slice(0, 19), 'YYYY-MM-DD HH:mm:ss', ZONA);
+    if (NAIVE_MYSQL_RE.test(trimmed)) {
+      const d = dayjs.tz(trimmed.slice(0, 19), FORMAT, ZONA);
       return d.isValid() ? d : null;
     }
-    if (/^\d{4}-\d{2}-\d{2}T/.test(trimmed)) {
-      return parseDesdeIsoSequelize(trimmed);
-    }
   }
 
-  if (fecha instanceof Date) {
-    return parseDesdeIsoSequelize(fecha);
-  }
+  const d = dayjs(fecha);
+  if (!d.isValid()) return null;
+  return d.tz(ZONA);
+}
 
-  const d = dayjs(fecha).tz(ZONA);
-  return d.isValid() ? d : null;
+/** Instante del fichaje (cronómetros, duraciones) */
+export function parseInstanteFichaje(fecha) {
+  return parseComoMadrid(fecha);
+}
+
+/** Hora de pared del fichaje (listados, igual que MySQL) */
+export function parseFechaFichaje(fecha) {
+  return parseComoMadrid(fecha);
 }
 
 export function formatHoraFichaje(fecha) {

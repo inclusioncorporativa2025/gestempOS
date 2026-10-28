@@ -6,6 +6,7 @@ const timezone = require('dayjs/plugin/timezone');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+const { rangoDiaMadridSql } = require('../utils/fechaMadrid');
 const MarketplaceEmpresaModulo = require('../models/MarketplaceEmpresaModulo');
 const MarketplaceUsuarioModulo = require('../models/MarketplaceUsuarioModulo');
 const MarketplaceAlertasFichajeEnvio = require('../models/MarketplaceAlertasFichajeEnvio');
@@ -140,8 +141,7 @@ const tieneAusenciaAprobadaEnDia = async (idEmpresa, idUsuario, fecha) => {
 };
 
 const tieneFichajeEntradaEnDia = async (idEmpresa, idUsuario, fecha) => {
-  const inicio = fecha.tz(TZ).startOf('day').toDate();
-  const fin = fecha.tz(TZ).endOf('day').toDate();
+  const { inicio, fin } = rangoDiaMadridSql(fecha.tz(TZ).format('YYYY-MM-DD'));
   const fichaje = await Fichajes.findOne({
     where: {
       empresa_id: idEmpresa,

@@ -20,7 +20,11 @@ const sequelize = new Sequelize(
     dialect: 'mysql',
     port: Number(process.env.DB_PORT) || 3306,
     logging: false,
-    timezone: '+02:00',
+    // DATETIME de fichajes = hora de pared Europe/Madrid (naive); ver utils/fechaMadrid.js
+    timezone: '+00:00',
+    dialectOptions: {
+      dateStrings: ['DATE', 'DATETIME', 'TIMESTAMP'],
+    },
     pool: {
       max: 10,
       min: 0,

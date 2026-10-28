@@ -13,6 +13,7 @@ const {
   TIPOS_HORA,
 } = require('../utils/tipoHora');
 const { enriquecerResumenBolsa, obtenerSaldoBolsa } = require('./bolsaHorasService');
+const { rangoMesMadridSql, parseMadridSql } = require('../utils/fechaMadrid');
 const { empresaTieneFeature } = require('./planService');
 const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/ausenciasCompat');
 const {
@@ -264,8 +265,7 @@ const calcularHorasOrdinariasMes = async (idEmpresa, idUsuario, mes) => {
 
 const calcularHorasTrabajadasMes = async (idEmpresa, idUsuario, mes) => {
   const mesNormalizado = String(mes).length === 7 ? mes : dayjs(mes).format('YYYY-MM');
-  const inicioMes = dayjs(`${mesNormalizado}-01`).startOf('month').toDate();
-  const finMes = dayjs(`${mesNormalizado}-01`).endOf('month').toDate();
+  const { inicio: inicioMes, fin: finMes } = rangoMesMadridSql(mesNormalizado);
 
   const fichajes = await Fichajes.findAll({
     where: {
@@ -279,9 +279,9 @@ const calcularHorasTrabajadasMes = async (idEmpresa, idUsuario, mes) => {
   let totalMinutos = 0;
 
   fichajes.forEach((fichaje) => {
-    const entrada = dayjs(fichaje.fecha_entrada);
-    const salida = dayjs(fichaje.fecha_salida);
-    if (entrada.isValid() && salida.isValid()) {
+    const entrada = parseMadridSql(fichaje.fecha_entrada);
+    const salida = parseMadridSql(fichaje.fecha_salida);
+    if (entrada?.isValid() && salida?.isValid()) {
       totalMinutos += salida.diff(entrada, 'minute');
     }
   });

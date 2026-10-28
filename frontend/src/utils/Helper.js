@@ -5,7 +5,7 @@ import timezone from 'dayjs/plugin/timezone';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-/** Instante UTC correcto al fichar (compatible con Sequelize timezone +02:00) */
+/** Instante actual (el servidor normaliza a hora de pared Madrid al guardar) */
 export function getFechaEuropeMadrid() {
-  return dayjs().tz('Europe/Madrid').toDate();
+    return dayjs().tz('Europe/Madrid').toDate();
 }

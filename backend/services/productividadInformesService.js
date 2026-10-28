@@ -11,6 +11,7 @@ const {
   calcularResumenHorasMes,
 } = require('./horasResumenService');
 const { ausenciasSoportaAprobacion, whereSoloAprobadas } = require('../utils/ausenciasCompat');
+const { rangoMesMadridSql, parseMadridSql } = require('../utils/fechaMadrid');
 const {
   esJornadaFija,
   diaSemanaDesdeNombre,
@@ -102,8 +103,7 @@ const calcularPuntualidadMes = async (idEmpresa, idUsuario, mesNormalizado, jorn
     return { media_retraso_min: null, fichajes_analizados: 0 };
   }
 
-  const inicioMes = dayjs(`${mesNormalizado}-01`).startOf('month').toDate();
-  const finMes = dayjs(`${mesNormalizado}-01`).endOf('month').toDate();
+  const { inicio: inicioMes, fin: finMes } = rangoMesMadridSql(mesNormalizado);
 
   const fichajes = await Fichajes.findAll({
     where: {
@@ -117,8 +117,8 @@ const calcularPuntualidadMes = async (idEmpresa, idUsuario, mesNormalizado, jorn
 
   const primeraEntradaPorDia = new Map();
   fichajes.forEach((fichaje) => {
-    const entrada = dayjs(fichaje.fecha_entrada);
-    if (!entrada.isValid()) return;
+    const entrada = parseMadridSql(fichaje.fecha_entrada);
+    if (!entrada?.isValid()) return;
     const clave = entrada.format('YYYY-MM-DD');
     if (!primeraEntradaPorDia.has(clave)) {
       primeraEntradaPorDia.set(clave, entrada);

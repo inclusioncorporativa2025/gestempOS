@@ -58,19 +58,14 @@ const filtroEmpresaObligatorio = (req, res) => {
   return { empresa_id: idEmpresa };
 };
 
-const combinarFechaConHoraMadrid = (fechaBase, horaHHmm) => {
-  const tz = 'Europe/Madrid';
-  const base = dayjs(fechaBase).tz(tz);
-  const [horas, minutos] = String(horaHHmm).split(':').map(Number);
-  return dayjs
-    .tz(
-      `${base.format('YYYY-MM-DD')} ${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`,
-      'YYYY-MM-DD HH:mm',
-      tz,
-    )
-    .utc()
-    .toDate();
-};
+const {
+  combinarFechaHoraMadridSql,
+  parseMadridSql,
+  rangoDiaMadridSql,
+  rangoMesMadridSql,
+  instanteAMadridSql,
+  ZONA: TZ_MADRID,
+} = require('../utils/fechaMadrid');
 
 const enriquecerPeticionesConDetalle = async (peticiones) => {
   if (!peticiones.length) return [];
@@ -242,9 +237,7 @@ const getDatosUsuarioById = async (req, res) => {
 
     const fichajesNormalizados = fichajes.map((f) => {
       const raw = f.toJSON();
-      const entrada = raw.fecha_entrada
-        ? dayjs(raw.fecha_entrada).tz('Europe/Madrid')
-        : null;
+      const entrada = raw.fecha_entrada ? parseMadridSql(raw.fecha_entrada) : null;
       return {
         ...raw,
         tipo: 'fichaje',
@@ -310,8 +303,7 @@ const getDatosUsuarioMes = async (req, res) => {
   }
 
   try {
-    const inicioMes = dayjs(mes + '-01').startOf('month').toDate();
-    const finMes = dayjs(mes + '-01').endOf('month').toDate();
+    const { inicio: inicioMes, fin: finMes } = rangoMesMadridSql(mes);
 
     const info = await Fichajes.findAll({
       where: {
@@ -601,8 +593,8 @@ const crearPeticionEdicion = async (req, res) => {
       return res.status(400).json({ error: 'Fecha de entrada no válida' });
     }
 
-    const nueva_entrada = combinarFechaConHoraMadrid(fechaEntradaBase, values.hora_entrada);
-    const entradaDt = dayjs(nueva_entrada).tz(tz);
+    const nueva_entrada = combinarFechaHoraMadridSql(fechaEntradaBase, values.hora_entrada);
+    const entradaDt = parseMadridSql(nueva_entrada);
     const ahora = dayjs().tz(tz);
 
     if (entradaDt.isAfter(ahora)) {
@@ -618,8 +610,8 @@ const crearPeticionEdicion = async (req, res) => {
       if (!fechaSalidaBase) {
         return res.status(400).json({ error: 'Fecha de salida no válida' });
       }
-      nueva_salida = combinarFechaConHoraMadrid(fechaSalidaBase, values.hora_salida);
-      const salidaDt = dayjs(nueva_salida).tz(tz);
+      nueva_salida = combinarFechaHoraMadridSql(fechaSalidaBase, values.hora_salida);
+      const salidaDt = parseMadridSql(nueva_salida);
       if (!entradaDt.isBefore(salidaDt)) {
         return res.status(400).json({ error: 'La entrada debe ser anterior a la salida' });
       }
@@ -1092,7 +1084,7 @@ const getHorasTrabajadasHoy = async (req, res)=> {
 
   try {
 
-      const hoy = moment().startOf('day').toDate();
+      const { inicio: inicioHoy } = rangoDiaMadridSql();
 
       const registros = await Fichajes.findAll({
           where: {
@@ -1100,7 +1092,7 @@ const getHorasTrabajadasHoy = async (req, res)=> {
               id_usuario: usuarioAccion,
               fecha_baja: null,
               fecha_entrada: {
-                  [Op.gte]: hoy
+                  [Op.gte]: inicioHoy
               },
           }
       });
@@ -1162,12 +1154,12 @@ const editarHoras = async (req, res) => {
     const idFichaje = peticion.id_fichaje || idFichajeBody || null;
 
     const updateData = {
-      fecha_entrada: horaEntrada,
+      fecha_entrada: instanteAMadridSql(horaEntrada),
       fecha_modificacion: fecha,
       usuario_modificacion: id_usuario_gestor,
     };
     if (horaSalida != null) {
-      updateData.fecha_salida = horaSalida;
+      updateData.fecha_salida = instanteAMadridSql(horaSalida);
     }
 
     const result = await sequelize.transaction(async (transaction) => {
@@ -1521,9 +1513,8 @@ const getEstadoPersonalEmpresa = async (req, res) => {
       order: [['fecha_entrada', 'DESC']],
     });
 
-    const tz = 'Europe/Madrid';
-    const inicioDia = dayjs().tz(tz).startOf('day').toDate();
-    const finDia = dayjs().tz(tz).endOf('day').toDate();
+    const tz = TZ_MADRID;
+    const { inicio: inicioDia, fin: finDia } = rangoDiaMadridSql();
 
     const fichajesHoy = await Fichajes.findAll({
       where: {

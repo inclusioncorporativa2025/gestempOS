@@ -5,6 +5,7 @@ const { createConId } = require('../utils/empresaScope');
 const { formatUbicacionStorage } = require('../utils/ubicacion');
 const { TIPO_REGISTRO_A_EVENTO } = require('../utils/registroHash');
 const { registrarEventoFichaje } = require('../repositorios/fichajeRegistroEventosRepository');
+const { instanteAMadridSql } = require('../utils/fechaMadrid');
 
 const getUltimoRegistro = async (idUsuario, idEmpresa) =>
   Fichajes.findOne({
@@ -40,6 +41,7 @@ const crearRegistroFichaje = async ({
   fecha = new Date(),
   usuarioAccion = idUsuario,
 }) => {
+  const fechaRegistro = instanteAMadridSql(fecha);
   const tipoEvento = TIPO_REGISTRO_A_EVENTO[tipoRegistro];
   if (!tipoEvento) {
     const error = new Error('Tipo de registro no válido');
@@ -58,9 +60,9 @@ const crearRegistroFichaje = async ({
     if ((!ultimoRegistro || ultimoRegistro.fecha_salida != null) && tipoRegistro === 1) {
       const fichaje = await createConId(Fichajes, idEmpresa, 'id_fichaje', {
         id_usuario: idUsuario,
-        fecha_alta: fecha,
+        fecha_alta: fechaRegistro,
         ubicacion_entrada: ubicacionSt,
-        fecha_entrada: fecha,
+        fecha_entrada: fechaRegistro,
         usuario_alta: usuarioAccion,
       }, transaction);
       idFichajeRef = fichaje.id_fichaje;
@@ -70,7 +72,7 @@ const crearRegistroFichaje = async ({
       }
       idFichajeRef = ultimoRegistro.id_fichaje;
       await Fichajes.update({
-        fecha_salida: fecha,
+        fecha_salida: fechaRegistro,
         ubicacion_salida: ubicacionSt,
       }, {
         where: { empresa_id: idEmpresa, id_fichaje: idFichajeRef },
@@ -79,9 +81,9 @@ const crearRegistroFichaje = async ({
     } else if (tipoRegistro === 3) {
       const descanso = await createConId(Descansos, idEmpresa, 'id_descanso', {
         id_usuario: idUsuario,
-        fecha_entrada: fecha,
+        fecha_entrada: fechaRegistro,
         ubicacion_entrada: ubicacionSt,
-        fecha_alta: fecha,
+        fecha_alta: fechaRegistro,
         usuario_alta: usuarioAccion,
       }, transaction);
       idDescansoRef = descanso.id_descanso;
@@ -91,7 +93,7 @@ const crearRegistroFichaje = async ({
       }
       idDescansoRef = ultimoDescanso.id_descanso;
       await Descansos.update({
-        fecha_salida: fecha,
+        fecha_salida: fechaRegistro,
         ubicacion_salida: ubicacionSt,
       }, {
         where: { empresa_id: idEmpresa, id_descanso: idDescansoRef },
@@ -105,7 +107,7 @@ const crearRegistroFichaje = async ({
       empresaId: idEmpresa,
       idUsuario,
       tipo: tipoEvento,
-      fechaInput: fecha,
+      fechaInput: fechaRegistro,
       ubicacion: ubicacionSt,
       idFichaje: idFichajeRef,
       idDescanso: idDescansoRef,
